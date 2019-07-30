@@ -147,6 +147,8 @@ class ConfigKey:
 
     PREP_REGISTRATION_FEE = "prepRegistrationFee"
 
+    DECENTRALIZE_TRIGGER = "decentralizeTrigger"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1

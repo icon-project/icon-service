@@ -26,7 +26,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, ConfigKey
 )
 
 if TYPE_CHECKING:
@@ -98,7 +98,6 @@ class ContextGetter(object):
 
 
 class IconScoreContext(object):
-
     score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
     icon_service_flag: int = 0
@@ -110,6 +109,8 @@ class IconScoreContext(object):
 
     main_prep_count: int = PREP_MAIN_PREPS
     main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
+
+    decentralize_trigger: float = 0
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -143,6 +144,15 @@ class IconScoreContext(object):
 
         # PReps to update on invoke
         self.preps: Optional['PRepContainer'] = None
+
+    @classmethod
+    def set_decentralize_trigger(cls, decentralize_trigger: float):
+        decentralize_trigger: float = decentralize_trigger
+
+        if not 1.0 > decentralize_trigger >= 0:
+            raise FatalException(f"Invalid min delegation percent for decentralize: {decentralize_trigger}."
+                                 f"Do not exceed 100% or negative value")
+        IconScoreContext.decentralize_trigger = decentralize_trigger
 
     @property
     def readonly(self):

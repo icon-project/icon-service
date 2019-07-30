@@ -25,8 +25,9 @@ if TYPE_CHECKING:
     from ..prep.data.prep import PRep
 
 
-def check_decentralization_condition(context: 'IconScoreContext'):
-    """ICON network decentralize when 22th prep get delegation more than some value(total-supply * 0.002icx)"""
+def check_decentralization_condition(context: 'IconScoreContext') -> bool:
+    """ICON network decentralize when the last prep of main prep count ( default: 22th )
+    get delegation more than some value( default: total-supply * 0.002icx )"""
     preps = context.preps
     if preps.size(active_prep_only=True) >= context.main_prep_count:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
@@ -36,8 +37,16 @@ def check_decentralization_condition(context: 'IconScoreContext'):
     return False
 
 
-def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext'):
-    """Minimum delegate = total_supply * 0.002 ICX"""
-    total_supply = context.storage.icx.get_total_supply(context)
-    minimum_delegate = total_supply * 2 // 1000
+def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
+    """Minimum delegate default value = total_supply * 0.002 ICX"""
+    assert 1.0 > context.decentralize_trigger >= 0
+
+    str_float: str = str(context.decentralize_trigger)
+    decimal: str = str_float[str_float.find('.') + 1:]
+    numerator = int(decimal)
+    denominator = 10 ** len(decimal)
+
+    total_supply: int = context.storage.icx.get_total_supply(context)
+
+    minimum_delegate: int = total_supply * numerator // denominator
     return minimum_delegate
