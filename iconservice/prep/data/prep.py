@@ -155,16 +155,12 @@ class PRep(Sortable):
         self._total_blocks: int = total_blocks
         self._validated_blocks: int = validated_blocks
 
-    def is_dirty(self) -> bool:
-        return bool(self._flags & PRepFlag.DIRTY)
-
     @property
     def status(self) -> 'PRepStatus':
         return self._status
 
     @status.setter
     def status(self, value: 'PRepStatus'):
-        assert self._status == PRepStatus.ACTIVE
         self._status = value
         
     @property

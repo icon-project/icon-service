@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import os
+from collections import OrderedDict
 from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -412,7 +414,11 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
+
+        # For PRep management
+        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context.tx_dirty_preps = OrderedDict()
+
         context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
         context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
 
@@ -425,7 +431,7 @@ class IconServiceEngine(ContextContainer):
         regulator: Optional['Regulator'] = None
         if is_block_editable and context.is_decentralized():
             base_transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
-            # todo: if the txhash field is add to addedTransaction, should remove this logic
+            # todo: if the txHash field is add to addedTransaction, should remove this logic
             tx_params_to_added = deepcopy(base_transaction["params"])
             del tx_params_to_added["txHash"]
             added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
@@ -466,7 +472,6 @@ class IconServiceEngine(ContextContainer):
         main_prep_as_dict, next_term = self.after_transaction_process(
             context, precommit_flag, base_tx_result, prev_block_generator, prev_block_validators)
 
-        # Make context.preps immutable
         context.preps.freeze()
 
         # Save precommit data
@@ -493,6 +498,7 @@ class IconServiceEngine(ContextContainer):
                                    prev_block_validators: Optional[List['Address']] = None):
         self._update_productivity(context, prev_block_generator, prev_block_validators)
         self._update_last_generate_block_height(context, prev_block_generator)
+        context.update_dirty_prep_batch()
 
     def after_transaction_process(
             self,
@@ -534,7 +540,9 @@ class IconServiceEngine(ContextContainer):
                 last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
                 if last_calc_end_block_height is not None:
                     context.storage.meta.put_last_calc_end_block(context.meta_block_batch, last_calc_end_block_height)
-            context.engine.iiss.update_db(context, next_term, prev_block_generator, prev_block_validators, flag)
+
+            context.engine.iiss.update_db(
+                context, next_term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
 
@@ -546,13 +554,20 @@ class IconServiceEngine(ContextContainer):
         low_productivities: list = []
         for main_prep in context.engine.prep.term.main_preps:
             prep = context.preps.get_by_address(main_prep.address)
-            if prep is not None and prep.is_low_productivity():
+            assert prep is not None
+
+            if prep.is_low_productivity():
                 low_productivities.append(prep)
 
         for prep in low_productivities:
-            context.preps.unregister(prep.address, PRepStatus.LOW_PRODUCTIVITY)
-            EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
-                                           [prep.address, PRepStatus.LOW_PRODUCTIVITY.value, prep.productivity], 1)
+            dirty_prep: 'PRep' = prep.copy()
+            dirty_prep.status = PRepStatus.LOW_PRODUCTIVITY
+            context.put_dirty_prep(dirty_prep)
+
+            EventLogEmitter.emit_event_log(
+                context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
+                [prep.address, PRepStatus.LOW_PRODUCTIVITY.value, prep.productivity], 1)
+
         base_tx_result.event_logs.extend(context.event_logs)
         base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
 
@@ -573,9 +588,10 @@ class IconServiceEngine(ContextContainer):
         main_preps: list = context.engine.prep.term.main_preps
         for main_prep in main_preps:
             is_validate: bool = main_prep.address in validates
-            prep: 'PRep' = context.preps.get_by_address(main_prep.address, mutable=True)
+            prep: 'PRep' = context.get_prep(main_prep.address, mutable=True)
             if prep:
                 prep.update_productivity(is_validate)
+                context.put_dirty_prep(prep)
 
     @staticmethod
     def _is_prep_term_over(context: 'IconScoreContext') -> bool:
@@ -590,12 +606,15 @@ class IconServiceEngine(ContextContainer):
     @staticmethod
     def _update_last_generate_block_height(
             context: 'IconScoreContext', prev_block_generator: Optional['Address']):
+        if not context.is_decentralized():
+            return
         if prev_block_generator is None:
             return
 
-        prep: 'PRep' = context.preps.get_by_address(prev_block_generator, mutable=True)
+        prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
         if prep:
             prep.last_generate_block_height = context.block.height - 1
+            context.put_dirty_prep(prep)
 
     @staticmethod
     def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext', next_term: 'Term'):
