@@ -16,14 +16,18 @@
 
 """IconScoreEngine testcase
 """
+from typing import TYPE_CHECKING, List
 from unittest.mock import patch
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import ZERO_SCORE_ADDRESS, Address
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, \
-    PREP_PENALTY_SIGNATURE, BASE_TRANSACTION_INDEX
+    PREP_PENALTY_SIGNATURE, BASE_TRANSACTION_INDEX, PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import PRepStatus, PRepGrade
 from iconservice.iconscore.icon_score_event_log import EventLog
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestPreps(TestIISSBase):
@@ -45,38 +49,36 @@ class TestPreps(TestIISSBase):
         3. check main preps sorted
         :return:
         """
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=10000 * ICX_IN_LOOP)
 
         # un-register first main prep
-        tx: dict = self.create_unregister_prep_tx(self._addr_array[0])
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.unregister_prep(from_=self._accounts[0])
 
-        response: dict = self.get_prep(self._addr_array[0])
+        response: dict = self.get_prep(self._accounts[0])
         self.assertEqual(PRepStatus.UNREGISTERED.value, response['status'])
+
+        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + 1],
+                            init_balance=20000)
+
+        self.set_stake(from_=self._accounts[PREP_MAIN_PREPS],
+                       value=10000)
 
         # register user[PREP_MAIN_PREPS]
         index: int = PREP_MAIN_PREPS
-        tx: dict = self.create_register_prep_tx(self._addr_array[index],
-                                                public_key=f"0x{self.public_key_array[index].hex()}")
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.register_prep(from_=self._accounts[index])
 
         # delegate to PRep
         delegation_amount: int = 10000
-        tx: dict = self.create_set_delegation_tx(self._addr_array[index],
-                                                 [
-                                                     (
-                                                         self._addr_array[index],
-                                                         delegation_amount
-                                                     )
-                                                 ])
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_delegation(from_=self._accounts[index],
+                            origin_delegations=[
+                                (
+                                    self._accounts[index],
+                                    delegation_amount
+                                )
+                            ])
 
-        prep_from_get_prep: dict = self.get_prep(str(self._addr_array[index]))
+        prep_from_get_prep: dict = self.get_prep(self._accounts[index])
 
         # get prep list
         response: dict = self.get_prep_list(1, 1)
@@ -87,8 +89,8 @@ class TestPreps(TestIISSBase):
         prep: dict = preps[0]
         self.assertEqual(1, len(preps))
         self.assertIsInstance(preps, list)
-        self.assertEqual(self._addr_array[index], prep["address"])
-        self.assertEqual(f"node{self._addr_array[index]}", prep["name"])
+        self.assertEqual(self._accounts[index].address, prep["address"])
+        self.assertEqual(f"node{self._accounts[index].address}", prep["name"])
         self.assertEqual(delegation_amount, prep["delegated"])
         self.assertIsInstance(PRepGrade(prep["grade"]), PRepGrade)
         for key in ("name", "country", "city", "delegated", "grade", "totalBlocks", "validatedBlocks"):
@@ -101,10 +103,11 @@ class TestPreps(TestIISSBase):
         expected_preps: list = []
         for i in range(1, PREP_MAIN_PREPS):
             expected_preps.append({
-                "address": self._addr_array[i],
+                "address": self._accounts[i].address,
                 "delegated": 0
             })
-        expected_preps.insert(0, {"address": self._addr_array[PREP_MAIN_PREPS], "delegated": delegation_amount})
+        expected_preps.insert(0, {"address": self._accounts[PREP_MAIN_PREPS].address,
+                                  "delegated": delegation_amount})
 
         response: dict = self.get_main_prep_list()
         expected_response: dict = \
@@ -117,70 +120,87 @@ class TestPreps(TestIISSBase):
     def test_low_productivity(self):
 
         # get totalBlocks in main prep
-        response: dict = self.get_prep(self._addr_array[0])
+        response: dict = self.get_prep(self._accounts[0])
         total_blocks: int = response['totalBlocks']
 
         # make blocks with prev_block_generator and prev_block_validators
         block_count: int = 20
         for i in range(block_count):
-            prev_block, tx_results = self._make_and_req_block(
+            prev_block, hash_list = self.make_and_req_block(
                 [],
-                prev_block_generator=self._addr_array[0],
-                prev_block_validators=[self._addr_array[1], self._addr_array[2]])
+                prev_block_generator=self._accounts[0].address,
+                prev_block_validators=[self._accounts[1].address,
+                                       self._accounts[2].address])
+
             self._write_precommit_state(prev_block)
+            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         for i in range(3):
-            response: dict = self.get_prep(self._addr_array[i])
+            response: dict = self.get_prep(self._accounts[i])
             self.assertEqual(total_blocks + block_count, response["totalBlocks"])
             self.assertEqual(block_count, response["validatedBlocks"])
 
-        response: dict = self.get_prep(self._addr_array[3])
+        response: dict = self.get_prep(self._accounts[3])
         self.assertEqual(total_blocks + block_count, response["totalBlocks"])
         self.assertEqual(0, response["validatedBlocks"])
 
     @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 80)
     def test_low_productivity_penalty1(self):
-        # get totalBlocks in main prep
-        response: dict = self.get_prep(self._addr_array[0])
-        total_blocks: int = response['totalBlocks']
         prep_penalty_event_logs: list = []
         _MAXIMUM_COUNT_FOR_ISSUE_EVENT_LOG = 5
         _STEADY_PREPS_COUNT = 13
         _UNCOOPERATIVE_PREP_COUNT = PREP_MAIN_PREPS - _STEADY_PREPS_COUNT
 
+        offset: int = PREP_MAIN_PREPS
+
         expected_penalty_event_log_data = [PRepStatus.LOW_PRODUCTIVITY.value, 0]
         expected_penalty_event_logs = [EventLog(ZERO_SCORE_ADDRESS,
-                                                [PREP_PENALTY_SIGNATURE, prep],
+                                                [PREP_PENALTY_SIGNATURE, prep.address],
                                                 expected_penalty_event_log_data)
-                                       for prep in self._addr_array[_STEADY_PREPS_COUNT:PREP_MAIN_PREPS]]
+                                       for prep in self._accounts[
+                                                   offset + _STEADY_PREPS_COUNT:
+                                                   offset + PREP_MAIN_PREPS]]
         initial_main_preps_info = self.get_main_prep_list()['preps']
         initial_main_preps = list(map(lambda prep_dict: prep_dict['address'], initial_main_preps_info))
-        for prep in self._addr_array[:PREP_MAIN_PREPS]:
-            self.assertIn(prep, initial_main_preps)
+        for prep in self._accounts[:PREP_MAIN_PREPS]:
+            self.assertIn(prep.address, initial_main_preps)
+
+        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=3000 * ICX_IN_LOOP)
+
+        # replace new preps
+        tx_list = []
+        for i in range(PREP_MAIN_PREPS, len(self._accounts)):
+            tx = self.create_register_prep_tx(from_=self._accounts[i])
+            tx_list.append(tx)
+            tx = self.create_set_stake_tx(from_=self._accounts[i],
+                                          value=1)
+            tx_list.append(tx)
+            tx = self.create_set_delegation_tx(from_=self._accounts[i],
+                                               origin_delegations=[
+                                                   (
+                                                       self._accounts[i],
+                                                       1
+                                                   )
+                                               ])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        self.make_blocks_to_end_calculation()
 
         block_count = 90
-        tx_list = []
-        for i in range(PREP_MAIN_PREPS, len(self._addr_array)):
-            tx = self._make_icx_send_tx(self._genesis, self._addr_array[i], 3000 * ICX_IN_LOOP)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
-
-        tx_list = []
-        for i in range(PREP_MAIN_PREPS, len(self._addr_array)):
-            tx = self.create_register_prep_tx(self._addr_array[i],
-                                              public_key=f"0x{self.public_key_array[i].hex()}")
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
-
         # make blocks with prev_block_generator and prev_block_validators
         for i in range(block_count):
-            prev_block, tx_results = self._make_and_req_block(
+            prev_block, hash_list = self.make_and_req_block(
                 [],
-                prev_block_generator=self._addr_array[0],
-                prev_block_validators=self._addr_array[1:_STEADY_PREPS_COUNT])
+                prev_block_generator=self._accounts[PREP_MAIN_PREPS].address,
+                prev_block_validators=[account.address
+                                       for account in self._accounts[
+                                                      PREP_MAIN_PREPS + 1:
+                                                      PREP_MAIN_PREPS + _STEADY_PREPS_COUNT]])
             self._write_precommit_state(prev_block)
+            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+
             if len(tx_results[BASE_TRANSACTION_INDEX].event_logs) > _MAXIMUM_COUNT_FOR_ISSUE_EVENT_LOG:
                 event_logs = tx_results[BASE_TRANSACTION_INDEX].event_logs
                 for event_log in event_logs:
@@ -188,18 +208,18 @@ class TestPreps(TestIISSBase):
                         prep_penalty_event_logs.append(event_log)
 
         # uncooperative preps got penalty on 90th block since PENALTY_GRACE_PERIOD is 80
-        for i in range(_STEADY_PREPS_COUNT):
-            response: dict = self.get_prep(self._addr_array[i])
+        for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + _STEADY_PREPS_COUNT):
+            response: dict = self.get_prep(self._accounts[i])
             expected_response: dict = \
                 {
-                    "totalBlocks": total_blocks + block_count + 2,
+                    "totalBlocks": block_count,
                     "validatedBlocks": block_count
                 }
             self.assertEqual(expected_response['totalBlocks'], response['totalBlocks'])
             self.assertEqual(expected_response['validatedBlocks'], response['validatedBlocks'])
 
-        for i in range(_STEADY_PREPS_COUNT, PREP_MAIN_PREPS):
-            response: dict = self.get_prep(self._addr_array[i])
+        for i in range(PREP_MAIN_PREPS + _STEADY_PREPS_COUNT, PREP_MAIN_PREPS + PREP_MAIN_PREPS):
+            response: dict = self.get_prep(self._accounts[i])
             expected_response: dict = \
                 {
                     "totalBlocks": block_count,
@@ -212,16 +232,23 @@ class TestPreps(TestIISSBase):
         main_preps = list(map(lambda prep_dict: prep_dict['address'], main_preps_info))
 
         # prep0~12 are still prep
-        for index, prep in enumerate(self._addr_array[:_STEADY_PREPS_COUNT]):
-            self.assertEqual(prep, main_preps[index])
+        for index, prep in enumerate(self._accounts[
+                                     offset:
+                                     offset + _STEADY_PREPS_COUNT]):
+            self.assertEqual(prep.address, main_preps[index])
 
         # prep13~21 got penalty
-        for prep in self._addr_array[_STEADY_PREPS_COUNT:PREP_MAIN_PREPS]:
+        for prep in self._accounts[
+                    offset + _STEADY_PREPS_COUNT:
+                    offset + PREP_MAIN_PREPS]:
             self.assertNotIn(prep, main_preps)
 
         # prep22~30 became new preps(14th prep ~ 22th prep)
-        for index, prep in enumerate(self._addr_array[PREP_MAIN_PREPS:PREP_MAIN_PREPS + _UNCOOPERATIVE_PREP_COUNT]):
-            self.assertEqual(prep, main_preps[index + PREP_MAIN_PREPS - _UNCOOPERATIVE_PREP_COUNT])
+        for index, prep in enumerate(self._accounts[
+                                     offset + PREP_MAIN_PREPS:
+                                     offset + PREP_MAIN_PREPS + _UNCOOPERATIVE_PREP_COUNT]):
+            self.assertEqual(prep.address,
+                             main_preps[index + PREP_MAIN_PREPS - _UNCOOPERATIVE_PREP_COUNT])
 
         for index, expected_event_log in enumerate(expected_penalty_event_logs):
             self.assertEqual(expected_event_log.indexed[0], prep_penalty_event_logs[index].indexed[0])
@@ -229,14 +256,16 @@ class TestPreps(TestIISSBase):
             self.assertEqual(expected_event_log.data, prep_penalty_event_logs[index].data)
 
     def test_set_governance_variables1(self):
-        origin_irep: int = IISS_INITIAL_IREP
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], origin_irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
 
-        response: dict = self.get_prep(self._addr_array[0])
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=10000 * ICX_IN_LOOP)
+
+        origin_irep: int = IISS_INITIAL_IREP
+        tx: dict = self.create_set_governance_variables(from_=self._accounts[0],
+                                                        irep=origin_irep)
+        self.process_confirm_block_tx([tx])
+
+        response: dict = self.get_prep(self._accounts[0])
         expected_irep: int = origin_irep
         expected_update_block_height: int = self._block_height
         self.assertEqual(expected_irep, response['irep'])
@@ -245,27 +274,24 @@ class TestPreps(TestIISSBase):
         self.make_blocks_to_end_calculation()
 
         irep: int = origin_irep * 12 // 10
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        tx: dict = self.create_set_governance_variables(self._accounts[0], irep)
+        self.process_confirm_block_tx([tx])
 
-        response: dict = self.get_prep(self._addr_array[0])
+        response: dict = self.get_prep(self._accounts[0])
         expected_irep: int = irep
         expected_update_block_height: int = self._block_height
         self.assertEqual(expected_irep, response['irep'])
         self.assertEqual(expected_update_block_height, response['irepUpdateBlockHeight'])
 
     def test_set_governance_variables2(self):
-        origin_irep: int = IISS_INITIAL_IREP
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], origin_irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=10000 * ICX_IN_LOOP)
 
-        response: dict = self.get_prep(self._addr_array[0])
+        origin_irep: int = IISS_INITIAL_IREP
+        tx: dict = self.create_set_governance_variables(self._accounts[0], origin_irep)
+        self.process_confirm_block_tx([tx])
+
+        response: dict = self.get_prep(self._accounts[0])
         expected_irep: int = origin_irep
         expected_update_block_height: int = self._block_height
         self.assertEqual(expected_irep, response['irep'])
@@ -273,39 +299,43 @@ class TestPreps(TestIISSBase):
 
         # term validate
         irep: int = origin_irep
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx: dict = self.create_set_governance_variables(self._accounts[0], irep)
+        prev_block, hash_list = self.make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual(int(False), tx_results[1].status)
-        self._write_precommit_state(prev_block)
 
         self.make_blocks_to_end_calculation()
 
         # 20% below
         irep: int = origin_irep * 8 - 1 // 10
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx: dict = self.create_set_governance_variables(self._accounts[0], irep)
+        prev_block, hash_list = self.make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual(int(False), tx_results[1].status)
-        self._write_precommit_state(prev_block)
 
         # 20 above
         irep: int = origin_irep * 12 + 1 // 10
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx: dict = self.create_set_governance_variables(self._accounts[0], irep)
+        prev_block, tx_results = self.make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual(int(False), tx_results[1].status)
-        self._write_precommit_state(prev_block)
 
     def test_set_governance_variables3(self):
-        origin_irep: int = IISS_INITIAL_IREP
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], origin_irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=10000 * ICX_IN_LOOP)
 
-        response: dict = self.get_prep(self._addr_array[0])
+        origin_irep: int = IISS_INITIAL_IREP
+        tx: dict = self.create_set_governance_variables(from_=self._accounts[0],
+                                                        irep=origin_irep)
+        self.process_confirm_block_tx([tx])
+
+        response: dict = self.get_prep(self._accounts[0])
         expected_irep: int = origin_irep
         expected_update_block_height: int = self._block_height
         self.assertEqual(expected_irep, response['irep'])
@@ -318,52 +348,55 @@ class TestPreps(TestIISSBase):
             self.make_blocks_to_end_calculation()
 
             irep: int = irep * 12 // 10
-            tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            for tx_result in tx_results:
-                self.assertEqual(int(True), tx_result.status)
-            self._write_precommit_state(prev_block)
+            tx: dict = self.create_set_governance_variables(from_=self._accounts[0],
+                                                            irep=irep)
+            self.process_confirm_block_tx([tx])
 
         # max totalsupply limitation
         self.make_blocks_to_end_calculation()
         irep: int = irep * 12 // 10
-        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx: dict = self.create_set_governance_variables(from_=self._accounts[0],
+                                                        irep=irep)
+        prev_block, hash_list = self.make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual(int(False), tx_results[1].status)
-        self._write_precommit_state(prev_block)
 
     def test_weighted_average_of_irep(self):
+        self.distribute_icx(accounts=self._accounts[:2] + self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        tx_list = []
+        for account in self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2]:
+            tx = self.create_set_stake_tx(from_=account,
+                                          value=3)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
 
         delegation1: int = 1
-        tx1: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS],
-                                                 [
-                                                     (
-                                                         self._addr_array[0],
-                                                         delegation1
-                                                     )
-                                                 ])
-        delegation2: int = 3
-        tx2: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + 1],
-                                                  [
+        tx1: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS],
+                                                  origin_delegations=[
                                                       (
-                                                          self._addr_array[1],
+                                                          self._accounts[0],
+                                                          delegation1
+                                                      )
+                                                  ])
+        delegation2: int = 3
+        tx2: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + 1],
+                                                  origin_delegations=[
+                                                      (
+                                                          self._accounts[1],
                                                           delegation2
                                                       )
                                                   ])
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx([tx1, tx2])
 
         irep1: int = IISS_INITIAL_IREP * 12 // 10
-        tx1: dict = self.create_set_governance_variables(self._addr_array[0], irep1)
+        tx1: dict = self.create_set_governance_variables(self._accounts[0], irep1)
         irep2: int = IISS_INITIAL_IREP * 8 // 10
-        tx2: dict = self.create_set_governance_variables(self._addr_array[1], irep2)
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        tx2: dict = self.create_set_governance_variables(self._accounts[1], irep2)
+        self.process_confirm_block_tx([tx1, tx2])
 
         self.make_blocks_to_end_calculation()
 
@@ -378,36 +411,41 @@ class TestPreps(TestIISSBase):
         self.assertEqual(response['nextCalculation'], response['nextPRepTerm'])
 
     def test_register_prep_apply_terms_irep(self):
+        self.distribute_icx(accounts=self._accounts[:2] + self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        tx_list = []
+        for account in self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2]:
+            tx = self.create_set_stake_tx(from_=account,
+                                          value=3)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
 
         delegation1: int = 1
-        tx1: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS],
-                                                  [
+        tx1: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS],
+                                                  origin_delegations=[
                                                       (
-                                                          self._addr_array[0],
+                                                          self._accounts[0],
                                                           delegation1
                                                       )
                                                   ])
         delegation2: int = 3
-        tx2: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + 1],
-                                                  [
+        tx2: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + 1],
+                                                  origin_delegations=[
                                                       (
-                                                          self._addr_array[1],
+                                                          self._accounts[1],
                                                           delegation2
                                                       )
                                                   ])
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx([tx1, tx2])
 
         irep1: int = IISS_INITIAL_IREP * 12 // 10
-        tx1: dict = self.create_set_governance_variables(self._addr_array[0], irep1)
+        tx1: dict = self.create_set_governance_variables(from_=self._accounts[0],
+                                                         irep=irep1)
         irep2: int = IISS_INITIAL_IREP * 8 // 10
-        tx2: dict = self.create_set_governance_variables(self._addr_array[1], irep2)
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        tx2: dict = self.create_set_governance_variables(from_=self._accounts[1],
+                                                         irep=irep2)
+        self.process_confirm_block_tx([tx1, tx2])
 
         self.make_blocks_to_end_calculation()
 
@@ -418,14 +456,10 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_avg_irep, response['variable']['irep'])
 
         # register new user
-        tx: dict = self.create_register_prep_tx(self._addr_array[PREP_MAIN_PREPS + 1],
-                                                public_key=f"0x{self.public_key_array[PREP_MAIN_PREPS + 1].hex()}")
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.register_prep(from_=self._accounts[PREP_MAIN_PREPS + 1])
 
         expected_block_height: int = self._block_height
 
-        response: dict = self.get_prep(self._addr_array[PREP_MAIN_PREPS + 1])
+        response: dict = self.get_prep(self._accounts[PREP_MAIN_PREPS + 1])
         self.assertEqual(expected_avg_irep, response['irep'])
         self.assertEqual(expected_block_height, response['irepUpdateBlockHeight'])

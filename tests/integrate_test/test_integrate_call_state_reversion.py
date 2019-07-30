@@ -17,109 +17,73 @@
 """IconScoreEngine testcase
 """
 
-import unittest
+from typing import List, TYPE_CHECKING
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
+    from iconservice.base.address import Address
+
 
 class TestIntegrateCallStateReversion(TestIntegrateBase):
-
     def test_invoke_chain(self):
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'E'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_e = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'E'
+                                                                  })
+        score_e: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'D',
-                    '_nextAddress': str(score_e),
-                    '_nextFunction': 'invoke'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_d = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'D',
+                                                                      '_nextAddress': str(score_e),
+                                                                      '_nextFunction': 'invoke'
+                                                                  })
+        score_d: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'C',
-                    '_nextAddress': str(score_d),
-                    '_nextFunction': 'invoke',
-                    '_shouldHandleException': '0x1'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_c = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'C',
+                                                                      '_nextAddress': str(score_d),
+                                                                      '_nextFunction': 'invoke',
+                                                                      '_shouldHandleException': '0x1'
+                                                                  })
+        score_c: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'B',
-                    '_nextAddress': str(score_c),
-                    '_nextFunction': 'invoke'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_b = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'B',
+                                                                      '_nextAddress': str(score_c),
+                                                                      '_nextFunction': 'invoke'
+                                                                  })
+        score_b: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'A',
-                    '_nextAddress': str(score_b),
-                    '_nextFunction': 'invoke'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_a = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'A',
+                                                                      '_nextAddress': str(score_b),
+                                                                      '_nextFunction': 'invoke'
+                                                                  })
+        score_a: 'Address' = tx_results[0].score_address
 
         value = 100 * ICX_IN_LOOP
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_score_call_tx(
-                self._genesis,
-                score_a,
-                'invoke',
-                {},
-                value)
-        ])
-
-        self._write_precommit_state(prev_block)
-
-        # Checks if the result is successful
-        self.assertEqual(tx_results[0].status, True)
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=score_a,
+                                                                func_name="invoke",
+                                                                params={},
+                                                                value=value)
 
         # Changes in A is OK
         response = self._query(
@@ -132,8 +96,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, True)
-        response = self._query({"address": score_a}, 'icx_getBalance')
-        self.assertNotEqual(response, 0)
+
+        balance: int = self.get_balance(score_a)
+        self.assertNotEqual(response, balance)
 
         # Changes in B is OK
         response = self._query(
@@ -146,8 +111,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, True)
-        response = self._query({"address": score_b}, 'icx_getBalance')
-        self.assertNotEqual(response, 0)
+
+        balance: int = self.get_balance(score_b)
+        self.assertNotEqual(response, balance)
 
         # Changes in C is OK
         response = self._query(
@@ -160,8 +126,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, True)
-        response = self._query({"address": score_c}, 'icx_getBalance')
-        self.assertNotEqual(response, 0)
+
+        balance: int = self.get_balance(score_c)
+        self.assertNotEqual(response, balance)
 
         # Changes in D is reverted
         response = self._query(
@@ -174,8 +141,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, False)
-        response = self._query({"address": score_d}, 'icx_getBalance')
-        self.assertEqual(response, 0)
+
+        balance: int = self.get_balance(score_d)
+        self.assertEqual(response, balance)
 
         # Changes in E is reverted
         response = self._query(
@@ -188,8 +156,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, False)
-        response = self._query({"address": score_d}, 'icx_getBalance')
-        self.assertEqual(response, 0)
+
+        balance: int = self.get_balance(score_e)
+        self.assertEqual(response, balance)
 
         events_data = [x.data for x in tx_results[0].event_logs if x.indexed[0] == 'Event(str,str,Address)']
         score_names_event_occurred = [x[0] for x in events_data]
@@ -209,99 +178,61 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
         self.assertEqual(events_data[2][2], events_data[3][2])
 
     def test_invoke_query_mixed(self):
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'E'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_e = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'E'
+                                                                  })
+        score_e: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'D',
-                    '_nextAddress': str(score_e),
-                    '_nextFunction': 'query'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_d = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'D',
+                                                                      '_nextAddress': str(score_e),
+                                                                      '_nextFunction': 'invoke'
+                                                                  })
+        score_d: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'C',
-                    '_nextAddress': str(score_d),
-                    '_nextFunction': 'invoke',
-                    '_shouldHandleException': '0x1'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_c = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'C',
+                                                                      '_nextAddress': str(score_d),
+                                                                      '_nextFunction': 'invoke',
+                                                                      '_shouldHandleException': '0x1'
+                                                                  })
+        score_c: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'B',
-                    '_nextAddress': str(score_c),
-                    '_nextFunction': 'invoke'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_b = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'B',
+                                                                      '_nextAddress': str(score_c),
+                                                                      '_nextFunction': 'invoke'
+                                                                  })
+        score_b: 'Address' = tx_results[0].score_address
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx(
-                "sample_score_call_state_reversion",
-                "sample_score",
-                self._addr_array[0],
-                ZERO_SCORE_ADDRESS,
-                {
-                    '_name': 'A',
-                    '_nextAddress': str(score_b),
-                    '_nextFunction': 'invoke'
-                })
-        ])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_a = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
+                                                                  "sample_score",
+                                                                  self._accounts[0],
+                                                                  deploy_params={
+                                                                      '_name': 'A',
+                                                                      '_nextAddress': str(score_b),
+                                                                      '_nextFunction': 'invoke'
+                                                                  })
+        score_a: 'Address' = tx_results[0].score_address
 
         value = 100 * ICX_IN_LOOP
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_score_call_tx(
-                self._genesis,
-                score_a,
-                'invoke',
-                {},
-                value)
-        ])
-
-        self._write_precommit_state(prev_block)
-
-        # Checks if the result is successful
-        self.assertEqual(tx_results[0].status, True)
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=score_a,
+                                                                func_name="invoke",
+                                                                params={},
+                                                                value=value)
 
         # Changes in A is OK
         response = self._query(
@@ -314,8 +245,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, True)
-        response = self._query({"address": score_a}, 'icx_getBalance')
-        self.assertNotEqual(response, 0)
+
+        balance: int = self.get_balance(score_a)
+        self.assertNotEqual(response, balance)
 
         # Changes in B is OK
         response = self._query(
@@ -328,8 +260,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, True)
-        response = self._query({"address": score_b}, 'icx_getBalance')
-        self.assertNotEqual(response, 0)
+
+        balance: int = self.get_balance(score_b)
+        self.assertNotEqual(response, balance)
 
         # Changes in C is OK
         response = self._query(
@@ -342,8 +275,9 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, True)
-        response = self._query({"address": score_c}, 'icx_getBalance')
-        self.assertNotEqual(response, 0)
+
+        balance: int = self.get_balance(score_c)
+        self.assertNotEqual(response, balance)
 
         # Changes in D is reverted
         response = self._query(
@@ -356,12 +290,12 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
             }
         )
         self.assertEqual(response, False)
-        response = self._query({"address": score_d}, 'icx_getBalance')
-        self.assertEqual(response, 0)
+        balance: int = self.get_balance(score_d)
+        self.assertEqual(response, balance)
 
         # Changes in E is reverted
-        response = self._query({"address": score_d}, 'icx_getBalance')
-        self.assertEqual(response, 0)
+        balance: int = self.get_balance(score_e)
+        self.assertEqual(response, balance)
 
         events_data = [x.data for x in tx_results[0].event_logs if x.indexed[0] == 'Event(str,str,Address)']
         score_names_event_occurred = [x[0] for x in events_data]
@@ -379,7 +313,3 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
         self.assertEqual(events_data[0][2], events_data[5][2])
         self.assertEqual(events_data[1][2], events_data[4][2])
         self.assertEqual(events_data[2][2], events_data[3][2])
-
-
-if __name__ == '__main__':
-    unittest.main()

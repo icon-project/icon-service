@@ -16,38 +16,33 @@
 
 """IconScoreEngine testcase
 """
-
+from typing import TYPE_CHECKING, List
 from unittest.mock import Mock
 
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
+
 
 class TestIISSClaim(TestIISSBase):
-
     def test_iiss_claim(self):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         # gain 100 icx
         balance: int = 100 * ICX_IN_LOOP
-        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=balance)
 
         # stake 10 icx
         stake: int = 10 * ICX_IN_LOOP
-        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_stake(from_=self._accounts[0],
+                       value=stake)
 
         # set delegation 1 icx addr0 ~ addr9
         delegation_amount: int = 1 * ICX_IN_LOOP
@@ -57,15 +52,13 @@ class TestIISSClaim(TestIISSBase):
         for i in range(IISS_MAX_DELEGATIONS):
             delegation_info: tuple = \
                 (
-                    self._addr_array[start_index + i],
+                    self._accounts[start_index + i],
                     delegation_amount
                 )
             delegations.append(delegation_info)
             total_delegating += delegation_amount
-        tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_delegation(from_=self._accounts[0],
+                            origin_delegations=delegations)
 
         # claim mocking
         block_height = 10 ** 2
@@ -77,10 +70,7 @@ class TestIISSClaim(TestIISSBase):
         treasury_balance_before_claim: int = self.get_balance(self._fee_treasury)
 
         # claim iscore
-        tx: dict = self.create_claim_tx(self._addr_array[0])
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
 
         accumulative_fee = tx_results[0].step_price * tx_results[0].step_used
         # query mocking
@@ -90,7 +80,7 @@ class TestIISSClaim(TestIISSBase):
         RewardCalcProxy.query_iscore = Mock(return_value=(iscore, block_height))
 
         # query iscore
-        response: dict = self.query_iscore(self._addr_array[0])
+        response: dict = self.query_iscore(self._accounts[0])
         expected_response = {
             "blockHeight": block_height,
             "estimatedICX": icx,

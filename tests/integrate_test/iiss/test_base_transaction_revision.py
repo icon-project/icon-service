@@ -14,17 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TYPE_CHECKING, List
 
-from iconservice.icon_constant import REV_IISS, \
-    IconScoreContextType
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import REV_IISS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIISSBaseTransactionRevision(TestIISSBase):
 
     def _create_dummy_tx(self):
-        return self._make_icx_send_tx(self._genesis, self._admin, 0)
+        return self.create_transfer_icx_tx(self._admin, self._genesis, 0)
 
     def _create_dummy_base_transaction(self):
         dummy_base_transacion = {
@@ -46,8 +48,9 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         tx_list = [
             self._create_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
         self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 
@@ -55,8 +58,9 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         tx_list = [
             self._create_dummy_tx(),
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
         self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 
@@ -73,16 +77,15 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         # success case: when isBlockEditable is false, block which does not have base tx should be invoked successfully.
         tx_list = [
             self._create_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
         self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 
@@ -90,8 +93,9 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         tx_list = [
             self._create_dummy_tx(),
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
         self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 

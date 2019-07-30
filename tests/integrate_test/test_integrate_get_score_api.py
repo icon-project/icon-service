@@ -17,43 +17,35 @@
 """IconScoreEngine testcase
 """
 
-import unittest
+from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
+    from iconservice.iconscore.icon_score_result import TransactionResult
+
 
 class TestIntegrateGetScoreApi(TestIntegrateBase):
 
     def test_get_score_api(self):
-        tx1 = self._make_deploy_tx("get_api",
-                                   "get_api1",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="get_api",
+                                                score_name="get_api1",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="get_api",
+                                                score_name="get_api2",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        tx2 = self._make_deploy_tx("get_api",
-                                   "get_api2",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        query_request = {
-            "address": score_addr1
-        }
-        response1 = self._query(query_request, 'icx_getScoreApi')
-
-        query_request = {
-            "address": score_addr2
-        }
-        response2 = self._query(query_request, 'icx_getScoreApi')
+        response1: dict = self.get_score_api(score_addr1)
+        response2: dict = self.get_score_api(score_addr2)
 
         expect_value1 = [
             {
@@ -171,49 +163,31 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         self.assertEqual(response2, expect_value2)
 
     def test_get_score_api_update(self):
-        tx1 = self._make_deploy_tx("get_api",
-                                   "get_api1",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="get_api",
+                                                score_name="get_api1",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="get_api",
+                                                score_name="get_api2",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        tx2 = self._make_deploy_tx("get_api",
-                                   "get_api2",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        self._write_precommit_state(prev_block)
+        tx1: dict = self.create_deploy_score_tx(score_root="get_api",
+                                                score_name="get_api1_update",
+                                                from_=self._accounts[0],
+                                                to_=score_addr1)
+        tx2: dict = self.create_deploy_score_tx(score_root="get_api",
+                                                score_name="get_api2_update",
+                                                from_=self._accounts[0],
+                                                to_=score_addr2)
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_deploy_tx("get_api",
-                                   "get_api1_update",
-                                   self._addr_array[0],
-                                   score_addr1)
-
-        tx4 = self._make_deploy_tx("get_api",
-                                   "get_api2_update",
-                                   self._addr_array[0],
-                                   score_addr2)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-
-        query_request = {
-            "address": score_addr1
-        }
-        response1 = self._query(query_request, 'icx_getScoreApi')
-
-        query_request = {
-            "address": score_addr2
-        }
-        response2 = self._query(query_request, 'icx_getScoreApi')
+        self.process_confirm_block_tx([tx1, tx2])
+        response1: dict = self.get_score_api(score_addr1)
+        response2: dict = self.get_score_api(score_addr2)
 
         expect_value1 = [
             {
@@ -363,21 +337,12 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         self.assertEqual(response2, expect_value2)
 
     def test_get_score_no_fallback(self):
-        tx1 = self._make_deploy_tx("get_api",
-                                   "get_api3",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="get_api",
+                                                                  score_name="get_api3",
+                                                                  from_=self._accounts[0])
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        query_request = {
-            "address": score_addr1
-        }
-        response1 = self._query(query_request, 'icx_getScoreApi')
+        score_addr1: 'Address' = tx_results[0].score_address
+        response1: dict = self.get_score_api(score_addr1)
 
         expect_value1 = [
             {
@@ -410,18 +375,9 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         ]
         self.assertEqual(response1, expect_value1)
 
-        tx2 = self._make_deploy_tx("get_api",
-                                   "get_api4",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-
         raise_exception_start_tag("test_get_score_no_fallback")
-        prev_block, tx_results = self._make_and_req_block([tx2])
+        self.deploy_score(score_root="get_api",
+                          score_name="get_api4",
+                          from_=self._accounts[0],
+                          expected_status=False)
         raise_exception_end_tag("test_get_score_no_fallback")
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
-
-
-if __name__ == '__main__':
-    unittest.main()

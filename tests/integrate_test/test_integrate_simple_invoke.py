@@ -17,10 +17,8 @@
 """IconScoreEngine testcase
 """
 
-import unittest
-
 from iconservice.base.address import MalformedAddress
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -65,109 +63,80 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
 
     def test_invoke_success(self):
         value1 = 3 * ICX_IN_LOOP
-        tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self.transfer_icx(from_=self._admin,
+                          to_=self._accounts[0],
+                          value=value1)
 
         value2 = 2 * ICX_IN_LOOP
-        tx2 = self._make_icx_send_tx(self._addr_array[0], self._addr_array[1], value2)
+        self.transfer_icx(from_=self._accounts[0],
+                          to_=self._accounts[1],
+                          value=value2)
 
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-        query_request = {
-            "address": self._addr_array[0]
-        }
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, value1 - value2)
-
-        query_request = {
-            "address": self._addr_array[1]
-        }
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, value2)
+        self.assertEqual(value1 - value2, self.get_balance(self._accounts[0]))
+        self.assertEqual(value2, self.get_balance(self._accounts[1]))
 
     def test_make_invalid_block_height(self):
         value1 = 1 * ICX_IN_LOOP
 
         # have to NextBlockHeight[2] != LastBlockHeight[0] + 1 (32000)
 
-        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
-        with self.assertRaises(BaseException) as e:
-            self._make_and_req_block([tx], block_height=0)
+        tx = self.create_transfer_icx_tx(from_=self._admin,
+                                         to_=self._accounts[0],
+                                         value=value1)
+        with self.assertRaises(InvalidParamsException) as e:
+            self.make_and_req_block([tx], block_height=0)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIn(f"Failed to invoke a block", e.exception.message)
 
-        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
-        with self.assertRaises(BaseException) as e:
-            self._make_and_req_block([tx], block_height=2)
+        tx = self.create_transfer_icx_tx(from_=self._admin,
+                                         to_=self._accounts[0],
+                                         value=value1)
+        with self.assertRaises(InvalidParamsException) as e:
+            self.make_and_req_block([tx], block_height=2)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIn(f"Failed to invoke a block", e.exception.message)
 
-        query_request = {
-            "address": self._addr_array[0]
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 0)
+        self.assertEqual(0, self.get_balance(self._accounts[0]))
 
     def test_make_invalid_block_hash(self):
         value1 = 1 * ICX_IN_LOOP
 
-        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
-        prev_block, tx_results = self._make_and_req_block([tx], block_height=1)
+        tx = self.create_transfer_icx_tx(from_=self._admin,
+                                         to_=self._accounts[0],
+                                         value=value1)
+        prev_block, tx_list = self.make_and_req_block([tx], block_height=1)
 
         # modulate blockHash
         invalid_block = self._create_invalid_block(prev_block.height)
-        with self.assertRaises(BaseException) as e:
+        with self.assertRaises(InvalidParamsException) as e:
             self._write_precommit_state(invalid_block)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIn("No precommit data:", e.exception.message)
 
-        query_request = {
-            "address": self._addr_array[0]
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 0)
+        self.assertEqual(0, self.get_balance(self._accounts[0]))
 
     def test_send_icx_using_malformed_address1(self):
         value1 = 1 * ICX_IN_LOOP
 
         malformed_address = MalformedAddress.from_string("hx1234")
-        tx = self._make_icx_send_tx(self._genesis, malformed_address, value1,
-                                    disable_pre_validate=True, support_v2=True)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        tx = self.create_transfer_icx_tx(from_=self._admin,
+                                         to_=malformed_address,
+                                         value=value1,
+                                         disable_pre_validate=True,
+                                         support_v2=True)
+        self.process_confirm_block_tx([tx])
 
-        query_request = {
-            "address": malformed_address
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, value1)
+        self.assertEqual(value1, self.get_balance(malformed_address))
 
     def test_send_icx_using_malformed_address2(self):
         value1 = 1 * ICX_IN_LOOP
 
         malformed_address = MalformedAddress.from_string("11")
-        tx = self._make_icx_send_tx(self._genesis, malformed_address, value1,
-                                    disable_pre_validate=True, support_v2=True)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        tx = self.create_transfer_icx_tx(from_=self._admin,
+                                         to_=malformed_address,
+                                         value=value1,
+                                         disable_pre_validate=True,
+                                         support_v2=True)
+        self.process_confirm_block_tx([tx])
 
-        query_request = {
-            "address": malformed_address
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, value1)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(value1, self.get_balance(malformed_address))
