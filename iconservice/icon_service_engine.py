@@ -18,7 +18,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -68,6 +67,7 @@ if TYPE_CHECKING:
     from iconcommons.icon_config import IconConfig
     from .prep.data import PRep, PRepContainer
     from .iiss.storage import RewardRate
+    from .prep.term import Term
 
 
 class IconServiceEngine(ContextContainer):

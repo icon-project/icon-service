@@ -33,7 +33,7 @@ path_pattern = r'(\/\S*)?$'
 port_regex = r'(:[0-9]{1,5})?'
 ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
 host_name_regex = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])'
-email_regex = '^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@'+host_name_regex+'$'
+email_regex = '^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@' + host_name_regex + '$'
 ENDPOINT_DOMAIN_NAME_PATTERN = re.compile(f'^{host_name_regex}{port_regex}$')
 ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
 WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
@@ -82,7 +82,6 @@ def _validate_prep_public_key(public_key: bytes, address: 'Address'):
 
 
 def _validate_p2p_endpoint(p2p_endpoint: str):
-
     network_locate_info = p2p_endpoint.split(":")
 
     if len(network_locate_info) != 2:

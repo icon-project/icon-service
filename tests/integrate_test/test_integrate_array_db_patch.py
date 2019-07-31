@@ -17,60 +17,20 @@
 """IconScoreEngine testcase
 """
 
-import unittest
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import REVISION_2, REVISION_3
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateArrayDBPatch(TestIntegrateBase):
-
-    def _update_governance(self):
-        tx = self._make_deploy_tx("sample_builtin",
-                                  "0_0_4/governance",
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-    def _deploy_score(self) -> Any:
-        address = ZERO_SCORE_ADDRESS
-        tx = self._make_deploy_tx("sample_scores",
-                                  "sample_array_db",
-                                  self._addr_array[0],
-                                  address,
-                                  deploy_params={})
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0].score_address
-
-    def _call_set_value(self, from_: 'Address', to: 'Address', step_limit=None):
-        tx = self._make_score_call_tx(from_,
-                                      to,
-                                      'set_values', {})
-
-        if step_limit:
-            tx['params']['stepLimit'] = step_limit
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def _external_call(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
-        tx = self._make_score_call_tx(from_addr, score_addr, func_name, params)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
     def test_array_db_defective(self):
-        self._update_governance()
+        self.update_governance("0_0_4")
 
         expected_status = {
             "code": REVISION_2,
@@ -79,7 +39,7 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
 
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
@@ -90,13 +50,14 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        score_address = self._deploy_score()
-        tx_result = self._call_set_value(self._addr_array[0], score_address)
-        self.assertEqual(tx_result.status, int(True))
-        tx_result = self._call_set_value(self._addr_array[1], score_address, 140519)
-        self.assertEqual(tx_result.status, int(False))
-        tx_result = self._call_set_value(self._addr_array[2], score_address)
-        self.assertEqual(tx_result.status, int(True))
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_scores",
+                                                                  "sample_array_db",
+                                                                  self._accounts[0])
+        score_address: 'Address' = tx_results[0].score_address
+
+        self.score_call(self._accounts[0], score_address, "set_values")
+        self.score_call(self._accounts[1], score_address, "set_values", step_limit=140519, expected_status=False)
+        self.score_call(self._accounts[2], score_address, "set_values")
 
         response = self._query(
             {
@@ -111,21 +72,16 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         self.assertEqual(len(response), 3)
 
     def test_array_db_patch(self):
-        self._update_governance()
-
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'setRevision',
-                                        {"code": hex(REVISION_3), "name": "1.1.1"})
-        self.assertEqual(tx_result.status, int(True))
+        self.update_governance("0_0_4")
+        self.set_revision(REVISION_3)
 
         expected_status = {
             "code": REVISION_3,
-            "name": "1.1.1"
+            "name": f"1.1.{REVISION_3}"
         }
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
@@ -136,13 +92,14 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        score_address = self._deploy_score()
-        tx_result = self._call_set_value(self._addr_array[0], score_address)
-        self.assertEqual(tx_result.status, int(True))
-        tx_result = self._call_set_value(self._addr_array[1], score_address, 140519)
-        self.assertEqual(tx_result.status, int(False))
-        tx_result = self._call_set_value(self._addr_array[2], score_address)
-        self.assertEqual(tx_result.status, int(True))
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_scores",
+                                                                  "sample_array_db",
+                                                                  self._accounts[0])
+        score_address: 'Address' = tx_results[0].score_address
+
+        self.score_call(self._accounts[0], score_address, "set_values")
+        self.score_call(self._accounts[1], score_address, "set_values", step_limit=140519, expected_status=False)
+        self.score_call(self._accounts[2], score_address, "set_values")
 
         response = self._query(
             {
@@ -155,7 +112,3 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         )
 
         self.assertEqual(len(response), 2)
-
-
-if __name__ == '__main__':
-    unittest.main()

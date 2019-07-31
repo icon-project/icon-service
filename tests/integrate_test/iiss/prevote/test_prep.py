@@ -16,17 +16,19 @@
 
 """IconScoreEngine testcase
 """
-import hashlib
-import os
 from copy import deepcopy
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus
 from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+from tests.integrate_test.test_integrate_base import EOAAccount
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 name = "prep"
 
@@ -52,40 +54,24 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        tx_list: list = []
-        for i in range(PREP_MAIN_PREPS):
-            tx: dict = self._make_icx_send_tx(self._genesis,
-                                              self._addr_array[i],
-                                              3000 * ICX_IN_LOOP)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=3000 * ICX_IN_LOOP)
 
         # register prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_register_prep_tx(self._addr_array[i],
-                                                    public_key=f"0x{self.public_key_array[i].hex()}")
+            tx: dict = self.create_register_prep_tx(self._accounts[i])
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         # get prep 0 ~ PREP_MAIN_PREPS
         register_block_height: int = self._block_height
         for i in range(PREP_MAIN_PREPS):
-            response: dict = self.get_prep(self._addr_array[i])
-            expected_params: dict = self.create_register_prep_params(self._addr_array[i],
-                                                                     f"0x{self.public_key_array[i].hex()}")
+            response: dict = self.get_prep(self._accounts[i])
+            expected_params: dict = self.create_register_prep_params(self._accounts[i])
             self.assertEqual(0, response["delegated"])
             self.assertEqual(0, response["stake"])
             self.assertEqual(self._config[ConfigKey.INITIAL_IREP], response["irep"])
@@ -101,18 +87,15 @@ class TestIntegratePrep(TestIISSBase):
         # set prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_prep_tx(self._addr_array[i], {"name": f"new{str(self._addr_array[i])}"})
+            tx: dict = self.create_set_prep_tx(from_=self._accounts[i],
+                                               set_data={"name": f"new{str(self._accounts[i])}"})
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         # get prep 0 ~ PREP_MAIN_PREPS
         for i in range(PREP_MAIN_PREPS):
-            response: dict = self.get_prep(self._addr_array[i])
-            expected_params: dict = self.create_register_prep_params(self._addr_array[i],
-                                                                     public_key=f"0x{self.public_key_array[i].hex()}")
+            response: dict = self.get_prep(self._accounts[i])
+            expected_params: dict = self.create_register_prep_params(self._accounts[i])
             expected_response: dict = {
                 "delegated": 0,
                 "stake": 0,
@@ -121,7 +104,7 @@ class TestIntegratePrep(TestIISSBase):
                 "irep": self._config[ConfigKey.INITIAL_IREP],
                 "irepUpdateBlockHeight": register_block_height,
                 "lastGenerateBlockHeight": -1,
-                "name": f"new{str(self._addr_array[i])}",
+                "name": f"new{str(self._accounts[i])}",
                 "country": expected_params["country"],
                 "city": expected_params["city"],
                 "p2pEndpoint": expected_params['p2pEndpoint'],
@@ -137,16 +120,13 @@ class TestIntegratePrep(TestIISSBase):
         # unregister prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_unregister_prep_tx(self._addr_array[i])
+            tx: dict = self.create_unregister_prep_tx(self._accounts[i])
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         response: dict = self.get_prep_list()
         expected_response: dict = {
-            "blockHeight": prev_block.height,
+            "blockHeight": self._block_height,
             "startRanking": 0,
             "totalDelegated": 0,
             "totalStake": 0,
@@ -158,37 +138,21 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         prep_count: int = 3000
-        public_key_list: list = [os.urandom(32) for _ in range(prep_count)]
-        address_list = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
-                        for public_key in public_key_list]
+        accounts: list = self.create_eoa_accounts(prep_count)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        tx_list: list = []
-        for i in range(prep_count):
-            tx: dict = self._make_icx_send_tx(self._genesis,
-                                              address_list[i],
-                                              3000 * ICX_IN_LOOP)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=accounts,
+                            init_balance=3000 * ICX_IN_LOOP)
 
         # register prep
         tx_list: list = []
         for i in range(prep_count):
-            tx: dict = self.create_register_prep_tx(address_list[i], public_key=f"0x{public_key_list[i].hex()}")
+            tx: dict = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         with self.assertRaises(InvalidParamsException) as e:
             self.get_prep_list(start_ranking=-1)
@@ -203,7 +167,7 @@ class TestIntegratePrep(TestIISSBase):
             self.get_prep_list(1, 0)
 
         with self.assertRaises(InvalidParamsException) as e:
-                self.get_prep_list(2, 1)
+            self.get_prep_list(2, 1)
 
         response: dict = self.get_prep_list(2, 2)
         actual_preps: list = response['preps']
@@ -217,55 +181,38 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        tx_list: list = []
-        for i in range(PREP_MAIN_PREPS):
-            tx: dict = self._make_icx_send_tx(self._genesis,
-                                              self._addr_array[i],
-                                              3000 * ICX_IN_LOOP)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=3000 * ICX_IN_LOOP)
 
         # register prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_register_prep_tx(self._addr_array[i],
-                                                    public_key=f"0x{self.public_key_array[i].hex()}")
+            tx: dict = self.create_register_prep_tx(self._accounts[i])
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
-        irep_update_block_height: int = prev_block.height
+        self.process_confirm_block_tx(tx_list)
+        irep_update_block_height: int = self._block_height
 
         # gain 10 icx user0
         balance: int = 100 * ICX_IN_LOOP
-        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+        self.transfer_icx(from_=self._admin,
+                          to_=self._accounts[0],
+                          value=balance)
 
         # stake 10 icx user0
         stake_amount: int = 10 * ICX_IN_LOOP
-        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake_amount)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+        self.set_stake(from_=self._accounts[0],
+                       value=stake_amount)
 
         # delegation 1 icx user0 ~ 9
         delegations: list = []
         delegation_amount: int = 1 * ICX_IN_LOOP
         for i in range(IISS_MAX_DELEGATIONS):
-            delegations.append((self._addr_array[i], delegation_amount))
-        tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+            delegations.append((self._accounts[i], delegation_amount))
+        self.set_delegation(from_=self._accounts[0],
+                            origin_delegations=delegations)
 
         response: dict = self.get_main_prep_list()
         actual_list: list = response["preps"]
@@ -278,7 +225,7 @@ class TestIntegratePrep(TestIISSBase):
         response: dict = self.get_prep_list(end_ranking=IISS_MAX_DELEGATIONS)
         preps: list = []
         for i in range(IISS_MAX_DELEGATIONS):
-            address: 'Address' = self._addr_array[i]
+            address: 'Address' = self._accounts[i].address
             preps.append(
                 {
                     "status": 0,
@@ -298,7 +245,7 @@ class TestIntegratePrep(TestIISSBase):
             )
         expected_response: dict = \
             {
-                "blockHeight": prev_block.height,
+                "blockHeight": self._block_height,
                 "startRanking": 1,
                 "totalDelegated": stake_amount,
                 "totalStake": stake_amount,
@@ -317,26 +264,17 @@ class TestIntegratePrep(TestIISSBase):
         """
         self.update_governance()
 
-        prep_address: 'Address' = self._addr_array[0]
+        prep_address: 'Address' = self._accounts[0]
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         # distribute icx for prep
-        tx: dict = self._make_icx_send_tx(self._genesis,
-                                          prep_address,
-                                          3000 * ICX_IN_LOOP)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.transfer_icx(from_=self._admin,
+                          to_=self._accounts[0],
+                          value=3000 * ICX_IN_LOOP)
 
-        tx: dict = self.create_register_prep_tx(prep_address, public_key=f"0x{self.public_key_array[0].hex()}")
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.register_prep(self._accounts[0])
 
         # get prep
         response = self.get_prep(prep_address)
@@ -345,30 +283,21 @@ class TestIntegratePrep(TestIISSBase):
         irep: int = response[ConstantKeys.IREP]
 
         # setGovernanceVariables call should be failed until IISS decentralization feature is enabled
-        tx: dict = self.create_set_governance_variables(prep_address, irep + 10)
-        prev_block, tx_results = self._make_and_req_block([tx])
-
-        tx_result = tx_results[0]
-        self.assertEqual(int(False), tx_result.status)
-        self.assertEqual(ExceptionCode.METHOD_NOT_FOUND, tx_result.failure.code)
+        tx_results: List['TransactionResult'] = self.set_governance_variables(from_=self._accounts[0],
+                                                                              irep=irep + 10,
+                                                                              expected_status=False)
+        self.assertEqual(ExceptionCode.METHOD_NOT_FOUND, tx_results[0].failure.code)
 
     def test_reg_prep_validator(self):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
         # gain 10 icx user0
-        balance: int = ICX_IN_LOOP
-        tx_list = []
-        for i in range(8):
-            tx = self._make_icx_send_tx(self._genesis, self._addr_array[i], balance)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
+        balance: int = 10 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:8],
+                            init_balance=balance)
 
         self._validate_name()
         self._validate_email()
@@ -382,18 +311,15 @@ class TestIntegratePrep(TestIISSBase):
     def _validate_name(self):
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.NAME] = ''
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[0].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[0], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertFalse(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[0].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[0], reg_data)
+        self.process_confirm_block_tx([tx],
+                                      expected_status=False)
 
         reg_data[ConstantKeys.NAME] = "valid name"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[0].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[0], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertTrue(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[0].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[0], reg_data)
+        self.process_confirm_block_tx([tx])
 
     def _validate_email(self):
         invalid_email_list = ['', 'invalid email', 'invalid.com', 'invalid@', 'invalid@a', 'invalid@a.',
@@ -402,19 +328,16 @@ class TestIntegratePrep(TestIISSBase):
         for email in invalid_email_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.EMAIL] = email
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[1].hex()}"
-            tx = self.create_register_prep_tx(self._addr_array[1], reg_data)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            tx_result = tx_results[0]
-            self.assertFalse(tx_result.status)
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[1].public_key)}"
+            tx = self.create_register_prep_tx(self._accounts[1], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.EMAIL] = "valid@validexample.com"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[1].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[1], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertTrue(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[1].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[1], reg_data)
+        self.process_confirm_block_tx([tx])
 
     def _validate_website(self):
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
@@ -423,19 +346,16 @@ class TestIntegratePrep(TestIISSBase):
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.WEBSITE] = website
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[2].hex()}"
-            tx = self.create_register_prep_tx(self._addr_array[2], reg_data)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            tx_result = tx_results[0]
-            self.assertFalse(tx_result.status)
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[2].public_key)}"
+            tx = self.create_register_prep_tx(self._accounts[2], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.WEBSITE] = "https://validurl.com"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[2].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[2], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertTrue(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[2].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[2], reg_data)
+        self.process_confirm_block_tx([tx])
 
     # TODO
     def _validate_country(self):
@@ -452,43 +372,37 @@ class TestIntegratePrep(TestIISSBase):
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.WEBSITE] = website
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[5].hex()}"
-            tx = self.create_register_prep_tx(self._addr_array[5], reg_data)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            tx_result = tx_results[0]
-            self.assertFalse(tx_result.status)
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[5].public_key)}"
+            tx = self.create_register_prep_tx(self._accounts[5], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.WEBSITE] = "https://validurl.com/json"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[5].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[5], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertTrue(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[5].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[5], reg_data)
+        self.process_confirm_block_tx([tx])
 
     def _validate_p2p_endpoint(self):
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
                                 'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."
-                                "https://target.asdf:7100"]
+                                                                                    "https://target.asdf:7100"]
 
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.P2P_ENDPOINT] = website
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
-            tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            tx_result = tx_results[0]
-            self.assertFalse(tx_result.status)
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[6].public_key)}"
+            tx = self.create_register_prep_tx(self._accounts[6], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
 
         validate_endpoint = "20.20.7.8:8000"
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.P2P_ENDPOINT] = validate_endpoint
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertTrue(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[6].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[6], reg_data)
+        self.process_confirm_block_tx([tx])
 
     def _validate_public_key(self):
         invalid_public_key_list = ['', f'0x{b"dummy".hex()}']
@@ -496,17 +410,14 @@ class TestIntegratePrep(TestIISSBase):
         for public_key in invalid_public_key_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.PUBLIC_KEY] = public_key
-            tx = self.create_register_prep_tx(self._addr_array[7], reg_data)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            tx_result = tx_results[0]
-            self.assertFalse(tx_result.status)
+            tx = self.create_register_prep_tx(self._accounts[7], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
-        tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        tx_result = tx_results[0]
-        self.assertTrue(tx_result.status)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[7].public_key)}"
+        tx = self.create_register_prep_tx(self._accounts[7], reg_data)
+        self.process_confirm_block_tx([tx])
 
     def test_prep_stake(self):
         """Test P-Rep stake management
@@ -516,53 +427,32 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(int(True), tx_results[0].status)
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_IISS)
 
-        # Create a user address
-        user_address: 'Address' = Address.from_prefix_and_int(AddressPrefix.EOA, 1234)
-
-        # The number of address is 100
-        prep_addresses: List['Address'] = self._addr_array
-        public_keys: List[bytes] = self.public_key_array
         prep_count = 30
+        user_account: 'EOAAccount' = self.create_eoa_accounts(1)[0]
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(prep_count)
 
         # Transfer 100 icx to 30 prep addresses and one user address
         tx_list: list = [
-            self._make_icx_send_tx(self._genesis, user_address, 100 * ICX_IN_LOOP)
+            self.create_transfer_icx_tx(self._admin, user_account, 100 * ICX_IN_LOOP)
         ]
         for i in range(prep_count):
-            prep_address: 'Address' = prep_addresses[i]
-            assert user_address != prep_address
+            prep_address: 'Address' = accounts[i]
+            assert user_account != prep_address
 
-            tx: dict = self._make_icx_send_tx(self._genesis, prep_address, 3000 * ICX_IN_LOOP)
+            tx: dict = self.create_transfer_icx_tx(self._admin, prep_address, 3000 * ICX_IN_LOOP)
             tx_list.append(tx)
 
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list)
         self.assertEqual(prep_count + 1, len(tx_results))
-
-        # Check whether transactions succeeded
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
 
         # Register 30 P-Rep candidates
         tx_list: list = []
-        for i in range(prep_count):
-            prep_address: 'Address' = prep_addresses[i]
-            public_key: str = f"0x{public_keys[i].hex()}"
-
-            tx: dict = self.create_register_prep_tx(prep_address, public_key=public_key)
+        for account in accounts:
+            tx: dict = self.create_register_prep_tx(from_=account)
             tx_list.append(tx)
-
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
-
-        # Check whether transactions succeeded
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
+        self.process_confirm_block_tx(tx_list)
 
         # Check whether the stake of each P-Rep is 0
         response: dict = self.get_prep_list(start_ranking=1)
@@ -574,20 +464,14 @@ class TestIntegratePrep(TestIISSBase):
         # Change the stake of each P-Rep
         total_stake: int = 0
         tx_list = []
-        for i in range(prep_count):
-            prep_address: 'Address' = prep_addresses[i]
+        for i, account in enumerate(accounts):
             stake: int = i * 10 * ICX_IN_LOOP
             total_stake += stake
 
-            tx = self.create_set_stake_tx(prep_address, stake)
+            tx = self.create_set_stake_tx(from_=account,
+                                          value=stake)
             tx_list.append(tx)
-
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
-
-        # Check whether transactions succeeded
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
+        self.process_confirm_block_tx(tx_list)
 
         # Check whether the stake of each P-Rep is correct.
         response: dict = self.get_prep_list(start_ranking=1)
@@ -604,22 +488,21 @@ class TestIntegratePrep(TestIISSBase):
         total_stake = 0
         stake: int = 10 * ICX_IN_LOOP
         tx_list = []
-        for i in range(prep_count):
-            prep_address: 'Address' = prep_addresses[i]
+        for account in accounts:
             total_stake += stake
 
-            tx = self.create_set_stake_tx(prep_address, stake)
+            tx = self.create_set_stake_tx(from_=account,
+                                          value=stake)
             tx_list.append(tx)
 
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         # setStake with user_address
         stake = 50 * ICX_IN_LOOP
-        tx_list = [self.create_set_stake_tx(user_address, stake)]
+        tx_list = [self.create_set_stake_tx(from_=user_account,
+                                            value=stake)]
 
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
         total_stake += stake
 
         # Check the stakes of P-Reps

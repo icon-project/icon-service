@@ -9,7 +9,8 @@ extra_requires = {
     "test": [
         "hypothesis>=4.0.0",
         "pytest>=3.6",
-        "pytest-cov>=2.5.1"
+        "pytest-cov>=2.5.1",
+        "iconsdk"
     ]
 }
 test_requires = extra_requires['test']

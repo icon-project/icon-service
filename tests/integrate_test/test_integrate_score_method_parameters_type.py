@@ -13,10 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from typing import TYPE_CHECKING, List
 
 from iconservice import ZERO_SCORE_ADDRESS, Address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 ONE = '1'
 ZERO = '0'
@@ -24,7 +27,7 @@ EMPTY_STR = ""
 EMPTY_BYTE = bytes.hex(b"")
 NUM1 = 1
 NUM0 = 0
-INT_VAL = '0x14'
+INT_VAL = hex(20)
 STRING_VAL = 'string value'
 BYTE_VAL = bytes.hex(b'byte string')
 ADDRESS_VAL = str(Address.from_string(f"hx{'abcd1234' * 5}"))
@@ -32,23 +35,35 @@ BOOL_VAL = hex(False)
 
 
 class TestIntegrateMethodParamters(TestIntegrateBase):
+    def _init_score(self,
+                    pre_validation_enabled: bool = True) -> 'Address':
+        tx = self.create_deploy_score_tx(score_root="sample_scores",
+                                         score_name="sample_db_returns",
+                                         from_=self._accounts[0],
+                                         to_=ZERO_SCORE_ADDRESS,
+                                         deploy_params={"value": str(self._accounts[1].address),
+                                                        "value1": str(self._accounts[1].address)},
+                                         pre_validation_enabled=pre_validation_enabled)
+
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx])
+        return tx_results[0].score_address
+
+    def _score_call(self,
+                    to_: 'Address',
+                    func_name: str,
+                    params: dict,
+                    pre_validation_enabled: bool = True,
+                    expected_status: bool = True):
+        tx = self.create_score_call_tx(self._accounts[0], to_, func_name,
+                                       params, pre_validation_enabled=pre_validation_enabled)
+        self.process_confirm_block_tx([tx], expected_status=expected_status)
 
     def test_int_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={"value": str(self._addr_array[1]),
-                                                  "value1": str(self._addr_array[1])})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        score_address: 'Address' = self._init_score()
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value1",
@@ -59,122 +74,108 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 0)  # original value: 0(int)
 
         # set value to '1' -> set 1
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": ONE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": ONE},
+                         pre_validation_enabled=False)
 
         # set value to '0' -> set 0
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": ZERO}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": ZERO},
+                         pre_validation_enabled=False)
 
         # set value to '' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": EMPTY_STR}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": EMPTY_STR},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": EMPTY_BYTE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": EMPTY_BYTE},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to None -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": None}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": None},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 1 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": NUM1}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": NUM1},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 0 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": NUM0}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": NUM0},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0x14' -> set 20
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": INT_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": INT_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, 20)
 
         # set value to 'string value'' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": STRING_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": STRING_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'byte value' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": BYTE_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": BYTE_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to address value -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": ADDRESS_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": ADDRESS_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to False -> 0
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": BOOL_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": BOOL_VAL},
+                         pre_validation_enabled=False)
+
         response = self._query(query_request)
         self.assertEqual(response, 0)
 
         # set value to 'a' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": 'a'})
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": 'a'},
+                         expected_status=False)
 
         # set value to 'A' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1',
-                                      {"value": 'A'})
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value1',
+                         params={"value": 'A'},
+                         expected_status=False)
 
     def test_str_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={"value": str(self._addr_array[1]),
-                                                  "value1": str(self._addr_array[1])},
-                                   pre_validation_enabled=False)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        score_address: 'Address' = self._init_score(pre_validation_enabled=False)
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value2",
@@ -185,124 +186,104 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, "")  # original value: 0(int)
 
         # set value to '1' -> set '1'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": ONE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": ONE},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, ONE)
 
         # set value to '0' -> set '0'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": ZERO}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": ZERO},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, ZERO)
 
         # set value to '' -> set ''
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": EMPTY_STR}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": EMPTY_STR},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, EMPTY_STR)
 
         # set value to b'' -> set ''
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": EMPTY_BYTE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": EMPTY_BYTE},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, '')
 
         # set value to None -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": None}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": None},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 1 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": NUM1}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": NUM1},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 0 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": NUM0}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": NUM0},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0x14' -> '0x14'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": INT_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": INT_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
-        self.assertEqual(response, '0x14')
+        self.assertEqual(response, hex(20))
 
         # set value to 'string value' -> 'string value'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": STRING_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": STRING_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, STRING_VAL)
 
         # set value to b'byte value' -> b'byte value'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": BYTE_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": BYTE_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, BYTE_VAL)
 
         # set value to address value -> address string
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": ADDRESS_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": ADDRESS_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, ADDRESS_VAL)
 
         # set value to False -> '0x0'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2',
-                                      {"value": BOOL_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value2',
+                         params={"value": BOOL_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, hex(False))
 
     def test_byte_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={"value": str(self._addr_array[1]),
-                                                  "value1": str(self._addr_array[1])},
-                                   pre_validation_enabled=False)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        score_address: 'Address' = self._init_score(pre_validation_enabled=False)
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value3",
@@ -313,110 +294,99 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, None)  # original value: 0(int)
 
         # set value to '1' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": ONE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": ONE},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": ZERO}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": ZERO},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '' fail -> None
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": EMPTY_STR}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": EMPTY_STR},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, None)
 
         # set value to b'' -> None
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": EMPTY_BYTE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": EMPTY_BYTE},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, None)
 
         # set value to None -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": None}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": None},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 1 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": NUM1}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": NUM1},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 0 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": NUM0}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": NUM0},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0x14' -> b'\x14'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": INT_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": INT_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, bytes.fromhex('14'))
 
         # set value to 'string value' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": STRING_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": STRING_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'byte value' -> byte value
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": BYTE_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": BYTE_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, int.to_bytes(int(BYTE_VAL, 16), 11, 'big'))
 
         # set value to address value -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": ADDRESS_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": ADDRESS_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to False -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3',
-                                      {"value": BOOL_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value3',
+                         params={"value": BOOL_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
     def test_address_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={"value": str(self._addr_array[1]),
-                                                  "value1": str(self._addr_array[1])})
+        score_address: 'Address' = self._init_score()
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value4",
@@ -424,108 +394,99 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, self._addr_array[1])  # original value: 0(int)
+        self.assertEqual(response, self._accounts[1].address)  # original value: 0(int)
 
         # set value to '1' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": ONE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": ONE},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": ZERO}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": ZERO},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '' fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": EMPTY_STR}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": EMPTY_STR},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'' fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": EMPTY_BYTE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": EMPTY_BYTE},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to None -> fail
-
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": None}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": None},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 1 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": NUM1}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": NUM1},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 0 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": NUM0}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": NUM0},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0x14'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": INT_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": INT_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 'string value''
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": STRING_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": STRING_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'byte value'
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": BYTE_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": BYTE_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to address value
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": ADDRESS_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": ADDRESS_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, Address.from_string(ADDRESS_VAL))
 
         # set value to False
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4',
-                                      {"value": BOOL_VAL}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value4',
+                         params={"value": BOOL_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
     def test_bool_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={"value": str(self._addr_array[1]),
-                                                  "value1": str(self._addr_array[1])})
+        score_address: 'Address' = self._init_score()
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value5",
@@ -536,102 +497,89 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, False)  # original value: 0(int)
 
         # set value to '1' -> True
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": ONE}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": ONE},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, True)
 
         # set value to '0' -> False
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": ZERO}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": ZERO},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, False)
 
         # set value to '' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": EMPTY_STR}, pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": EMPTY_STR},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": EMPTY_BYTE},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": EMPTY_BYTE},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to None -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": None},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": None},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 1 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": NUM1},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": NUM1},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to 0 -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": NUM0},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": NUM0},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to '0x14' -> True
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": INT_VAL},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": INT_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, True)
 
         # set value to 'string value' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": STRING_VAL},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": STRING_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to b'byte value' -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": BYTE_VAL},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": BYTE_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to address value -> fail
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": ADDRESS_VAL},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": ADDRESS_VAL},
+                         pre_validation_enabled=False,
+                         expected_status=False)
 
         # set value to False -> False
-        tx = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5',
-                                      {"value": BOOL_VAL},
-                                      pre_validation_enabled=False)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self._score_call(to_=score_address,
+                         func_name='set_value5',
+                         params={"value": BOOL_VAL},
+                         pre_validation_enabled=False)
         response = self._query(query_request)
         self.assertEqual(response, False)

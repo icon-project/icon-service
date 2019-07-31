@@ -15,43 +15,28 @@
 # limitations under the License.
 
 """on_install parameters testcase"""
+from typing import TYPE_CHECKING, List
 
-from iconservice import ZERO_SCORE_ADDRESS
-from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.exception import ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateOnInstallParameters(TestIntegrateBase):
-    def _update_governance(self):
-        tx = self._make_deploy_tx("sample_builtin",
-                                  "latest_version/governance",
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-
-    def _set_revision(self, revision):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                       {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
     def test_oninstall_parameters_success(self):
+        init_supply: int = 1000
+        decimal: int = 18
         # deploy
-        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-
+        tx = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                         score_name=f"install/sample_token",
+                                         from_=self._accounts[0],
+                                         to_=ZERO_SCORE_ADDRESS,
+                                         deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)})
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx])
         score_addr1 = tx_results[0].score_address
 
         query_request = {
@@ -64,33 +49,43 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         }
 
         total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
     def test_more_parameters_oninstall(self):
-        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12",
-                                                                      "additional_param": hex(123)})
+        init_supply: int = 1000
+        decimal: int = 18
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
+        tx = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                         score_name=f"install/sample_token",
+                                         from_=self._accounts[0],
+                                         to_=ZERO_SCORE_ADDRESS,
+                                         deploy_params={"init_supply": hex(init_supply),
+                                                        "decimal": hex(decimal),
+                                                        "additional_param": hex(123)})
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx], expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("on_install() got an unexpected keyword argument "
                                                            "'additional_param'") != -1)
-        self.assertEqual(tx_results[0].status, int(False))
 
     def test_missing_parameters_oninstall(self):
-        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"decimal": "0x12"})
-        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000)})
-        tx3 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={})
+        tx1 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                          score_name=f"install/sample_token",
+                                          from_=self._accounts[0],
+                                          to_=ZERO_SCORE_ADDRESS,
+                                          deploy_params={"decimal": hex(18)})
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
+        tx2 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                          score_name=f"install/sample_token",
+                                          from_=self._accounts[0],
+                                          to_=ZERO_SCORE_ADDRESS,
+                                          deploy_params={"init_supply": hex(1000)})
 
-        self._write_precommit_state(prev_block)
+        tx3 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                          score_name=f"install/sample_token",
+                                          from_=self._accounts[0],
+                                          to_=ZERO_SCORE_ADDRESS,
+                                          deploy_params={})
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2, tx3], expected_status=False)
 
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
@@ -103,50 +98,42 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.assertTrue(
             tx_results[2].failure.message.find("on_install() missing 2 required positional arguments:") != -1)
 
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[2].status, int(False))
-
     def test_invalid_parameter_value_oninstall(self):
-        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": str(self._addr_array[0]),
-                                                                      "decimal": "0x12"})
+        tx1 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                          score_name=f"install/sample_token",
+                                          from_=self._accounts[0],
+                                          to_=ZERO_SCORE_ADDRESS,
+                                          deploy_params={"init_supply": str(self._accounts[0].address),
+                                                         "decimal": hex(18)})
 
-        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": str(self._addr_array[0]),
-                                                                      "decimal": "0x12",
-                                                                      "address_param": "0x12"})
+        tx2 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                          score_name=f"install/sample_token",
+                                          from_=self._accounts[0],
+                                          to_=ZERO_SCORE_ADDRESS,
+                                          deploy_params={"init_supply": str(self._accounts[0].address),
+                                                         "decimal": hex(18)})
 
-        tx3 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000),
-                                                                      "decimal": "0x12",
-                                                                      "address_param": f"hx{'1234' * 5}"})
+        tx3 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                          score_name=f"install/sample_token",
+                                          from_=self._accounts[0],
+                                          to_=ZERO_SCORE_ADDRESS,
+                                          deploy_params={"init_supply": hex(1000),
+                                                         "decimal": hex(18),
+                                                         "address_param": f"hx{'1234' * 5}"})
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2, tx3], expected_status=False)
 
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_results[2].failure.code, ExceptionCode.INVALID_PARAMETER)
 
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[2].status, int(False))
-
     def test_invalid_kwargs_parameter_value_oninstall(self):
-        self._update_governance()
-        self._set_revision(2)
+        self.update_governance()
 
-        tx = self._make_deploy_tx("sample_deploy_scores/install",
-                                  "sample_legacy_kwargs_params",
-                                  self._addr_array[0],
-                                  ZERO_SCORE_ADDRESS)
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-
-        self._write_precommit_state(prev_block)
-
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name=f"install/sample_legacy_kwargs_params",
+                                                                  from_=self._accounts[0],
+                                                                  to_=ZERO_SCORE_ADDRESS)
         score_addr = tx_results[0].score_address
 
         query_request = {
@@ -159,15 +146,13 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         }
         self.assertEqual(self._query(query_request), "Hello")
 
-        self._set_revision(3)
-
-        tx = self._make_deploy_tx("sample_deploy_scores/install",
-                                  "sample_legacy_kwargs_params",
-                                  self._addr_array[0],
-                                  ZERO_SCORE_ADDRESS)
+        self.set_revision(3)
 
         raise_exception_start_tag("sample_invalid_kwargs_parameter_value_oninstall")
-        prev_block, tx_results = self._make_and_req_block([tx])
+        self.deploy_score(score_root="sample_deploy_scores",
+                          score_name=f"install/sample_legacy_kwargs_params",
+                          from_=self._accounts[0],
+                          to_=ZERO_SCORE_ADDRESS,
+                          expected_status=False)
         raise_exception_end_tag("sample_invalid_kwargs_parameter_value_oninstall")
 
-        self.assertEqual(tx_results[0].status, int(False))

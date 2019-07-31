@@ -16,49 +16,44 @@
 
 """IconScoreEngine testcase
 """
+
 import unittest
+from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import ExceptionCode, DatabaseException, StackOverflowException
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateScoreInternalCall(TestIntegrateBase):
 
     def test_link_score(self):
         value1 = 1 * ICX_IN_LOOP
-        tx1 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS,
+                                                deploy_params={'value': hex(value1)})
 
-        tx2 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_link_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        prev_block, tx_results = self._make_and_req_block([tx3])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
 
         query_request = {
             "version": self._version,
@@ -73,53 +68,36 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, value1)
 
-        value2 = 1 * ICX_IN_LOOP
-        tx4 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'set_value',
-                                       {"value": hex(value2)})
-
-        prev_block, tx_results = self._make_and_req_block([tx4])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        value2 = 2 * ICX_IN_LOOP
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="set_value",
+                        params={"value": hex(value2)})
 
         response = self._query(query_request)
         self.assertEqual(response, value2)
 
     def test_link_score_cross(self):
         value1 = 1 * ICX_IN_LOOP
-        tx1 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS,
+                                                deploy_params={'value': hex(value1)})
 
-        tx2 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_link_score_cross",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_score_cross",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        prev_block, tx_results = self._make_and_req_block([tx3])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
 
         query_request = {
             "version": self._version,
@@ -132,60 +110,44 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
             }
         }
 
-        with self.assertRaises(BaseException) as e:
+        with self.assertRaises(DatabaseException) as e:
             self._query(query_request)
 
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(e.exception.message, "No permission to write")
 
-        value2 = 1 * ICX_IN_LOOP
-        tx4 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'set_value',
-                                       {"value": hex(value2)})
-
-        prev_block, tx_results = self._make_and_req_block([tx4])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        value2 = 2 * ICX_IN_LOOP
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="set_value",
+                        params={"value": hex(value2)})
 
     def test_link_score_loop(self):
-        tx1 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_link_loop",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_loop",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        tx2 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_link_loop",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_loop",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        self._write_precommit_state(prev_block)
+        tx3: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                              to_=score_addr2,
+                                              func_name="add_score_func",
+                                              params={"score_addr": str(score_addr1)})
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
+        tx4: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                              to_=score_addr1,
+                                              func_name="add_score_func",
+                                              params={"score_addr": str(score_addr2)})
 
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        tx4 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr2)})
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
+        self.process_confirm_block_tx([tx3, tx4])
 
         query_request = {
             "version": self._version,
@@ -198,53 +160,41 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
             }
         }
 
-        with self.assertRaises(BaseException) as context:
+        with self.assertRaises(StackOverflowException) as e:
             self._query(query_request)
+        self.assertEqual(e.exception.message, 'Max call stack size exceeded')
 
-        self.assertEqual(context.exception.message, 'Max call stack size exceeded')
-
-        value2 = 1 * ICX_IN_LOOP
-        tx4 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'set_value',
-                                       {"value": hex(value2)})
-
+        value2 = 2 * ICX_IN_LOOP
         raise_exception_start_tag("sample_link_score_loop")
-        prev_block, tx_results = self._make_and_req_block([tx4])
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=score_addr2,
+                                                                func_name="set_value",
+                                                                params={"value": hex(value2)},
+                                                                expected_status=False)
         raise_exception_end_tag("sample_link_score_loop")
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.message, 'Max call stack size exceeded')
 
     def test_get_other_score_db(self):
         value1 = 1 * ICX_IN_LOOP
-        tx1 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS,
+                                                deploy_params={'value': hex(value1)})
 
-        tx2 = self._make_deploy_tx("sample_internal_call_scores",
-                                   "sample_link_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0], score_addr2, "add_score_func",
-                                       {"score_addr": str(score_addr1)})
-        prev_block, tx_results = self._make_and_req_block([tx3])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
 
         query_request = {
             "version": self._version,
@@ -255,12 +205,10 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
                 "method": "get_data_from_other_score", "params": {}
             }
         }
+        self._query(query_request)  # Query method does not raise AccessDenied exception
 
-        self._query(query_request) # Query method does not raise AccessDenied exception
-        tx4 = self._make_score_call_tx(self._addr_array[0], score_addr2, "try_get_other_score_db", {})
-        prev_block, tx_results = self._make_and_req_block([tx4])
-        self.assertEqual(tx_results[0].status, int(False))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="try_get_other_score_db",
+                        params={},
+                        expected_status=False)

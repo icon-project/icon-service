@@ -16,15 +16,15 @@
 
 """IconScoreEngine testcase
 """
-import hashlib
-import os
 from copy import deepcopy
+from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
-    ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey
+    ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
+    PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
@@ -34,6 +34,9 @@ from tests.integrate_test import create_timestamp
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
+
 
 class TestIISSBaseTransactionValidation(TestIISSBase):
     def _make_init_config(self) -> dict:
@@ -41,90 +44,55 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         config[ConfigKey.PREP_REGISTRATION_FEE] = 0
         return config
 
-    def setUp(self):
-        super().setUp()
-
+    def _init_decentralized(self):
         # decentralized
         self.update_governance()
 
         # set Revision REV_IISS
-        tx: dict = self.create_set_revision_tx(REV_IISS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-
-        self.public_key_list = [os.urandom(32) for _ in range(PREP_MAIN_PREPS)]
-        self._addr_array = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
-                            for public_key in self.public_key_array]
-
-        main_preps = self._addr_array[:PREP_MAIN_PREPS]
+        self.set_revision(REV_IISS)
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
         minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
-        init_balance: int = minimum_delegate_amount_for_decentralization * 10
+        init_balance: int = minimum_delegate_amount_for_decentralization * 2
 
         # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        tx_list: list = []
-        for i in range(PREP_MAIN_PREPS):
-            tx: dict = self._make_icx_send_tx(self._genesis,
-                                              self._addr_array[PREP_MAIN_PREPS + i],
-                                              init_balance)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=init_balance)
 
         # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         stake_amount: int = minimum_delegate_amount_for_decentralization
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_stake_tx(self._addr_array[PREP_MAIN_PREPS + i],
-                                                stake_amount)
+            tx: dict = self.create_set_stake_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                value=stake_amount)
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        tx_list: list = []
-        for i in range(PREP_MAIN_PREPS):
-            tx: dict = self._make_icx_send_tx(self._genesis,
-                                              self._addr_array[i],
-                                              3000 * ICX_IN_LOOP)
-            tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=3000 * ICX_IN_LOOP)
 
         # register PRep
         tx_list: list = []
-        for i, address in enumerate(main_preps):
-            tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
+        for account in self._accounts[:PREP_MAIN_PREPS]:
+            tx: dict = self.create_register_prep_tx(from_=account)
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         # delegate to PRep
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + i],
-                                                     [
+            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                     origin_delegations=[
                                                          (
-                                                             self._addr_array[i],
+                                                             self._accounts[i],
                                                              minimum_delegate_amount_for_decentralization
                                                          )
                                                      ])
             tx_list.append(tx)
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(True), tx_result.status)
-        self._write_precommit_state(prev_block)
+        self.process_confirm_block_tx(tx_list)
 
         # get main prep
         response: dict = self.get_main_prep_list()
@@ -135,25 +103,12 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        tx: dict = self.create_set_revision_tx(REV_DECENTRALIZATION)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+        self.set_revision(REV_DECENTRALIZATION)
 
-        # get main prep
-        response: dict = self.get_main_prep_list()
-        expected_preps: list = []
-        expected_total_delegated: int = 0
-        for address in main_preps:
-            expected_preps.append({
-                'address': address,
-                'delegated': minimum_delegate_amount_for_decentralization
-            })
-            expected_total_delegated += minimum_delegate_amount_for_decentralization
-        expected_response: dict = {
-            "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
-        }
-        self.assertEqual(expected_response, response)
+    def setUp(self):
+        super().setUp()
+
+        self._init_decentralized()
 
     def _make_base_tx(self, data: dict):
         timestamp_us = create_timestamp()
@@ -174,7 +129,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         return tx
 
     def _create_dummy_tx(self):
-        return self._make_icx_send_tx(self._genesis, self._admin, 0)
+        return self.create_transfer_icx_tx(self._admin, self._genesis, 0)
 
     def _make_issue_info(self) -> tuple:
         context = IconScoreContext(IconScoreContextType.DIRECT)
@@ -325,8 +280,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx(),
             self._create_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
         self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         expected_failure = None
         expected_trace = []
@@ -377,8 +333,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx(),
             self._create_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
         self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         expected_failure = None
         expected_trace = []
@@ -441,11 +398,13 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx()
         ]
         for x in range(1, 11):
-
             copied_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copied_tx_list,
-                                                                             is_block_editable=True,
-                                                                             cumulative_fee=cumulative_fee)
+            prev_block, hash_list = self._make_and_req_block_for_issue_test(copied_tx_list,
+                                                                            is_block_editable=True,
+                                                                            cumulative_fee=cumulative_fee)
+            self._write_precommit_state(prev_block)
+            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+
             issue_amount = tx_results[0].event_logs[0].data[3]
             actual_covered_by_fee = tx_results[0].event_logs[1].data[0]
             actual_covered_by_remain = tx_results[0].event_logs[1].data[1]
@@ -454,17 +413,17 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             print(tx_results[0].event_logs[0].data)
             print(tx_results[0].event_logs[1].data)
             # if x == 1:
-                # self.assertEqual(1000000000000000, actual_covered_by_fee)
-                # self.assertEqual(0, actual_covered_by_remain)
-                # self.assertEqual(first_expected_issue_amount - 1000000000000000, actual_issue_amount)
-                # self.assertEqual(0, tx_results[0].event_logs[1].data[3])
-                #
-                # actual_sequence = tx_results[0].event_logs[2].data[0]
-                # actual_start_block = tx_results[0].event_logs[2].data[1]
-                # actual_end_block = tx_results[0].event_logs[2].data[2]
-                # self.assertEqual(expected_sequence, actual_sequence)
-                # self.assertEqual(prev_block._height, actual_start_block)
-                # self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
+            # self.assertEqual(1000000000000000, actual_covered_by_fee)
+            # self.assertEqual(0, actual_covered_by_remain)
+            # self.assertEqual(first_expected_issue_amount - 1000000000000000, actual_issue_amount)
+            # self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+            #
+            # actual_sequence = tx_results[0].event_logs[2].data[0]
+            # actual_start_block = tx_results[0].event_logs[2].data[1]
+            # actual_end_block = tx_results[0].event_logs[2].data[2]
+            # self.assertEqual(expected_sequence, actual_sequence)
+            # self.assertEqual(prev_block._height, actual_start_block)
+            # self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
             #     expected_sequence += 1
             # elif x == calc_point:
             #     calc_point += calc_period
@@ -474,15 +433,16 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             #     self.assertEqual(first_expected_issue_amount - cumulative_fee, actual_issue_amount)
             #     self.assertEqual(0, tx_results[0].event_logs[1].data[3])
             # self.assertEqual(issue_amount, actual_covered_by_fee + actual_covered_by_remain + actual_issue_amount)
-            self._write_precommit_state(prev_block)
 
         calculate_response_iscore = calculate_response_iscore_after_first_period
 
         for x in range(11, 51):
             copied_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copied_tx_list,
-                                                                             is_block_editable=True,
-                                                                             cumulative_fee=cumulative_fee)
+            prev_block, hash_list = self._make_and_req_block_for_issue_test(copied_tx_list,
+                                                                            is_block_editable=True,
+                                                                            cumulative_fee=cumulative_fee)
+            self._write_precommit_state(prev_block)
+            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
             issue_amount = tx_results[0].event_logs[0].data[3]
             actual_covered_by_fee = tx_results[0].event_logs[1].data[0]
             actual_covered_by_remain = tx_results[0].event_logs[1].data[1]
@@ -511,5 +471,3 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             #     self.assertEqual(expected_issue_amount - cumulative_fee, actual_issue_amount)
             #     self.assertEqual(0, tx_results[0].event_logs[1].data[3])
             # self.assertEqual(issue_amount, actual_covered_by_fee + actual_covered_by_remain + actual_issue_amount)
-
-            self._write_precommit_state(prev_block)

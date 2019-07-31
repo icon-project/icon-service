@@ -24,9 +24,6 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         config[ConfigKey.PREP_REGISTRATION_FEE] = 0
         return config
 
-    def setUp(self):
-        super().setUp()
-
     def test_inner_call(self):
         inner_call_request = {"method": "ise_getPRepList"}
         inner_call_response: dict = self.inner_call(inner_call_request)
