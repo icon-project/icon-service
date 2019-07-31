@@ -841,6 +841,7 @@ class IconServiceEngine(ContextContainer):
         context.current_address = to
         context.event_logs: List['EventLog'] = []
         context.traces: List['Trace'] = []
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
 
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = context.storage.icx.get_account(context, from_)

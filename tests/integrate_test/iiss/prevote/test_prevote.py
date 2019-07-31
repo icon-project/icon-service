@@ -94,6 +94,8 @@ class TestIISS(TestIISSBase):
         tx: dict = self.create_unregister_prep_tx(from_=self._accounts[0])
         self.estimate_step(tx)
 
+        self.unregister_prep(from_=self._accounts[0])
+
     def test_query_prevote(self):
         self.update_governance()
 

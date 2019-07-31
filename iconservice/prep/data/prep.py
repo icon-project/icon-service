@@ -170,6 +170,7 @@ class PRep(Sortable):
     def status(self, value: 'PRepStatus'):
         assert self._status == PRepStatus.ACTIVE
         self._status = value
+        self._flags |= PRepFlag.DIRTY
         
     @property
     def grade(self) -> 'PRepGrade':
@@ -364,6 +365,8 @@ class PRep(Sortable):
 
         self._irep = irep
         self._irep_block_height = block_height
+
+        self._flags |= PRepFlag.DIRTY
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()

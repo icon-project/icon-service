@@ -118,7 +118,11 @@ class PRepContainer(object):
             raise InvalidParamsException("P-Rep is not active")
 
         self._active_prep_list.remove(prep)
-        prep.status = status
+
+        if prep.is_frozen():
+            prep: 'PRep' = prep.copy(PRepFlag.NONE)
+            prep.status = status
+            self._prep_dict[address] = prep
 
         self._total_prep_delegated -= prep.delegated
         assert self._total_prep_delegated >= 0
