@@ -1605,7 +1605,7 @@ class IconServiceEngine(ContextContainer):
 
         return None
 
-    @staticmethod
-    def inner_call(request: dict):
+    def inner_call(self, request: dict):
         context = IconScoreContext(IconScoreContextType.QUERY)
+        self._set_revision_to_context(context)
         return inner_call(context, request)

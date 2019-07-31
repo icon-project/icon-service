@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
+from ..icon_constant import REV_DECENTRALIZATION
 from ..base.type_converter import TypeConverter
 
 if TYPE_CHECKING:
@@ -24,7 +25,9 @@ if TYPE_CHECKING:
 
 def get_main_preps(context: 'IconScoreContext', **_kwargs):
     term: 'Term' = context.engine.prep.term
-    preps: dict = context.engine.prep.get_main_preps_in_dict(context.main_prep_count, term.main_preps)
+    preps: Optional[dict] = None
+    if context.revision >= REV_DECENTRALIZATION:
+        preps: Optional[dict] = context.engine.prep.get_main_preps_in_dict(context.main_prep_count, term.main_preps)
     if preps is None:
         preps = {}
 
