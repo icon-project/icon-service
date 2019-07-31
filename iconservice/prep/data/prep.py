@@ -155,6 +155,12 @@ class PRep(Sortable):
         self._total_blocks: int = total_blocks
         self._validated_blocks: int = validated_blocks
 
+    def is_dirty(self) -> bool:
+        return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
+
+    def _set_dirty(self, on: bool):
+        self._flags = utils.set_flag(self._flags, PRepFlag.DIRTY, on)
+
     @property
     def status(self) -> 'PRepStatus':
         return self._status
@@ -162,7 +168,8 @@ class PRep(Sortable):
     @status.setter
     def status(self, value: 'PRepStatus'):
         self._status = value
-        
+        self._set_dirty(True)
+
     @property
     def grade(self) -> 'PRepGrade':
         """The grade of P-Rep
@@ -177,6 +184,7 @@ class PRep(Sortable):
     @grade.setter
     def grade(self, value: 'PRepGrade'):
         self._grade = value
+        self._set_dirty(True)
 
     @property
     def country(self) -> str:
@@ -185,6 +193,7 @@ class PRep(Sortable):
     @country.setter
     def country(self, alpha3_country_code: str):
         self._country = self._get_country(alpha3_country_code)
+        self._set_dirty(True)
 
     @classmethod
     def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
@@ -203,7 +212,7 @@ class PRep(Sortable):
             self._validated_blocks += 1
         self._total_blocks += 1
 
-        utils.toggle_flags(self._flags, PRepFlag.DIRTY, True)
+        self._set_dirty(True)
 
     @property
     def productivity(self) -> int:
@@ -268,6 +277,7 @@ class PRep(Sortable):
     def last_generate_block_height(self, value: int):
         assert value >= 0
         self._last_generate_block_height = value
+        self._set_dirty(True)
 
     @property
     def block_height(self) -> int:
@@ -280,19 +290,6 @@ class PRep(Sortable):
     @classmethod
     def make_key(cls, address: 'Address') -> bytes:
         return cls.PREFIX + address.to_bytes_including_prefix()
-
-    def is_flag_on(self, flags: 'PRepFlag') -> bool:
-        return bool(self._flags & flags == flags)
-
-    def toggle_flag(self, flags: PRepFlag, on: bool):
-        """Toggle flags
-        This method should be called only by PRepContainer
-
-        :param flags:
-        :param on:
-        :return:
-        """
-        utils.toggle_flags(self._flags, flags, on)
 
     def is_frozen(self) -> bool:
         return bool(self._flags & PRepFlag.FROZEN)
@@ -339,7 +336,7 @@ class PRep(Sortable):
             if value is not None:
                 setattr(self, key, value)
 
-        self._flags |= PRepFlag.DIRTY
+        self._set_dirty(True)
 
     def set_irep(self, irep: int, block_height: int):
         """Set incentive rep
@@ -352,6 +349,7 @@ class PRep(Sortable):
 
         self._irep = irep
         self._irep_block_height = block_height
+        self._set_dirty(True)
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()

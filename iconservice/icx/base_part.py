@@ -15,7 +15,7 @@
 
 from enum import Flag
 
-from ..utils import toggle_flags
+from ..utils import set_flag
 
 
 class BasePartState(Flag):
@@ -33,7 +33,7 @@ class BasePart(object):
         return self._states
 
     def toggle_state(self, state: 'BasePartState', on: bool):
-        self._states = toggle_flags(self._states, state, on)
+        self._states = set_flag(self._states, state, on)
 
     def is_dirty(self) -> bool:
         return self.is_set(BasePartState.DIRTY)
