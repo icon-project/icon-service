@@ -205,11 +205,10 @@ class IconScoreContext(object):
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
         for dirty_prep in self.tx_dirty_preps.values():
-            dirty_prep.freeze()
-
             self.preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
+            dirty_prep.freeze()
 
         self.tx_dirty_preps.clear()
 

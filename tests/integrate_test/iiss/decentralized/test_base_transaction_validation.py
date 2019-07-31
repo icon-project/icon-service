@@ -28,7 +28,7 @@ from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAP
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
-from iconservice.prep.data import PRepContainer, PRepFlag
+from iconservice.prep.data import PRepFlag
 from tests import create_tx_hash, create_block_hash
 from tests.integrate_test import create_timestamp
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -133,7 +133,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _make_issue_info(self) -> tuple:
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+        context.preps = context.engine.prep.preps.copy(mutable=True)
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
@@ -149,7 +149,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+        context.preps = context.engine.prep.preps.copy(mutable=True)
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()

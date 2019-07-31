@@ -19,7 +19,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
-    from .prep.data import PRep, PRepContainer
+    from .prep.data import PRep
     from .iiss.storage import RewardRate
     from .prep.term import Term
 
@@ -80,6 +79,7 @@ class IconServiceEngine(ContextContainer):
     It MUST NOT have any loopchain dependencies.
     It is contained in IconInnerService.
     """
+    TAG = "ISE"
 
     def __init__(self):
         """Constructor
@@ -523,9 +523,9 @@ class IconServiceEngine(ContextContainer):
         main_prep_as_dict: Optional[dict] = None
         next_term: Optional['Term'] = None
 
-        if self._is_prep_term_over(context):
+        if self._is_prep_term_ended(context):
             if base_tx_result is not None:
-                self._update_preps_apply_low_productivity_penalty(context, base_tx_result)
+                self._impose_low_productivity_penalty_on_main_preps(context, base_tx_result)
 
             # The current P-Rep term is over. Prepare the next P-Rep term
             main_prep_as_dict, next_term = context.engine.prep.on_term_ended(context)
@@ -548,18 +548,24 @@ class IconServiceEngine(ContextContainer):
 
         return main_prep_as_dict, next_term
 
-    def _update_preps_apply_low_productivity_penalty(self,
-                                                     context: 'IconScoreContext',
-                                                     base_tx_result: 'TransactionResult'):
-        low_productivities: list = []
+    def _impose_low_productivity_penalty_on_main_preps(
+            self, context: 'IconScoreContext', base_tx_result: 'TransactionResult'):
+        """Check the P-Reps to impose low productivity penalty on every block
+
+        :param context:
+        :param base_tx_result:
+        :return:
+        """
+
+        lazy_preps: list = []
         for main_prep in context.engine.prep.term.main_preps:
-            prep = context.preps.get_by_address(main_prep.address)
+            prep: 'PRep' = context.get_prep(main_prep.address)
             assert prep is not None
 
             if prep.is_low_productivity():
-                low_productivities.append(prep)
+                lazy_preps.append(prep)
 
-        for prep in low_productivities:
+        for prep in lazy_preps:
             dirty_prep: 'PRep' = prep.copy()
             dirty_prep.status = PRepStatus.LOW_PRODUCTIVITY
             context.put_dirty_prep(dirty_prep)
@@ -570,15 +576,12 @@ class IconServiceEngine(ContextContainer):
 
         base_tx_result.event_logs.extend(context.event_logs)
         base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
+        context.update_dirty_prep_batch()
 
-    def _update_productivity(self,
-                             context: 'IconScoreContext',
+    @staticmethod
+    def _update_productivity(context: 'IconScoreContext',
                              prev_block_generator: Optional['Address'] = None,
                              prev_block_validators: Optional[List['Address']] = None):
-
-        if not context.is_decentralized():
-            return
-
         validates: set = set()
         if prev_block_generator:
             validates.add(prev_block_generator)
@@ -594,7 +597,7 @@ class IconServiceEngine(ContextContainer):
                 context.put_dirty_prep(prep)
 
     @staticmethod
-    def _is_prep_term_over(context: 'IconScoreContext') -> bool:
+    def _is_prep_term_ended(context: 'IconScoreContext') -> bool:
         if context.revision < REV_DECENTRALIZATION:
             return False
 
@@ -920,9 +923,10 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
         context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
         context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
+        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context.tx_dirty_preps = OrderedDict()
 
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.

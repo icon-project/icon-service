@@ -15,21 +15,21 @@
 
 import os
 import random
-from typing import Optional
+from typing import Set, Optional
 
 # noinspection PyPackageRequirements
 import pytest
-
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import AccessDeniedException, InvalidParamsException
-from iconservice.prep.data import PRep, PRepContainer, PRepStatus, PRepFlag
+from iconservice.prep.data import PRep, PRepContainer, PRepStatus
 
 
-def _create_dummy_prep(index: int) -> 'PRep':
+def _create_dummy_prep(index: int, status: 'PRepStatus' = PRepStatus.ACTIVE) -> 'PRep':
     address = Address(AddressPrefix.EOA, os.urandom(20))
 
     return PRep(
         address=address,
+        status=status,
         name=f"node{index}",
         country="KOR",
         city="Seoul",
@@ -51,26 +51,13 @@ def create_prep_container() -> callable:
 
         for i in range(size):
             prep = _create_dummy_prep(i)
-            preps.register(prep)
+            preps.add(prep)
 
         assert preps.size(active_prep_only=True) == size
         assert preps.size(active_prep_only=False) == size
         return preps
 
     return _create_prep_container
-
-
-def test_register(create_prep_container):
-    size: int = 100
-    preps = create_prep_container(size)
-
-    prev_prep: Optional['PRep'] = None
-    for prep in preps:
-        if prev_prep:
-            assert prev_prep.order() < prep.order()
-
-        prev_prep = prep
-        print(f"{prep.order()}")
 
 
 def test_getitem(create_prep_container):
@@ -84,7 +71,7 @@ def test_getitem(create_prep_container):
         assert id(prep_by_index) == id(prep_by_address)
 
 
-def test_get_by_address_with_non_existing_address(create_prep_container):
+def test_get_by_address(create_prep_container):
     size = 10
     preps = create_prep_container(size)
 
@@ -92,107 +79,58 @@ def test_get_by_address_with_non_existing_address(create_prep_container):
     prep: 'PRep' = preps.get_by_index(index)
     assert isinstance(prep, PRep)
 
-    unregistered_prep = preps.unregister(prep.address)
+    indexed_prep: 'PRep' = preps.get_by_address(prep.address)
+    assert id(prep) == id(indexed_prep)
 
-    prep = preps.get_by_address(unregistered_prep.address, mutable=False)
-    assert prep is not None
-    assert prep.status != PRepStatus.ACTIVE
-    assert not prep.is_frozen()
+    removed_prep: 'PRep' = preps.remove(prep.address)
+    assert id(prep) == id(removed_prep)
 
-    prep = preps.get_by_address(unregistered_prep.address, mutable=True)
-    assert prep is not None
-    assert prep.status != PRepStatus.ACTIVE
-    assert not prep.is_frozen()
+    returned_prep: 'PRep' = preps.get_by_address(prep.address)
+    assert returned_prep is None
 
-    preps.freeze()
+    prep: 'PRep' = _create_dummy_prep(10, PRepStatus.UNREGISTERED)
+    preps.add(prep)
+    assert preps.size(active_prep_only=False) == 10
+    assert preps.size(active_prep_only=True) == 9
 
-    prep = preps.get_by_address(unregistered_prep.address, mutable=False)
-    assert prep is not None
-    assert prep.status != PRepStatus.ACTIVE
-    assert prep.is_frozen()
-
-    with pytest.raises(AccessDeniedException):
-        preps.get_by_address(unregistered_prep.address, mutable=True)
+    returned_prep = preps.get_by_address(prep.address)
+    assert id(prep) == id(returned_prep)
 
 
 def test_get_by_index(create_prep_container):
     size = 10
     preps = create_prep_container(size)
 
-    index: int = random.randint(0, size - 1)
-    prep: 'PRep' = preps.get_by_index(index)
-    assert isinstance(prep, PRep)
+    old_preps: Set['PRep'] = set()
 
-    prep = preps.get_by_index(size, mutable=False)
+    # Index
+    for i in range(size):
+        prep: 'PRep' = preps.get_by_index(i)
+        assert prep is not None
+        assert preps not in old_preps
+        old_preps.add(prep)
+
+    prep = preps.get_by_index(size)
     assert prep is None
 
-    prep = preps.get_by_index(size, mutable=True)
-    assert prep is None
-
+    # Reverse index
     for i in range(1, size + 1):
         prep = preps.get_by_index(-i)
         assert prep is not None
         assert prep == preps.get_by_index(size - i)
 
 
-def test_get_inactive_prep_by_address(create_prep_container):
-    size = 11
-    preps = create_prep_container(size)
-
-    for prep_status in (PRepStatus.UNREGISTERED, PRepStatus.DISQUALIFIED, PRepStatus.LOW_PRODUCTIVITY):
-        active_prep_count: int = preps.size(active_prep_only=True)
-
-        # Make sure that the prep to unregister is active
-        index: int = random.randint(0, active_prep_count - 1)
-        prep: 'PRep' = preps.get_by_index(index)
-        assert isinstance(prep, PRep)
-        assert prep.status == PRepStatus.ACTIVE
-        assert not prep.is_frozen()
-
-        # Remove a prep from PRepContainer with a given index
-        removed_prep = preps.unregister(prep.address, prep_status)
-        assert id(prep) == id(removed_prep)
-        assert removed_prep.address not in preps
-        assert preps.contains(removed_prep.address, active_prep_only=False)
-
-        # Check whether the prep is removed
-        prep: 'PRep' = preps.get_by_address(removed_prep.address)
-        assert prep is not None
-        assert prep.status == prep_status
-
-
-def test_unregister(create_prep_container):
-    init_size: int = 100
-    size: int = 100
-    preps = create_prep_container(size)
-
-    for _ in range(50):
-        i = random.randint(0, size - 1)
-        prep = preps.get_by_index(i)
-        assert preps.contains(prep.address, active_prep_only=True)
-        assert preps.contains(prep.address, active_prep_only=False)
-
-        unregister_prep = preps.unregister(prep.address)
-        size -= 1
-
-        assert prep == unregister_prep
-        assert prep.address not in preps
-        assert preps.size(active_prep_only=True) == size
-        assert preps.size(active_prep_only=False) == init_size
-        assert not preps.contains(unregister_prep.address, active_prep_only=True)
-        assert preps.contains(unregister_prep.address, active_prep_only=False)
-
-
 def test_index(create_prep_container):
     size: int = 100
     preps = create_prep_container(size)
 
-    i = random.randint(0, size - 1)
-    prep = preps.get_by_index(i)
+    for _ in range(10):
+        i = random.randint(0, size - 1)
+        prep = preps.get_by_index(i)
 
-    index: int = preps.index(prep.address)
-    assert 0 <= index < size
-    assert prep == preps.get_by_index(index)
+        index: int = preps.index(prep.address)
+        assert 0 <= index < size
+        assert id(prep) == id(preps.get_by_index(index))
 
 
 def test_freeze(create_prep_container):
@@ -206,13 +144,13 @@ def test_freeze(create_prep_container):
 
     with pytest.raises(AccessDeniedException):
         address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        preps.register(PRep(address))
+        preps.add(PRep(address))
 
     with pytest.raises(AccessDeniedException):
-        preps.unregister(prep.address)
+        preps.remove(prep.address)
 
 
-def test_total_prep_delegated(create_prep_container):
+def test_total_delegated(create_prep_container):
     size: int = 51
     preps: 'PRepContainer' = create_prep_container(size)
 
@@ -220,39 +158,47 @@ def test_total_prep_delegated(create_prep_container):
     for prep in preps:
         total_delegated += prep.delegated
 
-    assert total_delegated == preps.total_prep_delegated
+    assert total_delegated == preps.total_delegated
 
-    # Case: unregister a P-Rep
+    # Case: remove a P-Rep
     for _ in range(size // 2):
         active_prep_count: int = preps.size(active_prep_only=True)
         index: int = random.randint(0, active_prep_count - 1)
         prep: 'PRep' = preps.get_by_index(index)
+        assert prep.status == PRepStatus.ACTIVE
 
-        expected_total_prep_delegated: int = preps.total_prep_delegated - prep.delegated
-        preps.unregister(prep.address)
-        assert preps.total_prep_delegated == expected_total_prep_delegated
+        expected_total_delegated: int = preps.total_delegated - prep.delegated
+        removed_prep = preps.remove(prep.address)
+        assert id(prep) == id(removed_prep)
+        assert preps.total_delegated == expected_total_delegated
 
     # Case: add a P-Rep
+    size = preps.size(active_prep_only=True)
     for _ in range(size // 2):
-        index: int = preps.size(active_prep_only=True)
+        size: int = preps.size(active_prep_only=True)
+        index = size
+
         new_prep: 'PRep' = _create_dummy_prep(index)
+        assert new_prep.status == PRepStatus.ACTIVE
 
-        expected_total_prep_delegated: int = preps.total_prep_delegated + new_prep.delegated
-        preps.register(new_prep)
-        assert preps.total_prep_delegated == expected_total_prep_delegated
-
-    assert preps.size(active_prep_only=True) == size
+        expected_total_delegated: int = preps.total_delegated + new_prep.delegated
+        preps.add(new_prep)
+        assert preps.size(active_prep_only=True) == size + 1
+        assert preps.total_delegated == expected_total_delegated
 
     # Case: change delegated amount of an existing P-Rep
     for i in range(size):
         prep: 'PRep' = preps.get_by_index(i)
-        new_delegated: int = random.randint(0, 5000)
 
-        expected_total_prep_delegated: int = \
-            preps.total_prep_delegated - prep.delegated + new_delegated
-        preps.set_delegated_to_prep(prep.address, new_delegated)
-        assert prep.delegated == new_delegated
-        assert preps.total_prep_delegated == expected_total_prep_delegated
+        new_prep: 'PRep' = prep.copy()
+        new_prep.delegated = random.randint(0, 5000)
+
+        expected_total_delegated: int = \
+            preps.total_delegated - prep.delegated + new_prep.delegated
+
+        old_prep: 'PRep' = preps.replace(new_prep)
+        assert id(prep) == id(old_prep)
+        assert preps.total_delegated == expected_total_delegated
 
 
 def test_copy(create_prep_container):
@@ -261,7 +207,7 @@ def test_copy(create_prep_container):
 
     for mutable in (True, False):
         copied_preps: 'PRepContainer' = preps.copy(mutable)
-        assert preps.total_prep_delegated == copied_preps.total_prep_delegated
+        assert preps.total_delegated == copied_preps.total_delegated
 
         assert len(preps._active_prep_list) == len(copied_preps._active_prep_list)
         assert len(preps._prep_dict) == len(copied_preps._prep_dict)
@@ -277,6 +223,7 @@ def test_add(create_prep_container):
     size: int = 10
     preps: 'PRepContainer' = create_prep_container(size)
 
+    # Case: Add an active P-Rep
     new_prep = _create_dummy_prep(size)
     preps.add(new_prep)
     assert preps.size(active_prep_only=True) == size + 1
@@ -289,13 +236,15 @@ def test_add(create_prep_container):
     prep: 'PRep' = preps.get_by_index(index)
     assert prep is not None
 
-    preps.remove(prep.address)
-    assert preps.size(active_prep_only=True) == size
-    assert preps.size(active_prep_only=False) == size
+    for status in (PRepStatus.UNREGISTERED, PRepStatus.DISQUALIFIED, PRepStatus.LOW_PRODUCTIVITY):
+        preps.remove(prep.address)
+        assert preps.size(active_prep_only=True) == size
+        assert preps.size(active_prep_only=False) == size
 
-    preps.add(prep)
-    assert preps.size(active_prep_only=True) == size + 1
-    assert preps.size(active_prep_only=False) == size + 1
+        prep.status = status
+        preps.add(prep)
+        assert preps.size(active_prep_only=True) == size
+        assert preps.size(active_prep_only=False) == size + 1
 
 
 def test_remove(create_prep_container):
@@ -314,18 +263,22 @@ def test_remove(create_prep_container):
 def test_replace(create_prep_container):
     size: int = 20
     preps: 'PRepContainer' = create_prep_container(size)
-    new_preps = preps.copy(mutable=True)
 
     index: int = 10
-    old_prep: 'PRep' = preps.get_by_index(index, mutable=False)
-    new_prep: 'PRep' = old_prep.copy(PRepFlag.NONE)
+    old_prep: Optional['PRep'] = preps.get_by_index(index)
+    new_prep: 'PRep' = old_prep.copy()
     assert id(old_prep) != id(new_prep)
 
     new_prep.country = "USA"
     new_prep.city = "New York"
 
-    new_preps.replace(new_prep)
-    assert new_prep == new_preps.get_by_index(index)
-    assert preps.total_prep_delegated == new_preps.total_prep_delegated
-    assert preps.size(active_prep_only=True) == new_preps.size(active_prep_only=True)
-    assert preps.size(active_prep_only=False) == new_preps.size(active_prep_only=False)
+    preps.replace(new_prep)
+    assert new_prep == preps.get_by_index(index)
+    assert old_prep.address == new_prep.address
+    assert index == preps.index(new_prep.address)
+    assert preps.total_delegated == preps.total_delegated
+    assert preps.size(active_prep_only=True) == preps.size(active_prep_only=True)
+    assert preps.size(active_prep_only=False) == preps.size(active_prep_only=False)
+
+    old_prep = preps.replace(new_prep)
+    assert old_prep is None

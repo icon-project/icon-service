@@ -122,7 +122,7 @@ class Term(object):
             if delegated == frozen_prep.delegated:
                 prep: 'PRep' = frozen_prep
             else:
-                prep: 'PRep' = frozen_prep.copy(PRepFlag.NONE)
+                prep: 'PRep' = frozen_prep.copy()
                 prep.delegated = delegated
                 prep.freeze()
 
