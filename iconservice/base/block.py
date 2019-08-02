@@ -190,3 +190,7 @@ class Block(object):
             block_hash_bytes,
             timestamp_bytes,
             prev_block_hash_bytes)
+
+
+# This predefined block is used to fix context.block.height access error before genesis block is synchronized.
+EMPTY_BLOCK = Block(block_height=-1, block_hash=bytes(64), timestamp=0, prev_hash=None)

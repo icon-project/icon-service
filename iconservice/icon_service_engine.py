@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 from iconcommons.logger import Logger
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from .base.block import Block
+from .base.block import Block, EMPTY_BLOCK
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException
 from .base.message import Message
@@ -1603,7 +1603,7 @@ class IconServiceEngine(ContextContainer):
         if self._precommit_data_manager:
             return self._precommit_data_manager.last_block
 
-        return None
+        return EMPTY_BLOCK
 
     def inner_call(self, request: dict):
         context = IconScoreContext(IconScoreContextType.QUERY)
