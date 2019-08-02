@@ -19,9 +19,9 @@
 from typing import TYPE_CHECKING, List
 from unittest.mock import patch
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, \
-    PREP_PENALTY_SIGNATURE, BASE_TRANSACTION_INDEX, PREP_MAIN_AND_SUB_PREPS
+    PREP_PENALTY_SIGNATURE, BASE_TRANSACTION_INDEX, PREP_MAIN_AND_SUB_PREPS, IISS_MIN_IREP
 from iconservice.icon_constant import PRepStatus, PRepGrade
 from iconservice.iconscore.icon_score_event_log import EventLog
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -102,18 +102,42 @@ class TestPreps(TestIISSBase):
         # get main prep list
         expected_preps: list = []
         for i in range(1, PREP_MAIN_PREPS):
+            account = self._accounts[i]
             expected_preps.append({
-                "address": self._accounts[i].address,
-                "delegated": 0
+                'status': 0,
+                'name': f'node{account.address}',
+                'country': 'KOR',
+                'city': 'Unknown',
+                'stake': 0,
+                'totalBlocks': 40,
+                'validatedBlocks': 0,
+                'irep': IISS_INITIAL_IREP,
+                'irepUpdateBlockHeight': self.irep_updated_block_height,
+                'lastGenerateBlockHeight': -1,
+                'address': account.address,
+                'votingWeight': 0,
+                'delegated': 0
             })
-        expected_preps.insert(0, {"address": self._accounts[PREP_MAIN_PREPS].address,
-                                  "delegated": delegation_amount})
+        expected_preps.insert(0, {'status': 0,
+                                  'name': f'node{self._accounts[PREP_MAIN_PREPS].address}',
+                                  'country': 'KOR',
+                                  'city': 'Unknown',
+                                  'stake': delegation_amount,
+                                  'totalBlocks': 0,
+                                  'validatedBlocks': 0,
+                                  'irep': IISS_MIN_IREP,
+                                  'irepUpdateBlockHeight': self._block_height - 2,
+                                  'lastGenerateBlockHeight': -1,
+                                  'address': self._accounts[PREP_MAIN_PREPS].address,
+                                  'votingWeight': delegation_amount,
+                                  'delegated': delegation_amount})
 
         response: dict = self.get_main_prep_list()
         expected_response: dict = \
             {
                 "preps": expected_preps,
-                "totalDelegated": delegation_amount
+                "totalDelegated": delegation_amount,
+                "totalStake": delegation_amount
             }
         self.assertEqual(expected_response, response)
 

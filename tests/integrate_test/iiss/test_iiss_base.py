@@ -22,7 +22,7 @@ from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ConfigKey, REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, \
-    REV_DECENTRALIZATION, PREP_MAIN_AND_SUB_PREPS
+    REV_DECENTRALIZATION, PREP_MAIN_AND_SUB_PREPS, IISS_INITIAL_IREP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
 
 if TYPE_CHECKING:
@@ -407,7 +407,8 @@ class TestIISSBase(TestIntegrateBase):
         response: dict = self.get_main_prep_list()
         expected_response: dict = {
             "preps": [],
-            "totalDelegated": 0
+            "totalDelegated": 0,
+            "totalStake": 0
         }
         self.assertEqual(expected_response, response)
 
@@ -418,16 +419,30 @@ class TestIISSBase(TestIntegrateBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
+        self.irep_updated_block_height = self._block_height - 2
         for account in self._accounts[:PREP_MAIN_PREPS]:
             expected_preps.append({
+                'status': 0,
+                'name': f'node{account.address}',
+                'country': "KOR",
+                'city': 'Unknown',
+                'stake': 0,
+                'totalBlocks': 0,
+                'validatedBlocks': 0,
+                'irep': IISS_INITIAL_IREP,
+                'irepUpdateBlockHeight': self.irep_updated_block_height,
+                'lastGenerateBlockHeight': -1,
                 'address': account.address,
-                'delegated': minimum_delegate_amount_for_decentralization
+                'delegated': minimum_delegate_amount_for_decentralization,
+                'votingWeight': minimum_delegate_amount_for_decentralization
             })
             expected_total_delegated += minimum_delegate_amount_for_decentralization
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
+            "totalStake": 0
         }
+
         self.assertEqual(expected_response, response)
 
         # delegate to PRep 0
@@ -445,12 +460,24 @@ class TestIISSBase(TestIntegrateBase):
         expected_preps: list = []
         for account in self._accounts[:PREP_MAIN_PREPS]:
             expected_preps.append({
+                'status': 0,
+                'name': f'node{account.address}',
+                'country': 'KOR',
+                'city': 'Unknown',
+                'stake': 0,
+                'totalBlocks': 10,
+                'validatedBlocks': 0,
+                'irep': IISS_INITIAL_IREP,
+                'irepUpdateBlockHeight': self.irep_updated_block_height,
+                'lastGenerateBlockHeight': -1,
                 'address': account.address,
-                'delegated': 0
+                'votingWeight': 0,
+                'delegated': 0,
             })
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": 0
+            "totalDelegated": 0,
+            "totalStake": 0
         }
         self.assertEqual(expected_response, response)
 

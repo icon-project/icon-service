@@ -62,9 +62,9 @@ class Engine(EngineBase, IISSEngineListener):
 
         self._query_handler: dict = {
             "getPRep": self.handle_get_prep,
-            "getMainPReps": self.handle_get_main_prep_list,
-            "getSubPReps": self.handle_get_sub_prep_list,
-            "getPReps": self.handle_get_prep_list
+            "getMainPReps": self.handle_get_main_preps,
+            "getSubPReps": self.handle_get_sub_preps,
+            "getPReps": self.handle_get_preps
         }
 
         self.preps = PRepContainer()
@@ -83,7 +83,6 @@ class Engine(EngineBase, IISSEngineListener):
     def _load_preps(self, context: 'IconScoreContext'):
         """Load a prep from db
 
-        :param prep:
         :return:
         """
         icx_storage: 'IcxStorage' = context.storage.icx
@@ -480,7 +479,7 @@ class Engine(EngineBase, IISSEngineListener):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
-    def handle_get_main_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_main_preps(self, _context: 'IconScoreContext', _params: dict) -> dict:
         """Returns main P-Rep list in the current term
 
         :param _context:
@@ -488,23 +487,28 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         preps: List['PRep'] = self.term.main_preps
+        prep_container: PRepContainer = self.preps
         total_delegated: int = 0
+        total_stake: int = 0
         prep_list: list = []
 
         for prep in preps:
-            item = {
-                "address": prep.address,
-                "delegated": prep.delegated
-            }
+            prep_in_block: PRep = prep_container.get_by_address(prep.address)
+            item: dict = prep_in_block.to_dict(PRepDictType.ABRIDGED)
+            del item['grade']
+            item['votingWeight'] = item.pop("delegated")
+            item['delegated'] = prep.delegated
             prep_list.append(item)
-            total_delegated += prep.delegated
+            total_delegated += prep_in_block.delegated
+            total_stake += prep_in_block.stake
 
         return {
             "totalDelegated": total_delegated,
+            "totalStake": total_stake,
             "preps": prep_list
         }
 
-    def handle_get_sub_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_sub_preps(self, _context: 'IconScoreContext', _params: dict) -> dict:
         """Returns sub P-Rep list in the present term
 
         :param _context:
@@ -512,23 +516,28 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         preps: List['PRep'] = self.term.sub_preps
+        prep_container: PRepContainer = self.preps
         total_delegated: int = 0
+        total_stake: int = 0
         prep_list: list = []
 
         for prep in preps:
-            item = {
-                "address": prep.address,
-                "delegated": prep.delegated
-            }
+            prep_in_block: PRep = prep_container.get_by_address(prep.address)
+            item: dict = prep_in_block.to_dict(PRepDictType.ABRIDGED)
+            del item['grade']
+            item['votingWeight'] = item.pop("delegated")
+            item['delegated'] = prep.delegated
             prep_list.append(item)
-            total_delegated += prep.delegated
+            total_delegated += prep_in_block.delegated
+            total_stake += prep_in_block.stake
 
         return {
             "totalDelegated": total_delegated,
+            "totalStake": total_stake,
             "preps": prep_list
         }
 
-    def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_preps(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns P-Reps ranging in ranking from start_ranking to end_ranking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps

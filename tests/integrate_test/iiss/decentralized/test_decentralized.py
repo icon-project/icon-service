@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice.base.address import Address
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
     PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_MIN_IREP, IISS_INITIAL_IREP, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -80,7 +79,8 @@ class TestIISSDecentralized(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_response: dict = {
             "preps": [],
-            "totalDelegated": 0
+            "totalDelegated": 0,
+            "totalStake": 0
         }
         self.assertEqual(expected_response, response)
 
@@ -91,15 +91,28 @@ class TestIISSDecentralized(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
+        irep_updated = self._block_height - 2
         for account in self._accounts[:PREP_MAIN_PREPS]:
             expected_preps.append({
+                'status': 0,
+                'name': f'node{account.address}',
+                'country': 'KOR',
+                'city': 'Unknown',
+                'stake': 0,
+                'totalBlocks': 0,
+                'validatedBlocks': 0,
+                'irep': IISS_INITIAL_IREP,
+                'irepUpdateBlockHeight': irep_updated,
+                'lastGenerateBlockHeight': -1,
                 'address': account.address,
-                'delegated': minimum_delegate_amount_for_decentralization
+                'votingWeight': minimum_delegate_amount_for_decentralization,
+                'delegated': minimum_delegate_amount_for_decentralization,
             })
             expected_total_delegated += minimum_delegate_amount_for_decentralization
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
+            "totalStake": 0
         }
         self.assertEqual(expected_response, response)
 

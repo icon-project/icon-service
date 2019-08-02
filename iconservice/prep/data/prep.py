@@ -493,8 +493,6 @@ class PRep(Sortable):
             data[ConstantKeys.DETAILS] = self.details
             data[ConstantKeys.P2P_ENDPOINT] = self.p2p_endpoint
             data[ConstantKeys.PUBLIC_KEY] = self.public_key
-            data[ConstantKeys.IREP] = self._irep
-            data[ConstantKeys.IREP_BLOCK_HEIGHT] = self._irep_block_height
         else:
             data[ConstantKeys.ADDRESS] = self.address
 

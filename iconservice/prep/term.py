@@ -131,8 +131,8 @@ class Term(object):
 
         return prep_list
 
-    def update( self, sequence: int, main_prep_count: int, main_and_sub_prep_count: int,
-                current_block_height: int, preps: List['PRep'], total_supply: int, term_period: int, irep: int):
+    def update(self, sequence: int, main_prep_count: int, main_and_sub_prep_count: int,
+               current_block_height: int, preps: List['PRep'], total_supply: int, term_period: int, irep: int):
         """
         :param sequence:
         :param main_prep_count

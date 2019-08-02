@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice import Address
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
+    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_INITIAL_IREP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
@@ -50,13 +49,25 @@ class TestChangedMinimumDelegate(TestIISSBase):
         expected_total_delegated: int = 0
         for account in self._accounts[:PREP_MAIN_PREPS]:
             expected_preps.append({
+                'status': 0,
+                'name': f'node{account.address}',
+                'country': 'KOR',
+                'city': 'Unknown',
+                'stake': 0,
+                'totalBlocks': 0,
+                'validatedBlocks': 0,
+                'irep': IISS_INITIAL_IREP,
+                'irepUpdateBlockHeight': self._block_height - 1,
+                'lastGenerateBlockHeight': -1,
                 'address': account.address,
+                'votingWeight': 0,
                 'delegated': 0
             })
             expected_total_delegated += 0
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": 0
+            "totalDelegated": 0,
+            "totalStake": 0
         }
         self.assertEqual(expected_response, response)
 

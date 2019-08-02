@@ -98,7 +98,8 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_response: dict = {
             "preps": [],
-            "totalDelegated": 0
+            "totalDelegated": 0,
+            "totalStake": 0
         }
         self.assertEqual(expected_response, response)
 
