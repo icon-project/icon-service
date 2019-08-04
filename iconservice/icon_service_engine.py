@@ -26,6 +26,7 @@ from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFou
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
+from .database.batch import ExternalBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
@@ -34,8 +35,8 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
     REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PRepStatus, PREP_PENALTY_SIGNATURE,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-)
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    META_DB)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -55,6 +56,7 @@ from .icx.issue.regulator import Regulator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
 from .inner_call import inner_call
+from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
@@ -114,9 +116,12 @@ class IconServiceEngine(ContextContainer):
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
 
+        meta_db_path: str = os.path.join(state_db_root_path, META_DB)
+
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
         os.makedirs(rc_data_path, exist_ok=True)
+        os.makedirs(meta_db_path, exist_ok=True)
 
         # Share one context db with all SCOREs
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
@@ -149,6 +154,7 @@ class IconServiceEngine(ContextContainer):
                                      log_dir,
                                      rc_data_path,
                                      rc_socket_path,
+                                     meta_db_path,
                                      conf[ConfigKey.IISS_META_DATA],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
@@ -173,7 +179,8 @@ class IconServiceEngine(ContextContainer):
                                                    iiss=IISSStorage(self._icx_context_db),
                                                    prep=PRepStorage(self._icx_context_db),
                                                    issue=IssueStorage(self._icx_context_db),
-                                                   rc=RewardCalcStorage())
+                                                   rc=RewardCalcStorage(),
+                                                   meta=MetaDBStorage())
 
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage
@@ -183,6 +190,7 @@ class IconServiceEngine(ContextContainer):
                                 log_dir: str,
                                 rc_data_path: str,
                                 rc_socket_path: str,
+                                meta_db_path: str,
                                 iiss_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
@@ -212,6 +220,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.rc.open(rc_data_path)
 
+        IconScoreContext.storage.meta.open(meta_db_path)
+
     def _close_component_context(self, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
         IconScoreContext.engine.fee.close()
@@ -227,6 +237,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.prep.close(context)
         IconScoreContext.storage.issue.close(context)
         IconScoreContext.storage.rc.close()
+        IconScoreContext.storage.meta.close()
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
@@ -382,6 +393,7 @@ class IconServiceEngine(ContextContainer):
         :param is_block_editable: boolean which imply whether creating base transaction or not
         :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
+
         # If the block has already been processed,
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
@@ -401,6 +413,8 @@ class IconServiceEngine(ContextContainer):
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
         context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
+        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
+        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
 
         self._set_revision_to_context(context)
         block_result = []
@@ -417,8 +431,7 @@ class IconServiceEngine(ContextContainer):
             added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
             tx_requests.insert(0, base_transaction)
 
-        self._update_productivity(context, prev_block_generator, prev_block_validators)
-        self._update_last_generate_block_height(context, prev_block_generator)
+        self.before_transaction_process(context, prev_block_generator, prev_block_validators)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -463,6 +476,7 @@ class IconServiceEngine(ContextContainer):
             context.block_batch,
             block_result,
             context.rc_block_batch,
+            context.meta_block_batch,
             context.preps,
             next_term,
             prev_block_generator,
@@ -472,6 +486,13 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    def before_transaction_process(self,
+                                   context: 'IconScoreContext',
+                                   prev_block_generator: Optional['Address'] = None,
+                                   prev_block_validators: Optional[List['Address']] = None):
+        self._update_productivity(context, prev_block_generator, prev_block_validators)
+        self._update_last_generate_block_height(context, prev_block_generator)
 
     def after_transaction_process(
             self,
@@ -506,7 +527,12 @@ class IconServiceEngine(ContextContainer):
             # Synchronize the timing between I-Score calculation and term change
             self._sync_end_block_height_of_calc_and_term(context, next_term)
 
+            context.storage.meta.put_last_term_end_block(context.meta_block_batch, next_term.start_block_height - 1)
+
         if context.revision >= REV_IISS:
+            if flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC):
+                last_calc_end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+                context.storage.meta.put_last_calc_end_block(context.meta_block_batch, last_calc_end_block_height)
             context.engine.iiss.update_db(context, next_term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
@@ -579,6 +605,7 @@ class IconServiceEngine(ContextContainer):
             assert next_term.sequence == 0
             next_end_block_height: int = next_term.end_block_height
             context.storage.iiss.put_end_block_height_of_calc(context, next_end_block_height)
+            context.storage.meta.put_last_calc_end_block(context.meta_block_batch, next_end_block_height)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
@@ -874,6 +901,8 @@ class IconServiceEngine(ContextContainer):
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
         context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
+        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
+        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
 
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.
@@ -1071,24 +1100,23 @@ class IconServiceEngine(ContextContainer):
         response['variable']['irep'] = context.engine.prep.term.irep
         response['variable']['rrep'] = reward_rate.reward_prep
 
-        check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-        if check_end_block_height is None:
-            check_end_block_height = -1
-
-        calc_period: int = context.storage.iiss.get_calc_period(context)
-        estimate_end_block: int = check_end_block_height - calc_period
-        if context.block.height == estimate_end_block:
-            response['nextCalculation'] = estimate_end_block + 1
+        calc_end_block: int = context.storage.meta.get_last_calc_end_block(context)
+        if context.block.height == calc_end_block:
+            if calc_end_block < 0:
+                calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+            if calc_end_block is None:
+                calc_end_block = -1
         else:
-            response['nextCalculation'] = check_end_block_height + 1
+            calc_end_block: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        response['nextCalculation'] = calc_end_block + 1
 
-        term_end_block_height: int = context.engine.prep.term.end_block_height
-        term_period: int = context.engine.prep.term.period
-        estimate_end_block: int = term_end_block_height - term_period
-        if context.block.height == estimate_end_block:
-            response['nextPRepTerm'] = estimate_end_block + 1
+        term_end_block: int = context.storage.meta.get_last_term_end_block(context)
+        if context.block.height == term_end_block:
+            if term_end_block < 0:
+                term_end_block: int = context.engine.prep.term.end_block_height
         else:
-            response['nextPRepTerm'] = term_end_block_height + 1
+            term_end_block: int = context.engine.prep.term.end_block_height
+        response['nextPRepTerm'] = term_end_block + 1
 
         return response
 
@@ -1571,6 +1599,7 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.revision >= REV_IISS:
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
+            context.storage.meta.commit(precommit_data.meta_block_batch)
 
             context.engine.iiss.send_ipc(context, precommit_data)
 

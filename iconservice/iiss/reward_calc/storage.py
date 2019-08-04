@@ -18,12 +18,11 @@ import os
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
-
-from ...utils.msgpack_for_db import MsgPackForDB
-from ..reward_calc.db import Database as RewardCalcDatabase
 from ..reward_calc.msg_data import TxData
 from ...base.exception import DatabaseException
+from ...database.db import ExternalDatabase
 from ...icon_constant import DATA_BYTE_ORDER
+from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..reward_calc.msg_data import Data
@@ -38,7 +37,7 @@ class Storage(object):
 
     def __init__(self):
         self._path: str = ""
-        self._db: Optional['RewardCalcDatabase'] = None
+        self._db: Optional['ExternalDatabase'] = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
@@ -48,7 +47,7 @@ class Storage(object):
         self._path = path
 
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
-        self._db = RewardCalcDatabase.from_path(current_db_path, create_if_missing=True)
+        self._db = ExternalDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
 
     def close(self):
@@ -60,17 +59,17 @@ class Storage(object):
 
     def put_prev_calc_period_issued_iscore(self, iscore: int):
         version = 0
-        iscore = MsgPackForDB.dumps([version, iscore])
-        self._db.put(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE, iscore)
+        value: bytes = MsgPackForDB.dumps([version, iscore])
+        self._db.put(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE, value)
 
     def get_prev_calc_period_issued_iscore(self) -> Optional[int]:
-        prev_calc_period_issued_iscore = self._db.get(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE)
-        if prev_calc_period_issued_iscore is None:
+        value: bytes = self._db.get(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE)
+        if value is None:
             return None
-        iscore = MsgPackForDB.loads(prev_calc_period_issued_iscore)
-        version = iscore[0]
+        data: list = MsgPackForDB.loads(value)
+        version = data[0]
 
-        return iscore[1]
+        return data[1]
 
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):
@@ -118,7 +117,7 @@ class Storage(object):
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
 
-        self._db = RewardCalcDatabase.from_path(current_db_path)
+        self._db = ExternalDatabase.from_path(current_db_path)
         self._db_iiss_tx_index = -1
 
         return iiss_rc_db_path

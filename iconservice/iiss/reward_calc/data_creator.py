@@ -17,13 +17,13 @@
 from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
-
 from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 
 if TYPE_CHECKING:
     from ...base.address import Address
     from ..reward_calc.msg_data import Tx
+    from ...prep.data import PRep
 
 
 class DataCreator:
@@ -51,7 +51,7 @@ class DataCreator:
         data = BlockProduceInfoData()
         data.block_height: int = block_height
         data.block_generator: 'Address' = block_generator
-        data.block_validator_list: list = block_validators
+        data.block_validator_list: List['Address'] = block_validators
         return data
 
     @staticmethod

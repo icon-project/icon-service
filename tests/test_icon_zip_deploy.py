@@ -95,7 +95,8 @@ class TestIconZipDeploy(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
 
         self._one_icx = 1 * 10 ** 18

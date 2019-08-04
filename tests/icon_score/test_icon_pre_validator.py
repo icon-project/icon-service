@@ -52,7 +52,8 @@ class TestTransactionValidator(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
         self.context = IconScoreContext()
 

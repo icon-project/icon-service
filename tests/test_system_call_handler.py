@@ -50,7 +50,8 @@ class TestSystemCallHandler(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
         self.block_height = randrange(0, 100000)
         self.context.block = Block(self.block_height, os.urandom(32), 0, os.urandom(32), 0)

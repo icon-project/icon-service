@@ -18,21 +18,22 @@ import os
 import unittest
 from unittest.mock import patch
 
-from iconservice.iiss.reward_calc.data_creator import *
 from iconservice.iiss.reward_calc import RewardCalcStorage
+from iconservice.iiss.reward_calc.data_creator import *
 from iconservice.iiss.reward_calc.msg_data import TxType
 from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
 from tests.mock_db import MockPlyvelDB
+from tests.mock_generator import EXTERNAL_DB_PATH
 
 
 class TestRcDataStorage(unittest.TestCase):
-    @patch('iconservice.iiss.reward_calc.db.Database.from_path')
+    @patch(f'{EXTERNAL_DB_PATH}.from_path')
     @patch('os.path.exists')
-    def setUp(self, _, mocked_iiss_db_from_path) -> None:
+    def setUp(self, _, mocked_rc_db_from_path) -> None:
         self.path = ""
-        mocked_iiss_db_from_path.side_effect = MockIissDataBase.from_path
+        mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
         self.rc_data_storage = RewardCalcStorage()
         self.rc_data_storage.open(self.path)
 
@@ -61,9 +62,9 @@ class TestRcDataStorage(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @patch('iconservice.iiss.reward_calc.db.Database.from_path')
+    @patch(f'{EXTERNAL_DB_PATH}.from_path')
     @patch('os.path.exists')
-    def test_open(self, mocked_path_exists, mocked_iiss_db_from_path):
+    def test_open(self, mocked_path_exists, mocked_rc_db_from_path):
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
         rc_data_storage = RewardCalcStorage()
@@ -82,7 +83,7 @@ class TestRcDataStorage(unittest.TestCase):
             assert True, create_if_missing
             db = MockPlyvelDB(MockPlyvelDB.make_db())
             return MockIissDataBase(db)
-        mocked_iiss_db_from_path.side_effect = from_path
+        mocked_rc_db_from_path.side_effect = from_path
         rc_data_storage.open(test_db_path)
         mocked_path_exists.assert_called()
 
@@ -114,12 +115,12 @@ class TestRcDataStorage(unittest.TestCase):
         for block_height in range(-2, 1):
             self.assertRaises(AssertionError, self.rc_data_storage.create_db_for_calc, block_height)
 
-    @patch('iconservice.iiss.reward_calc.db.Database.from_path')
+    @patch(f'{EXTERNAL_DB_PATH}.from_path')
     @patch('os.rename')
     @patch('os.path.exists')
-    def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_iiss_db_from_path):
+    def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_rc_db_from_path):
         # success case: when input valid block height, should create iiss_db and return path
-        mocked_iiss_db_from_path.side_effect = MockIissDataBase.from_path
+        mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
         current_db_path = os.path.join(self.path, RewardCalcStorage._CURRENT_IISS_DB_NAME)
 
         # todo: to be refactored
@@ -137,7 +138,7 @@ class TestRcDataStorage(unittest.TestCase):
         self.assertEqual(expected_iiss_db_path, actual_ret_path)
 
         mocked_rename.assert_called_with(current_db_path, expected_iiss_db_path)
-        mocked_iiss_db_from_path.assert_called_with(current_db_path)
+        mocked_rc_db_from_path.assert_called_with(current_db_path)
 
         expected_last_tx_index = -1
         self.assertEqual(expected_last_tx_index, self.rc_data_storage._db_iiss_tx_index)

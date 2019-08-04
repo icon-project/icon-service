@@ -130,7 +130,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.deploy_storage.put_deploy_info(context, deploy_info)
         context.storage = ContextStorage(deploy=self.deploy_storage, fee=self.fee_storage, icx=self.icx_storage,
-                                         iiss=None, prep=None, issue=None, rc=None)
+                                         iiss=None, prep=None, issue=None, rc=None, meta=None)
         context.engine = ContextEngine(deploy=None, fee=None, icx=self._icx_engine, iiss=None, prep=None, issue=None)
         self._icx_engine.open(self.icx_storage)
 
@@ -158,7 +158,7 @@ class TestFeeEngine(unittest.TestCase):
         block.attach_mock(Mock(return_value=0), 'height')
         context.block = block
         context.storage = ContextStorage(deploy=self.deploy_storage,fee=self.fee_storage, icx=self.icx_storage,
-                                         iiss=None, prep=None, issue=None, rc=None)
+                                         iiss=None, prep=None, issue=None, rc=None, meta=None)
         context.engine = ContextEngine(deploy=None, fee=None, icx=self._icx_engine, iiss=None, prep=None, issue=None)
         return context
 

@@ -33,7 +33,7 @@ class TxType(IntEnum):
     INVALID = 99
 
 
-class Data(object):
+class Data:
     @abstractmethod
     def make_key(self, *args, **kwargs) -> bytes:
         pass
@@ -149,7 +149,9 @@ class BlockProduceInfoData(Data):
 
     def __str__(self):
         return f"[{self._PREFIX}] " \
-            f"key: {self.block_height}, block_generator: {str(self.block_generator)}"
+            f"key: {self.block_height}, " \
+            f"block_generator: {str(self.block_generator)}, " \
+            f"block_validators: {[str(addr) for addr in self.block_validator_list]}"
 
 
 class PRepsData(Data):

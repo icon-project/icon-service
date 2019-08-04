@@ -57,7 +57,8 @@ class TestIconScoreClassLoader(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
 
         self._context = IconScoreContext(IconScoreContextType.DIRECT)

@@ -80,7 +80,8 @@ class TestTrace(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
 
         context.icon_score_mapper = Mock()

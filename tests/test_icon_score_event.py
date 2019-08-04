@@ -59,7 +59,8 @@ class TestEventlog(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
 
         IconScoreContext.icx_engine = Mock(spec=IcxEngine)

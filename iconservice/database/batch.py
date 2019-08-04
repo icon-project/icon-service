@@ -153,3 +153,7 @@ class BlockBatch(Batch):
     def clear(self) -> None:
         self.block = None
         super().clear()
+
+
+class ExternalBatch(OrderedDict):
+    pass
