@@ -18,7 +18,7 @@ from enum import IntFlag
 from threading import Lock
 from typing import TYPE_CHECKING, Optional, List
 
-from .base.block import Block
+from .base.block import Block, EMPTY_BLOCK
 from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
@@ -103,7 +103,7 @@ class PrecommitDataManager(object):
         :return:
         """
         with self._lock:
-            self._last_block = block
+            self._last_block = block if block else EMPTY_BLOCK
 
     def push(self, precommit_data: 'PrecommitData'):
         block: 'Block' = precommit_data.block_batch.block
@@ -139,7 +139,7 @@ class PrecommitDataManager(object):
 
         :param block: block to invoke
         """
-        if self._last_block is None:
+        if not self._is_last_block_valid():
             return
 
         if block.prev_hash == self._last_block.hash and \
@@ -164,7 +164,7 @@ class PrecommitDataManager(object):
             raise InvalidParamsException(
                 f'No precommit data: block hash: ({instant_block_hash})')
 
-        if self._last_block is None:
+        if not self._is_last_block_valid():
             return
 
         precommit_block = precommit_data.block
@@ -173,3 +173,6 @@ class PrecommitDataManager(object):
                 self._last_block.height + 1 != precommit_block.height:
             raise InvalidParamsException(
                 f'Invalid precommit block: last_block({self._last_block}) precommit_block({precommit_block})')
+
+    def _is_last_block_valid(self) -> bool:
+        return self._last_block.height >= 0

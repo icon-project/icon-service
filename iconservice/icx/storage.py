@@ -25,7 +25,7 @@ from .icx_account import Account
 from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
-from ..base.block import Block
+from ..base.block import Block, EMPTY_BLOCK
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG
 
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ class Storage(StorageBase):
         """
         super().__init__(db)
         self._db = db
-        self._last_block = None
+        self._last_block = EMPTY_BLOCK
         self._genesis: 'Address' = None
         self._fee_treasury: 'Address' = None
 
