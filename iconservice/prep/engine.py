@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
-
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -34,6 +32,7 @@ from ..icx.icx_account import Account
 from ..icx.storage import Intent
 from ..iiss import IISSEngineListener
 from ..iiss.reward_calc import RewardCalcDataCreator
+from ..utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
     from . import PRepStorage
@@ -292,9 +291,9 @@ class Engine(EngineBase, IISSEngineListener):
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
             return None
 
-        prep_as_dict = {}
-        preps_as_list = []
-        prep_addresses_for_roothash = b''
+        prep_as_dict: dict = {}
+        preps_as_list: list = []
+        prep_addresses: List[bytes] = []
 
         for i in range(count):
             prep: 'PRep' = preps[i]
@@ -302,10 +301,10 @@ class Engine(EngineBase, IISSEngineListener):
                 ConstantKeys.PREP_ID: prep.address,
                 ConstantKeys.P2P_ENDPOINT: prep.p2p_endpoint
             })
-            prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
+            prep_addresses.append(prep.address.to_bytes_including_prefix())
 
         prep_as_dict["preps"] = preps_as_list
-        prep_as_dict["rootHash"]: bytes = hashlib.sha3_256(prep_addresses_for_roothash).digest()
+        prep_as_dict["rootHash"]: bytes = RootHashGenerator.generate_root_hash(values=prep_addresses, do_hash=True)
 
         return prep_as_dict
 
