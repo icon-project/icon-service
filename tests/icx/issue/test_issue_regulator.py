@@ -212,7 +212,7 @@ class TestIssueRegulator:
         # failure case: when prev issued i score is None, should raise error
 
         prev_calc_period_issued_icx = 1_000
-        prev_calc_period_issued_iscore = None
+        prev_calc_period_issued_iscore = -1
 
         prev_block_cumulative_fee = 0
         icx_issue_amount = 1000

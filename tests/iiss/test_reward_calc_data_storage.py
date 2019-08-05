@@ -181,8 +181,8 @@ class TestRcDataStorage(unittest.TestCase):
 
     def test_putting_i_score_data_on_current_db(self):
         # success case: If there is no prev_calc_period_issued_i_score, should return None
-        actual_i_score = self.rc_data_storage.get_calc_response_from_rc()
-        assert actual_i_score is None
+        actual_i_score, _ = self.rc_data_storage.get_calc_response_from_rc()
+        assert actual_i_score == -1
 
         # success case: put i score and get i score from the db
         expected_i_score = 10_000

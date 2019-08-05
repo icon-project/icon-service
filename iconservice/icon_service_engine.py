@@ -1106,7 +1106,7 @@ class IconServiceEngine(ContextContainer):
             return rc_result
 
         iscore, _ = context.storage.rc.get_calc_response_from_rc()
-        if iscore is None:
+        if iscore == -1:
             return rc_result
 
         rc_result['iscore'] = iscore

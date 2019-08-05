@@ -155,7 +155,7 @@ class Regulator:
     @classmethod
     def _correct_issue_amount_on_calc_period(cls,
                                              prev_calc_period_issued_icx: int,
-                                             prev_calc_period_issued_iscore: Optional[int],
+                                             prev_calc_period_issued_iscore: int,
                                              remain_over_issued_iscore: int,
                                              icx_issue_amount: int,
                                              prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
@@ -163,7 +163,7 @@ class Regulator:
         assert prev_block_cumulative_fee >= 0
 
         # check if RC has sent response about 'CALCULATE' requests. every period should get response
-        if prev_calc_period_issued_iscore is None:
+        if prev_calc_period_issued_iscore == -1:
             raise FatalException("There is no prev_calc_period_iscore")
 
         # get difference between icon_service and reward_calc after set exchange rates

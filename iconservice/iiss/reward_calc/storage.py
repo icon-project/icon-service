@@ -62,11 +62,11 @@ class Storage(object):
         response_from_rc = MsgPackForDB.dumps([version, iscore, block_height])
         self._db.put(self._KEY_FOR_CALC_RESPONSE_FROM_RC, response_from_rc)
 
-    def get_calc_response_from_rc(self) -> Optional[Tuple[int, int]]:
-        prev_calc_period_issued_iscore = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
-        if prev_calc_period_issued_iscore is None:
-            return None
-        response_from_rc = MsgPackForDB.loads(prev_calc_period_issued_iscore)
+    def get_calc_response_from_rc(self) -> Tuple[int, int]:
+        response_from_rc = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
+        if response_from_rc is None:
+            return -1, -1
+        response_from_rc: list = MsgPackForDB.loads(response_from_rc)
         version = response_from_rc[0]
         iscore = response_from_rc[1]
         block_height = response_from_rc[2]
