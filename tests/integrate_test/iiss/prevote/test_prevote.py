@@ -35,8 +35,23 @@ class TestIISS(TestIISSBase):
         self.set_revision(REV_IISS)
 
         block_height: int = self._block_height
+        calc_period: int = self._config[ConfigKey.IISS_CALCULATE_PERIOD]
 
         # get iiss info
+        response: dict = self.get_iiss_info()
+        expected_response = {
+            'nextCalculation': block_height + calc_period + 1,
+            'nextPRepTerm': 0,
+            'variable': {
+                "irep": 0,
+                "rrep": 1200
+            }
+        }
+        self.assertEqual(expected_response, response)
+
+        self.make_blocks_to_end_calculation()
+
+        block_height: int = self._block_height
         response: dict = self.get_iiss_info()
         expected_response = {
             'nextCalculation': block_height + 1,

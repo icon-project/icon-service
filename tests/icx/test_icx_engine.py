@@ -60,7 +60,8 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
         self.storage.put_genesis_accounts(self.context, accounts)
 
@@ -170,7 +171,8 @@ class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None
         )
         self.storage.put_genesis_accounts(self.context, accounts)
 

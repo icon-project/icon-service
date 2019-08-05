@@ -143,7 +143,8 @@ class TestScoreDeployEngine(unittest.TestCase):
             iiss=None,
             prep=None,
             issue=None,
-            rc=None
+            rc=None,
+            meta=None,
         )
 
         self.make_context()

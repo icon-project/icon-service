@@ -28,13 +28,6 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 
-def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
-    if context is None:
-        return IconScoreContextType.DIRECT
-    else:
-        return context.type
-
-
 def _is_db_writable_on_context(context: 'IconScoreContext'):
     """Check if db is writable on a given context
 
@@ -201,7 +194,7 @@ class ContextDatabase(object):
         :param key:
         :return: value
         """
-        context_type = _get_context_type(context)
+        context_type = context.type
 
         if context_type in (IconScoreContextType.DIRECT, IconScoreContextType.QUERY):
             return self.key_value_db.get(key)
@@ -250,7 +243,7 @@ class ContextDatabase(object):
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to write')
 
-        context_type = _get_context_type(context)
+        context_type = context.type
 
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
@@ -266,7 +259,7 @@ class ContextDatabase(object):
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to delete')
 
-        context_type = _get_context_type(context)
+        context_type = context.type
 
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
@@ -487,3 +480,26 @@ class IconScoreSubDatabase(object):
         data.append(key)
 
         return b'|'.join(data)
+
+
+class ExternalDatabase(KeyValueDatabase):
+    def __init__(self, db: plyvel.DB) -> None:
+        super().__init__(db)
+
+    @staticmethod
+    def from_path(path: str,
+                  create_if_missing: bool = True) -> 'ExternalDatabase':
+        """
+        :param path: db path
+        :param create_if_missing:
+        :return: KeyValueDatabase instance
+        """
+        db = plyvel.DB(path, create_if_missing=create_if_missing)
+        return ExternalDatabase(db)
+
+    def get_sub_db(self, prefix: bytes) -> 'ExternalDatabase':
+        """Return a new prefixed database.
+
+        :param prefix: (bytes): prefix to use
+        """
+        return ExternalDatabase(self._db.prefixed_db(prefix))

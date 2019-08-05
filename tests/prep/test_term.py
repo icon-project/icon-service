@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import random
 from unittest.mock import Mock
@@ -20,6 +21,7 @@ from iconservice.base.address import Address
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxStorage
+from iconservice.meta import MetaDBStorage
 from iconservice.prep import PRepStorage
 from iconservice.prep.data import PRep
 from iconservice.prep.term import Term
@@ -29,7 +31,7 @@ PREPS = [PRep(Address.from_bytes(os.urandom(32))) for _ in range(PREP_MAIN_AND_S
 
 context = IconScoreContext(IconScoreContextType.DIRECT)
 context.storage = ContextStorage(deploy=None, fee=None, icx=Mock(spec=IcxStorage), iiss=None,
-                                 issue=None, rc=None, prep=Mock(spec=PRepStorage))
+                                 issue=None, rc=None, prep=Mock(spec=PRepStorage), meta=None)
 context.storage.prep.put_term = Mock()
 
 

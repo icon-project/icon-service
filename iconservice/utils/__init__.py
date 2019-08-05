@@ -109,4 +109,4 @@ def toggle_flags(src_flags: Flag, dest_flags: Flag, on: bool) -> Flag:
 
 
 ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
-ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue rc")
+ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue rc meta")

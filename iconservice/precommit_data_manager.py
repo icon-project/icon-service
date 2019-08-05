@@ -26,6 +26,8 @@ from .iconscore.icon_score_mapper import IconScoreMapper
 if TYPE_CHECKING:
     from .base.address import Address
     from .prep.data.prep_container import PRepContainer
+    from .prep.term import Term
+    from .database.batch import ExternalBatch
 
 
 class PrecommitFlag(IntFlag):
@@ -50,6 +52,7 @@ class PrecommitData(object):
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
+                 meta_block_batch: 'ExternalBatch',
                  preps: 'PRepContainer',
                  term: Optional['Term'],
                  prev_block_generator: Optional['Address'],
@@ -68,6 +71,7 @@ class PrecommitData(object):
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch
+        self.meta_block_batch = meta_block_batch
         # Snapshot of preps
         self.preps = preps
         self.term = term

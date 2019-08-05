@@ -113,6 +113,8 @@ REV_DECENTRALIZATION = REV_IISS + 1
 IISS_DB = 'iiss'
 RC_SOCKET = 'iiss.sock'
 
+META_DB = 'meta'
+
 
 class ConfigKey:
     BUILTIN_SCORE_OWNER = 'builtinScoreOwner'

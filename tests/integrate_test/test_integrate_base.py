@@ -194,8 +194,8 @@ class TestIntegrateBase(TestCase):
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
-        governance_score = self.icon_service_engine._get_governance_score(context)
-        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_DECENTRALIZATION:
+        self.icon_service_engine._set_revision_to_context(context)
+        if context.revision >= REV_DECENTRALIZATION:
             is_block_editable = True
 
         tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
