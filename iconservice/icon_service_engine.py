@@ -36,7 +36,7 @@ from .icon_constant import (
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
     REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PRepStatus, PREP_PENALTY_SIGNATURE,
     PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    META_DB)
+    META_DB, ISCORE_EXCHANGE_RATE)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -533,7 +533,11 @@ class IconServiceEngine(ContextContainer):
             if flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC):
                 last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
                 if last_calc_end_block_height is not None:
-                    context.storage.meta.put_last_calc_end_block(context.meta_block_batch, last_calc_end_block_height)
+                    calc_period: int = context.storage.iiss.get_calc_period(context)
+                    start_block_height: int = last_calc_end_block_height - calc_period + 1
+                    context.storage.meta.put_last_calc_info(context.meta_block_batch,
+                                                            start_block_height,
+                                                            last_calc_end_block_height)
             context.engine.iiss.update_db(context, next_term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
@@ -606,7 +610,9 @@ class IconServiceEngine(ContextContainer):
             assert next_term.sequence == 0
             next_end_block_height: int = next_term.end_block_height
             context.storage.iiss.put_end_block_height_of_calc(context, next_end_block_height)
-            context.storage.meta.put_last_calc_end_block(context.meta_block_batch, next_end_block_height)
+            context.storage.meta.put_last_calc_info(context.meta_block_batch,
+                                                    next_term.start_block_height,
+                                                    next_end_block_height)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
@@ -1093,15 +1099,33 @@ class IconServiceEngine(ContextContainer):
                                          data_type,
                                          data)
 
+    @staticmethod
+    def _create_rc_result(context: 'IconScoreContext', start_block: int, end_block: int) -> dict:
+        rc_result = dict()
+        if start_block < 0 or end_block < 0:
+            return rc_result
+
+        iscore, _ = context.storage.rc.get_calc_response_from_rc()
+        if iscore is None:
+            return rc_result
+
+        rc_result['iscore'] = iscore
+        rc_result['estimatedICX'] = iscore // ISCORE_EXCHANGE_RATE
+        rc_result['startBlockHeight'] = start_block
+        rc_result['endBlockHeight'] = end_block
+
+        return rc_result
+
     def _handle_get_iiss_info(self, context: 'IconScoreContext', params: dict) -> dict:
         response = dict()
 
+        response['blockHeight'] = context.block.height
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         response['variable'] = dict()
         response['variable']['irep'] = context.engine.prep.term.irep
         response['variable']['rrep'] = reward_rate.reward_prep
 
-        calc_end_block: int = context.storage.meta.get_last_calc_end_block(context)
+        calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
         if calc_end_block < 0 or context.block.height != calc_end_block:
             calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
             if calc_end_block is None:
@@ -1112,6 +1136,8 @@ class IconServiceEngine(ContextContainer):
         if term_end_block < 0 or context.block.height != term_end_block:
             term_end_block: int = context.engine.prep.term.end_block_height
         response['nextPRepTerm'] = term_end_block + 1
+
+        response['rcResult'] = self._create_rc_result(context, calc_start_block, calc_end_block)
 
         return response
 

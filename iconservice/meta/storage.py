@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from ..database.db import ExternalDatabase
 from ..icon_constant import IconScoreContextType
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class Storage(object):
-    _KEY_LAST_CALC_END_BLOCK = b'last_calc_end_block'
+    _KEY_LAST_CALC_INFO = b'last_calc_info'
     _KEY_LAST_TERM_END_BLOCK = b'last_term_end_block'
 
     def __init__(self):
@@ -42,22 +42,23 @@ class Storage(object):
             self._db.close()
             self._db = None
 
-    def put_last_calc_end_block(self,
-                                batch: 'ExternalBatch',
-                                last_end_block_height: int):
+    def put_last_calc_info(self,
+                           batch: 'ExternalBatch',
+                           last_start_block_height: int,
+                           last_end_block_height: int):
         version = 0
-        value: bytes = MsgPackForDB.dumps([version, last_end_block_height])
-        batch[self._KEY_LAST_CALC_END_BLOCK] = value
+        value: bytes = MsgPackForDB.dumps([version, last_start_block_height, last_end_block_height])
+        batch[self._KEY_LAST_CALC_INFO] = value
 
-    def get_last_calc_end_block(self,
-                                context: 'IconScoreContext') -> int:
-        value: bytes = self._db_get_tmp_data(context, self._KEY_LAST_CALC_END_BLOCK)
+    def get_last_calc_info(self,
+                           context: 'IconScoreContext') -> Tuple[int, int]:
+        value: bytes = self._db_get_tmp_data(context, self._KEY_LAST_CALC_INFO)
         if value is None:
-            return -1
+            return -1, -1
         data: list = MsgPackForDB.loads(value)
         version = data[0]
 
-        return data[1]
+        return data[1], data[2]
 
     def put_last_term_end_block(self,
                                 batch: 'ExternalBatch',

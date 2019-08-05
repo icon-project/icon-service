@@ -181,17 +181,19 @@ class TestRcDataStorage(unittest.TestCase):
 
     def test_putting_i_score_data_on_current_db(self):
         # success case: If there is no prev_calc_period_issued_i_score, should return None
-        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_iscore()
+        actual_i_score = self.rc_data_storage.get_calc_response_from_rc()
         assert actual_i_score is None
 
         # success case: put i score and get i score from the db
         expected_i_score = 10_000
         expected_version = 0
-        self.rc_data_storage.put_prev_calc_period_issued_iscore(expected_i_score)
-        i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE))
+        expected_block_height = 0
+        self.rc_data_storage.put_calc_response_from_rc(expected_i_score, expected_block_height)
+        i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_CALC_RESPONSE_FROM_RC))
         assert i_score_db_data[0] == expected_version
         assert i_score_db_data[1] == expected_i_score
+        assert i_score_db_data[2] == expected_block_height
 
-        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_iscore()
+        actual_i_score, _ = self.rc_data_storage.get_calc_response_from_rc()
         assert actual_i_score == expected_i_score
 

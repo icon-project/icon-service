@@ -59,7 +59,7 @@ class Regulator:
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if calc_next_block_height == context.block.height:
-            prev_calc_period_issued_iscore: Optional[int] = context.storage.rc.get_prev_calc_period_issued_iscore()
+            prev_calc_period_issued_iscore, _ = context.storage.rc.get_calc_response_from_rc()
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
                 self._correct_issue_amount_on_calc_period(regulator_variable.prev_calc_period_issued_icx,
                                                           prev_calc_period_issued_iscore,
