@@ -187,6 +187,7 @@ class IconScoreContext(object):
         self.update_dirty_prep_batch()
         self.update_state_db_batch()
         self.update_rc_db_batch()
+        self.update_meta_db_batch()
 
     def update_state_db_batch(self):
         self.block_batch.update(self.tx_batch)
@@ -196,6 +197,7 @@ class IconScoreContext(object):
         self.rc_block_batch.extend(self.rc_tx_batch)
         self.rc_tx_batch.clear()
 
+    def update_meta_db_batch(self):
         self.meta_block_batch.update(self.meta_tx_batch)
         self.meta_tx_batch.clear()
 

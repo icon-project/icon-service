@@ -52,9 +52,7 @@ class TestIISS(TestIISSBase):
         }
         self.assertEqual(expected_response, response)
 
-        self.make_blocks_to_end_calculation()
-
-        block_height: int = self._block_height
+        block_height: int = self.make_blocks_to_end_calculation()
         response: dict = self.get_iiss_info()
         expected_response = {
             'blockHeight': block_height,

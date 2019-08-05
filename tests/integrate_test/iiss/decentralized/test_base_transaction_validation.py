@@ -105,6 +105,8 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         # set Revision REV_IISS (decentralization)
         self.set_revision(REV_DECENTRALIZATION)
 
+        self.make_blocks_to_end_calculation()
+
     def setUp(self):
         super().setUp()
 
@@ -256,7 +258,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         expected_step_price = 0
         expected_step_used = 0
-        expected_prev_fee = 1410800000000000
+        expected_prev_fee = 1000000000000000
 
         # failure case: when issue transaction invoked even though isBlockEditable is true, should raise error
         # case of isBlockEditable is True
@@ -320,7 +322,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         expected_step_price = 0
         expected_step_used = 0
-        expected_prev_fee = 1410800000000000
+        expected_prev_fee = 1000000000000000
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is False

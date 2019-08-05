@@ -468,6 +468,8 @@ class IconServiceEngine(ContextContainer):
 
         if self.check_end_block_height_of_calc(context):
             precommit_flag |= PrecommitFlag.IISS_CALC
+            if check_decentralization_condition(context):
+                precommit_flag |= PrecommitFlag.DECENTRALIZATION
 
         main_prep_as_dict, next_term = self.after_transaction_process(
             context, precommit_flag, base_tx_result, prev_block_generator, prev_block_validators)
@@ -523,15 +525,12 @@ class IconServiceEngine(ContextContainer):
         main_prep_as_dict: Optional[dict] = None
         next_term: Optional['Term'] = None
 
-        if self._is_prep_term_ended(context):
+        if self._is_prep_term_ended(context, flag):
             if base_tx_result is not None:
                 self._impose_low_productivity_penalty_on_main_preps(context, base_tx_result)
 
             # The current P-Rep term is over. Prepare the next P-Rep term
             main_prep_as_dict, next_term = context.engine.prep.on_term_ended(context)
-
-            # Synchronize the timing between I-Score calculation and term change
-            self._sync_end_block_height_of_calc_and_term(context, next_term)
 
             context.storage.meta.put_last_term_end_block(context.meta_block_batch, next_term.start_block_height - 1)
 
@@ -600,14 +599,14 @@ class IconServiceEngine(ContextContainer):
                 context.put_dirty_prep(prep)
 
     @staticmethod
-    def _is_prep_term_ended(context: 'IconScoreContext') -> bool:
+    def _is_prep_term_ended(context: 'IconScoreContext', flag: 'PrecommitFlag') -> bool:
         if context.revision < REV_DECENTRALIZATION:
             return False
 
         if context.engine.prep.term.sequence > -1:
             return context.engine.prep.check_end_block_height_of_term(context)
         else:
-            return check_decentralization_condition(context)
+            return flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION
 
     @staticmethod
     def _update_last_generate_block_height(
@@ -621,19 +620,6 @@ class IconServiceEngine(ContextContainer):
         if prep:
             prep.last_generate_block_height = context.block.height - 1
             context.put_dirty_prep(prep)
-
-    @staticmethod
-    def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext', next_term: 'Term'):
-        end_block_height_of_calc = context.storage.iiss.get_end_block_height_of_calc(context)
-        end_block_height_of_term = next_term.start_block_height - 1
-
-        if end_block_height_of_calc != end_block_height_of_term:
-            assert next_term.sequence == 0
-            next_end_block_height: int = next_term.end_block_height
-            context.storage.iiss.put_end_block_height_of_calc(context, next_end_block_height)
-            context.storage.meta.put_last_calc_info(context.meta_block_batch,
-                                                    next_term.start_block_height,
-                                                    next_end_block_height)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',

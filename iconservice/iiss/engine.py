@@ -533,7 +533,7 @@ class Engine(EngineBase):
         if not self._is_iiss_calc(flag):
             return
 
-        self._put_next_calc_block_height(context)
+        self._put_end_calc_block_height(context)
 
         self._put_header_to_rc_db(context)
         self._put_gv(context)
@@ -565,7 +565,7 @@ class Engine(EngineBase):
         return block_height == check_end_block_height
 
     @classmethod
-    def _put_next_calc_block_height(cls, context: 'IconScoreContext'):
+    def _put_end_calc_block_height(cls, context: 'IconScoreContext'):
         calc_period: int = context.storage.iiss.get_calc_period(context)
         if calc_period is None:
             raise InvalidParamsException("Fail put next calc block height: didn't init yet")
