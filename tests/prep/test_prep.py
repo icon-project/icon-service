@@ -42,7 +42,6 @@ IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
 
 @pytest.fixture
 def prep():
-    public_key: bytes = b""
     address = Address(AddressPrefix.EOA, os.urandom(20))
     prep = PRep(
         address,
@@ -53,7 +52,6 @@ def prep():
         website=WEBSITE,
         details=DETAILS,
         p2p_endpoint=P2P_END_POINT,
-        public_key=public_key,
         irep=IREP,
         irep_block_height=IREP_BLOCK_HEIGHT,
         last_generate_block_height=LAST_GENERATE_BLOCK_HEIGHT,
@@ -74,7 +72,6 @@ def prep():
     assert prep.website == WEBSITE
     assert prep.details == DETAILS
     assert prep.p2p_endpoint == P2P_END_POINT
-    assert prep.public_key == public_key
     assert prep.irep == IREP
     assert prep.irep_block_height == BLOCK_HEIGHT
     assert prep.stake == STAKE
@@ -149,7 +146,6 @@ def test_from_bytes_and_to_bytes(prep):
     assert prep.website == prep2.website == WEBSITE
     assert prep.details == prep2.details == DETAILS
     assert prep.p2p_endpoint == prep2.p2p_endpoint == P2P_END_POINT
-    assert prep.public_key == prep2.public_key
     assert prep.irep == prep2.irep == IREP
     assert prep.irep_block_height == prep2.irep_block_height == IREP_BLOCK_HEIGHT
     assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT

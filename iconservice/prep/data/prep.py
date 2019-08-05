@@ -59,7 +59,6 @@ class PRep(Sortable):
         WEBSITE = auto()
         DETAILS = auto()
         P2P_ENDPOINT = auto()
-        PUBLIC_KEY = auto()
         IREP = auto()
         IREP_BLOCK_HEIGHT = auto()
         LAST_GENERATE_BLOCK_HEIGHT = auto()
@@ -85,7 +84,6 @@ class PRep(Sortable):
             website: str = "",
             details: str = "",
             p2p_endpoint: str = "",
-            public_key: bytes = b"",
             irep: int = 0,
             irep_block_height: int = 0,
             last_generate_block_height: int = -1,
@@ -110,7 +108,6 @@ class PRep(Sortable):
         :param email:
         :param website:
         :param details:
-        :param public_key:
         :param p2p_endpoint:
         :param irep:
         :param irep_block_height:
@@ -142,7 +139,6 @@ class PRep(Sortable):
         self.website: str = website
         self.details: str = details
         # information required for PRep Consensus
-        self._public_key: bytes = public_key
         self.p2p_endpoint: str = p2p_endpoint
         # Governance Variables
         self._irep: int = irep
@@ -259,10 +255,6 @@ class PRep(Sortable):
         assert value >= 0
         self._check_access_permission()
         self._delegated = value
-
-    @property
-    def public_key(self) -> bytes:
-        return self._public_key
 
     @property
     def irep(self) -> int:
@@ -391,7 +383,6 @@ class PRep(Sortable):
             self.website,
             self.details,
             self.p2p_endpoint,
-            self._public_key,
 
             self._irep,
             self._irep_block_height,
@@ -421,7 +412,6 @@ class PRep(Sortable):
             website=items[cls.Index.WEBSITE],
             details=items[cls.Index.DETAILS],
             p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
-            public_key=items[cls.Index.PUBLIC_KEY],
             irep=items[cls.Index.IREP],
             irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
             last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
@@ -457,7 +447,6 @@ class PRep(Sortable):
 
             # Required items
             p2p_endpoint=data[ConstantKeys.P2P_ENDPOINT],
-            public_key=data[ConstantKeys.PUBLIC_KEY],
             irep=0,
             irep_block_height=block_height,
 
@@ -492,7 +481,6 @@ class PRep(Sortable):
             data[ConstantKeys.WEBSITE] = self.website
             data[ConstantKeys.DETAILS] = self.details
             data[ConstantKeys.P2P_ENDPOINT] = self.p2p_endpoint
-            data[ConstantKeys.PUBLIC_KEY] = self.public_key
             data[ConstantKeys.IREP] = self._irep
             data[ConstantKeys.IREP_BLOCK_HEIGHT] = self._irep_block_height
         else:

@@ -171,7 +171,6 @@ class ConstantKeys:
     WEBSITE = 'website'
     DETAILS = 'details'
     P2P_ENDPOINT = 'p2pEndpoint'
-    PUBLIC_KEY = 'publicKey'
     PREP_ID = 'id'
     START_RANKING = "startRanking"
     END_RANKING = "endRanking"
@@ -359,8 +358,7 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
-    ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
-    ConstantKeys.PUBLIC_KEY: ValueType.BYTES
+    ConstantKeys.P2P_ENDPOINT: ValueType.STRING
 }
 
 type_convert_templates[ParamType.IISS_SET_PREP] = {
