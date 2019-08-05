@@ -16,8 +16,10 @@
 
 import copy
 import hashlib
+from typing import Union, Iterable
 
-from iconservice.utils.hashing.hash_origin_generator import HashOriginGeneratorV1
+from .hash_origin_generator import HashOriginGeneratorV1
+from .merkle_tree import MerkleTree
 
 
 class HashGenerator:
@@ -42,3 +44,11 @@ class HashGenerator:
         origin = cls.generate_salted_origin(origin_data)
         return hashlib.sha3_256(origin.encode()).hexdigest()
 
+
+class RootHashGenerator:
+    @classmethod
+    def generate_root_hash(cls, values: Union[Iterable, bytes, bytearray], do_hash=False) -> bytes:
+        merkle_tree = MerkleTree()
+        merkle_tree.add_leaf(values, do_hash)
+        merkle_tree.make_tree()
+        return merkle_tree.get_merkle_root()
