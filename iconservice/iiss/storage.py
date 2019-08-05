@@ -31,7 +31,7 @@ class Storage(StorageBase):
     REWARD_RATE_KEY: bytes = PREFIX + b'rr'
     TOTAL_STAKE_KEY: bytes = PREFIX + b'ts'
 
-    CALC_NEXT_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cnbh'
+    CALC_END_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cebh'
     CALC_PERIOD_KEY: bytes = PREFIX + b'pk'
 
     TOTAL_PREP_DELEGATED_KEY: bytes = PREFIX + b'tpd'
@@ -126,10 +126,10 @@ class Storage(StorageBase):
         version = 0
         data: list = [version, calc_block_height]
         value: bytes = MsgPackForDB.dumps(data)
-        self._db.put(context, self.CALC_NEXT_BLOCK_HEIGHT_KEY, value)
+        self._db.put(context, self.CALC_END_BLOCK_HEIGHT_KEY, value)
 
     def get_end_block_height_of_calc(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.CALC_NEXT_BLOCK_HEIGHT_KEY)
+        value: bytes = self._db.get(context, self.CALC_END_BLOCK_HEIGHT_KEY)
         if value:
             data: list = MsgPackForDB.loads(value)
             version: int = data[0]

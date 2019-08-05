@@ -87,6 +87,8 @@ class TestIISSDecentralized(TestIISSBase):
         # set Revision REV_IISS (decentralization)
         self.set_revision(REV_DECENTRALIZATION)
 
+        self.make_blocks_to_end_calculation()
+
         # get main prep
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
@@ -243,6 +245,8 @@ class TestIISSDecentralized(TestIISSBase):
 
         # set Revision REV_IISS (decentralization)
         self.set_revision(REV_DECENTRALIZATION)
+
+        self.make_blocks_to_end_calculation()
 
         # after decentralization, irep should be 50,000
         expected_irep_when_decentralized = IISS_INITIAL_IREP

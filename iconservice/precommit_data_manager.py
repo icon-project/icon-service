@@ -44,6 +44,7 @@ class PrecommitFlag(IntFlag):
     # CHANGE REVISION
     GENESIS_IISS_CALC = 0x100
     IISS_CALC = 0x200
+    DECENTRALIZATION = 0x400
 
 
 class PrecommitData(object):

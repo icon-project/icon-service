@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from .engine import Engine as IISSEngine
 from .engine import EngineListener as IISSEngineListener
 from .storage import Storage as IISSStorage
+from ..icon_constant import REV_DECENTRALIZATION
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -26,6 +27,9 @@ if TYPE_CHECKING:
 
 
 def check_decentralization_condition(context: 'IconScoreContext') -> bool:
+    if context.revision < REV_DECENTRALIZATION:
+        return False
+
     """ICON network decentralize when the last prep of main prep count ( default: 22th )
     get delegation more than some value( default: total-supply * 0.002icx )"""
     preps = context.preps
