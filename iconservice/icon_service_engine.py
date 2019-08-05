@@ -531,8 +531,9 @@ class IconServiceEngine(ContextContainer):
 
         if context.revision >= REV_IISS:
             if flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC):
-                last_calc_end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
-                context.storage.meta.put_last_calc_end_block(context.meta_block_batch, last_calc_end_block_height)
+                last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+                if last_calc_end_block_height is not None:
+                    context.storage.meta.put_last_calc_end_block(context.meta_block_batch, last_calc_end_block_height)
             context.engine.iiss.update_db(context, next_term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
@@ -1101,20 +1102,14 @@ class IconServiceEngine(ContextContainer):
         response['variable']['rrep'] = reward_rate.reward_prep
 
         calc_end_block: int = context.storage.meta.get_last_calc_end_block(context)
-        if context.block.height == calc_end_block:
-            if calc_end_block < 0:
-                calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        if calc_end_block < 0 or context.block.height != calc_end_block:
+            calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
             if calc_end_block is None:
                 calc_end_block = -1
-        else:
-            calc_end_block: int = context.storage.iiss.get_end_block_height_of_calc(context)
         response['nextCalculation'] = calc_end_block + 1
 
         term_end_block: int = context.storage.meta.get_last_term_end_block(context)
-        if context.block.height == term_end_block:
-            if term_end_block < 0:
-                term_end_block: int = context.engine.prep.term.end_block_height
-        else:
+        if term_end_block < 0 or context.block.height != term_end_block:
             term_end_block: int = context.engine.prep.term.end_block_height
         response['nextPRepTerm'] = term_end_block + 1
 
