@@ -16,6 +16,7 @@
 
 import threading
 import warnings
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
     from ..base.address import Address
-    from ..prep.data.prep_container import PRepContainer
+    from ..prep.data.prep_container import PRep, PRepContainer
     from ..utils import ContextEngine, ContextStorage
     from ..database.batch import ExternalBatch
 
@@ -147,6 +148,7 @@ class IconScoreContext(object):
 
         # PReps to update on invoke
         self.preps: Optional['PRepContainer'] = None
+        self.tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
 
     @classmethod
     def set_decentralize_trigger(cls, decentralize_trigger: float):
@@ -181,14 +183,34 @@ class IconScoreContext(object):
         self.engine.deploy.deploy(self, tx_hash)
 
     def update_batch(self):
+        # Call update_dirty_prep_batch before update_state_db_batch()
+        self.update_dirty_prep_batch()
+        self.update_state_db_batch()
+        self.update_rc_db_batch()
+
+    def update_state_db_batch(self):
         self.block_batch.update(self.tx_batch)
         self.tx_batch.clear()
 
+    def update_rc_db_batch(self):
         self.rc_block_batch.extend(self.rc_tx_batch)
         self.rc_tx_batch.clear()
 
         self.meta_block_batch.update(self.meta_tx_batch)
         self.meta_tx_batch.clear()
+
+    def update_dirty_prep_batch(self):
+        """Update context.preps and block_dirty_preps when a tx is done
+
+        Caution: call update_dirty_prep_batch before update_state_db_batch()
+        """
+        for dirty_prep in self.tx_dirty_preps.values():
+            self.preps.replace(dirty_prep)
+            # Write serialized dirty_prep data into tx_batch
+            self.storage.prep.put_prep(self, dirty_prep)
+            dirty_prep.freeze()
+
+        self.tx_dirty_preps.clear()
 
     def clear_batch(self):
         if self.tx_batch:
@@ -197,3 +219,18 @@ class IconScoreContext(object):
             self.rc_tx_batch.clear()
         if self.meta_tx_batch:
             self.meta_tx_batch.clear()
+        if self.tx_dirty_preps:
+            self.tx_dirty_preps.clear()
+
+    def get_prep(self, address: 'Address', mutable: bool = False):
+        prep: 'PRep' = self.tx_dirty_preps.get(address)
+        if prep is None:
+            prep = self.preps.get_by_address(address)
+
+        if prep and prep.is_frozen() and mutable:
+            prep = prep.copy()
+
+        return prep
+
+    def put_dirty_prep(self, prep: 'PRep'):
+        self.tx_dirty_preps[prep.address] = prep

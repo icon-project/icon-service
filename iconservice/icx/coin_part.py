@@ -22,7 +22,7 @@ from .base_part import BasePart
 from ..base.address import AddressPrefix
 from ..base.exception import InvalidParamsException, OutOfBalanceException
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION_4
-from ..utils import toggle_flags
+from ..utils import set_flag
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -119,7 +119,7 @@ class CoinPart(BasePart):
         return self._flags
 
     def toggle_has_unstake(self, on: bool):
-        new_flags = toggle_flags(self._flags, CoinPartFlag.HAS_UNSTAKE, on)
+        new_flags = set_flag(self._flags, CoinPartFlag.HAS_UNSTAKE, on)
 
         if self._flags != new_flags:
             self._flags = new_flags

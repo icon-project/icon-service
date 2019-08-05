@@ -36,7 +36,7 @@ class TestEngine(unittest.TestCase):
             self.assertEqual(PRepGrade.CANDIDATE, prep.grade)
             self.assertEqual(0, prep.delegated)
 
-            self.new_preps.register(prep)
+            self.new_preps.add(prep)
 
     def tearDown(self) -> None:
         self.new_preps = None
@@ -60,13 +60,15 @@ class TestEngine(unittest.TestCase):
             else:
                 self.assertEqual(PRepGrade.CANDIDATE, prep.grade)
 
-        # Case1: Reorder preps in descending order by prep.order()
+        # Case1: Sort preps in descending order by prep.order()
         for i, prep in enumerate(new_preps):
             delegated: int = random.randint(0, 10_000)
             delegated_list.append((-delegated, i))
 
             old_prep_list.append(prep)
-            new_preps.set_delegated_to_prep(prep.address, delegated)
+            new_preps.remove(prep.address)
+            prep.delegated = delegated
+            new_preps.add(prep)
 
         # Expected list in descending order by (delegated, block_height, tx_index)
         delegated_list.sort()
@@ -87,7 +89,7 @@ class TestEngine(unittest.TestCase):
             prep_in_list: 'PRep' = old_prep_list[index]
 
             self.assertEqual(abs(delegated), prep.delegated)
-            self.assertEqual(prep_in_list, prep)
+            self.assertEqual(prep_in_list.address, prep.address)
 
             if i < PREP_MAIN_PREPS:
                 self.assertEqual(PRepGrade.MAIN, prep.grade)

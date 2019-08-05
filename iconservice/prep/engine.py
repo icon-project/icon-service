@@ -35,7 +35,6 @@ from ..iiss.reward_calc import RewardCalcDataCreator
 from ..utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
-    from . import PRepStorage
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
     from ..icx import IcxStorage
     from ..precommit_data_manager import PrecommitData
@@ -159,7 +158,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
         for i in range(main_and_sub_prep_count):
-            prep: 'PRep' = new_preps.get_by_index(i, mutable=False)
+            prep: 'PRep' = new_preps.get_by_index(i)
             if prep is None:
                 Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {new_preps.size(active_prep_only=True)}")
                 break
@@ -177,9 +176,12 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Update the grades of P-Reps for the next term
         for address, grades in prep_grades.items():
-            prep: 'PRep' = new_preps.get_by_address(address, mutable=True)
+            prep: 'PRep' = new_preps.remove(address)
             assert prep is not None
-            prep.grade = grades[1]
+
+            dirty_prep = prep.copy()
+            dirty_prep.grade = grades[1]
+            new_preps.add(dirty_prep)
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
@@ -195,11 +197,10 @@ class Engine(EngineBase, IISSEngineListener):
         :return: 
         """
         icx_storage: 'IcxStorage' = context.storage.icx
-        prep_storage: 'PRepStorage' = context.storage.prep
 
         address: 'Address' = context.tx.origin
         if context.preps.contains(address, active_prep_only=False):
-            raise InvalidParamsException(f"{address} has been already registered")
+            raise InvalidParamsException(f"P-Rep already exists: {address}")
 
         # Check Prep registration fee
         value = context.msg.value
@@ -215,21 +216,18 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Create a PRep object and assign delegated amount from account to prep
         # prep.irep is set to IISS_MIN_IREP by default
-        prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
-        prep.stake = account.stake
-        prep.delegated = account.delegated_amount
+        dirty_prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
+        dirty_prep.stake = account.stake
+        dirty_prep.delegated = account.delegated_amount
 
         # Set an initial value to irep of a P-Rep on registerPRep
         if context.is_decentralized():
-            prep.set_irep(self.term.irep, context.block.height)
+            dirty_prep.set_irep(self.term.irep, context.block.height)
         else:
-            prep.set_irep(self._initial_irep, context.block.height)
+            dirty_prep.set_irep(self._initial_irep, context.block.height)
 
         # Update preps in context
-        context.preps.register(prep)
-
-        # Update stateDB
-        prep_storage.put_prep(context, prep)
+        context.put_dirty_prep(dirty_prep)
 
         # Update rcDB
         self._put_reg_prep_in_rc_db(context, address)
@@ -334,16 +332,16 @@ class Engine(EngineBase, IISSEngineListener):
         total_weighted_irep = 0
 
         for i in range(context.main_prep_count):
-            prep: 'PRep' = preps.get_by_index(i, mutable=False)
+            prep: 'PRep' = preps.get_by_index(i)
             total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated
 
         return total_weighted_irep // total_delegated if total_delegated > 0 else IISS_MIN_IREP
 
-    def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_prep(self, _context: 'IconScoreContext', params: dict) -> dict:
         """Returns the details of a P-Rep including information on registration, delegation and statistics
 
-        :param context:
+        :param _context:
         :param params:
         :return: the response for getPRep JSON-RPC request
         """
@@ -354,10 +352,7 @@ class Engine(EngineBase, IISSEngineListener):
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
-
         response: dict = prep.to_dict(PRepDictType.FULL)
-        response["stake"] = account.stake
         return response
 
     @staticmethod
@@ -368,12 +363,11 @@ class Engine(EngineBase, IISSEngineListener):
         :param params:
         :return:
         """
-        prep_storage = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address, mutable=True)
+        prep: 'PRep' = context.preps.get_by_address(address)
         if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+            raise InvalidParamsException(f"P-Rep not found: {address}")
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
@@ -384,12 +378,6 @@ class Engine(EngineBase, IISSEngineListener):
             del kwargs[ConstantKeys.P2P_ENDPOINT]
             kwargs["p2p_endpoint"] = p2p_endpoint
 
-        # Update registration info
-        prep.set(**kwargs)
-
-        # Update a new P-Rep registration info to stateDB
-        prep_storage.put_prep(context, prep)
-
         # EventLog
         EventLogEmitter.emit_event_log(
             context,
@@ -398,6 +386,11 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[address],
             indexed_args_count=0
         )
+
+        # Update registration info
+        dirty_prep: 'PRep' = prep.copy()
+        dirty_prep.set(**kwargs)
+        context.put_dirty_prep(dirty_prep)
 
     def handle_set_governance_variables(self, context: 'IconScoreContext', params: dict):
         """Handles setGovernanceVariables JSON-RPC API request
@@ -412,19 +405,15 @@ class Engine(EngineBase, IISSEngineListener):
 
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address, mutable=True)
+        prep: 'PRep' = context.preps.get_by_address(address)
         if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+            raise InvalidParamsException(f"P-Rep not found: {address}")
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
 
         # Update incentive rep
         irep: int = kwargs["irep"]
         validate_irep(context, irep, prep)
-        prep.set_irep(irep, context.block.height)
-
-        # Update the changed properties of a P-Rep to stateDB
-        context.storage.prep.put_prep(context, prep)
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -434,6 +423,12 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[address, irep],
             indexed_args_count=1
         )
+
+        # Update the changed properties of a P-Rep to stateDB
+        # context.storage.prep.put_dirty_prep(context, prep)
+        new_prep: 'PRep' = prep.copy()
+        new_prep.set_irep(irep, context.block.height)
+        context.put_dirty_prep(new_prep)
 
     def handle_unregister_prep(self, context: 'IconScoreContext', _params: dict):
         """Unregister a P-Rep
@@ -455,15 +450,20 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
-    def unregister_prep(self, context: 'IconScoreContext', address: 'Address',
-                        status: 'PRepStatus' = PRepStatus.UNREGISTERED):
-        prep_storage: 'PRepStorage' = context.storage.prep
+    def unregister_prep(
+            self, context: 'IconScoreContext',
+            address: 'Address', status: 'PRepStatus' = PRepStatus.UNREGISTERED):
+        prep: 'PRep' = context.preps.get_by_address(address)
 
-        # Remove a given P-Rep from context.preps
-        context.preps.unregister(address, status)
+        if prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        # Update stateDB
-        prep_storage.delete_prep(context, address)
+        if prep.status != PRepStatus.ACTIVE:
+            raise InvalidParamsException(f"Inactive P-Rep: {address}")
+
+        dirty_prep: 'PRep' = prep.copy()
+        dirty_prep.status = status
+        context.put_dirty_prep(dirty_prep)
 
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)
@@ -557,7 +557,7 @@ class Engine(EngineBase, IISSEngineListener):
         return {
             "blockHeight": context.block.height,
             "startRanking": start_ranking,
-            "totalDelegated": preps.total_prep_delegated,
+            "totalDelegated": preps.total_delegated,
             "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
         }
@@ -570,9 +570,11 @@ class Engine(EngineBase, IISSEngineListener):
         :param account:
         :return:
         """
-        prep: 'PRep' = context.preps.get_by_address(account.address, mutable=True)
+        prep: 'PRep' = context.preps.get_by_address(account.address)
         if prep:
-            prep.stake = account.stake
+            dirty_prep: 'PRep' = prep.copy()
+            dirty_prep.stake = account.stake
+            context.put_dirty_prep(dirty_prep)
 
     def on_set_delegation(
             self, context: 'IconScoreContext', updated_accounts: List['Account']):
@@ -589,5 +591,8 @@ class Engine(EngineBase, IISSEngineListener):
             address = account.address
 
             # If a delegated account is a P-Rep, then update its delegated amount
-            if context.preps.contains(address, active_prep_only=True):
-                context.preps.set_delegated_to_prep(address, account.delegated_amount)
+            prep: 'PRep' = context.preps.get_by_address(address)
+            if prep:
+                dirty_prep: 'PRep' = prep.copy()
+                dirty_prep.delegated = account.delegated_amount
+                context.put_dirty_prep(dirty_prep)
