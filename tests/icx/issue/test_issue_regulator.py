@@ -372,9 +372,11 @@ class TestIssueRegulator:
         assert actual_current_icx == issue_amount + current_calc_preiod_issued_icx
         assert actual_prev_icx == prev_calc_period_issued_icx
 
+    @patch('iconservice.iconscore.icon_score_context.IconScoreContext.engine')
     @patch('iconservice.iconscore.icon_score_context.IconScoreContext.storage')
     def test_set_corrected_issue_data_end_of_period(self,
-                                                    mocked_context_storage):
+                                                    mocked_context_storage,
+                                                    mocked_context_engine):
         # create dummy block
         block_height = 5
         block = self._create_dummy_block_by_height(block_height)
@@ -390,6 +392,7 @@ class TestIssueRegulator:
         cumulative_fee = 0
         issue_amount = 10_000
         mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
+        mocked_context_engine.prep.term.sequence = 0
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
         mocked_context_storage.rc.get_prev_calc_period_issued_iscore = Mock(return_value=0)

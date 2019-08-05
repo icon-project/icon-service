@@ -15,8 +15,10 @@
 
 from typing import Optional, Tuple, TYPE_CHECKING
 
+from iconcommons import Logger
+
 from ...base.exception import FatalException
-from ...icon_constant import ISCORE_EXCHANGE_RATE
+from ...icon_constant import ISCORE_EXCHANGE_RATE, IISS_LOG_TAG
 
 if TYPE_CHECKING:
     from .storage import RegulatorVariable
@@ -67,6 +69,9 @@ class Regulator:
 
             regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
             regulator_variable.current_calc_period_issued_icx = 0
+            Logger.debug(f"Accumulative issued ICX in term: {context.engine.prep.term.sequence}. "
+                         f"ICX Amount: {regulator_variable.prev_calc_period_issued_icx} "
+                         f"Block height of this block: {context.block.height}", IISS_LOG_TAG)
         else:
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
                 self._correct_issue_amount(regulator_variable.over_issued_iscore,
