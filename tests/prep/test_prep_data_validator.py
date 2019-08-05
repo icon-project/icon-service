@@ -12,15 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import hashlib
-import os
 from typing import List
 
 import pytest
 
-from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import InvalidParamsException
-from iconservice.prep.validator import _validate_p2p_endpoint, _validate_prep_public_key
+from iconservice.prep.validator import _validate_p2p_endpoint
 from iconservice.prep.validator import _validate_uri, _validate_email, _validate_country
 
 NAME = "banana"
@@ -31,30 +28,6 @@ P2P_END_POINT = "https://banana.example.com:7100"
 IREP = 10_000
 BLOCK_HEIGHT = 777
 TX_INDEX = 0
-
-
-@pytest.fixture
-def public_key_address_pair():
-    public_key = os.urandom(32)
-    address = Address(AddressPrefix.EOA, hashlib.sha3_256(public_key[1:]).digest()[-20:])
-
-    return public_key, address
-
-
-def test_validate_public_key(public_key_address_pair):
-    public_key, address = public_key_address_pair
-    try:
-        _validate_prep_public_key(public_key, address)
-    except BaseException:
-        pytest.fail("validating public key test Failed")
-
-
-def test_validate_public_key_invalid_case(public_key_address_pair):
-    public_key, address = public_key_address_pair
-    public_key = os.urandom(32)
-    with pytest.raises(InvalidParamsException) as e:
-        _validate_prep_public_key(public_key, address)
-    assert e.value.message == 'Invalid publicKey'
 
 
 def test_validate_uri():

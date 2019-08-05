@@ -83,7 +83,6 @@ class Engine(EngineBase, IISSEngineListener):
     def _load_preps(self, context: 'IconScoreContext'):
         """Load a prep from db
 
-        :param prep:
         :return:
         """
         icx_storage: 'IcxStorage' = context.storage.icx
@@ -211,7 +210,7 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"not {value}")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
-        validate_prep_data(address, ret_params)
+        validate_prep_data(ret_params)
 
         account: 'Account' = icx_storage.get_account(context, address, Intent.STAKE | Intent.DELEGATED)
 
@@ -301,7 +300,6 @@ class Engine(EngineBase, IISSEngineListener):
             prep: 'PRep' = preps[i]
             preps_as_list.append({
                 ConstantKeys.PREP_ID: prep.address,
-                ConstantKeys.PUBLIC_KEY: prep.public_key,
                 ConstantKeys.P2P_ENDPOINT: prep.p2p_endpoint
             })
             prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
@@ -380,7 +378,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
-        validate_prep_data(context.tx.origin, kwargs, True)
+        validate_prep_data(kwargs, True)
 
         if ConstantKeys.P2P_ENDPOINT in kwargs:
             p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]

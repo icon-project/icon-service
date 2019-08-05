@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import re
 from typing import TYPE_CHECKING
 
 import iso3166
 
-from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE
@@ -33,7 +31,7 @@ path_pattern = r'(\/\S*)?$'
 port_regex = r'(:[0-9]{1,5})?'
 ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
 host_name_regex = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])'
-email_regex = '^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@' + host_name_regex + '$'
+email_regex = r'^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@' + host_name_regex + '$'
 ENDPOINT_DOMAIN_NAME_PATTERN = re.compile(f'^{host_name_regex}{port_regex}$')
 ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
 WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
@@ -41,7 +39,7 @@ WEBSITE_IP_PATTERN = re.compile(f'{scheme_pattern}{ip_regex}{port_regex}{path_pa
 EMAIL_PATTERN = re.compile(email_regex)
 
 
-def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
+def validate_prep_data(data: dict, set_prep: bool = False):
     if not set_prep:
         fields_to_validate = (
             ConstantKeys.NAME,
@@ -50,7 +48,6 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
             ConstantKeys.EMAIL,
             ConstantKeys.WEBSITE,
             ConstantKeys.DETAILS,
-            ConstantKeys.PUBLIC_KEY,
             ConstantKeys.P2P_ENDPOINT
         )
 
@@ -63,9 +60,7 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
     for key in data:
         if len(data[key].strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
-        if key == ConstantKeys.PUBLIC_KEY:
-            _validate_prep_public_key(data[key], tx_origin)
-        elif key == ConstantKeys.P2P_ENDPOINT:
+        if key == ConstantKeys.P2P_ENDPOINT:
             _validate_p2p_endpoint(data[key])
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
             _validate_uri(data[key])
@@ -73,12 +68,6 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
             _validate_email(data[key])
         elif key == ConstantKeys.COUNTRY:
             _validate_country(data[key])
-
-
-def _validate_prep_public_key(public_key: bytes, address: 'Address'):
-    public_key_hash_value = hashlib.sha3_256(public_key[1:]).digest()
-    if address.body != public_key_hash_value[-20:]:
-        raise InvalidParamsException("Invalid publicKey")
 
 
 def _validate_p2p_endpoint(p2p_endpoint: str):

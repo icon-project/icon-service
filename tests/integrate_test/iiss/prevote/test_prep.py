@@ -38,7 +38,6 @@ prep_register_data = {
     ConstantKeys.WEBSITE: f"https://{name}.example.com",
     ConstantKeys.DETAILS: f"https://{name}.example.com/details",
     ConstantKeys.P2P_ENDPOINT: f"{name}.example.com:7100",
-    ConstantKeys.PUBLIC_KEY: "0x12",
     ConstantKeys.CITY: "city",
     ConstantKeys.COUNTRY: "KOR"
 }
@@ -76,7 +75,6 @@ class TestIntegratePrep(TestIISSBase):
             self.assertEqual(0, response["stake"])
             self.assertEqual(self._config[ConfigKey.INITIAL_IREP], response["irep"])
             self.assertEqual(register_block_height, response["irepUpdateBlockHeight"])
-            self.assertEqual(bytes.fromhex(expected_params['publicKey'][2:]), response["publicKey"])
             for key in ("details", "email", "name", "country", "city", "p2pEndpoint", "website"):
                 self.assertEqual(expected_params[key], response[key])
             self.assertEqual(0, response["totalBlocks"])
@@ -108,7 +106,6 @@ class TestIntegratePrep(TestIISSBase):
                 "country": expected_params["country"],
                 "city": expected_params["city"],
                 "p2pEndpoint": expected_params['p2pEndpoint'],
-                "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                 "website": expected_params['website'],
                 "totalBlocks": 0,
                 "validatedBlocks": 0,
@@ -306,18 +303,15 @@ class TestIntegratePrep(TestIISSBase):
         self._validate_city()
         self._validate_details()
         self._validate_p2p_endpoint()
-        self._validate_public_key()
 
     def _validate_name(self):
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.NAME] = ''
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[0].public_key)}"
         tx = self.create_register_prep_tx(self._accounts[0], reg_data)
         self.process_confirm_block_tx([tx],
                                       expected_status=False)
 
         reg_data[ConstantKeys.NAME] = "valid name"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[0].public_key)}"
         tx = self.create_register_prep_tx(self._accounts[0], reg_data)
         self.process_confirm_block_tx([tx])
 
@@ -328,14 +322,12 @@ class TestIntegratePrep(TestIISSBase):
         for email in invalid_email_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.EMAIL] = email
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[1].public_key)}"
             tx = self.create_register_prep_tx(self._accounts[1], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.EMAIL] = "valid@validexample.com"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[1].public_key)}"
         tx = self.create_register_prep_tx(self._accounts[1], reg_data)
         self.process_confirm_block_tx([tx])
 
@@ -346,14 +338,12 @@ class TestIntegratePrep(TestIISSBase):
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.WEBSITE] = website
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[2].public_key)}"
             tx = self.create_register_prep_tx(self._accounts[2], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.WEBSITE] = "https://validurl.com"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[2].public_key)}"
         tx = self.create_register_prep_tx(self._accounts[2], reg_data)
         self.process_confirm_block_tx([tx])
 
@@ -372,14 +362,12 @@ class TestIntegratePrep(TestIISSBase):
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.WEBSITE] = website
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[5].public_key)}"
             tx = self.create_register_prep_tx(self._accounts[5], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.WEBSITE] = "https://validurl.com/json"
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[5].public_key)}"
         tx = self.create_register_prep_tx(self._accounts[5], reg_data)
         self.process_confirm_block_tx([tx])
 
@@ -391,7 +379,6 @@ class TestIntegratePrep(TestIISSBase):
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.P2P_ENDPOINT] = website
-            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[6].public_key)}"
             tx = self.create_register_prep_tx(self._accounts[6], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
@@ -400,23 +387,7 @@ class TestIntegratePrep(TestIISSBase):
 
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.P2P_ENDPOINT] = validate_endpoint
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[6].public_key)}"
         tx = self.create_register_prep_tx(self._accounts[6], reg_data)
-        self.process_confirm_block_tx([tx])
-
-    def _validate_public_key(self):
-        invalid_public_key_list = ['', f'0x{b"dummy".hex()}']
-
-        for public_key in invalid_public_key_list:
-            reg_data: dict = deepcopy(prep_register_data)
-            reg_data[ConstantKeys.PUBLIC_KEY] = public_key
-            tx = self.create_register_prep_tx(self._accounts[7], reg_data)
-            self.process_confirm_block_tx([tx],
-                                          expected_status=False)
-
-        reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{bytes.hex(self._accounts[7].public_key)}"
-        tx = self.create_register_prep_tx(self._accounts[7], reg_data)
         self.process_confirm_block_tx([tx])
 
     def test_prep_stake(self):

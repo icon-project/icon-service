@@ -18,7 +18,7 @@ import unittest
 
 from iconservice.base.type_converter import TypeConverter
 from iconservice.base.type_converter_templates import ParamType, ConstantKeys
-from tests import create_address, create_tx_hash
+from tests import create_address
 
 
 class TestTypeConverter(unittest.TestCase):
@@ -103,7 +103,6 @@ class TestTypeConverter(unittest.TestCase):
         website = "website"
         json = "json"
         ip = "ip"
-        public_key = create_tx_hash()
 
         request = {
             ConstantKeys.NAME: name,
@@ -111,7 +110,6 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.WEBSITE: website,
             ConstantKeys.DETAILS: json,
             ConstantKeys.P2P_ENDPOINT: ip,
-            ConstantKeys.PUBLIC_KEY: public_key.hex(),
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP)
@@ -120,7 +118,6 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
         self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
         self.assertEqual(ip, ret_params[ConstantKeys.P2P_ENDPOINT])
-        self.assertEqual(public_key, ret_params[ConstantKeys.PUBLIC_KEY])
 
     def test_unreg_prep(self):
 

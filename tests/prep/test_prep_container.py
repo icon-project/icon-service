@@ -27,7 +27,6 @@ from iconservice.prep.data import PRep, PRepContainer, PRepStatus, PRepFlag
 
 def _create_dummy_prep(index: int) -> 'PRep':
     address = Address(AddressPrefix.EOA, os.urandom(20))
-    public_key: bytes = b"\x04" + os.urandom(64)
 
     return PRep(
         address=address,
@@ -38,7 +37,6 @@ def _create_dummy_prep(index: int) -> 'PRep':
         website=f"https://node{index}.example.com",
         details=f"https://node{index}.example.com/details",
         p2p_endpoint=f"node{index}.example.com:7100",
-        public_key=public_key,
         delegated=random.randint(0, 1000),
         irep=10_000,
         irep_block_height=index,
