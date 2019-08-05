@@ -40,11 +40,14 @@ class TestIISS(TestIISSBase):
         # get iiss info
         response: dict = self.get_iiss_info()
         expected_response = {
+            'blockHeight': block_height,
             'nextCalculation': block_height + calc_period + 1,
             'nextPRepTerm': 0,
             'variable': {
                 "irep": 0,
                 "rrep": 1200
+            },
+            'rcResult': {
             }
         }
         self.assertEqual(expected_response, response)
@@ -54,11 +57,18 @@ class TestIISS(TestIISSBase):
         block_height: int = self._block_height
         response: dict = self.get_iiss_info()
         expected_response = {
+            'blockHeight': block_height,
             'nextCalculation': block_height + 1,
             'nextPRepTerm': 0,
             'variable': {
                 "irep": 0,
                 "rrep": 1200
+            },
+            'rcResult': {
+                "iscore": 0,
+                "estimatedICX": 0,
+                "startBlockHeight": block_height - calc_period + 1,
+                "endBlockHeight": block_height
             }
         }
         self.assertEqual(expected_response, response)

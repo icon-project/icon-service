@@ -212,7 +212,7 @@ class TestIssueRegulator:
         # failure case: when prev issued i score is None, should raise error
 
         prev_calc_period_issued_icx = 1_000
-        prev_calc_period_issued_iscore = None
+        prev_calc_period_issued_iscore = -1
 
         prev_block_cumulative_fee = 0
         icx_issue_amount = 1000
@@ -395,7 +395,7 @@ class TestIssueRegulator:
         mocked_context_engine.prep.term.sequence = 0
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
-        mocked_context_storage.rc.get_prev_calc_period_issued_iscore = Mock(return_value=0)
+        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(0, 0))
         regulator = Regulator(self.context, issue_amount)
 
         actual_current_icx = regulator._regulator_variable.current_calc_period_issued_icx

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from iconcommons import Logger
 from ..reward_calc.msg_data import TxData
@@ -33,7 +33,7 @@ class Storage(object):
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
     _KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
-    _KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE = b'prev_calc_period_issued_iscore'
+    _KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
 
     def __init__(self):
         self._path: str = ""
@@ -57,19 +57,21 @@ class Storage(object):
             self._db.close()
             self._db = None
 
-    def put_prev_calc_period_issued_iscore(self, iscore: int):
+    def put_calc_response_from_rc(self, iscore: int, block_height: int):
         version = 0
-        value: bytes = MsgPackForDB.dumps([version, iscore])
-        self._db.put(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE, value)
+        response_from_rc = MsgPackForDB.dumps([version, iscore, block_height])
+        self._db.put(self._KEY_FOR_CALC_RESPONSE_FROM_RC, response_from_rc)
 
-    def get_prev_calc_period_issued_iscore(self) -> Optional[int]:
-        value: bytes = self._db.get(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE)
-        if value is None:
-            return None
-        data: list = MsgPackForDB.loads(value)
-        version = data[0]
+    def get_calc_response_from_rc(self) -> Tuple[int, int]:
+        response_from_rc = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
+        if response_from_rc is None:
+            return -1, -1
+        response_from_rc: list = MsgPackForDB.loads(response_from_rc)
+        version = response_from_rc[0]
+        iscore = response_from_rc[1]
+        block_height = response_from_rc[2]
 
-        return data[1]
+        return iscore, block_height
 
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):

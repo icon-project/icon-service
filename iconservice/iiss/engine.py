@@ -101,7 +101,7 @@ class Engine(EngineBase):
         if not cb_data.success:
             raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
 
-        IconScoreContext.storage.rc.put_prev_calc_period_issued_iscore(cb_data.iscore)
+        IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height)
         Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)
 
     def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str):
