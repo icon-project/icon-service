@@ -23,7 +23,7 @@ from iconservice.base.exception import InvalidParamsException, OutOfBalanceExcep
 from iconservice.icon_constant import REVISION_4, REVISION_3
 from iconservice.icx.base_part import BasePartState
 from iconservice.icx.coin_part import CoinPartType, CoinPartFlag, CoinPart
-from iconservice.utils import toggle_flags
+from iconservice.utils import set_flag
 from tests import create_address
 
 
@@ -129,10 +129,10 @@ class TestCoinPart(unittest.TestCase):
         part1 = CoinPart()
         self.assertEqual(BasePartState.NONE, part1.states)
 
-        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
+        part1._flags = set_flag(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
         self.assertIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
 
-        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, False)
+        part1._flags = set_flag(part1.flags, CoinPartFlag.HAS_UNSTAKE, False)
         self.assertEqual(CoinPartFlag.NONE, part1.flags)
         self.assertNotIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
 

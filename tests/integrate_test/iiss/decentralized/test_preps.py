@@ -210,45 +210,36 @@ class TestPreps(TestIISSBase):
         # uncooperative preps got penalty on 90th block since PENALTY_GRACE_PERIOD is 80
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + _STEADY_PREPS_COUNT):
             response: dict = self.get_prep(self._accounts[i])
-            expected_response: dict = \
-                {
-                    "totalBlocks": block_count,
-                    "validatedBlocks": block_count
-                }
-            self.assertEqual(expected_response['totalBlocks'], response['totalBlocks'])
-            self.assertEqual(expected_response['validatedBlocks'], response['validatedBlocks'])
+            self.assertEqual(block_count, response['totalBlocks'])
+            self.assertEqual(block_count, response['validatedBlocks'])
 
         for i in range(PREP_MAIN_PREPS + _STEADY_PREPS_COUNT, PREP_MAIN_PREPS + PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._accounts[i])
-            expected_response: dict = \
-                {
-                    "totalBlocks": block_count,
-                    "validatedBlocks": 0
-                }
-            self.assertEqual(expected_response['totalBlocks'], response['totalBlocks'])
-            self.assertEqual(expected_response['validatedBlocks'], response['validatedBlocks'])
+            self.assertEqual(block_count, response['totalBlocks'])
+            self.assertEqual(0, response['validatedBlocks'])
 
-        main_preps_info = self.get_main_prep_list()['preps']
-        main_preps = list(map(lambda prep_dict: prep_dict['address'], main_preps_info))
+        main_preps_info: dict = self.get_main_prep_list()['preps']
+        main_prep_addresses: List['Address'] = \
+            list(map(lambda prep_dict: prep_dict['address'], main_preps_info))
 
-        # prep0~12 are still prep
+        # prep0~12 are still preps
         for index, prep in enumerate(self._accounts[
                                      offset:
                                      offset + _STEADY_PREPS_COUNT]):
-            self.assertEqual(prep.address, main_preps[index])
+            self.assertEqual(prep.address, main_prep_addresses[index])
 
         # prep13~21 got penalty
         for prep in self._accounts[
                     offset + _STEADY_PREPS_COUNT:
                     offset + PREP_MAIN_PREPS]:
-            self.assertNotIn(prep, main_preps)
+            self.assertNotIn(prep, main_prep_addresses)
 
         # prep22~30 became new preps(14th prep ~ 22th prep)
         for index, prep in enumerate(self._accounts[
                                      offset + PREP_MAIN_PREPS:
                                      offset + PREP_MAIN_PREPS + _UNCOOPERATIVE_PREP_COUNT]):
-            self.assertEqual(prep.address,
-                             main_preps[index + PREP_MAIN_PREPS - _UNCOOPERATIVE_PREP_COUNT])
+            self.assertEqual(
+                prep.address, main_prep_addresses[index + PREP_MAIN_PREPS - _UNCOOPERATIVE_PREP_COUNT])
 
         for index, expected_event_log in enumerate(expected_penalty_event_logs):
             self.assertEqual(expected_event_log.indexed[0], prep_penalty_event_logs[index].indexed[0])

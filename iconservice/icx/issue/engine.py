@@ -45,7 +45,7 @@ class Engine(EngineBase):
             IssueDataKey.PREP: {
                 IssueDataKey.IREP: irep,
                 IssueDataKey.RREP: context.storage.iiss.get_reward_rate(context).reward_prep,
-                IssueDataKey.TOTAL_DELEGATION: context.preps.total_prep_delegated
+                IssueDataKey.TOTAL_DELEGATION: context.preps.total_delegated
             }
         }
         total_issue_amount = 0
