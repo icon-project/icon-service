@@ -59,11 +59,11 @@ class Storage(object):
 
     def put_calc_response_from_rc(self, iscore: int, block_height: int):
         version = 0
-        response_from_rc = MsgPackForDB.dumps([version, iscore, block_height])
+        response_from_rc: bytes = MsgPackForDB.dumps([version, iscore, block_height])
         self._db.put(self._KEY_FOR_CALC_RESPONSE_FROM_RC, response_from_rc)
 
     def get_calc_response_from_rc(self) -> Tuple[int, int]:
-        response_from_rc = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
+        response_from_rc: Optional[bytes] = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
         if response_from_rc is None:
             return -1, -1
         response_from_rc: list = MsgPackForDB.loads(response_from_rc)
