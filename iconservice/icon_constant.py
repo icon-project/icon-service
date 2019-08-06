@@ -220,7 +220,14 @@ PREP_METHOD_TABLE = [
 ]
 
 DEBUG_METHOD_TABLE = [
-    'getIISSInfo'
+    "getIISSInfo"
+]
+
+HASH_TYPE_TABLE = [
+    "blockHash",
+    "txHash",
+    "prevBlockHash",
+    "rootHash"
 ]
 
 NEW_METHOD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE + DEBUG_METHOD_TABLE

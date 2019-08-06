@@ -17,10 +17,11 @@
 from copy import deepcopy
 from typing import Union, Any, get_type_hints
 
-from iconservice.base.type_converter_templates import ParamType, \
-    type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
 from .address import Address, MalformedAddress, is_icon_address_valid
 from .exception import InvalidParamsException
+from .type_converter_templates import ParamType, \
+    type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
+from ..icon_constant import HASH_TYPE_TABLE
 from ..utils import get_main_type_from_annotations_type
 
 score_base_support_type = (int, str, bytes, bool, Address)
@@ -263,7 +264,7 @@ class TypeConverter:
         if isinstance(value, dict):
             for k, v in value.items():
                 if isinstance(v, bytes):
-                    is_hash = k in ('blockHash', 'txHash', 'prevBlockHash')
+                    is_hash = k in HASH_TYPE_TABLE
                     value[k] = TypeConverter._convert_bytes_reverse(v, is_hash)
                 else:
                     value[k] = TypeConverter.convert_type_reverse(v)
