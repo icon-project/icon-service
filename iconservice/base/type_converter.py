@@ -17,11 +17,11 @@
 from copy import deepcopy
 from typing import Union, Any, get_type_hints
 
-from iconservice.base.type_converter_templates import ParamType, \
-    type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
-from iconservice.icon_constant import HASH_TYPE_TABLE
 from .address import Address, MalformedAddress, is_icon_address_valid
 from .exception import InvalidParamsException
+from .type_converter_templates import ParamType, \
+    type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
+from ..icon_constant import HASH_TYPE_TABLE
 from ..utils import get_main_type_from_annotations_type
 
 score_base_support_type = (int, str, bytes, bool, Address)
