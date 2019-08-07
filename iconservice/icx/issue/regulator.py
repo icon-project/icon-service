@@ -60,6 +60,8 @@ class Regulator:
         current_calc_period_total_issued_icx += issue_amount
         if calc_next_block_height == context.block.height:
             prev_calc_period_issued_iscore, _ = context.storage.rc.get_calc_response_from_rc()
+            if regulator_variable.prev_calc_period_issued_icx == -1:
+                regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
                 self._correct_issue_amount_on_calc_period(regulator_variable.prev_calc_period_issued_icx,
                                                           prev_calc_period_issued_iscore,
@@ -69,9 +71,6 @@ class Regulator:
 
             regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
             regulator_variable.current_calc_period_issued_icx = 0
-            Logger.debug(f"Accumulative issued ICX in term: {context.engine.prep.term.sequence}. "
-                         f"ICX Amount: {regulator_variable.prev_calc_period_issued_icx} "
-                         f"Block height of this block: {context.block.height}", IISS_LOG_TAG)
         else:
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
                 self._correct_issue_amount(regulator_variable.over_issued_iscore,
@@ -84,6 +83,8 @@ class Regulator:
         self._covered_icx_by_fee = covered_icx_by_fee
         self._covered_icx_by_remain = covered_icx_by_remain
         self._corrected_icx_issue_amount = corrected_icx_issue_amount
+        Logger.debug(f"Block height of this block: {context.block.height} "
+                     f"Regulator variable: {self._regulator_variable}", IISS_LOG_TAG)
 
     def put_regulate_variable(self, context: 'IconScoreContext'):
         context.storage.issue.put_regulator_variable(context, self._regulator_variable)
