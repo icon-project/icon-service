@@ -18,6 +18,8 @@
 import unittest
 
 from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes
+from iconservice.utils.hashing.hash_generator import RootHashGenerator
+from tests import create_address
 
 
 class TestUtils(unittest.TestCase):
@@ -62,6 +64,16 @@ class TestUtils(unittest.TestCase):
             self.assertListEqual([0x00, 0x80], [first, second])
 
             n <<= 8
+
+    def test_generate_root_hash(self):
+        data: bytes = create_address().to_bytes_including_prefix()
+        data: bytes = RootHashGenerator.generate_root_hash([data], do_hash=True)
+        self.assertIsInstance(data, bytes)
+
+        data1: bytes = create_address().to_bytes_including_prefix()
+        data2: bytes = create_address().to_bytes_including_prefix()
+        data: bytes = RootHashGenerator.generate_root_hash([data1, data2], do_hash=True)
+        self.assertIsInstance(data, bytes)
 
 
 if __name__ == '__main__':
