@@ -23,7 +23,8 @@ from .base.address import Address, generate_score_address, generate_score_addres
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException
+    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException, \
+    MethodNotFoundException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -1269,7 +1270,11 @@ class IconServiceEngine(ContextContainer):
             return False
 
         method_name: Optional[str] = data.get("method")
-        return method_name in NEW_METHOD_TABLE
+        if method_name in NEW_METHOD_TABLE:
+            return True
+        else:
+            # TODO: we should refector logic of check_new_process. IS-715
+            raise MethodNotFoundException(f"Method not found: {method_name}")
 
     @staticmethod
     def _check_iiss_process(params: dict) -> bool:
