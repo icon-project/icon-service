@@ -16,6 +16,7 @@
 """Test for icon_score_base.py and icon_score_base2.py"""
 from unittest.mock import Mock
 
+from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import MethodNotFoundException
 from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -152,3 +153,23 @@ class TestIISS(TestIISSBase):
 
         response: dict = self.get_prep_list()
         print(response)
+
+    def test_method_not_found(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(REV_IISS)
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "invalid",
+                "params": {}
+            }
+        }
+
+        with self.assertRaises(MethodNotFoundException):
+            self._query(query_request)
