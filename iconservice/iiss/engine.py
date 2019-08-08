@@ -205,15 +205,16 @@ class Engine(EngineBase):
 
         stake: int = account.stake
         unstake: int = account.unstake
-        unstake_block_beight: int = account.unstake_block_height
+        unstake_block_height: int = account.unstake_block_height
 
         data = {
             "stake": stake
         }
 
-        if unstake_block_beight:
+        if unstake_block_height:
             data["unstake"] = unstake
-            data["unstakeBlockHeight"] = unstake_block_beight
+            data["unstakeBlockHeight"] = unstake_block_height
+            data["remainingBlocks"] = unstake_block_height - context.block.height
 
         return data
 
