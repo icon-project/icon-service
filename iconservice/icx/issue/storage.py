@@ -31,7 +31,7 @@ class Storage(StorageBase):
         if regulator_variable:
             return RegulatorVariable.from_bytes(regulator_variable)
         return RegulatorVariable(current_calc_period_issued_icx=0,
-                                 prev_calc_period_issued_icx=0,
+                                 prev_calc_period_issued_icx=-1,
                                  over_issued_iscore=0)
 
     def put_regulator_variable(self, context: 'IconScoreContext', rv: 'RegulatorVariable'):
@@ -64,3 +64,8 @@ class RegulatorVariable:
             self.over_issued_iscore
         ]
         return MsgPackForDB.dumps(data)
+
+    def __str__(self):
+        return f"Current calc period issued ICX: {self.current_calc_period_issued_icx} " \
+               f"Prev calc period issued ICX: {self.prev_calc_period_issued_icx} " \
+               f"Remain over issued I-SCORE: {self.over_issued_iscore} "

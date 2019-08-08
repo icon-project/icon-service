@@ -402,3 +402,40 @@ class TestIssueRegulator:
         actual_prev_icx = regulator._regulator_variable.prev_calc_period_issued_icx
         assert actual_current_icx == 0
         assert actual_prev_icx == issue_amount + current_calc_preiod_issued_icx
+
+    @patch('iconservice.iconscore.icon_score_context.IconScoreContext.engine')
+    @patch('iconservice.iconscore.icon_score_context.IconScoreContext.storage')
+    def test_set_negative_value_to_prev_calc_preiod_issued_icx(self,
+                                                               mocked_context_storage,
+                                                               mocked_context_engine):
+        # success case: if 'prev_calc_preiod_issued_icx' is -1, should not regulate ICX even though
+        # prev_calc_preiod_issued_iscore is exists
+
+        # create dummy block
+        block_height = 5
+        block = self._create_dummy_block_by_height(block_height)
+        self.context.block = block
+
+        # set regulator_variable
+        over_issued_i_score = 0
+        current_calc_preiod_issued_icx = 50_000_000
+        prev_calc_period_issued_icx = -1
+        prev_calc_period_issued_iscore = 50_000_000_000_000
+        rv = RegulatorVariable(current_calc_preiod_issued_icx,
+                               prev_calc_period_issued_icx,
+                               over_issued_i_score)
+        cumulative_fee = 0
+        issue_amount = 10_000_000
+
+        mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
+        mocked_context_engine.prep.term.sequence = 0
+        mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
+        mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
+        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(prev_calc_period_issued_iscore, 0))
+        regulator = Regulator(self.context, issue_amount)
+
+        assert regulator._regulator_variable.prev_calc_period_issued_icx == issue_amount + current_calc_preiod_issued_icx
+        assert regulator._regulator_variable.current_calc_period_issued_icx == 0
+        assert regulator._regulator_variable.over_issued_iscore == 0
+        assert regulator.corrected_icx_issue_amount == issue_amount
+        assert regulator.covered_icx_by_over_issue == 0
