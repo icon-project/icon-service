@@ -1273,7 +1273,6 @@ class IconServiceEngine(ContextContainer):
         if method_name in NEW_METHOD_TABLE:
             return True
         else:
-            # TODO: we should refector logic of check_new_process. IS-715
             raise MethodNotFoundException(f"Method not found: {method_name}")
 
     @staticmethod
