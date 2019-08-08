@@ -1223,6 +1223,15 @@ class IconServiceEngine(ContextContainer):
 
         :param params: JSON-RPC params
         """
+        # Checks the balance only on the invoke context(skip estimate context)
+        if context.type == IconScoreContextType.INVOKE:
+            tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+            tmp_context.block = self._get_last_block()
+            # Check if from account can charge a tx fee
+            self._icon_pre_validator.execute_to_check_out_of_balance(
+                context if context.revision >= REVISION_3 else tmp_context,
+                params,
+                step_price=context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first
         context.step_counter.apply_step(StepType.DEFAULT, 1)
@@ -1293,16 +1302,6 @@ class IconServiceEngine(ContextContainer):
 
         to: Address = params['to']
 
-        # Checks the balance only on the invoke context(skip estimate context)
-        if context.type == IconScoreContextType.INVOKE:
-            tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-            tmp_context.block = self._get_last_block()
-            # Check if from account can charge a tx fee
-            self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= REVISION_3 else tmp_context,
-                params,
-                step_price=context.step_counter.step_price)
-
         data_type: str = params.get('dataType')
         if data_type in (None, 'call', 'message'):
             self._transfer_coin(context, params)
@@ -1328,12 +1327,6 @@ class IconServiceEngine(ContextContainer):
         # Only 'registerPRep' method allow to set value
         if context.msg.value > 0 and data.get("method") != "registerPRep":
             raise InvalidParamsException(f"Do not allow to set value in this method: {data.get('method')}")
-
-        # Check if from account can charge a tx fee
-        self._icon_pre_validator.execute_to_check_out_of_balance(
-            context,
-            params,
-            step_price=context.step_counter.step_price)
 
         if self._check_iiss_process(params):
             context.engine.iiss.invoke(context, data)
