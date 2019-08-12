@@ -317,13 +317,14 @@ def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optiona
 
 
 class PRepInfo(object):
-    def __init__(self, address: 'Address', delegated: int):
+    def __init__(self, address: 'Address', delegated: int, name: str):
         self.address = address
         self.delegated = delegated
+        self.name = name
 
 
 def __create_prep_info_from_prep(prep: 'PRep') -> 'PRepInfo':
-    return PRepInfo(prep.address, prep.delegated)
+    return PRepInfo(prep.address, prep.delegated, prep.name)
 
 
 def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
