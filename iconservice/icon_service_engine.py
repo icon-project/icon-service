@@ -1328,7 +1328,7 @@ class IconServiceEngine(ContextContainer):
 
         assert to == ZERO_SCORE_ADDRESS, "Invalid to Address"
 
-        # Only 'registerPRep' method allow to set value
+        # Only 'registerPRep' method is allowed to set value
         if context.msg.value > 0 and data.get("method") != "registerPRep":
             raise InvalidParamsException(f"Do not allow to set value in this method: {data.get('method')}")
 
@@ -1337,7 +1337,7 @@ class IconServiceEngine(ContextContainer):
         elif self._check_prep_process(params):
             context.engine.prep.invoke(context, data)
         else:
-            raise InvalidParamsException("invalid method")
+            raise InvalidParamsException("Invalid method")
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',

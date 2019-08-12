@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import asyncio
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 from .message import Request, Response
 from iconservice.base.exception import InvalidParamsException
@@ -28,20 +28,21 @@ class MessageQueue(object):
         self._loop = loop
         self._requests = asyncio.Queue()
         self._msg_id_to_future = {}
-        self.notify_message: tuple = notify_message
+        self.notify_message: Optional[tuple] = notify_message
         self.notify_handler = notify_handler
 
     async def get(self) -> 'Request':
         return await self._requests.get()
 
-    def put(self, request) -> asyncio.Future:
+    def put(self, request, wait_for_response: bool = True) -> Optional[asyncio.Future]:
         assert isinstance(request, Request)
 
-        future: asyncio.Future = self._loop.create_future()
         self._requests.put_nowait(request)
-        self._msg_id_to_future[request.msg_id] = future
 
-        return future
+        if wait_for_response:
+            future: asyncio.Future = self._loop.create_future()
+            self._msg_id_to_future[request.msg_id] = future
+            return future
 
     def message_handler(self, response: 'Response'):
         try:
