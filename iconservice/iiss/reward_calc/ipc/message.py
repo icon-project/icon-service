@@ -40,6 +40,7 @@ class MessageType(IntEnum):
     QUERY = 2
     CALCULATE = 3
     COMMIT_BLOCK = 4
+    COMMIT_CLAIM = 5
 
 
 class Request(metaclass=ABCMeta):
@@ -93,7 +94,7 @@ class VersionResponse(Response):
     @staticmethod
     def from_list(items: list) -> 'VersionResponse':
         msg_id: int = items[1]
-        payload: int = items[2]
+        payload: list = items[2]
 
         version: int = payload[0]
         block_height: int = payload[1]
@@ -144,6 +145,27 @@ class ClaimResponse(Response):
         iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[3])
 
         return ClaimResponse(msg_id, address, block_height, block_hash, iscore)
+
+
+class CommitClaimRequest(Request):
+    """Send the result of claimIScore tx to reward calculator
+        No response for CommitClaimRequest
+    """
+    def __init__(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+        super().__init__(MessageType.COMMIT_CLAIM)
+
+        self.success = success
+        self.address = address
+        self.block_height = block_height
+        self.block_hash = block_hash
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id,\
+               (self.success, self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
+
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}" \
+                f"({self.msg_id}, {self.success}, {self.address}, {self.block_height}, {self.block_hash.hex()})"
 
 
 class QueryRequest(Request):
