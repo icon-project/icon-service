@@ -541,7 +541,7 @@ class Engine(EngineBase):
 
     def update_db(self,
                   context: 'IconScoreContext',
-                  next_term: Optional['Term'],
+                  term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
                   prev_block_validators: Optional[List['Address']],
                   flag: 'PrecommitFlag'):
@@ -549,13 +549,16 @@ class Engine(EngineBase):
         self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_validators)
 
         if not self._is_iiss_calc(flag):
+            if term is not None:
+                self._put_gv(context, term)
+                self._put_preps_to_rc_db(context, term)
             return
 
         self._put_end_calc_block_height(context)
 
         self._put_header_to_rc_db(context)
-        self._put_gv(context, next_term)
-        self._put_preps_to_rc_db(context, next_term)
+        self._put_gv(context, term)
+        self._put_preps_to_rc_db(context, term)
 
     def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         block_height: int = precommit_data.block.height
@@ -595,9 +598,13 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_gv(cls, context: 'IconScoreContext', next_term: 'Term'):
-        current_total_supply = context.storage.icx.get_total_supply(context)
-        current_total_prep_delegated: int = context.preps.total_delegated
+    def _put_gv(cls, context: 'IconScoreContext', term: Optional['Term']):
+        if term is None:
+            current_total_supply: int = context.storage.icx.get_total_supply(context)
+            current_total_prep_delegated: int = context.preps.total_delegated
+        else:
+            current_total_supply: int = term.total_supply
+            current_total_prep_delegated: int = term.total_delegated
 
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         reward_prep: int = IssueFormula.calculate_rrep(context.storage.iiss.reward_min,
@@ -607,7 +614,7 @@ class Engine(EngineBase):
                                                        current_total_prep_delegated)
 
         reward_rate.reward_prep = reward_prep
-        irep: int = next_term.irep if next_term is not None else 0
+        irep: int = term.irep if term is not None else 0
         calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
 
         reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_prep)
@@ -637,13 +644,13 @@ class Engine(EngineBase):
         if term is None:
             return
 
-        total_prep_delegated: int = 0
+        total_100_delegated: int = 0
         for prep in term.preps:
-            total_prep_delegated += prep.delegated
+            total_100_delegated += prep.delegated
 
-        Logger.debug(f"put_preps_for_rc: total_prep_delegated{total_prep_delegated}", "iiss")
+        Logger.debug(f"put_preps_for_rc: total_prep_delegated{total_100_delegated}", "iiss")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(context.block.height,
-                                                                   total_prep_delegated,
+                                                                   total_100_delegated,
                                                                    term.preps)
         context.storage.rc.put(context.rc_block_batch, data)

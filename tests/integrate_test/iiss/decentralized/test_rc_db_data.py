@@ -14,16 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from os.path import isfile
-from typing import TYPE_CHECKING, List
 
 from iconservice.database.db import ExternalDatabase
 from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
     IISS_DB, REV_DECENTRALIZATION
+from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.msg_data import GovernanceVariable
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
-from iconservice.iiss.reward_calc import RewardCalcStorage
 
 
 class TestRCDatabase(TestIISSBase):
@@ -37,7 +35,8 @@ class TestRCDatabase(TestIISSBase):
 
     @staticmethod
     def get_last_rc_db_data(rc_data_path):
-        return sorted([dir_name for dir_name in os.listdir(rc_data_path) if dir_name.startswith(RewardCalcStorage._IISS_RC_DB_NAME_PREFIX)],
+        return sorted([dir_name for dir_name in os.listdir(rc_data_path)
+                       if dir_name.startswith(RewardCalcStorage._IISS_RC_DB_NAME_PREFIX)],
                       key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage._IISS_RC_DB_NAME_PREFIX):]),
                       reverse=True)[0]
 

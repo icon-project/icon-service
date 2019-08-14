@@ -20,9 +20,9 @@ import iso3166
 
 from .sorted_list import Sortable
 from ... import utils
-from ...base.exception import AccessDeniedException
+from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, VALIDATION_PENALTY
 from ...icon_constant import PRepGrade, PRepStatus
 from ...utils.msgpack_for_db import MsgPackForDB
 
@@ -43,7 +43,7 @@ class PRepDictType(Enum):
 
 class PRep(Sortable):
     PREFIX: bytes = b"prep"
-    _VERSION: int = 0
+    _VERSION: int = 1
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
     class Index(IntEnum):
@@ -68,6 +68,7 @@ class PRep(Sortable):
 
         TOTAL_BLOCKS = auto()
         VALIDATED_BLOCKS = auto()
+        VALIDATION_PENALTY = auto()
 
         SIZE = auto()
 
@@ -92,7 +93,8 @@ class PRep(Sortable):
             block_height: int = 0,
             tx_index: int = 0,
             total_blocks: int = 0,
-            validated_blocks: int = 0):
+            validated_blocks: int = 0,
+            validation_penalty: int = 0):
         """
         Main PRep: top 1 ~ 22 preps in descending order by delegated amount
         Sub PRep: 23 ~ 100 preps
@@ -154,6 +156,7 @@ class PRep(Sortable):
         # stats
         self._total_blocks: int = total_blocks
         self._validated_blocks: int = validated_blocks
+        self._validation_penalty: int = validation_penalty
 
     def is_dirty(self) -> bool:
         return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
@@ -200,7 +203,7 @@ class PRep(Sortable):
         return iso3166.countries_by_alpha3.get(
             alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
 
-    def update_productivity(self, is_validate: bool):
+    def update_main_prep_validate(self, is_validate: bool):
         """Update the block validation statistics of P-Rep
 
         :param is_validate:
@@ -210,6 +213,8 @@ class PRep(Sortable):
 
         if is_validate:
             self._validated_blocks += 1
+        else:
+            self._validation_penalty += 1
         self._total_blocks += 1
 
         self._set_dirty(True)
@@ -228,6 +233,14 @@ class PRep(Sortable):
             return False
 
         return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
+
+    def reset_validation_penalty(self):
+        if self._status == PRepStatus.TURN_OVER:
+            self._status = PRepStatus.ACTIVE
+            self._validation_penalty: int = 0
+
+    def is_validation_penalty(self) -> bool:
+        return self._validation_penalty >= VALIDATION_PENALTY
 
     @property
     def total_blocks(self) -> int:
@@ -301,7 +314,8 @@ class PRep(Sortable):
         """
         self._flags |= PRepFlag.FROZEN
 
-    def set(self, *,
+    def set(self,
+            *,
             name: str = None,
             country: str = None,
             city: str = None,
@@ -388,6 +402,7 @@ class PRep(Sortable):
 
             self._total_blocks,
             self._validated_blocks,
+            self._validation_penalty
         ])
 
     @classmethod
@@ -395,25 +410,50 @@ class PRep(Sortable):
         items: list = MsgPackForDB.loads(data)
         assert len(items) == cls.Index.SIZE
 
-        return PRep(
-            address=items[cls.Index.ADDRESS],
-            status=PRepStatus(items[cls.Index.STATUS]),
-            grade=PRepGrade(items[cls.Index.GRADE]),
-            name=items[cls.Index.NAME],
-            country=items[cls.Index.COUNTRY],
-            city=items[cls.Index.CITY],
-            email=items[cls.Index.EMAIL],
-            website=items[cls.Index.WEBSITE],
-            details=items[cls.Index.DETAILS],
-            p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
-            irep=items[cls.Index.IREP],
-            irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
-            last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
-            block_height=items[cls.Index.BLOCK_HEIGHT],
-            tx_index=items[cls.Index.TX_INDEX],
-            total_blocks=items[cls.Index.TOTAL_BLOCKS],
-            validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
-        )
+        version: int = items[cls.Index.VERSION]
+        if version == 0:
+            return PRep(
+                address=items[cls.Index.ADDRESS],
+                status=PRepStatus(items[cls.Index.STATUS]),
+                grade=PRepGrade(items[cls.Index.GRADE]),
+                name=items[cls.Index.NAME],
+                country=items[cls.Index.COUNTRY],
+                city=items[cls.Index.CITY],
+                email=items[cls.Index.EMAIL],
+                website=items[cls.Index.WEBSITE],
+                details=items[cls.Index.DETAILS],
+                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+                irep=items[cls.Index.IREP],
+                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+                block_height=items[cls.Index.BLOCK_HEIGHT],
+                tx_index=items[cls.Index.TX_INDEX],
+                total_blocks=items[cls.Index.TOTAL_BLOCKS],
+                validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
+            )
+        elif version == 1:
+            return PRep(
+                address=items[cls.Index.ADDRESS],
+                status=PRepStatus(items[cls.Index.STATUS]),
+                grade=PRepGrade(items[cls.Index.GRADE]),
+                name=items[cls.Index.NAME],
+                country=items[cls.Index.COUNTRY],
+                city=items[cls.Index.CITY],
+                email=items[cls.Index.EMAIL],
+                website=items[cls.Index.WEBSITE],
+                details=items[cls.Index.DETAILS],
+                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+                irep=items[cls.Index.IREP],
+                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+                block_height=items[cls.Index.BLOCK_HEIGHT],
+                tx_index=items[cls.Index.TX_INDEX],
+                total_blocks=items[cls.Index.TOTAL_BLOCKS],
+                validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
+                validation_penalty=items[cls.Index.VALIDATION_PENALTY]
+            )
+        else:
+            raise InvalidParamsException("invalid version")
 
     @staticmethod
     def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':

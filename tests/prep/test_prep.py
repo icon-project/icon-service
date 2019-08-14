@@ -100,7 +100,7 @@ def test_freeze(prep):
         prep.set_irep(10_000, 777)
 
     with pytest.raises(AccessDeniedException):
-        prep.update_productivity(True)
+        prep.update_main_prep_validate(True)
 
 
 def test_set_ok(prep):

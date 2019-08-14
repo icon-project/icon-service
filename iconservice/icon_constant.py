@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique, IntEnum, Enum
+from enum import IntFlag, unique, IntEnum, Enum, Flag
 
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
@@ -252,20 +252,23 @@ ISCORE_EXCHANGE_RATE = 1_000
 PENALTY_GRACE_PERIOD = IISS_DAY_BLOCK * 2
 
 MIN_PRODUCTIVITY_PERCENTAGE = 85
+VALIDATION_PENALTY = 660
 
 BASE_TRANSACTION_VERSION = 3
 
 PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
 
 
-class PRepStatus(Enum):
+class PRepStatus(Flag):
     ACTIVE = 0
     # Unregistered by P-Rep itself
     UNREGISTERED = 1
     # "prep disqualification penalty"
     DISQUALIFIED = 2
-    # "low productivity penalty"
-    LOW_PRODUCTIVITY = 3
+    # low productivity
+    LOW_PRODUCTIVITY = 4
+    # pause validation
+    TURN_OVER = 8
 
 
 class PRepGrade(Enum):
@@ -274,6 +277,6 @@ class PRepGrade(Enum):
     CANDIDATE = 2
 
 
-class PrepResultState(Enum):
+class PRepResultState(Enum):
     NORMAL = 0
-    PENALTY = 1
+    IN_TERM_UPDATED = 1

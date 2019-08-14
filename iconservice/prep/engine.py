@@ -25,7 +25,7 @@ from ..base.exception import InvalidParamsException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
-from ..icon_constant import PRepGrade, PrepResultState, PRepStatus
+from ..icon_constant import PRepGrade, PRepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -140,11 +140,19 @@ class Engine(EngineBase, IISSEngineListener):
                                  main_and_sub_prep_count=context.main_and_sub_prep_count,
                                  old_preps=self.term.preps,
                                  new_preps=context.preps)
-        main_preps_as_dict: dict = self.get_next_main_preps(context)
-        next_term: 'Term' = self._create_next_term(context)
-        next_term.save(context)
+        term: 'Term' = self._create_next_term(context)
+        main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.NORMAL)
+        term.save(context)
+        return main_preps_as_dict, term
 
-        return main_preps_as_dict, next_term
+    def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
+        term: Optional['Term'] = self._create_updated_term(context)
+        if term:
+            main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.IN_TERM_UPDATED)
+            term.save(context)
+        else:
+            main_preps_as_dict: dict = {}
+        return main_preps_as_dict, term
 
     @staticmethod
     def _update_prep_grades(main_prep_count: int, main_and_sub_prep_count: int,
@@ -268,23 +276,24 @@ class Engine(EngineBase, IISSEngineListener):
         """
         return self.term.end_block_height == context.block.height
 
-    def get_next_main_preps(self, context: 'IconScoreContext') -> Optional[dict]:
+    @classmethod
+    def get_updated_main_preps(cls, term: 'Term', state: 'PRepResultState') -> Optional[dict]:
         """Returns preps which will run as main preps during the next term in dict format
 
         :return:
         """
         prep_as_dict: Optional[dict] = \
-            self.get_main_preps_in_dict(context.main_prep_count, context.preps.get_preps(0, context.main_prep_count))
+            cls.get_main_preps_in_dict(term.main_preps)
 
         if prep_as_dict:
-            prep_as_dict['irep'] = self.term.irep
-            prep_as_dict['state'] = PrepResultState.NORMAL.value
+            prep_as_dict['irep'] = term.irep
+            prep_as_dict['state'] = state.value
 
         return prep_as_dict
 
     @staticmethod
-    def get_main_preps_in_dict(main_prep_count: int, preps: List['PRep']) -> Optional[dict]:
-        count: int = min(len(preps), main_prep_count)
+    def get_main_preps_in_dict(preps: List['PRep']) -> Optional[dict]:
+        count: int = len(preps)
         if count == 0:
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
             return None
@@ -307,32 +316,46 @@ class Engine(EngineBase, IISSEngineListener):
         return prep_as_dict
 
     def _create_next_term(self, context: 'IconScoreContext') -> 'Term':
-        # The current P-Rep term is over. Prepare the next P-Rep term
-        irep: int = self._calculate_weighted_average_of_irep(context)
 
-        next_term = Term()
-        next_term.update(
+        new_preps: List['PRep'] = context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count)
+
+        # The current P-Rep term is over. Prepare the next P-Rep term
+        irep: int = self._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+
+        term: 'Term' = Term.create_next_term(
             self.term.sequence + 1,
             context.main_prep_count,
             context.main_and_sub_prep_count,
             context.block.height,
-            context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count),
+            new_preps,
             context.total_supply,
+            context.preps.total_delegated,
             self.term.period,
             irep
         )
 
-        return next_term
+        return term
+
+    def _create_updated_term(self, context: 'IconScoreContext') -> Optional['Term']:
+        # gather PReps who has gotten a penalty on this block
+        invalid_preps: List[int] = []
+        for i, main_prep in enumerate(self.term.main_preps):
+            ref_main_prep: 'PRep' = context.preps.get_by_address(main_prep.address)
+            if ref_main_prep.status != PRepStatus.ACTIVE:
+                invalid_preps.append(i)
+
+        if invalid_preps:
+            term: 'Term' = Term.create_update_term(context.engine.prep.term, invalid_preps)
+        else:
+            term = None
+        return term
 
     @staticmethod
-    def _calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
-        preps: 'PRepContainer' = context.preps
-
+    def _calculate_weighted_average_of_irep(new_main_preps: List['PRep']) -> int:
         total_delegated = 0  # total delegated of top 22 preps
         total_weighted_irep = 0
 
-        for i in range(context.main_prep_count):
-            prep: 'PRep' = preps.get_by_index(i)
+        for prep in new_main_preps:
             total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated
 
@@ -452,17 +475,18 @@ class Engine(EngineBase, IISSEngineListener):
 
     def unregister_prep(
             self, context: 'IconScoreContext',
-            address: 'Address', status: 'PRepStatus' = PRepStatus.UNREGISTERED):
+            address: 'Address',
+            status: 'PRepStatus' = PRepStatus.UNREGISTERED):
         prep: 'PRep' = context.preps.get_by_address(address)
 
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        if prep.status != PRepStatus.ACTIVE:
+        if status == PRepStatus.UNREGISTERED and prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
         dirty_prep: 'PRep' = prep.copy()
-        dirty_prep.status = status
+        dirty_prep.status = dirty_prep.status | status
         context.put_dirty_prep(dirty_prep)
 
         # Update rcDB

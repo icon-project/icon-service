@@ -25,6 +25,7 @@ from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL
 from iconservice.icon_constant import PRepStatus, PRepGrade
 from iconservice.iconscore.icon_score_event_log import EventLog
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+from tests.integrate_test.test_integrate_base import EOAAccount
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_result import TransactionResult
@@ -215,7 +216,7 @@ class TestPreps(TestIISSBase):
 
         for i in range(PREP_MAIN_PREPS + _STEADY_PREPS_COUNT, PREP_MAIN_PREPS + PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._accounts[i])
-            self.assertEqual(block_count, response['totalBlocks'])
+            self.assertEqual(80 + 1, response['totalBlocks'])
             self.assertEqual(0, response['validatedBlocks'])
 
         main_preps_info: dict = self.get_main_prep_list()['preps']

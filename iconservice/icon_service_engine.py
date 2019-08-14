@@ -61,7 +61,7 @@ from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
-from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
+from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage, is_flag_on
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 
@@ -472,7 +472,7 @@ class IconServiceEngine(ContextContainer):
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
 
-        main_prep_as_dict, next_term = self.after_transaction_process(
+        main_prep_as_dict, term = self.after_transaction_process(
             context, precommit_flag, base_tx_result, prev_block_generator, prev_block_validators)
 
         context.preps.freeze()
@@ -486,7 +486,7 @@ class IconServiceEngine(ContextContainer):
             context.rc_block_batch,
             context.meta_block_batch,
             context.preps,
-            next_term,
+            term,
             prev_block_generator,
             prev_block_validators,
             context.new_icon_score_mapper,
@@ -523,17 +523,16 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_validators:
         :return:
         """
-        main_prep_as_dict: Optional[dict] = None
-        next_term: Optional['Term'] = None
+
+        if base_tx_result is not None:
+            self._impose_penalty_on_main_preps(context, base_tx_result)
 
         if self._is_prep_term_ended(context, flag):
-            if base_tx_result is not None:
-                self._impose_low_productivity_penalty_on_main_preps(context, base_tx_result)
-
             # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, next_term = context.engine.prep.on_term_ended(context)
-
-            context.storage.meta.put_last_term_end_block(context.meta_block_batch, next_term.start_block_height - 1)
+            main_prep_as_dict, term = context.engine.prep.on_term_ended(context)
+            context.storage.meta.put_last_term_end_block(context.meta_block_batch, term.start_block_height - 1)
+        else:
+            main_prep_as_dict, term = context.engine.prep.on_term_updated(context)
 
         if context.revision >= REV_IISS:
             if flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC):
@@ -545,37 +544,57 @@ class IconServiceEngine(ContextContainer):
                                                             start_block_height,
                                                             last_calc_end_block_height)
             context.engine.iiss.update_db(
-                context, next_term, prev_block_generator, prev_block_validators, flag)
+                context, term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
 
-        return main_prep_as_dict, next_term
+        return main_prep_as_dict, term
 
-    def _impose_low_productivity_penalty_on_main_preps(
-            self, context: 'IconScoreContext', base_tx_result: 'TransactionResult'):
-        """Check the P-Reps to impose low productivity penalty on every block
+    def _impose_penalty_on_main_preps(
+            self,
+            context: 'IconScoreContext',
+            base_tx_result: 'TransactionResult'):
+        """Check the P-Reps to impose penalty on every block
 
         :param context:
         :param base_tx_result:
         :return:
         """
 
-        lazy_preps: list = []
+        lazy_preps: List['PRep'] = []
         for main_prep in context.engine.prep.term.main_preps:
             prep: 'PRep' = context.get_prep(main_prep.address)
             assert prep is not None
 
-            if prep.is_low_productivity():
-                lazy_preps.append(prep)
+            is_low_productivity: bool = prep.is_low_productivity()
+            is_validation_penalty: bool = prep.is_validation_penalty()
 
-        for prep in lazy_preps:
-            dirty_prep: 'PRep' = prep.copy()
-            dirty_prep.status = PRepStatus.LOW_PRODUCTIVITY
-            context.put_dirty_prep(dirty_prep)
+            if is_low_productivity or is_validation_penalty:
+                dirty_prep: 'PRep' = prep.copy()
+                if is_low_productivity:
+                    dirty_prep.status |= PRepStatus.LOW_PRODUCTIVITY
+                if is_validation_penalty:
+                    dirty_prep.status |= PRepStatus.TURN_OVER
+                lazy_preps.append(dirty_prep)
+
+        if not lazy_preps:
+            return
+
+        for dirty_prep in lazy_preps:
+            if is_flag_on(dirty_prep.status, PRepStatus.LOW_PRODUCTIVITY):
+                status: int = PRepStatus.LOW_PRODUCTIVITY.value
+                data: int = dirty_prep.productivity
+            else:
+                status: int = PRepStatus.TURN_OVER.value
+                data: int = 0
 
             EventLogEmitter.emit_event_log(
-                context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
-                [prep.address, PRepStatus.LOW_PRODUCTIVITY.value, prep.productivity], 1)
+                context,
+                ZERO_SCORE_ADDRESS,
+                PREP_PENALTY_SIGNATURE,
+                [dirty_prep.address, status, data],
+                1)
+            context.put_dirty_prep(dirty_prep)
 
         base_tx_result.event_logs.extend(context.event_logs)
         base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
@@ -596,7 +615,7 @@ class IconServiceEngine(ContextContainer):
             is_validate: bool = main_prep.address in validates
             prep: 'PRep' = context.get_prep(main_prep.address, mutable=True)
             if prep:
-                prep.update_productivity(is_validate)
+                prep.update_main_prep_validate(is_validate)
                 context.put_dirty_prep(prep)
 
     @staticmethod

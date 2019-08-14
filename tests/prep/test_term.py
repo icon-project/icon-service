@@ -39,6 +39,7 @@ def test_save():
     current_block = random.randint(10, 100)
     # irep = random.randint(10, 100)
     total_supply = random.randint(10, 100)
+    total_delegated = random.randint(10, 100)
     term_period = random.randint(10, 100)
     irep = random.randint(10, 100)
 
@@ -56,8 +57,15 @@ def test_save():
     for _ in range(5):
         next_sequence = term.sequence + 1
         current_block += 1
-        term.update(next_sequence, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, current_block, PREPS, total_supply,
-                    term_period, irep)
+        term = term.create_next_term(next_sequence,
+                                     PREP_MAIN_PREPS,
+                                     PREP_MAIN_AND_SUB_PREPS,
+                                     current_block,
+                                     PREPS,
+                                     total_supply,
+                                     total_delegated,
+                                     term_period,
+                                     irep)
         term.save(context)
         assert term.sequence == next_sequence
         assert term.total_supply == total_supply
@@ -72,6 +80,7 @@ def test_save_and_load():
     current_block = random.randint(10, 100)
     irep = random.randint(10, 100)
     total_supply = random.randint(10, 100)
+    total_delegated = random.randint(10, 100)
     period = random.randint(10, 100)
 
     # case when term data is None
@@ -106,8 +115,14 @@ def test_save_and_load():
         next_sequence = term.sequence + 1
         current_block += 1
         term._period = period
-        term.update(next_sequence, context.main_prep_count, context.main_and_sub_prep_count, current_block, PREPS,
-                    total_supply, period, irep)
+        term = Term.create_next_term(next_sequence,
+                                     context.main_prep_count,
+                                     context.main_and_sub_prep_count,
+                                     current_block, PREPS,
+                                     total_supply,
+                                     total_delegated,
+                                     period,
+                                     irep)
         term.save(context)
         assert term.sequence == next_sequence
         assert term.total_supply == total_supply
@@ -121,7 +136,7 @@ def test_save_and_load():
         saved_sequence = next_sequence
 
         context.storage.prep.get_term = Mock(return_value=[
-            0, saved_sequence, current_block + 1, term._serialize_preps(PREPS), irep, total_supply])
+            0, saved_sequence, current_block + 1, term._serialize_preps(PREPS), irep, total_supply, total_delegated, 0])
         term._make_main_and_sub_preps = Mock(return_value=PREPS)
         term.load(context, period)
         assert term.sequence == saved_sequence
