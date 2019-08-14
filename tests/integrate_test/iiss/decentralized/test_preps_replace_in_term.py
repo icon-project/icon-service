@@ -84,16 +84,12 @@ class TestPreps(TestIISSBase):
 
         # maintain
         block_count = 100
-        for i in range(block_count):
-            prev_block, hash_list = self.make_and_req_block(
-                [],
-                prev_block_generator=accounts[0].address,
-                prev_block_validators=[account.address
-                                       for account in accounts[1:PREP_MAIN_PREPS]])
-            self._write_precommit_state(prev_block)
-            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-            for tx_result in tx_results:
-                self.assertEqual(True, tx_result.status)
+        self.make_blocks(to=self._block_height + 100,
+                         prev_block_generator=accounts[0].address,
+                         prev_block_validators=[
+                             account.address
+                             for account in accounts[1:PREP_MAIN_PREPS]
+                         ])
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
@@ -112,8 +108,8 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         response: dict = self.get_prep(accounts[0])
-        self.assertEqual(block_count, response["totalBlocks"])
-        self.assertEqual(block_count, response["validatedBlocks"])
+        self.assertEqual(block_count - 1, response["totalBlocks"])
+        self.assertEqual(block_count - 1, response["validatedBlocks"])
 
     @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 5)
     def test_prep_replace_in_term2(self):
@@ -148,16 +144,12 @@ class TestPreps(TestIISSBase):
 
         # maintain
         block_count = 100
-        for i in range(block_count):
-            prev_block, hash_list = self.make_and_req_block(
-                [],
-                prev_block_generator=accounts[0].address,
-                prev_block_validators=[account.address
-                                       for account in accounts[1:PREP_MAIN_PREPS]])
-            self._write_precommit_state(prev_block)
-            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-            for tx_result in tx_results:
-                self.assertEqual(True, tx_result.status)
+        self.make_blocks(to=self._block_height + 100,
+                         prev_block_generator=accounts[0].address,
+                         prev_block_validators=[
+                             account.address
+                             for account in accounts[1:PREP_MAIN_PREPS]
+                         ])
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
@@ -176,5 +168,5 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         response: dict = self.get_prep(accounts[0])
-        self.assertEqual(block_count, response["totalBlocks"])
-        self.assertEqual(block_count, response["validatedBlocks"])
+        self.assertEqual(block_count - 1, response["totalBlocks"])
+        self.assertEqual(block_count - 1, response["validatedBlocks"])

@@ -136,6 +136,12 @@ class Engine(EngineBase, IISSEngineListener):
 
         Update P-Rep grades according to PRep.delegated
         """
+
+        context.storage.meta.put_last_term_info(context,
+                                                self.term.start_block_height,
+                                                self.term.end_block_height)
+        self._put_last_main_preps(context, self.term.main_preps)
+
         self._update_prep_grades(main_prep_count=context.main_prep_count,
                                  main_and_sub_prep_count=context.main_and_sub_prep_count,
                                  old_preps=self.term.preps,
@@ -146,6 +152,8 @@ class Engine(EngineBase, IISSEngineListener):
         return main_preps_as_dict, term
 
     def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
+        self._put_last_main_preps(context, self.term.main_preps)
+
         term: Optional['Term'] = self._create_updated_term(context)
         if term:
             main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.IN_TERM_UPDATED)
@@ -154,8 +162,12 @@ class Engine(EngineBase, IISSEngineListener):
             main_preps_as_dict: dict = {}
         return main_preps_as_dict, term
 
-    @staticmethod
-    def _update_prep_grades(main_prep_count: int, main_and_sub_prep_count: int,
+    @classmethod
+    def _put_last_main_preps(cls, context: 'IconScoreContext', main_preps: List['PRep']):
+        context.storage.meta.put_last_main_preps(context, main_preps)
+
+    @classmethod
+    def _update_prep_grades(cls, main_prep_count: int, main_and_sub_prep_count: int,
                             old_preps: List['PRep'], new_preps: 'PRepContainer'):
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
@@ -252,8 +264,8 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
-    @staticmethod
-    def _put_reg_prep_in_rc_db(context: 'IconScoreContext', address: 'Address'):
+    @classmethod
+    def _put_reg_prep_in_rc_db(cls, context: 'IconScoreContext', address: 'Address'):
         """Put a newly registered P-Rep in RewardCalcDatabase
 
         :param context:
@@ -291,8 +303,8 @@ class Engine(EngineBase, IISSEngineListener):
 
         return prep_as_dict
 
-    @staticmethod
-    def get_main_preps_in_dict(preps: List['PRep']) -> Optional[dict]:
+    @classmethod
+    def get_main_preps_in_dict(cls, preps: List['PRep']) -> Optional[dict]:
         count: int = len(preps)
         if count == 0:
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
@@ -350,8 +362,8 @@ class Engine(EngineBase, IISSEngineListener):
             term = None
         return term
 
-    @staticmethod
-    def _calculate_weighted_average_of_irep(new_main_preps: List['PRep']) -> int:
+    @classmethod
+    def _calculate_weighted_average_of_irep(cls, new_main_preps: List['PRep']) -> int:
         total_delegated = 0  # total delegated of top 22 preps
         total_weighted_irep = 0
 
@@ -378,8 +390,8 @@ class Engine(EngineBase, IISSEngineListener):
         response: dict = prep.to_dict(PRepDictType.FULL)
         return response
 
-    @staticmethod
-    def handle_set_prep(context: 'IconScoreContext', params: dict):
+    @classmethod
+    def handle_set_prep(cls, context: 'IconScoreContext', params: dict):
         """Update a P-Rep registration information
 
         :param context:
@@ -492,8 +504,8 @@ class Engine(EngineBase, IISSEngineListener):
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)
 
-    @staticmethod
-    def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):
+    @classmethod
+    def _put_unreg_prep_for_iiss_db(cls, context: 'IconScoreContext', address: 'Address'):
         rc_tx_batch: list = context.rc_tx_batch
         block_height: int = context.block.height
 

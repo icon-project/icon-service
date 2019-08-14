@@ -545,6 +545,7 @@ class Engine(EngineBase):
                   prev_block_generator: Optional['Address'],
                   prev_block_validators: Optional[List['Address']],
                   flag: 'PrecommitFlag'):
+
         # every block time
         self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_validators)
 
@@ -554,6 +555,7 @@ class Engine(EngineBase):
                 self._put_preps_to_rc_db(context, term)
             return
 
+        self._put_last_calc_info(context)
         self._put_end_calc_block_height(context)
 
         self._put_header_to_rc_db(context)
@@ -584,6 +586,16 @@ class Engine(EngineBase):
             return False
 
         return block_height == check_end_block_height
+
+    @classmethod
+    def _put_last_calc_info(cls, context: 'IconScoreContext'):
+        last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        if last_calc_end_block_height is not None:
+            calc_period: int = context.storage.iiss.get_calc_period(context)
+            start_block_height: int = last_calc_end_block_height - calc_period + 1
+            context.storage.meta.put_last_calc_info(context,
+                                                    start_block_height,
+                                                    last_calc_end_block_height)
 
     @classmethod
     def _put_end_calc_block_height(cls, context: 'IconScoreContext'):

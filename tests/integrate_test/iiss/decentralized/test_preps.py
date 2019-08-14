@@ -189,16 +189,15 @@ class TestPreps(TestIISSBase):
 
         self.make_blocks_to_end_calculation()
 
+        block_generator = None
+        block_validators = None
         block_count = 90
         # make blocks with prev_block_generator and prev_block_validators
         for i in range(block_count):
             prev_block, hash_list = self.make_and_req_block(
                 [],
-                prev_block_generator=self._accounts[PREP_MAIN_PREPS].address,
-                prev_block_validators=[account.address
-                                       for account in self._accounts[
-                                                      PREP_MAIN_PREPS + 1:
-                                                      PREP_MAIN_PREPS + _STEADY_PREPS_COUNT]])
+                prev_block_generator=block_generator,
+                prev_block_validators=block_validators)
             self._write_precommit_state(prev_block)
             tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
@@ -208,15 +207,21 @@ class TestPreps(TestIISSBase):
                     if event_log.indexed[0] == PREP_PENALTY_SIGNATURE:
                         prep_penalty_event_logs.append(event_log)
 
+            block_generator = self._accounts[PREP_MAIN_PREPS].address
+            block_validators = [account.address
+                                for account in self._accounts[
+                                               PREP_MAIN_PREPS + 1:
+                                               PREP_MAIN_PREPS + _STEADY_PREPS_COUNT]]
+
         # uncooperative preps got penalty on 90th block since PENALTY_GRACE_PERIOD is 80
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + _STEADY_PREPS_COUNT):
             response: dict = self.get_prep(self._accounts[i])
-            self.assertEqual(block_count, response['totalBlocks'])
-            self.assertEqual(block_count, response['validatedBlocks'])
+            self.assertEqual(block_count - 1, response['totalBlocks'])
+            self.assertEqual(block_count - 1, response['validatedBlocks'])
 
         for i in range(PREP_MAIN_PREPS + _STEADY_PREPS_COUNT, PREP_MAIN_PREPS + PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._accounts[i])
-            self.assertEqual(80 + 1, response['totalBlocks'])
+            self.assertEqual(80 + 2, response['totalBlocks'])
             self.assertEqual(0, response['validatedBlocks'])
 
         main_preps_info: dict = self.get_main_prep_list()['preps']

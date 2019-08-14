@@ -264,8 +264,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used_replace, request, tx_hash)
 
+    @patch('iconservice.icon_service_engine.IconServiceEngine.before_transaction_process')
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    def test_get_db(self, score_invoke):
+    def test_get_db(self, score_invoke, before_transaction_process):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -304,6 +305,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         result = self._inner_task_invoke(request)
         score_invoke.assert_called()
+        before_transaction_process.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -360,8 +362,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.GET, 100), call_args_for_apply_step[1][0])
 
+    @patch('iconservice.icon_service_engine.IconServiceEngine.before_transaction_process')
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    def test_remove_db(self, score_invoke):
+    def test_remove_db(self, score_invoke, before_transaction_process):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -398,6 +401,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
+        before_transaction_process.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 

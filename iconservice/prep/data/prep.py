@@ -213,6 +213,7 @@ class PRep(Sortable):
 
         if is_validate:
             self._validated_blocks += 1
+            self._validation_penalty = 0
         else:
             self._validation_penalty += 1
         self._total_blocks += 1
