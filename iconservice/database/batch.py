@@ -31,9 +31,13 @@ def digest(ordered_dict: OrderedDict):
     data = []
 
     for key, value in ordered_dict.items():
+        if isinstance(value, tuple):
+            if value[1] is True:
+                value = value[0]
+            else:
+                continue
+
         data.append(key)
-        if isinstance(value, tuple) and value[1] is True:
-            value = value[0]
         if value is not None:
             data.append(value)
     return hashlib.sha3_256(b'|'.join(data)).digest()
