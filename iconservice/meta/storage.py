@@ -36,8 +36,7 @@ class Storage(StorageBase):
                            end: int):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, start, end])
-        # self._db.put(context, self._KEY_LAST_CALC_INFO, value, include_root_hash=False)
-        self._db.put(context, self._KEY_LAST_CALC_INFO, value)
+        self._db.put(context, self._KEY_LAST_CALC_INFO, value, include_root_hash=False)
 
     def get_last_calc_info(self, context: 'IconScoreContext') -> Tuple[int, int]:
         value: bytes = self._db.get(context, self._KEY_LAST_CALC_INFO)
@@ -53,8 +52,7 @@ class Storage(StorageBase):
                            end: int):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, start, end])
-        # self._db.put(context, self._KEY_LAST_TERM_INFO, value, include_root_hash=False)
-        self._db.put(context, self._KEY_LAST_TERM_INFO, value)
+        self._db.put(context, self._KEY_LAST_TERM_INFO, value, include_root_hash=False)
 
     def get_last_term_info(self, context: 'IconScoreContext') -> Tuple[int, int]:
         value: bytes = self._db.get(context, self._KEY_LAST_TERM_INFO)
@@ -70,8 +68,7 @@ class Storage(StorageBase):
         version = 0
         preps: List['Address'] = [prep.address for prep in main_preps]
         value: bytes = MsgPackForDB.dumps([version, preps])
-        # self._db.put(context, self._KEY_LAST_MAIN_PREPS, value, include_root_hash=False)
-        self._db.put(context, self._KEY_LAST_MAIN_PREPS, value)
+        self._db.put(context, self._KEY_LAST_MAIN_PREPS, value, include_root_hash=False)
 
     def get_last_main_preps(self, context: 'IconScoreContext') -> List['Address']:
         value: bytes = self._db.get(context, self._KEY_LAST_MAIN_PREPS)

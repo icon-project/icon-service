@@ -31,6 +31,12 @@ def digest(ordered_dict: OrderedDict):
     data = []
 
     for key, value in ordered_dict.items():
+        if isinstance(value, tuple):
+            if value[1] is True:
+                value = value[0]
+            else:
+                continue
+
         data.append(key)
         if value is not None:
             data.append(value)

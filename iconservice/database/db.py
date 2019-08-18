@@ -111,6 +111,9 @@ class KeyValueDatabase(object):
 
         with self._db.write_batch() as wb:
             for key, value in states.items():
+                if isinstance(value, tuple):
+                    value = value[0]
+
                 if value:
                     wb.put(key, value)
                 else:
@@ -221,11 +224,15 @@ class ContextDatabase(object):
 
         # get value from tx_batch
         if key in tx_batch:
-            return tx_batch[key]
+            return tx_batch[key][0]
 
         # get value from block_batch
         if key in block_batch:
-            return block_batch[key]
+            value = block_batch[key]
+            if isinstance(value, tuple):
+                return value[0]
+            else:
+                return value
 
         # get value from state_db
         return self.key_value_db.get(key)
@@ -233,12 +240,14 @@ class ContextDatabase(object):
     def put(self,
             context: Optional['IconScoreContext'],
             key: bytes,
-            value: Optional[bytes]) -> None:
+            value: Optional[bytes],
+            include_root_hash: bool = True) -> None:
         """Set the value to StateDB or cache it according to context type
 
         :param context:
         :param key:
         :param value:
+        :param include_root_hash:
         """
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to write')
@@ -248,7 +257,7 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
         else:
-            context.tx_batch[key] = value
+            context.tx_batch[key] = (value, include_root_hash)
 
     def delete(self, context: Optional['IconScoreContext'], key: bytes):
         """Delete key from db
