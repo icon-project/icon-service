@@ -259,11 +259,15 @@ class ContextDatabase(object):
         else:
             context.tx_batch[key] = (value, include_root_hash)
 
-    def delete(self, context: Optional['IconScoreContext'], key: bytes):
+    def delete(self,
+               context: Optional['IconScoreContext'],
+               key: bytes,
+               include_root_hash: bool = True):
         """Delete key from db
 
         :param context:
         :param key: key to delete from db
+        :param include_root_hash:
         """
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to delete')
@@ -273,7 +277,7 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
         else:
-            context.tx_batch[key] = None
+            context.tx_batch[key] = (None, include_root_hash)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
