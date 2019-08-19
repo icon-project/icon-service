@@ -113,14 +113,31 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(b'value0', value)
 
         batch = self.context.tx_batch
-        self.assertEqual(b'value0', batch[b'key0'])
+        self.assertEqual((b'value0', True), batch[b'key0'])
 
         self.context_db.put(context, b'key0', b'value1')
         self.context_db.put(context, b'key1', b'value1')
 
         self.assertEqual(len(batch), 2)
-        self.assertEqual(batch[b'key0'], b'value1')
-        self.assertEqual(batch[b'key1'], b'value1')
+        self.assertEqual(batch[b'key0'], (b'value1', True))
+        self.assertEqual(batch[b'key1'], (b'value1', True))
+
+        self.context_db.put(context, b'key2', b'value2', False)
+        self.context_db.put(context, b'key3', b'value3', False)
+
+        value2 = self.context_db.get(context, b'key2')
+        value3 = self.context_db.get(context, b'key3')
+        self.assertEqual(b'value2', value2)
+        self.assertEqual(b'value3', value3)
+
+        self.assertEqual(len(batch), 4)
+        self.assertEqual(batch[b'key2'], (b'value2', False))
+        self.assertEqual(batch[b'key3'], (b'value3', False))
+
+        # overwrite
+        self.context_db.put(context, b'key3', b'value3', True)
+        self.assertEqual(len(batch), 4)
+        self.assertEqual(batch[b'key3'], (b'value3', True))
 
     def test_put_on_readonly_exception(self):
         context = self.context
@@ -173,8 +190,9 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         tx_batch = context.tx_batch
 
         db.put(context, b'key0', b'value0')
+        db.put(context, b'key1', b'value1')
         self.assertEqual(b'value0', db.get(context, b'key0'))
-        self.assertEqual(b'value0', tx_batch[b'key0'])
+        self.assertEqual((b'value0', True), tx_batch[b'key0'])
 
         db.write_batch(context, tx_batch)
         tx_batch.clear()
@@ -182,10 +200,16 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(b'value0', db.get(context, b'key0'))
 
         db.delete(context, b'key0')
+        db.delete(context, b'key1', False)
+        self.assertEqual(None, db.get(context, b'key0'))
+        self.assertEqual(None, db.get(context, b'key1'))
+        self.assertEqual((None, True), tx_batch[b'key0'])
+        self.assertEqual((None, False), tx_batch[b'key1'])
         db.write_batch(context, tx_batch)
         tx_batch.clear()
         self.assertEqual(0, len(tx_batch))
         self.assertIsNone(db.get(context, b'key0'))
+        self.assertIsNone(db.get(context, b'key1'))
 
     def test_delete_on_readonly_exception(self):
         context = self.context
@@ -194,7 +218,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         db.put(context, b'key0', b'value0')
         self.assertEqual(b'value0', db.get(context, b'key0'))
-        self.assertEqual(b'value0', tx_batch[b'key0'])
+        self.assertEqual((b'value0', True), tx_batch[b'key0'])
 
         context.func_type = IconScoreFuncType.READONLY
         with self.assertRaises(DatabaseException):
@@ -202,7 +226,8 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         context.func_type = IconScoreFuncType.WRITABLE
         db.delete(context, b'key0')
-        self.assertIsNone(tx_batch[b'key0'])
+        self.assertIsNone(db.get(context, b'key0'))
+        self.assertEqual((None, True), tx_batch[b'key0'])
 
 
 class TestIconScoreDatabase(unittest.TestCase):
