@@ -16,24 +16,29 @@
 
 import threading
 import warnings
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
+from .icon_score_trace import Trace
 from ..base.block import Block
+from ..base.exception import FatalException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icon_constant import IconScoreContextType, IconScoreFuncType
-from .icon_score_trace import Trace
+from ..icon_constant import (
+    IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+)
 
 if TYPE_CHECKING:
-    from ..base.address import Address
-    from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
-    from ..icx.icx_engine import IcxEngine
-    from ..fee.fee_engine import FeeEngine
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
+    from ..base.address import Address
+    from ..prep.data.prep_container import PRep, PRepContainer
+    from ..utils import ContextEngine, ContextStorage
+    from ..database.batch import ExternalBatch
 
 _thread_local_data = threading.local()
 
@@ -73,7 +78,7 @@ class ContextContainer(object):
         if context_stack is not None and len(context_stack) > 0:
             return context_stack.pop()
         else:
-            raise AssertionError('Failed to pop a context out of context_stack')
+            raise FatalException('Failed to pop a context out of context_stack')
 
     @staticmethod
     def _clear_context() -> None:
@@ -95,14 +100,19 @@ class ContextGetter(object):
 
 
 class IconScoreContext(object):
-
     score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
-    icon_score_deploy_engine: 'IconScoreDeployEngine' = None
-    icx_engine: 'IcxEngine' = None
-    fee_engine: 'FeeEngine' = None
     icon_service_flag: int = 0
-    legacy_tbears_mode = False
+    legacy_tbears_mode: bool = False
+    iiss_initial_irep: int = 0
+
+    engine: 'ContextEngine' = None
+    storage: 'ContextStorage' = None
+
+    main_prep_count: int = PREP_MAIN_PREPS
+    main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
+
+    decentralize_trigger: float = 0
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -112,9 +122,9 @@ class IconScoreContext(object):
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
         """
-        self.type: IconScoreContextType = context_type
+        self.type: 'IconScoreContextType' = context_type
         # The type of external function which is called latest
-        self.func_type: IconScoreFuncType = IconScoreFuncType.WRITABLE
+        self.func_type: 'IconScoreFuncType' = IconScoreFuncType.WRITABLE
         self.block: 'Block' = None
         self.tx: 'Transaction' = None
         self.msg: 'Message' = None
@@ -122,6 +132,10 @@ class IconScoreContext(object):
         self.revision: int = 0
         self.block_batch: 'BlockBatch' = None
         self.tx_batch: 'TransactionBatch' = None
+        self.rc_block_batch: list = []
+        self.rc_tx_batch: list = []
+        self.meta_block_batch: 'ExternalBatch' = None
+        self.meta_tx_batch: 'ExternalBatch' = None
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
@@ -132,10 +146,29 @@ class IconScoreContext(object):
         self.msg_stack = []
         self.event_log_stack = []
 
+        # PReps to update on invoke
+        self.preps: Optional['PRepContainer'] = None
+        self.tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
+
+    @classmethod
+    def set_decentralize_trigger(cls, decentralize_trigger: float):
+        decentralize_trigger: float = decentralize_trigger
+
+        if not 1.0 > decentralize_trigger >= 0:
+            raise FatalException(f"Invalid min delegation percent for decentralize: {decentralize_trigger}."
+                                 f"Do not exceed 100% or negative value")
+        IconScoreContext.decentralize_trigger = decentralize_trigger
+
     @property
     def readonly(self):
-        return self.type == IconScoreContextType.QUERY or \
-               self.func_type == IconScoreFuncType.READONLY
+        return self.type == IconScoreContextType.QUERY or self.func_type == IconScoreFuncType.READONLY
+
+    @property
+    def total_supply(self):
+        return self.storage.icx.get_total_supply(self)
+
+    def is_decentralized(self) -> bool:
+        return self.revision >= REV_DECENTRALIZATION and self.engine.prep.term.sequence != -1
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
@@ -147,4 +180,59 @@ class IconScoreContext(object):
     # TODO should remove after update GOVERNANCE 0.0.6 afterward
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        self.icon_score_deploy_engine.deploy(self, tx_hash)
+        self.engine.deploy.deploy(self, tx_hash)
+
+    def update_batch(self):
+        # Call update_dirty_prep_batch before update_state_db_batch()
+        self.update_dirty_prep_batch()
+        self.update_state_db_batch()
+        self.update_rc_db_batch()
+        self.update_meta_db_batch()
+
+    def update_state_db_batch(self):
+        self.block_batch.update(self.tx_batch)
+        self.tx_batch.clear()
+
+    def update_rc_db_batch(self):
+        self.rc_block_batch.extend(self.rc_tx_batch)
+        self.rc_tx_batch.clear()
+
+    def update_meta_db_batch(self):
+        self.meta_block_batch.update(self.meta_tx_batch)
+        self.meta_tx_batch.clear()
+
+    def update_dirty_prep_batch(self):
+        """Update context.preps and block_dirty_preps when a tx is done
+
+        Caution: call update_dirty_prep_batch before update_state_db_batch()
+        """
+        for dirty_prep in self.tx_dirty_preps.values():
+            self.preps.replace(dirty_prep)
+            # Write serialized dirty_prep data into tx_batch
+            self.storage.prep.put_prep(self, dirty_prep)
+            dirty_prep.freeze()
+
+        self.tx_dirty_preps.clear()
+
+    def clear_batch(self):
+        if self.tx_batch:
+            self.tx_batch.clear()
+        if self.rc_tx_batch:
+            self.rc_tx_batch.clear()
+        if self.meta_tx_batch:
+            self.meta_tx_batch.clear()
+        if self.tx_dirty_preps:
+            self.tx_dirty_preps.clear()
+
+    def get_prep(self, address: 'Address', mutable: bool = False):
+        prep: 'PRep' = self.tx_dirty_preps.get(address)
+        if prep is None:
+            prep = self.preps.get_by_address(address)
+
+        if prep and prep.is_frozen() and mutable:
+            prep = prep.copy()
+
+        return prep
+
+    def put_dirty_prep(self, prep: 'PRep'):
+        self.tx_dirty_preps[prep.address] = prep

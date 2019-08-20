@@ -32,6 +32,7 @@ class TestIconContainerDB(unittest.TestCase):
     def setUp(self):
         self.db = self.create_db()
         self._context = IconScoreContext(IconScoreContextType.DIRECT)
+        self._context.current_address = self.db.address
 
         ContextContainer._push_context(self._context)
         pass
@@ -327,7 +328,6 @@ class TestIconContainerDB(unittest.TestCase):
         with self.assertRaises(InvalidParamsException):
             testarray[5] = 1
             a = testarray[5]
-
 
     def test_container_util(self):
         prefix: bytes = ContainerUtil.create_db_prefix(ArrayDB, 'a')

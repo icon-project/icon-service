@@ -20,20 +20,18 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from .icon_score_class_loader import IconScoreClassLoader
 from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
-from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.address import GOVERNANCE_SCORE_ADDRESS
-from ..base.exception import ScoreNotFoundException, AccessDeniedException
+from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
+from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
-from ..deploy import DeployState
-from ..deploy.utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
-from ..icon_constant import IconScoreContextType, IconServiceFlag
+from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
     from .icon_score_base import IconScoreBase
     from .icon_score_mapper import IconScoreMapper
-    from ..deploy.icon_score_deploy_storage import IconScoreDeployTXParams, IconScoreDeployInfo
+    from ..deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo
 
 
 class IconScoreContextUtil(object):
@@ -48,7 +46,7 @@ class IconScoreContextUtil(object):
             return True
 
         deploy_info: 'IconScoreDeployInfo' = \
-            context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(context, score_address)
+            context.storage.deploy.get_deploy_info(context, score_address)
 
         if deploy_info is None:
             return False
@@ -59,7 +57,7 @@ class IconScoreContextUtil(object):
     def get_owner(context: 'IconScoreContext',
                   score_address: 'Address') -> Optional['Address']:
         deploy_info: 'IconScoreDeployInfo' =\
-            context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(context, score_address)
+            context.storage.deploy.get_deploy_info(context, score_address)
 
         if deploy_info is None:
             return None
@@ -68,7 +66,7 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def deploy(context: 'IconScoreContext', tx_hash: bytes) -> None:
-        context.icon_score_deploy_engine.deploy(context, tx_hash)
+        context.engine.deploy.deploy(context, tx_hash)
 
     @staticmethod
     def get_builtin_score(context: 'IconScoreContext', address: 'Address') -> 'IconScoreBase':
@@ -127,7 +125,7 @@ class IconScoreContextUtil(object):
                 IconScoreContextUtil.create_score_info(context, address, current_tx_hash)
             score_mapper[address] = score_info
         elif score_info.tx_hash != current_tx_hash:
-            raise AssertionError(
+            raise FatalException(
                 f'scoreInfo.txHash(0x{score_info.tx_hash.hex()}) != txHash(0x{current_tx_hash.hex()})')
 
         return score_info
@@ -230,19 +228,19 @@ class IconScoreContextUtil(object):
     def get_tx_hashes_by_score_address(context: 'IconScoreContext',
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        return context.icon_score_deploy_engine.icon_deploy_storage.get_tx_hashes_by_score_address(
+        return context.storage.deploy.get_tx_hashes_by_score_address(
             context, score_address)
 
     @staticmethod
     def get_score_address_by_tx_hash(context: 'IconScoreContext',
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        return context.icon_score_deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
+        return context.storage.deploy.get_score_address_by_tx_hash(context, tx_hash)
 
     @staticmethod
     def get_deploy_tx_params(context: 'IconScoreContext', tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
-        return context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_tx_params(context, tx_hash)
+        return context.storage.deploy.get_deploy_tx_params(context, tx_hash)
 
     @staticmethod
     def get_deploy_info(context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreDeployInfo']:
-        return context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(context, address)
+        return context.storage.deploy.get_deploy_info(context, address)

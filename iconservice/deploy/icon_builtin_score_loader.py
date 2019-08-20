@@ -18,7 +18,8 @@ from shutil import copytree
 from typing import TYPE_CHECKING
 
 from iconcommons.logger import Logger
-from .icon_score_deploy_storage import IconScoreDeployInfo, DeployState
+
+from .storage import IconScoreDeployInfo, DeployState
 from .utils import remove_path
 from ..base.address import Address
 from ..base.exception import AccessDeniedException
@@ -26,7 +27,6 @@ from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, ZERO_TX_HASH, ICON_DEP
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 
 if TYPE_CHECKING:
-    from .icon_score_deploy_storage import IconScoreDeployStorage
     from ..iconscore.icon_score_base import IconScoreBase
     from ..iconscore.icon_score_context import IconScoreContext
     from ..iconscore.icon_score_mapper_object import IconScoreInfo
@@ -42,8 +42,7 @@ class IconBuiltinScoreLoader(object):
         return os.path.join(root_path, 'builtin_scores')
 
     @staticmethod
-    def load_builtin_scores(context: 'IconScoreContext', builtin_score_owner_str: str):
-        builtin_score_owner = Address.from_string(builtin_score_owner_str)
+    def load_builtin_scores(context: 'IconScoreContext', builtin_score_owner: 'Address'):
         for score_name, value in BUILTIN_SCORE_ADDRESS_MAPPER.items():
             score_address = Address.from_string(value)
 
@@ -69,20 +68,18 @@ class IconBuiltinScoreLoader(object):
                       score_name: str,
                       score_address: 'Address',
                       builtin_score_owner: 'Address'):
-        score_deploy_storage: IconScoreDeployStorage = \
-            context.icon_score_deploy_engine.icon_deploy_storage
 
         score_source_path_in_iconservice: str = os.path.join(
             IconBuiltinScoreLoader._pre_builtin_score_root_path(), score_name)
 
-        # Save deploy_info for a builtin score to score_deploy_storage.
+        # Save deploy_info for a builtin score to storage.
         deploy_info = IconScoreDeployInfo(
             score_address=score_address,
             deploy_state=DeployState.ACTIVE,
             owner=builtin_score_owner,
             current_tx_hash=ZERO_TX_HASH,
             next_tx_hash=ZERO_TX_HASH)
-        score_deploy_storage.put_deploy_info(context, deploy_info)
+        context.storage.deploy.put_deploy_info(context, deploy_info)
 
         tx_hash: bytes = deploy_info.current_tx_hash
 

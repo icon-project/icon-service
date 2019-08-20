@@ -15,138 +15,80 @@
 
 """Test for icon_score_base.py and icon_score_base2.py"""
 
-import unittest
 import hashlib
 import json
-from iconservice.base.exception import ExceptionCode, AccessDeniedException, IconScoreException
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
-from tests import create_tx_hash, create_address
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, List
 
+from iconservice.base.exception import ExceptionCode, AccessDeniedException, IconScoreException
+from iconservice.icon_constant import ICX_IN_LOOP
+from tests import create_tx_hash, create_address
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateScoreAPI(TestIntegrateBase):
 
     def _test_deploy_score(self):
         # Deploys test SCORE
-        value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("test_score_base", value1, self._addr_array[0])
-
-        # Uses it when testing `test_get_tx_hashes_by_score_address`
-        self.tx_result = tx_result
-        self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
+        value1 = 1 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_score_api",
+                                                                  score_name="sample_score_base",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={'value': hex(value1)})
+        score_addr1: 'Address' = tx_results[0].score_address
 
         # Asserts if get value is value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", {}, value1)
+        response: int = self.query_score(from_=self._accounts[0],
+                                         to_=score_addr1,
+                                         func_name="get_value",
+                                         params={})
+        self.assertEqual(value1, response)
 
         # Set value to value2
-        value2 = 2 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
+        value2 = 2 * ICX_IN_LOOP
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value2)})
 
         # Asserts if get value is 2 * value2
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", {}, value2)
+        response: int = self.query_score(from_=self._accounts[0],
+                                         to_=score_addr1,
+                                         func_name="get_value",
+                                         params={})
+        self.assertEqual(value2, response)
 
         expect_ret = {}
-        self._assert_get_score_status(score_addr1, expect_ret)
-
-        self.score_addr1 = score_addr1
+        response: dict = self.get_score_status(score_addr1)
+        self.assertEqual(expect_ret, response)
+        self.deploy_results: List['TransactionResult'] = tx_results
 
     def setUp(self):
         super().setUp()
         self._test_deploy_score()
 
-    def _deploy_score(self, score_path: str,
-                      value: int,
-                      from_addr: 'Address',
-                      update_score_addr: 'Address' = None) -> Any:
-        address = ZERO_SCORE_ADDRESS
-        if update_score_addr:
-            address = update_score_addr
-
-        tx = self._make_deploy_tx("test_score_api",
-                                  score_path,
-                                  from_addr,
-                                  address,
-                                  deploy_params={'value': hex(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def _assert_get_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict, value: Any):
-        query_request = {
-            "version": self._version,
-            "from": from_addr,
-            "to": score_addr,
-            "dataType": "call",
-            "data": {
-                "method": func_name,
-                "params": params
-            }
-        }
-        response = self._query(query_request)
-        self.assertEqual(response, value)
-
-    def _get_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict = {}):
-        query_request = {
-            "version": self._version,
-            "from": from_addr,
-            "to": score_addr,
-            "dataType": "call",
-            "data": {
-                "method": func_name,
-                "params": params
-            }
-        }
-        response = self._query(query_request)
-        return response
-
-    def _set_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
-        tx = self._make_score_call_tx(from_addr,
-                                      score_addr,
-                                      func_name,
-                                      params)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertTrue(int(tx_results[0].status))
-        self._write_precommit_state(prev_block)
-
-    def _set_value_fail(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
-        tx = self._make_score_call_tx(from_addr,
-                                      score_addr,
-                                      func_name,
-                                      params)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertFalse(int(tx_results[0].status))
-        return tx_results[0].failure
-
-    def _assert_get_score_status(self, target_addr: 'Address', expect_status: dict):
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(target_addr)}
-            }
-        }
-        response = self._query(query_request)
-        self.assertEqual(response, expect_status)
+    def test_passed(self):
+        pass
 
     def test_revert(self):
         """Checks if the method `revert` raises IconScoreException successfully."""
         # Successful case - readonly
-        self.assertRaises(IconScoreException, self._get_value, self._addr_array[0], self.score_addr1, "test_revert_readonly")
+        with self.assertRaises(IconScoreException) as e:
+            self.query_score(from_=self._accounts[0],
+                             to_=self.deploy_results[0].score_address,
+                             func_name="test_revert_readonly")
 
         # not readonly
-        failure = self._set_value_fail(self._addr_array[0], self.score_addr1, "test_revert", {"value": hex(10**18)})
-        self.assertEqual(failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(failure.message, "revert message!!")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=self.deploy_results[0].score_address,
+                                                                func_name="test_revert",
+                                                                params={"value": hex(1 * ICX_IN_LOOP)},
+                                                                expected_status=False)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "revert message!!")
 
     def test_sha3_256(self):
         """Checks if the method `sha3_256` returns digest successfully."""
@@ -154,80 +96,129 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         data = b'1234'
         value3 = hashlib.sha3_256(data).digest()
         data = f'0x{bytes.hex(data)}'
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_sha3_256_readonly", {'data': data}, value3)
-
+        response: bytes = self.query_score(from_=self._accounts[0],
+                                           to_=self.deploy_results[0].score_address,
+                                           func_name="test_sha3_256_readonly",
+                                           params={'data': data})
+        self.assertEqual(value3, response)
         # Successful case - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_sha3_256", {'data': data})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_sha3_256",
+                        params={'data': data})
 
     def test_json_dumps(self):
         """Checks if the method `json_dumps` returns a string of json.dumps data successfully."""
         # Successful case - readonly
         data = {"key1": 1, "key2": 2, "key3": "value3"}
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_dumps_readonly", {}, json.dumps(data))
+        response: str = self.query_score(from_=self._accounts[0],
+                                         to_=self.deploy_results[0].score_address,
+                                         func_name="test_json_dumps_readonly",
+                                         params={})
+        self.assertEqual(json.dumps(data), response)
 
         # Successful case - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_json_dumps", {})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_json_dumps",
+                        params={})
 
         # Successful case with none
         data = {"key1": None, "key2": 2, "key3": "value3"}
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_dumps_none", {}, json.dumps(data))
+        response: str = self.query_score(from_=self._accounts[0],
+                                         to_=self.deploy_results[0].score_address,
+                                         func_name="test_json_dumps_none",
+                                         params={})
+        self.assertEqual(json.dumps(data), response)
 
     def test_json_loads(self):
         """Checks if the method `json_dumps` returns a dictionary of json.load data successfully."""
         # Successful case - readonly
         data = {"key1": 1, "key2": 2, "key3": "value3"}
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_loads_readonly", {}, data)
+        response: dict = self.query_score(from_=self._accounts[0],
+                                          to_=self.deploy_results[0].score_address,
+                                          func_name="test_json_loads_readonly",
+                                          params={})
+        self.assertEqual(data, response)
 
-        # Successful case - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_json_loads", {})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_json_loads",
+                        params={})
 
     def test_is_score_active(self):
         """Checks if the method `is_score_active` returns a bool rightly."""
         # Successful case 1 - readonly : When address is active
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_is_score_active_readonly",
-                               {'address': str(self.score_addr1)}, True)
+        response: bool = self.query_score(from_=self._accounts[0],
+                                          to_=self.deploy_results[0].score_address,
+                                          func_name="test_is_score_active_readonly",
+                                          params={'address': str(self.deploy_results[0].score_address)})
+        self.assertEqual(True, response)
 
         # Successful case 2 - readonly : When address is inactive
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_is_score_active_readonly",
-                               {'address': "cx"+"b"*40}, False)
+        response: bool = self.query_score(from_=self._accounts[0],
+                                          to_=self.deploy_results[0].score_address,
+                                          func_name="test_is_score_active_readonly",
+                                          params={'address': "cx" + "b" * 40})
+        self.assertEqual(False, response)
 
         # Successful case - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_is_score_active",
-                        {'address': str(self.score_addr1)})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_is_score_active",
+                        params={'address': str(self.deploy_results[0].score_address)})
 
     def test_get_owner(self):
         """Checks if the method `get_owner` returns the SCORE owner's address."""
         # Successful case 1 - readonly
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner_readonly",
-                               {'address': str(self.score_addr1)}, self._addr_array[0])
+        response: 'Address' = self.query_score(from_=self._accounts[0],
+                                               to_=self.deploy_results[0].score_address,
+                                               func_name="test_get_owner_readonly",
+                                               params={'address': str(self.deploy_results[0].score_address)})
+        self.assertEqual(self._accounts[0].address, response)
 
         # Successful case 2 - readonly : When the SCORE does not exist, returns None.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner_readonly",
-                               {'address': "cx"+"b"*40}, None)
+        response: 'Address' = self.query_score(from_=self._accounts[0],
+                                               to_=self.deploy_results[0].score_address,
+                                               func_name="test_get_owner_readonly",
+                                               params={'address': "cx" + "b" * 40})
+        self.assertEqual(None, response)
 
         # Successful case 3 - readonly : When the address is EOS address not SCORE address.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner_readonly",
-                               {'address': str(create_address())}, None)
+        response: 'Address' = self.query_score(from_=self._accounts[0],
+                                               to_=self.deploy_results[0].score_address,
+                                               func_name="test_get_owner_readonly",
+                                               params={'address': str(create_address())})
+        self.assertEqual(None, response)
 
         # Successful case - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_get_owner",
-                        {'address': str(self.score_addr1)})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_get_owner",
+                        params={'address': str(self.deploy_results[0].score_address)})
 
     def test_create_interface_score(self):
         """Checks if the method `create_interface_score` create the interface score and returns it."""
         # Successful case - readonly
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_create_interface_score_readonly",
-                               {'address': str(self.score_addr1)}, True)
+        response: 'bool' = self.query_score(from_=self._accounts[0],
+                                            to_=self.deploy_results[0].score_address,
+                                            func_name="test_create_interface_score_readonly",
+                                            params={'address': str(self.deploy_results[0].score_address)})
+        self.assertEqual(True, response)
 
         # Successful case 1 - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_create_interface_score",
-                        {'address': str(self.score_addr1)})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_create_interface_score",
+                        params={'address': str(self.deploy_results[0].score_address)})
 
         # Successful case 2 - not readonly
         # If the SCORE does not exist, it can pass the test.
         # Creating an interface SCORE means mapping the interface with the SCORE.
-        self._set_value(self._addr_array[0], self.score_addr1, "test_create_interface_score",
-                        {'address': "cx"+"b"*40})
+        self.score_call(from_=self._accounts[0],
+                        to_=self.deploy_results[0].score_address,
+                        func_name="test_create_interface_score",
+                        params={'address': "cx" + "b" * 40})
 
     def test_deploy(self):
         """Checks if deploys unsuccessfully with the wrong tx_hash."""
@@ -235,70 +226,93 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         tx_hash = f'0x{bytes.hex(tx_hash)}'
 
         # Failure case - readonly
-        self.assertRaises(AccessDeniedException, self._get_value, self._addr_array[0], self.score_addr1,
-                          "test_deploy_readonly", {'tx_hash': tx_hash})
+        with self.assertRaises(AccessDeniedException) as e:
+            self.query_score(from_=self._accounts[0],
+                             to_=self.deploy_results[0].score_address,
+                             func_name="test_deploy_readonly",
+                             params={'tx_hash': tx_hash})
 
         # Failure case - not readonly
-        failure = self._set_value_fail(self._addr_array[0], self.score_addr1, "test_deploy",
-                                       {'tx_hash': tx_hash})
-        self.assertEqual(failure.code, ExceptionCode.ACCESS_DENIED)
-        self.assertEqual(failure.message, "No permission")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=self.deploy_results[0].score_address,
+                                                                func_name="test_deploy",
+                                                                params={'tx_hash': tx_hash},
+                                                                expected_status=False)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ACCESS_DENIED)
+        self.assertEqual(tx_results[0].failure.message, "No permission")
 
     def test_get_tx_hashes_by_score_address(self):
         """Checks if gets tx_hashes by score address successfully."""
         # Successful case 1 - readonly : When the right SCORE address.
-        return_value = self._get_value(self._addr_array[0], self.score_addr1,
-                                       "test_get_tx_hashes_by_score_address_readonly",
-                                       {'address': str(self.score_addr1)})
-        self.assertEqual(return_value[0], self.tx_result.tx_hash)
+        response: tuple = self.query_score(from_=self._accounts[0],
+                                           to_=self.deploy_results[0].score_address,
+                                           func_name="test_get_tx_hashes_by_score_address_readonly",
+                                           params={'address': str(self.deploy_results[0].score_address)})
+        self.assertEqual(self.deploy_results[0].tx_hash, response[0])
+
+        response: tuple = self.query_score(from_=self._accounts[0],
+                                           to_=self.deploy_results[0].score_address,
+                                           func_name="test_get_tx_hashes_by_score_address_readonly",
+                                           params={'address': str(self.deploy_results[0].score_address)})
+
+        self.assertEqual(self.deploy_results[0].tx_hash, response[0])
 
         # Successful case 2 - readonly : When the wrong SCORE address.
-        return_value = self._get_value(self._addr_array[0], self.score_addr1,
-                                       "test_get_tx_hashes_by_score_address_readonly",
-                                       {'address': "cx"+"0"*40})
-        self.assertEqual(return_value, (None, None))
+        response: tuple = self.query_score(from_=self._accounts[0],
+                                           to_=self.deploy_results[0].score_address,
+                                           func_name="test_get_tx_hashes_by_score_address_readonly",
+                                           params={'address': "cx" + "0" * 40})
+        self.assertEqual((None, None), response)
 
         # Successful case 3 - readonly : When the wrong EOS address.
-        return_value = self._get_value(self._addr_array[0], self.score_addr1,
-                                       "test_get_tx_hashes_by_score_address_readonly",
-                                       {'address': str(create_address())})
-        self.assertEqual(return_value, (None, None))
+        response: tuple = self.query_score(from_=self._accounts[0],
+                                           to_=self.deploy_results[0].score_address,
+                                           func_name="test_get_tx_hashes_by_score_address_readonly",
+                                           params={'address': str(create_address())})
+        self.assertEqual((None, None), response)
 
         # Successful case 1 - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
-                        {'address': str(self.score_addr1)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.deploy_results[0].score_address,
+            func_name="test_get_tx_hashes_by_score_address",
+            params={'address': str(self.deploy_results[0].score_address)})
 
         # Successful case 2 - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
-                        {'address': "cx" + "b" * 40})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.deploy_results[0].score_address,
+            func_name="test_get_tx_hashes_by_score_address",
+            params={'address': "cx" + "b" * 40})
 
     def test_get_score_address_by_tx_hash(self):
         """Checks if gets score addresses by tx hash successfully."""
         # Successful case 1 - readonly
-        tx_hash_right = f'0x{bytes.hex(self.tx_result.tx_hash)}'
-        score_address = self._get_value(self._addr_array[0], self.score_addr1,
-                                        "test_get_score_address_by_tx_hash_readonly",
-                                        {'tx_hash': tx_hash_right})
-        self.assertEqual(score_address, self.score_addr1)
+        tx_hash_right = f'0x{bytes.hex(self.deploy_results[0].tx_hash)}'
+        response: 'Address' = self.query_score(from_=self._accounts[0],
+                                               to_=self.deploy_results[0].score_address,
+                                               func_name="test_get_score_address_by_tx_hash_readonly",
+                                               params={'tx_hash': tx_hash_right})
+        self.assertEqual(self.deploy_results[0].score_address, response)
 
         # Successful case 2 - readonly : When the wrong tx_hash.
         tx_hash_wrong = f'0x{bytes.hex(create_tx_hash())}'
-        score_address = self._get_value(self._addr_array[0], self.score_addr1,
-                                        "test_get_score_address_by_tx_hash_readonly",
-                                        {'tx_hash': tx_hash_wrong})
-        self.assertEqual(score_address, None)
+        response: 'Address' = self.query_score(from_=self._accounts[0],
+                                               to_=self.deploy_results[0].score_address,
+                                               func_name="test_get_score_address_by_tx_hash_readonly",
+                                               params={'tx_hash': tx_hash_wrong})
+        self.assertEqual(None, response)
 
         # Successful case 1 - not readonly
-        self._set_value(self._addr_array[0], self.score_addr1,
-                        "test_get_score_address_by_tx_hash",
-                        {'tx_hash': tx_hash_right})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.deploy_results[0].score_address,
+            func_name="test_get_score_address_by_tx_hash",
+            params={'tx_hash': tx_hash_right})
 
         # Successful case 2 - not readonly : When the wrong tx_hash.
-        self._set_value(self._addr_array[0], self.score_addr1,
-                        "test_get_score_address_by_tx_hash",
-                        {'tx_hash': tx_hash_wrong})
-
-
-if __name__ == '__main__':
-    unittest.main()
-
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.deploy_results[0].score_address,
+            func_name="test_get_score_address_by_tx_hash",
+            params={'tx_hash': tx_hash_wrong})

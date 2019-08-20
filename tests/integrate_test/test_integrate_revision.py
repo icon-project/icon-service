@@ -17,58 +17,25 @@
 """IconScoreEngine testcase
 """
 
-import unittest
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import REVISION_2
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
     from iconservice.base.address import Address
 
 
 class TestIntegrateRevision(TestIntegrateBase):
-    """
-    audit on
-    test governance deploy audit accept, reject
-    """
-
-    def _update_governance_0_0_4(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_4/governance",
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-    def _deploy_score(self, score_path: str, value: int, update_score_addr: 'Address' = None) -> Any:
-        address = ZERO_SCORE_ADDRESS
-        if update_score_addr:
-            address = update_score_addr
-
-        tx = self._make_deploy_tx("test_deploy_scores",
-                                  score_path,
-                                  self._addr_array[0],
-                                  address,
-                                  deploy_params={'value': hex(value * self._icx_factor)})
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def _external_call(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
-        tx = self._make_score_call_tx(from_addr, score_addr, func_name, params)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def test_governance_call_about_set_revision(self):
+    def setUp(self):
+        super().setUp()
         # this unit test's purpose is just for test getRevision and setRevision method,
         # so don't need to add unit test whenever governance version is increased.
-        self._update_governance_0_0_4()
+        self.update_governance("0_0_4")
 
+    def test_governance_call_about_set_revision(self):
         expected_status = {
             "code": REVISION_2,
             "name": "1.1.0"
@@ -76,7 +43,7 @@ class TestIntegrateRevision(TestIntegrateBase):
 
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
@@ -89,11 +56,10 @@ class TestIntegrateRevision(TestIntegrateBase):
 
         next_revision = REVISION_2 + 1
 
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'setRevision',
-                                        {"code": hex(next_revision), "name": "1.1.1"})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="setRevision",
+                        params={"code": hex(next_revision), "name": "1.1.1"})
 
         expected_status = {
             "code": next_revision,
@@ -103,45 +69,33 @@ class TestIntegrateRevision(TestIntegrateBase):
         self.assertEqual(expected_status, response)
 
     def test_revision_update_on_block(self):
-        # this unit test's purpose is just for test getRevision and setRevision method,
-        # so don't need to add unit test whenever governance version is increased.
-        self._update_governance_0_0_4()
-
-        tx = self._make_deploy_tx("test_scores",
-                                  "test_revision_checker",
-                                  self._addr_array[0],
-                                  ZERO_SCORE_ADDRESS)
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_scores",
+            score_name="sample_revision_checker",
+            from_=self._accounts[0])
+        score_address: 'Address' = tx_results[0].score_address
 
         first_revision = REVISION_2
         next_revision = first_revision + 1
 
-        checker_address = tx_results[0].score_address
-
         # 1-revision check
         # 2-revision update
         # 3-revision check
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_score_call_tx(
-                self._addr_array[0],
-                checker_address,
-                "checkRevision",
-                {}),
-            self._make_score_call_tx(
-                self._admin,
-                GOVERNANCE_SCORE_ADDRESS,
-                'setRevision',
-                {"code": hex(next_revision), "name": "1.1.1"},
-            ),
-            self._make_score_call_tx(
-                self._addr_array[0],
-                checker_address,
-                "checkRevision",
-                {})
-        ])
-        self._write_precommit_state(prev_block)
+
+        tx1: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                              to_=score_address,
+                                              func_name="checkRevision",
+                                              params={})
+        tx2: dict = self.create_score_call_tx(from_=self._admin,
+                                              to_=GOVERNANCE_SCORE_ADDRESS,
+                                              func_name="setRevision",
+                                              params={"code": hex(next_revision), "name": "1.1.1"})
+        tx3: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                              to_=score_address,
+                                              func_name="checkRevision",
+                                              params={})
+
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2, tx3])
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[0].event_logs[0].indexed[1], first_revision)
@@ -151,7 +105,7 @@ class TestIntegrateRevision(TestIntegrateBase):
 
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
@@ -167,18 +121,10 @@ class TestIntegrateRevision(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        prev_block, tx_results = self._make_and_req_block([
-            self._make_score_call_tx(
-                self._addr_array[0],
-                checker_address,
-                "checkRevision",
-                {})
-        ])
-        self._write_precommit_state(prev_block)
+        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                             to_=score_address,
+                                             func_name="checkRevision",
+                                             params={})
 
-        self.assertEqual(tx_results[0].status, int(True))
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx])
         self.assertEqual(tx_results[0].event_logs[0].indexed[1], next_revision)
-
-
-if __name__ == '__main__':
-    unittest.main()

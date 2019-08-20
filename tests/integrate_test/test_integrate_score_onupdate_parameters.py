@@ -15,27 +15,47 @@
 # limitations under the License.
 
 """on_update parameters testcase"""
+from typing import TYPE_CHECKING, List
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.exception import ExceptionCode
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateOnUpdateParameters(TestIntegrateBase):
 
+    def _deploy_score(self,
+                      deploy_params: dict,
+                      to_: 'Address' = ZERO_SCORE_ADDRESS,
+                      expected_status: bool = True) -> List['TransactionResult']:
+        return self.deploy_score(score_root="sample_deploy_scores",
+                                 score_name=f"install/sample_token",
+                                 from_=self._accounts[0],
+                                 to_=to_,
+                                 deploy_params=deploy_params,
+                                 expected_status=expected_status)
+
+    def _create_init_deploy_tx(self,
+                               deploy_params: dict,
+                               to_: 'Address' = ZERO_SCORE_ADDRESS,
+                               count: int = 1) -> List[dict]:
+        return [self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                            score_name="install/sample_token",
+                                            from_=self._accounts[0],
+                                            to_=to_,
+                                            deploy_params=deploy_params)
+                for _ in range(count)]
+
     def test_onupdate_parameters_success(self):
+        init_supply: int = 1000
+        decimal: int = 18
+
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-
+        tx_results: List['TransactionResult'] = self._deploy_score(deploy_params={"init_supply": hex(init_supply),
+                                                                                  "decimal": hex(decimal)})
         score_addr1 = tx_results[0].score_address
 
         query_request = {
@@ -48,34 +68,22 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         }
 
         total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   score_addr1, deploy_params={"update_supply": hex(2000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-
+        update_supply: int = 2000
+        tx_results: List['TransactionResult'] = self._deploy_score(to_=score_addr1,
+                                                                   deploy_params={"update_supply": hex(update_supply),
+                                                                                  "decimal": hex(decimal)})
         total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 2000 * 10 ** 18)
+        self.assertEqual(total_supply, update_supply * 10 ** decimal)
 
     def test_more_parameters_onupdate(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
+        init_supply: int = 1000
+        decimal: int = 18
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-
+        # deploy
+        tx_results: List['TransactionResult'] = self._deploy_score(deploy_params={"init_supply": hex(init_supply),
+                                                                                  "decimal": hex(decimal)})
         score_addr1 = tx_results[0].score_address
 
         query_request = {
@@ -88,82 +96,53 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         }
 
         total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   score_addr1, deploy_params={"update_supply": hex(1000), "decimal": "0x12",
-                                                               "additional_param": hex(123)})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
+        update_supply: int = 2000
+        tx_results: List['TransactionResult'] = self._deploy_score(to_=score_addr1,
+                                                                   deploy_params={"update_supply": hex(update_supply),
+                                                                                  "decimal": hex(decimal),
+                                                                                  "additional_param": hex(123)},
+                                                                   expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("on_update() got an unexpected keyword argument "
                                                            "'additional_param'") != -1)
-        self.assertEqual(tx_results[0].status, int(False))
 
         total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
     def test_missing_parameters_onupdate(self):
+        init_supply: int = 1000
+        decimal: int = 18
+        count: int = 3
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
+        tx_list: List[dict] = self._create_init_deploy_tx(deploy_params={"init_supply": hex(init_supply),
+                                                                         "decimal": hex(decimal)},
+                                                          count=count)
+        tx_results0: List['TransactionResult'] = self.process_confirm_block_tx(tx_list)
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        tx3 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-        self.assertEqual(tx_results[2].status, int(True))
-
-        score_addr1 = tx_results[0].score_address
-        score_addr2 = tx_results[1].score_address
-        score_addr3 = tx_results[2].score_address
-
-        query_request = {
-            "from": self._admin,
-            "to": score_addr1,
-            "dataType": "call",
-            "data": {
-                "method": "total_supply",
+        for i in range(count):
+            query_request = {
+                "from": self._admin,
+                "to": tx_results0[i].score_address,
+                "dataType": "call",
+                "data": {
+                    "method": "total_supply",
+                }
             }
-        }
+            total_supply = self._query(query_request)
+            self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        tx_list: List[dict] = []
+        tx_list.extend(self._create_init_deploy_tx(deploy_params={"decimal": hex(18)},
+                                                   to_=tx_results0[0].score_address))
+        tx_list.extend(self._create_init_deploy_tx(deploy_params={"update_supply": hex(1000)},
+                                                   to_=tx_results0[1].score_address))
+        tx_list.extend(self._create_init_deploy_tx(deploy_params={},
+                                                   to_=tx_results0[2].score_address))
 
-        query_request['to'] = score_addr2
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
-
-        query_request['to'] = score_addr3
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
-
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   score_addr1, deploy_params={"decimal": "0x12"})
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   score_addr2, deploy_params={"update_supply": hex(1000)})
-        tx3 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   score_addr3, deploy_params={})
-
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list,
+                                                                              expected_status=False)
 
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
@@ -174,65 +153,50 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         self.assertTrue(
             tx_results[2].failure.message.find("on_update() missing 2 required positional arguments:") != -1)
 
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[2].status, int(False))
-
-        query_request['to'] = score_addr1
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
-
-        query_request['to'] = score_addr2
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
-
-        query_request['to'] = score_addr3
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        for i in range(count):
+            query_request = {
+                "from": self._admin,
+                "to": tx_results0[i].score_address,
+                "dataType": "call",
+                "data": {
+                    "method": "total_supply",
+                }
+            }
+            total_supply = self._query(query_request)
+            self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
     def test_invalid_parameter_value_onupdate(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
+        init_supply: int = 1000
+        decimal: int = 18
+        count: int = 2
+        # deploy
+        tx_list: List[dict] = self._create_init_deploy_tx(deploy_params={"init_supply": hex(init_supply),
+                                                                         "decimal": hex(decimal)},
+                                                          count=count)
+        tx_results0: List['TransactionResult'] = self.process_confirm_block_tx(tx_list)
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-
-        score_addr1 = tx_results[0].score_address
-        score_addr2 = tx_results[1].score_address
-
-        query_request = {
-            "from": self._admin,
-            "to": score_addr1,
-            "dataType": "call",
-            "data": {
-                "method": "total_supply",
+        for i in range(count):
+            query_request = {
+                "from": self._admin,
+                "to": tx_results0[i].score_address,
+                "dataType": "call",
+                "data": {
+                    "method": "total_supply",
+                }
             }
-        }
+            total_supply = self._query(query_request)
+            self.assertEqual(total_supply, init_supply * 10 ** decimal)
 
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        tx_list: List[dict] = []
+        tx_list.extend(self._create_init_deploy_tx(deploy_params={"update_supply": str(self._accounts[0].address),
+                                                                  "decimal": hex(18)},
+                                                   to_=tx_results0[0].score_address))
+        tx_list.extend(self._create_init_deploy_tx(deploy_params={"update_supply": hex(2000), "decimal": hex(18),
+                                                                  "address_param": hex(12345)},
+                                                   to_=tx_results0[1].score_address))
 
-        query_request['to'] = score_addr2
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
-
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   score_addr1, deploy_params={"update_supply": str(self._addr_array[0]),
-                                                               "decimal": "0x12"})
-
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   score_addr2, deploy_params={"update_supply": hex(2000), "decimal": "0x12",
-                                                               "address_param": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list,
+                                                                              expected_status=False)
 
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
@@ -240,13 +204,14 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         self.assertTrue(tx_results[0].failure.message.find("invalid literal for int()") != -1)
         self.assertTrue(tx_results[1].failure.message.find("Invalid address") != -1)
 
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[1].status, int(False))
-
-        query_request['to'] = score_addr1
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
-
-        query_request['to'] = score_addr2
-        total_supply = self._query(query_request)
-        self.assertEqual(total_supply, 1000 * 10 ** 18)
+        for i in range(count):
+            query_request = {
+                "from": self._admin,
+                "to": tx_results0[i].score_address,
+                "dataType": "call",
+                "data": {
+                    "method": "total_supply",
+                }
+            }
+            total_supply = self._query(query_request)
+            self.assertEqual(total_supply, init_supply * 10 ** decimal)

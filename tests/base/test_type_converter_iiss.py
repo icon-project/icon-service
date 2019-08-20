@@ -84,7 +84,7 @@ class TestTypeConverter(unittest.TestCase):
 
         request = {}
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_CLAIM_I_SCORE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_CLAIM_ISCORE)
         self.assertEqual({}, ret_params)
 
     def test_query_i_score(self):
@@ -94,96 +94,96 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.ADDRESS: str(address),
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_QUERY_I_SCORE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_QUERY_ISCORE)
         self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
 
-    def test_reg_prep_candidate(self):
-        network_info = "network_info"
+    def test_reg_prep(self):
         name = "name"
-        url = "url"
-        icx_price = 1000
-        incentive_rep = 10000
+        email = 'email'
+        website = "website"
+        json = "json"
+        ip = "ip"
 
         request = {
-            ConstantKeys.NETWORK_INFO: network_info,
             ConstantKeys.NAME: name,
-            ConstantKeys.URL: url,
-            ConstantKeys.GOVERNANCE: {
-                ConstantKeys.ICX_PRICE: hex(icx_price),
-                ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
-            }
+            ConstantKeys.EMAIL: email,
+            ConstantKeys.WEBSITE: website,
+            ConstantKeys.DETAILS: json,
+            ConstantKeys.P2P_ENDPOINT: ip,
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP_CANDIDATE)
-        self.assertEqual(network_info, ret_params[ConstantKeys.NETWORK_INFO])
+        ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP)
         self.assertEqual(name, ret_params[ConstantKeys.NAME])
-        self.assertEqual(url, ret_params[ConstantKeys.URL])
-        governance = ret_params[ConstantKeys.GOVERNANCE]
-        self.assertEqual(icx_price, governance[ConstantKeys.ICX_PRICE])
-        self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
+        self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
+        self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
+        self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
+        self.assertEqual(ip, ret_params[ConstantKeys.P2P_ENDPOINT])
 
-    def test_unreg_prep_candidate(self):
+    def test_unreg_prep(self):
 
         request = {}
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_UNREG_PREP_CANDIDATE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_UNREG_PREP)
         self.assertEqual({}, ret_params)
 
-    def test_set_prep_candidate(self):
-        network_info = "network_info"
-        url = "url"
-        incentive_rep = 10000
+    def test_set_prep(self):
+        name = "name"
+        email = 'email'
+        website = "website"
+        json = "json"
+        ip = "ip"
 
         request = {
-            ConstantKeys.NETWORK_INFO: network_info,
-            ConstantKeys.URL: url,
-            ConstantKeys.GOVERNANCE: {
-                ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
-            }
+            ConstantKeys.NAME: name,
+            ConstantKeys.EMAIL: email,
+            ConstantKeys.WEBSITE: website,
+            ConstantKeys.DETAILS: json,
+            ConstantKeys.P2P_ENDPOINT: ip,
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP_CANDIDATE)
-        self.assertEqual(network_info, ret_params[ConstantKeys.NETWORK_INFO])
-        self.assertEqual(url, ret_params[ConstantKeys.URL])
-        governance = ret_params[ConstantKeys.GOVERNANCE]
-        self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
+        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP)
+        self.assertEqual(name, ret_params[ConstantKeys.NAME])
+        self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
+        self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
+        self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
+        self.assertEqual(ip, ret_params[ConstantKeys.P2P_ENDPOINT])
 
-    def test_get_prep_candidate(self):
+    def test_set_governance_variable(self):
+        irep = 12345
+
+        request = {
+            ConstantKeys.IREP: hex(irep),
+        }
+
+        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
+        self.assertEqual(irep, ret_params[ConstantKeys.IREP])
+
+    def test_get_prep(self):
         address = create_address()
 
         request = {
             ConstantKeys.ADDRESS: str(address),
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP)
         self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
 
-    def test_get_prep_candidate_delegation_info(self):
-        address = create_address()
+    def test_get_main_prep_list(self):
 
-        request = {
-            ConstantKeys.ADDRESS: str(address),
-        }
+        request = {}
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO)
-        self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
+        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_MAIN_PREP_LIST)
+        self.assertEqual({}, ret_params)
 
     def test_get_prep_list(self):
-
-        request = {}
-
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_LIST)
-        self.assertEqual({}, ret_params)
-
-    def test_get_prep_candidate_list(self):
         start_rank = 10
         end_rank = 20
 
         request = {
-            ConstantKeys.START_RANK: hex(start_rank),
-            ConstantKeys.END_RANK: hex(end_rank)
+            ConstantKeys.START_RANKING: hex(start_rank),
+            ConstantKeys.END_RANKING: hex(end_rank)
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE_LIST)
-        self.assertEqual(start_rank, ret_params[ConstantKeys.START_RANK])
-        self.assertEqual(end_rank, ret_params[ConstantKeys.END_RANK])
+        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_LIST)
+        self.assertEqual(start_rank, ret_params[ConstantKeys.START_RANKING])
+        self.assertEqual(end_rank, ret_params[ConstantKeys.END_RANKING])

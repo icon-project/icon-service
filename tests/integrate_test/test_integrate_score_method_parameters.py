@@ -15,114 +15,113 @@
 # limitations under the License.
 
 """score method parameters testcase"""
+from typing import TYPE_CHECKING, List
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateMethodParamters(TestIntegrateBase):
 
+    def init_deploy_sample_token(self, init_supply: int, decimal: int) -> 'Address':
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_token",
+            from_=self._accounts[0],
+            deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)})
+        return tx_results[0].score_address
+
     def test_parameters_success_cases(self):
-        # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
-                                   "sample_token",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])
+                    "addr_from": str(self._accounts[0].address)
                 }
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 1000 * 10 ** 18)
+        init_balance: int = init_supply * ICX_IN_LOOP
+        self.assertEqual(response, init_balance)
 
         # transfer test
-        tx2 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'transfer',
-                                       {"addr_to": str(self._addr_array[1]), "value": hex(100 * 10 ** 18)})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        value = 100 * ICX_IN_LOOP
+        self.score_call(from_=self._accounts[0],
+                        to_=score_address,
+                        func_name="transfer",
+                        params={"addr_to": str(self._accounts[1].address), "value": hex(value)})
 
         # balance_of test
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])
+                    "addr_from": str(self._accounts[0].address)
                 }
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 900 * 10 ** 18)
+        self.assertEqual(response, init_balance - value)
 
-        query_request['data']['params']['addr_from'] = str(self._addr_array[1])
-        response = self._query(query_request)
-        self.assertEqual(response, 100 * 10 ** 18)
-
-    def test_more_parameters_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        # balance_of test
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0]),
+                    "addr_from": str(self._accounts[1].address)
+                }
+            }
+        }
+        response = self._query(query_request)
+        self.assertEqual(response, value)
+
+    def test_more_parameters_query(self):
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+
+        # balance_of test
+        query_request = {
+            "from": self._admin,
+            "to": score_address,
+            "dataType": "call",
+            "data": {
+                "method": "balance_of",
+                "params": {
+                    "addr_from": str(self._accounts[0].address),
                     "more_param": hex(1)
                 }
             }
         }
-
         self.assertRaises(TypeError, self._query, query_request)
 
     def test_less_parameters_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
@@ -133,19 +132,14 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(TypeError, self._query, query_request)
 
     def test_invalid_paramter_value_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
@@ -158,24 +152,19 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_invalid_address_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])[:20]
+                    "addr_from": str(self._accounts[0])[:20]
                 }
             }
         }
@@ -183,166 +172,147 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_more_parameters_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
-        tx2 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'transfer',
-                                       {"addr_to": str(self._addr_array[1]), "value": hex(100 * 10 ** 18),
-                                        "additional_param": hex(1)})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
+        init_balance: int = init_supply * ICX_IN_LOOP
+        value = 100 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=score_address,
+                                                                func_name="transfer",
+                                                                params={"addr_to": str(self._accounts[1].address),
+                                                                        "value": hex(value),
+                                                                        "additional_param": hex(1)},
+                                                                expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("got an unexpected keyword argument") != -1)
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])
+                    "addr_from": str(self._accounts[0].address)
                 }
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 1000 * 10 ** 18)
+        self.assertEqual(response, init_balance)
 
     def test_less_parameters_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
-        tx2 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'transfer',
-                                       {"value": hex(100 * 10 ** 18)})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
+        init_balance: int = init_supply * ICX_IN_LOOP
+        value = 100 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=score_address,
+                                                                func_name="transfer",
+                                                                params={"value": hex(value)},
+                                                                expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("missing 1 required positional argument") != -1)
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])
+                    "addr_from": str(self._accounts[0].address)
                 }
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 1000 * 10 ** 18)
+        self.assertEqual(response, init_balance)
 
     def test_invalid_paramters_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
-        tx1 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'transfer',
-                                       {"addr_to": str(self._addr_array[1]), "value": str(self._addr_array[0])})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
+        init_balance: int = init_supply * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=score_address,
+                                                                func_name="transfer",
+                                                                params={"addr_to": str(self._accounts[1].address),
+                                                                        "value": str(self._accounts[0].address)},
+                                                                expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("invalid literal for int()") != -1)
 
         # check balance
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])
+                    "addr_from": str(self._accounts[0].address)
                 }
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 1000 * 10 ** 18)
+        self.assertEqual(response, init_balance)
 
     def test_invalid_address_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
-        tx2 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'transfer',
-                                       {"addr_to": str(self._addr_array[1])[:20], "value": str(self._addr_array[0])})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
+        init_balance: int = init_supply * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="transfer",
+            params={"addr_to": str(self._accounts[1].address)[:20],
+                    "value": str(self._accounts[0].address)},
+            expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         # check balance
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "balance_of",
                 "params": {
-                    "addr_from": str(self._addr_array[0])
+                    "addr_from": str(self._accounts[0].address)
                 }
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 1000 * 10 ** 18)
+        self.assertEqual(response, init_balance)
 
     def test_default_parameters(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns_default_value", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={})
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_scores",
+            score_name="sample_db_returns_default_value",
+            from_=self._accounts[0],
+            deploy_params={})
+        score_address: 'Address' = tx_results[0].score_address
 
         val1 = 3
         val2 = "string"
         val3 = b'bytestring'
-        val4 = Address.from_string(f"hx{'0'*40}")
+        val4 = Address.from_string(f"hx{'0' * 40}")
         val5 = False
-        val6 = Address.from_string(f"hx{'abcd1234'*5}")
+        val6 = Address.from_string(f"hx{'abcd1234' * 5}")
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value1",
@@ -373,20 +343,17 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, val6)
 
     def test_primitive_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                   deploy_params={"value": str(self._addr_array[1]),
-                                                  "value1": str(self._addr_array[1])})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_scores",
+            score_name="sample_db_returns",
+            from_=self._accounts[0],
+            deploy_params={"value": str(self._accounts[1].address),
+                           "value1": str(self._accounts[1].address)})
+        score_address: 'Address' = tx_results[0].score_address
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value1",
@@ -396,14 +363,12 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, 0)
 
-        value = 1 * self._icx_factor
-        tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1', {"value": hex(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        value = 1 * ICX_IN_LOOP
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value1",
+            params={"value": hex(value)})
 
         response = self._query(query_request)
         self.assertEqual(response, value)
@@ -413,13 +378,11 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, "")
 
         value = "a"
-        tx3 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value2', {"value": value})
-
-        prev_block, tx_results = self._make_and_req_block([tx3])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value2",
+            params={"value": value})
 
         response = self._query(query_request)
         self.assertEqual(response, value)
@@ -429,29 +392,25 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, None)
 
         value = self._prev_block_hash
-        tx4 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value3', {"value": bytes.hex(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx4])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value3",
+            params={"value": bytes.hex(value)})
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
         query_request['data']['method'] = "get_value4"
         response = self._query(query_request)
-        self.assertEqual(response, self._addr_array[1])
+        self.assertEqual(response, self._accounts[1].address)
 
         value = self._genesis
-        tx5 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value4', {"value": str(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx5])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value4",
+            params={"value": str(value)})
 
         response = self._query(query_request)
         self.assertEqual(response, value)
@@ -461,53 +420,50 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, False)
 
         value = True
-        tx6 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value5', {"value": hex(int(value))})
-
-        prev_block, tx_results = self._make_and_req_block([tx6])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value5",
+            params={"value": hex(int(value))})
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
         query_request['data']['method'] = "get_value6"
         response = self._query(query_request)
-        self.assertEqual(response, self._addr_array[1])
+        self.assertEqual(response, self._accounts[1].address)
 
         value = self._genesis
-        tx7 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value6', {"value": str(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx7])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value6",
+            params={"value": str(value)})
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
         # test if dict type param can be passed
         value = {"a": 123}
-        tx8 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value6', {"value": str(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx8])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value6",
+            params={"value": str(value)},
+            expected_status=False)
 
     # test for empty parameter invoke method
     def test_empty_parameter_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_score", self._addr_array[0], ZERO_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_score",
+            from_=self._accounts[0],
+            deploy_params={"value": hex(1000)})
+        score_address: 'Address' = tx_results[0].score_address
+
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "get_value",
@@ -517,25 +473,28 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, 1000)
 
-        tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value', params={"value": "0x12"})
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="set_value",
+            params={"value": hex(18)})
+
         response = self._query(query_request)
         self.assertEqual(response, 18)
 
         # token test
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        init_supply: int = 1000
+        decimal: int = 18
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_token",
+            from_=self._accounts[0],
+            deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)})
+        score_address: 'Address' = tx_results[0].score_address
 
         query_request = {
             "from": self._admin,
-            "to": score_addr1,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "total_supply",
@@ -543,41 +502,48 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 10 ** 21)
-        tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'mint', params={})
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(response, init_supply * 10 ** decimal)
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="mint",
+            params={})
+
         response = self._query(query_request)
-        self.assertEqual(response, 10 ** 21 + 1)
+        self.assertEqual(response, init_supply * 10 ** decimal + 1)
 
     # unsupported parameter type testcase
     def test_kwargs_parameter_method(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_kwargs_score", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"value": str(self._addr_array[1]),
-                                                                      "value1": str(self._addr_array[1])})
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_kwargs_score",
+            from_=self._accounts[0],
+            deploy_params={"value": str(self._accounts[1].address),
+                           "value1": str(self._accounts[1].address)},
+            expected_status=False)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
 
     # unsupported parameter type testcase
     def test_list_parameters_query(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_list_params_score", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_list_params_score",
+            from_=self._accounts[0],
+            deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+            expected_status=False)
+
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'list_param: <class 'list'>'") != -1)
 
     def test_dict_parameters_query(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_dict_params_score", self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_dict_params_score",
+            from_=self._accounts[0],
+            deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+            expected_status=False)
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'dict_param: <class 'dict'>'") != -1)

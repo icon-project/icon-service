@@ -21,8 +21,9 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.exception import ExceptionCode, AccessDeniedException, InvalidParamsException
 from iconservice.database.db import ContextDatabase
-from iconservice.deploy.icon_score_deploy_storage import \
-    IconScoreDeployTXParams, IconScoreDeployInfo, DeployType, DeployState, IconScoreDeployStorage
+from iconservice.deploy import DeployStorage
+from iconservice.deploy.storage import \
+    IconScoreDeployTXParams, IconScoreDeployInfo, DeployType, DeployState
 from iconservice.icon_constant import ZERO_TX_HASH
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_tx_hash, create_address
@@ -100,7 +101,7 @@ class TestIconScoreDeployInfo(unittest.TestCase):
 class TestIconScoreDeployStorage(unittest.TestCase):
 
     def setUp(self):
-        self.storage = IconScoreDeployStorage(Mock(spec=ContextDatabase))
+        self.storage = DeployStorage(Mock(spec=ContextDatabase))
 
     def test_put_deploy_info_and_tx_params(self):
         self.storage.put_deploy_tx_params = Mock()
@@ -122,8 +123,8 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.assertEqual(e.exception.message, f'deploy_params already exists: {tx_hash}')
         self.storage.put_deploy_tx_params.assert_not_called()
 
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
-            with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployInfo') as MockDeployInfos:
+        with patch('iconservice.deploy.storage.IconScoreDeployTXParams') as MockTxParams:
+            with patch('iconservice.deploy.storage.IconScoreDeployInfo') as MockDeployInfos:
                 self.storage.put_deploy_tx_params.reset_mock()
                 self.storage.get_deploy_tx_params.reset_mock()
                 self.storage.get_deploy_tx_params.return_value = None
@@ -151,7 +152,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                 self.storage.get_deploy_info.assert_called_once_with(context, score_address)
                 self.storage.put_deploy_info.assert_called_once_with(context, deploy_info)
 
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
+        with patch('iconservice.deploy.storage.IconScoreDeployTXParams') as MockTxParams:
             self.storage.put_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.return_value = None
@@ -183,7 +184,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
             self.storage.put_deploy_tx_params.assert_called_once_with(context, tx_params)
             self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
+        with patch('iconservice.deploy.storage.IconScoreDeployTXParams') as MockTxParams:
             self.storage.put_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.return_value = None

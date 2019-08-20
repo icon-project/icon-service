@@ -7,14 +7,13 @@ branches:
   - master
   - develop
   - /^release-.*$/
-  - travis-test
 
 install:
+  - go get github.com/icon-project/rewardcalculator/cmd/icon_rc
   - pip install -r requirements.txt
-  - pip install hypothesis
 
 script:
-  - python -m unittest
+  - python setup.py test
 
 deploy:
   provider: pypi

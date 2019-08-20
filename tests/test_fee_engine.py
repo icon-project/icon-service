@@ -20,20 +20,21 @@ from random import randrange
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
+from iconservice.base.block import Block
 from iconservice.base.exception import InvalidRequestException, OutOfBalanceException
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import ContextDatabase
-from iconservice.deploy import DeployState
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
-from iconservice.fee.fee_engine import FeeEngine
-from iconservice.fee.fee_engine import VirtualStepCalculator, FIXED_TERM
-from iconservice.fee.fee_storage import FeeStorage
-from iconservice.icon_constant import IconScoreContextType
+from iconservice.deploy import DeployStorage
+from iconservice.deploy.storage import IconScoreDeployInfo
+from iconservice.fee import FeeEngine, FeeStorage
+from iconservice.fee.engine import VirtualStepCalculator, FIXED_TERM
+from iconservice.icon_constant import IconScoreContextType, DeployState
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
-from iconservice.icx.icx_account import AccountType, Account
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx import IcxStorage
+from iconservice.icx.coin_part import CoinPartType
+from iconservice.utils import ContextStorage, ContextEngine
 from tests.mock_generator import clear_inner_task
 
 
@@ -99,43 +100,53 @@ def get_rand_term():
         return randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
 
+calculate_virtual_step = VirtualStepCalculator.calculate_virtual_step
+
+
 class TestFeeEngine(unittest.TestCase):
 
     def setUp(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        block = Mock(spec=Block)
+        block.attach_mock(Mock(return_value=0), 'height')
+        context.block = block
 
         self._sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         self._score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
 
         context_db = create_context_db()
 
-        deploy_storage = IconScoreDeployStorage(context_db)
+        self.deploy_storage = DeployStorage(context_db)
         deploy_info = IconScoreDeployInfo(self._score_address,
                                           DeployState.ACTIVE,
                                           self._sender,
                                           os.urandom(32),
                                           os.urandom(32))
-        icx_storage = IcxStorage(context_db)
+        self.icx_storage = IcxStorage(context_db)
         self._icx_engine = IcxEngine()
 
-        fee_storage = FeeStorage(context_db)
-        patch_fee_storage(fee_storage)
+        self.fee_storage = FeeStorage(context_db)
+        patch_fee_storage(self.fee_storage)
 
-        deploy_storage.put_deploy_info(context, deploy_info)
-        self._icx_engine.open(icx_storage)
+        self.deploy_storage.put_deploy_info(context, deploy_info)
+        context.storage = ContextStorage(deploy=self.deploy_storage, fee=self.fee_storage, icx=self.icx_storage,
+                                         iiss=None, prep=None, issue=None, rc=None, meta=None)
+        context.engine = ContextEngine(deploy=None, fee=None, icx=self._icx_engine, iiss=None, prep=None, issue=None)
+        self._icx_engine.open(self.icx_storage)
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, 100000000 * 10 ** 18)
+        self.icx_storage._put_genesis_data_account(context,
+                                                   CoinPartType.GENERAL,
+                                                   self._sender,
+                                                   100000000 * 10 ** 18)
+        self.icx_storage._put_genesis_data_account(context, CoinPartType.TREASURY,
+                                                   Address.from_data(AddressPrefix.EOA, os.urandom(20)), 0)
 
-        treasury = Account(
-            AccountType.TREASURY, Address.from_data(AddressPrefix.EOA, os.urandom(20)))
-        self._icx_engine._init_special_account(context, treasury)
-
-        self._engine = FeeEngine(deploy_storage, fee_storage, icx_storage, self._icx_engine)
+        self._engine = FeeEngine()
 
     def tearDown(self):
         ContextContainer._clear_context()
         clear_inner_task()
+        VirtualStepCalculator.calculate_virtual_step = calculate_virtual_step
 
     def get_context(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -143,6 +154,12 @@ class TestFeeEngine(unittest.TestCase):
         context.step_counter.step_price = 10 ** 10
         context.tx = Mock(spec=Transaction)
         context.tx.to = self._score_address
+        block = Mock(spec=Block)
+        block.attach_mock(Mock(return_value=0), 'height')
+        context.block = block
+        context.storage = ContextStorage(deploy=self.deploy_storage,fee=self.fee_storage, icx=self.icx_storage,
+                                         iiss=None, prep=None, issue=None, rc=None, meta=None)
+        context.engine = ContextEngine(deploy=None, fee=None, icx=self._icx_engine, iiss=None, prep=None, issue=None)
         return context
 
     def _deposit_bulk(self, count):
@@ -156,10 +173,10 @@ class TestFeeEngine(unittest.TestCase):
             block_height = randrange(100, 10000)
             term = get_rand_term()
 
-            before_sender_balance = self._icx_engine.get_balance(None, self._sender)
+            before_sender_balance = self._icx_engine.get_balance(self.context, self._sender)
             self._engine.add_deposit(
                 self.context, tx_hash, self._sender, self._score_address, amount, block_height, term)
-            after_sender_balance = self._icx_engine.get_balance(None, self._sender)
+            after_sender_balance = self._icx_engine.get_balance(self.context, self._sender)
 
             self.assertEqual(amount, before_sender_balance - after_sender_balance)
             input_params.append((tx_hash, amount, block_height, term))
@@ -279,8 +296,8 @@ class TestFeeEngine(unittest.TestCase):
     def test_deposit_fee_out_of_balance(self):
         context = self.get_context()
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, 10000 * 10 ** 18)
+        self.icx_storage._put_genesis_data_account(
+            context, CoinPartType.GENERAL, self._sender, 10000 * 10 ** 18)
 
         tx_hash = os.urandom(32)
         amount = 10001 * 10 ** 18
@@ -301,8 +318,10 @@ class TestFeeEngine(unittest.TestCase):
         amount = 10000 * 10 ** 18
         block_height = 1000
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, amount)
+        self.icx_storage._put_genesis_data_account(context,
+                                                   CoinPartType.GENERAL,
+                                                   self._sender,
+                                                   amount)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
 
@@ -323,8 +342,10 @@ class TestFeeEngine(unittest.TestCase):
         block_height = 1000
         term = FeeEngine._MIN_DEPOSIT_TERM
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, amount)
+        self.icx_storage._put_genesis_data_account(context,
+                                                   CoinPartType.GENERAL,
+                                                   self._sender,
+                                                   amount)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
 
@@ -348,9 +369,9 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
-        before_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        before_sender_balance = self._icx_engine.get_balance(context, self._sender)
         self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term + 1)
-        after_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        after_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
         self.assertIsNone(deposit_info)
@@ -367,9 +388,9 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
-        before_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        before_sender_balance = self._icx_engine.get_balance(context, self._sender)
         self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term - 1)
-        after_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        after_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
         self.assertIsNone(deposit_info)
@@ -606,10 +627,10 @@ class TestFeeEngine(unittest.TestCase):
         block_height = randrange(100, 10000)
         term = get_rand_term()
 
-        before_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        before_sender_balance = self._icx_engine.get_balance(context, self._sender)
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
-        after_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        after_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
         self.assertEqual(amount, before_sender_balance - after_sender_balance)
 
@@ -661,12 +682,12 @@ class TestFeeEngine(unittest.TestCase):
         ratio = 50
         context.fee_sharing_proportion = ratio
 
-        before_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        before_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, block_height)
 
-        after_sender_balance = self._icx_engine.get_balance(None, self._sender)
+        after_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
         score_charging_step = used_step * ratio // 100
         sender_charging_step = used_step - score_charging_step
@@ -708,7 +729,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(deposits[1][0], deposit_meta.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step_single_deposit_next_head(self):
@@ -747,7 +768,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(deposits[2][0], deposit_meta.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step__single_deposit_next_head_next_expire(self):
@@ -786,7 +807,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(deposits[4][0], deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(deposits[4][2], deposit_meta.expires_of_virtual_step)
 
@@ -826,7 +847,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
@@ -866,7 +887,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(deposits[3][0], deposit_meta.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_combine_by_single_deposit(self):
@@ -904,7 +925,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
@@ -945,7 +966,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
@@ -986,7 +1007,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
@@ -1028,7 +1049,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
@@ -1069,7 +1090,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
@@ -1112,7 +1133,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        deposit_meta = self.fee_storage.get_deposit_meta(context, self._score_address)
         # Asserts virtual step disabled
         self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
         self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
@@ -1124,8 +1145,8 @@ class TestFeeEngine(unittest.TestCase):
     def _set_up_deposits(self, context, deposits):
         context.fee_sharing_proportion = 100
 
-        FeeEngine._MIN_DEPOSIT_TERM = 50
-        FeeEngine._MIN_DEPOSIT_AMOUNT = 10
+        self._engine._MIN_DEPOSIT_TERM = 50
+        self._engine._MIN_DEPOSIT_AMOUNT = 10
 
         for deposit in deposits:
             tx_hash = deposit[0]

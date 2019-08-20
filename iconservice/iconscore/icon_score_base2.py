@@ -18,7 +18,7 @@ import hashlib
 import json
 from abc import ABC, ABCMeta
 from enum import IntEnum
-from typing import TYPE_CHECKING, Optional, Any
+from typing import TYPE_CHECKING, Optional, Any, Tuple, List
 
 from secp256k1 import PublicKey, ALL_FLAGS, NO_FLAGS
 
@@ -31,6 +31,7 @@ from ..iconscore.icon_score_step import StepType
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_context import IconScoreContext
+    from ..prep.data import PRep
 
 """
 The explanation below are extracted
@@ -313,3 +314,39 @@ def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optiona
         return public_key.serialize(compressed)
 
     return None
+
+
+class PRepInfo(object):
+    def __init__(self, address: 'Address', delegated: int):
+        self.address = address
+        self.delegated = delegated
+
+
+def __create_prep_info_from_prep(prep: 'PRep') -> 'PRepInfo':
+    return PRepInfo(prep.address, prep.delegated)
+
+
+def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
+    context = ContextContainer._get_context()
+    assert context
+
+    if context:
+        prep_info_list: List[PRepInfo] = []
+        for prep in context.engine.prep.term.main_preps:
+            prep_info_list.append(__create_prep_info_from_prep(prep))
+        return prep_info_list, context.engine.prep.term.end_block_height
+    else:
+        return [], -1
+
+
+def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
+    context = ContextContainer._get_context()
+    assert context
+
+    if context:
+        prep_info_list: List[PRepInfo] = []
+        for prep in context.engine.prep.term.sub_preps:
+            prep_info_list.append(__create_prep_info_from_prep(prep))
+        return prep_info_list, context.engine.prep.term.end_block_height
+    else:
+        return [], -1

@@ -1,5 +1,5 @@
-from ..test_func import test1_func
+from ..test_func import sample_func
 
 
 def func_test():
-    test1_func()
+    sample_func()

@@ -1,1 +1,0 @@
-from .test_invalid_index_event_log_score import TestInvalidIndexEventLogScore

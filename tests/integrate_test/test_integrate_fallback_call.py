@@ -17,708 +17,515 @@
 """IconScoreEngine testcase
 """
 
-import unittest
+from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY
+
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateFallbackCall(TestIntegrateBase):
 
-    def _update_governance(self, governance_path):
-        tx = self._make_deploy_tx("test_builtin", governance_path, self._admin, GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        return tx['params']['txHash']
-
-    def _set_revision(self, revision):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
     def test_score_pass(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_score_pass",
+                                                                  from_=self._accounts[0])
+        score_addr1: 'Address' = tx_results[0].score_address
 
-        self._write_precommit_state(prev_block)
+        value = 1 * ICX_IN_LOOP
+        self.transfer_icx(from_=self._admin,
+                          to_=score_addr1,
+                          value=value)
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        value = 1 * self._icx_factor
-        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, value)
 
     def test_score_send_to_eoa(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_to_eoa",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_score_to_eoa",
+                                                                  from_=self._accounts[0])
+        score_addr1: 'Address' = tx_results[0].score_address
 
-        self._write_precommit_state(prev_block)
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_addr_func",
+                        params={"addr": str(self._accounts[1].address)})
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
+        value = 1 * ICX_IN_LOOP
+        self.transfer_icx(from_=self._admin,
+                          to_=score_addr1,
+                          value=value)
 
-        tx2 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr1,
-                                       'set_addr_func',
-                                       {"addr": str(self._addr_array[1])})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-
-        value = 1 * self._icx_factor
-        tx3 = self._make_icx_send_tx(self._genesis, score_addr1, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3])
-
-        self._write_precommit_state(prev_block)
-
-        query_request = {
-            "address": self._addr_array[1]
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(self._accounts[1])
         self.assertEqual(response, value)
 
     def test_score_revert(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_score_revert",
+                                                                  from_=self._accounts[0])
+        score_addr1: 'Address' = tx_results[0].score_address
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        value = 1 * self._icx_factor
-        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
+        value = 1 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.transfer_icx(from_=self._admin,
+                                                                  to_=score_addr1,
+                                                                  value=value,
+                                                                  expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[0].failure.message, "fallback!!")
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_no_payable(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_score_no_payable",
+                                                                  from_=self._accounts[0])
+        score_addr1: 'Address' = tx_results[0].score_address
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        value = 1 * self._icx_factor
-        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
+        value = 1 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.transfer_icx(from_=self._admin,
+                                                                  to_=score_addr1,
+                                                                  value=value,
+                                                                  expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_PAYABLE)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not payable"))
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_no_payable_revision_3(self):
         # update governance SCORE(revision4)
-        self._update_governance('0_0_4')
-        self._set_revision(3)
+        self.update_governance("0_0_4")
+        self.set_revision(3)
 
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_score_no_payable",
+                                                                  from_=self._accounts[0])
+        score_addr1: 'Address' = tx_results[0].score_address
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        value = 1 * self._icx_factor
-        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
+        value = 1 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.transfer_icx(from_=self._admin,
+                                                                  to_=score_addr1,
+                                                                  value=value,
+                                                                  expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_pass_link_transfer(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_pass",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_transfer",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        self._write_precommit_state(prev_block)
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
+        self.process_confirm_block_tx([tx3, tx4])
 
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, value)
 
     def test_score_pass_link_send(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_pass",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_send",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        self._write_precommit_state(prev_block)
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
 
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
+        self.process_confirm_block_tx([tx3, tx4])
 
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, value)
 
     def test_score_no_payable_link_transfer(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_no_payable",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_transfer",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
+
+        prev_block, hash_list = self.make_and_req_block([tx3, tx4])
         self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.METHOD_NOT_PAYABLE)
         self.assertTrue(tx_results[1].failure.message.startswith("Method not payable"))
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_no_payable_link_transfer_revision_3(self):
         # update governance SCORE(revision4)
-        self._update_governance('0_0_4')
-        self._set_revision(3)
+        self.update_governance("0_0_4")
+        self.set_revision(3)
 
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_no_payable",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_transfer",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
+
+        prev_block, hash_list = self.make_and_req_block([tx3, tx4])
         self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[1].failure.message.startswith("Method not found"))
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_no_payable_link_send(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_no_payable",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_send",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
+
+        prev_block, hash_list = self.make_and_req_block([tx3, tx4])
         self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[1].failure.message, "This is not payable")
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_revert_link_transfer(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_revert",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_transfer",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
+
+        prev_block, hash_list = self.make_and_req_block([tx3, tx4])
         self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[1].failure.message, "fallback!!")
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_revert_link_send(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_revert",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_send",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
+
+        prev_block, hash_list = self.make_and_req_block([tx3, tx4])
         self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[1].failure.message, "This is not payable")
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_score_revert_link_send_fail(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send_fail",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_score_revert",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_send_fail",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
+        tx3 = self.create_score_call_tx(from_=self._accounts[0],
+                                        to_=score_addr2,
+                                        func_name="add_score_func",
+                                        params={"score_addr": str(score_addr1)})
+
+        value = 1 * ICX_IN_LOOP
+        tx4 = self.create_transfer_icx_tx(from_=self._admin,
+                                          to_=score_addr2,
+                                          value=value)
+
+        prev_block, hash_list = self.make_and_req_block([tx3, tx4])
         self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
-
-        tx3 = self._make_score_call_tx(self._addr_array[0],
-                                       score_addr2,
-                                       'add_score_func',
-                                       {"score_addr": str(score_addr1)})
-
-        value = 1 * self._icx_factor
-        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
-
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
-
-        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[1].failure.message, "Fail icx.send!")
 
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
     def test_fallback(self):
-        query_request = {
-            "address": self._genesis
-        }
+        response: int = self.get_balance(self._admin)
+        self.assertEqual(response, TOTAL_SUPPLY * ICX_IN_LOOP)
 
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 1_000_000 * self._icx_factor)
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_send_A",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
+                                                score_name="sample_link_score_send_B",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
 
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send_A",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send_B",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        tx3 = self.create_score_call_tx(from_=self._admin,
+                                        to_=score_addr1,
+                                        func_name="add_score_addr",
+                                        params={"score_addr": str(score_addr2)})
+        tx4 = self.create_score_call_tx(from_=self._admin,
+                                        to_=score_addr1,
+                                        func_name="add_user_addr",
+                                        params={"eoa_addr": str(self._accounts[2].address)})
 
-        self._write_precommit_state(prev_block)
+        tx5 = self.create_score_call_tx(from_=self._admin,
+                                        to_=score_addr2,
+                                        func_name="add_user_addr1",
+                                        params={"eoa_addr": str(self._accounts[3].address)})
 
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        self.assertEqual(tx_results[1].status, int(True))
-        score_addr2 = tx_results[1].score_address
+        tx6 = self.create_score_call_tx(from_=self._admin,
+                                        to_=score_addr2,
+                                        func_name="add_user_addr2",
+                                        params={"eoa_addr": str(self._accounts[2].address)})
 
-        tx3 = self._make_score_call_tx(self._admin,
-                                       score_addr1,
-                                       'add_score_addr',
-                                       {"score_addr": str(score_addr2)})
-        tx4 = self._make_score_call_tx(self._admin,
-                                       score_addr1,
-                                       'add_user_addr',
-                                       {"eoa_addr": str(self._addr_array[2])})
-        tx5 = self._make_score_call_tx(self._admin,
-                                       score_addr2,
-                                       'add_user_addr1',
-                                       {"eoa_addr": str(self._addr_array[3])})
-        tx6 = self._make_score_call_tx(self._admin,
-                                       score_addr2,
-                                       'add_user_addr2',
-                                       {"eoa_addr": str(self._addr_array[2])})
+        value = 20 * ICX_IN_LOOP
+        tx7 = self.create_transfer_icx_tx(self._admin, score_addr1, value)
 
-        value = 20 * self._icx_factor
-        tx7 = self._make_icx_send_tx(self._genesis, score_addr1, value)
+        self.process_confirm_block_tx([tx3, tx4, tx5, tx6, tx7])
 
-        prev_block, tx_results = self._make_and_req_block([tx3, tx4, tx5, tx6, tx7])
-
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-        self.assertEqual(tx_results[2].status, int(True))
-        self.assertEqual(tx_results[3].status, int(True))
-        self.assertEqual(tx_results[4].status, int(True))
-
-        query_request = {
-            "address": score_addr1
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr1)
         self.assertEqual(response, 0)
 
-        query_request = {
-            "address": score_addr2
-        }
-
-        response = self._query(query_request, 'icx_getBalance')
+        response: int = self.get_balance(score_addr2)
         self.assertEqual(response, 0)
 
-        query_request = {
-            "address": self._addr_array[2]
-        }
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 15 * self._icx_factor)
+        response: int = self.get_balance(self._accounts[2])
+        self.assertEqual(response, 15 * ICX_IN_LOOP)
 
-        query_request = {
-            "address": self._addr_array[3]
-        }
-        response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 5 * self._icx_factor)
+        response: int = self.get_balance(self._accounts[3])
+        self.assertEqual(response, 5 * ICX_IN_LOOP)
 
     def test_base_fallback_send_0_and_1(self):
-        tx = self._make_deploy_tx("test_fallback_call_scores",
-                                  "test_base_fallback",
-                                  self._addr_array[0],
-                                  ZERO_SCORE_ADDRESS)
-
         # update governance SCORE(revision4)
-        self._update_governance('0_0_4')
-        self._set_revision(3)
+        self.update_governance("0_0_4")
+        self.set_revision(3)
 
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_base_fallback",
+                                                                  from_=self._accounts[0])
+        score_addr: 'Address' = tx_results[0].score_address
 
-        raise_exception_start_tag("test_base_fallback_send_0_and_1")
-        value = 0 * self._icx_factor
-        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        raise_exception_start_tag("sample_base_fallback_send_0_and_1")
+        value = 0 * ICX_IN_LOOP
+        tx: dict = self.create_transfer_icx_tx(from_=self._admin,
+                                               to_=score_addr,
+                                               value=value)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx],
+                                                                              expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
-        value = 1 * self._icx_factor
-        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        value = 1 * ICX_IN_LOOP
+        tx: dict = self.create_transfer_icx_tx(from_=self._admin,
+                                               to_=score_addr,
+                                               value=value)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx],
+                                                                              expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
-        raise_exception_end_tag("test_base_fallback_send_0_and_1")
+        raise_exception_end_tag("sample_base_fallback_send_0_and_1")
 
     def test_non_payable_fallback_send_0_and_1(self):
-        tx = self._make_deploy_tx("test_fallback_call_scores",
-                                  "test_non_payable_fallback",
-                                  self._addr_array[0],
-                                  ZERO_SCORE_ADDRESS)
-
         # update governance SCORE(revision4)
-        self._update_governance('0_0_4')
-        self._set_revision(3)
+        self.update_governance("0_0_4")
+        self.set_revision(3)
 
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_non_payable_fallback",
+                                                                  from_=self._accounts[0])
+        score_addr: 'Address' = tx_results[0].score_address
 
-        raise_exception_start_tag("test_non_payable_fallback_send_0_and_1")
-        value = 0 * self._icx_factor
-        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        raise_exception_start_tag("sample_non_payable_fallback_send_0_and_1")
+        value = 0 * ICX_IN_LOOP
+        tx: dict = self.create_transfer_icx_tx(from_=self._admin,
+                                               to_=score_addr,
+                                               value=value)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx],
+                                                                              expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
-        value = 1 * self._icx_factor
-        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        value = 1 * ICX_IN_LOOP
+        tx: dict = self.create_transfer_icx_tx(from_=self._admin,
+                                               to_=score_addr,
+                                               value=value)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx],
+                                                                              expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
-        raise_exception_end_tag("test_non_payable_fallback_send_0_and_1")
+        raise_exception_end_tag("sample_non_payable_fallback_send_0_and_1")
 
     def test_payable_external_send_0_and_1(self):
-        tx = self._make_deploy_tx("test_fallback_call_scores",
-                                  "test_payable_external",
-                                  self._addr_array[0],
-                                  ZERO_SCORE_ADDRESS)
-
         # update governance SCORE(revision4)
-        self._update_governance('0_0_4')
-        self._set_revision(3)
+        self.update_governance("0_0_4")
+        self.set_revision(3)
 
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr = tx_results[0].score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
+                                                                  score_name="sample_payable_external",
+                                                                  from_=self._accounts[0])
+        score_addr: 'Address' = tx_results[0].score_address
 
-        tx = self._make_score_call_tx(self._addr_array[0],
-                                      score_addr,
-                                      'set_value1', {})
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr,
+                        func_name="set_value1")
 
-        value = 1 * self._icx_factor
-        tx = self._make_score_call_tx(self._genesis,
-                                      score_addr,
-                                      'set_value1', {}, value)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        value = 1 * ICX_IN_LOOP
+        self.score_call(from_=self._admin,
+                        to_=score_addr,
+                        func_name="set_value1",
+                        value=value)

@@ -33,7 +33,7 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.config = IconConfig("", default_icon_config)
         self.config.load()
 
-        self.config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin)})
+        self.config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
         self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
                                                      ConfigKey.SERVICE_FEE: False,
                                                      ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,

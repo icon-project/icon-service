@@ -47,9 +47,8 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
-        IconScoreEngine._validate_score_blacklist(context, icon_score_address)
-
         if data_type == 'call':
+            IconScoreEngine._validate_score_blacklist(context, icon_score_address)
             IconScoreEngine._call(context, icon_score_address, data)
         else:
             IconScoreEngine._fallback(context, icon_score_address)

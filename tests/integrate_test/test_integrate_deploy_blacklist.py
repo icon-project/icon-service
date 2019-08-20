@@ -17,235 +17,214 @@
 """IconScoreEngine testcase
 """
 
-import unittest
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode, AccessDeniedException
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
-    from iconservice.base.address import Address
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateDeployBlackList(TestIntegrateBase):
-    def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  LATEST_GOVERNANCE,
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-
-    def _deploy_score(self, from_addr: 'Address', score_root_path: str, score_path: str, value: int) -> Any:
-        tx = self._make_deploy_tx(score_root_path,
-                                  score_path,
-                                  from_addr,
-                                  ZERO_SCORE_ADDRESS,
-                                  deploy_params={'value': hex(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def _external_call(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
-        tx = self._make_score_call_tx(from_addr, score_addr, func_name, params)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
     def test_governance_call_about_add_blacklist_myself(self):
-        self._update_governance()
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(GOVERNANCE_SCORE_ADDRESS)})
-        self.assertEqual(tx_result.status, int(False))
+        self.update_governance()
+
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str(GOVERNANCE_SCORE_ADDRESS)},
+                                                                expected_status=False)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "can't add myself")
 
     def test_governance_call_about_add_blacklist_already_blacklist(self):
         score_addr = create_address(1)
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr)})
-        self.assertEqual(tx_result.status, int(True))
 
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addToScoreBlackList",
+                        params={"address": str(score_addr)})
+
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addToScoreBlackList",
+                        params={"address": str(score_addr)})
 
     def test_governance_call_about_add_blacklist_already_blacklist_update_governance(self):
-        self._update_governance()
+        self.update_governance()
 
         score_addr = create_address(1)
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr)})
-        self.assertEqual(tx_result.status, int(True))
 
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr)})
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, "Invalid address: already SCORE blacklist")
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addToScoreBlackList",
+                        params={"address": str(score_addr)})
+
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str(score_addr)},
+                                                                expected_status=False)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Invalid address: already SCORE blacklist")
 
     def test_governance_call_about_blacklist_invalid_address(self):
-        self._update_governance()
+        self.update_governance()
 
-        raise_exception_start_tag("addToScoreBlackList")
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str("")})
-        raise_exception_end_tag("addToScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_result.failure.message, "Invalid address")
+        raise_exception_start_tag("test_governance_call_about_blacklist_invalid_address -1")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str("")},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_invalid_address -1")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
+        self.assertEqual(tx_results[0].failure.message, "Invalid address")
 
-        raise_exception_start_tag("removeFromScoreBlackList")
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'removeFromScoreBlackList',
-                                        {"address": str("")})
-        raise_exception_end_tag("removeFromScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_result.failure.message, "Invalid address")
+        raise_exception_start_tag("test_governance_call_about_blacklist_invalid_address -2")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="removeFromScoreBlackList",
+                                                                params={"address": str("")},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_invalid_address -2")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
+        self.assertEqual(tx_results[0].failure.message, "Invalid address")
 
     def test_governance_call_about_blacklist_eoa_addr(self):
         eoa_addr = create_address()
 
-        raise_exception_start_tag("addToScoreBlackList")
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(eoa_addr)})
-        raise_exception_end_tag("addToScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid SCORE Address: {str(eoa_addr)}")
+        raise_exception_start_tag("test_governance_call_about_blacklist_eoa_addr -1")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str(eoa_addr)},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_eoa_addr -1")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid SCORE Address: {str(eoa_addr)}")
 
-        raise_exception_start_tag("removeFromScoreBlackList")
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'removeFromScoreBlackList',
-                                        {"address": str(eoa_addr)})
-        raise_exception_end_tag("removeFromScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
+        raise_exception_start_tag("test_governance_call_about_blacklist_eoa_addr -2")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="removeFromScoreBlackList",
+                                                                params={"address": str(eoa_addr)},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_eoa_addr -2")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_blacklist_eoa_addr_update_governance(self):
-        self._update_governance()
+        self.update_governance()
 
         eoa_addr = create_address()
 
-        raise_exception_start_tag("addToScoreBlackList")
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(eoa_addr)})
-        raise_exception_end_tag("addToScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid SCORE Address: {str(eoa_addr)}")
+        raise_exception_start_tag("test_governance_call_about_blacklist_eoa_addr_update_governance -1")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str(eoa_addr)},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_eoa_addr_update_governance -1")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid SCORE Address: {str(eoa_addr)}")
 
-        raise_exception_start_tag("removeFromScoreBlackList")
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'removeFromScoreBlackList',
-                                        {"address": str(eoa_addr)})
-        raise_exception_end_tag("removeFromScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid SCORE Address: {str(eoa_addr)}")
+        raise_exception_start_tag("test_governance_call_about_blacklist_eoa_addr_update_governance -2")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="removeFromScoreBlackList",
+                                                                params={"address": str(eoa_addr)},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_eoa_addr_update_governance -2")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid SCORE Address: {str(eoa_addr)}")
 
     def test_governance_call_about_blacklist_not_owner(self):
         score_addr = create_address(1)
 
         raise_exception_start_tag("addToScoreBlackList")
-        tx_result = self._external_call(self._addr_array[0],
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr)})
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str(score_addr)},
+                                                                expected_status=False)
         raise_exception_end_tag("addToScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid sender: not owner")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid sender: not owner")
 
         raise_exception_start_tag("removeFromScoreBlackList")
-        tx_result = self._external_call(self._addr_array[0],
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'removeFromScoreBlackList',
-                                        {"address": str(score_addr)})
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="removeFromScoreBlackList",
+                                                                params={"address": str(score_addr)},
+                                                                expected_status=False)
         raise_exception_end_tag("removeFromScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_blacklist_not_owner_update_governance(self):
-        self._update_governance()
+        self.update_governance()
 
         score_addr = create_address(1)
 
-        raise_exception_start_tag("addToScoreBlackList")
-        tx_result = self._external_call(self._addr_array[0],
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr)})
-        raise_exception_end_tag("addToScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid sender: not owner")
+        raise_exception_start_tag("test_governance_call_about_blacklist_not_owner_update_governance -1")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="addToScoreBlackList",
+                                                                params={"address": str(score_addr)},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_not_owner_update_governance -1")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid sender: not owner")
 
-        raise_exception_start_tag("removeFromScoreBlackList")
-        tx_result = self._external_call(self._addr_array[0],
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'removeFromScoreBlackList',
-                                        {"address": str(score_addr)})
-        raise_exception_end_tag("removeFromScoreBlackList")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, f"Invalid sender: not owner")
+        raise_exception_start_tag("test_governance_call_about_blacklist_not_owner_update_governance -2")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name="removeFromScoreBlackList",
+                                                                params={"address": str(score_addr)},
+                                                                expected_status=False)
+        raise_exception_end_tag("test_governance_call_about_blacklist_not_owner_update_governance -2")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f"Invalid sender: not owner")
 
     def test_score_add_blacklist(self):
-        self._update_governance()
+        self.update_governance()
 
         # deploy normal SCORE
-        value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score(self._addr_array[0], "test_deploy_scores", "install/test_score", value1)
-        self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
+        value1 = 1
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="install/sample_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={"value": hex(value1 * ICX_IN_LOOP)})
+        score_addr1 = tx_results[0].score_address
 
         # deploy other SCORE which has external call to normal SCORE
-        tx_result = self._deploy_score(self._addr_array[0], "test_internal_call_scores", "test_link_score", value1)
-        self.assertEqual(tx_result.status, int(True))
-        score_addr2 = tx_result.score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_internal_call_scores",
+                                                                  score_name="sample_link_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={"value": hex(value1 * ICX_IN_LOOP)})
+        score_addr2 = tx_results[0].score_address
 
         # link interface SCORE setting
-        tx_result = self._external_call(self._addr_array[0],
-                                        score_addr2,
-                                        'add_score_func',
-                                        {"score_addr": str(score_addr1)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
 
         # add blacklist
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr1)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addToScoreBlackList",
+                        params={"address": str(score_addr1)})
 
         # direct external call
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": score_addr1,
             "dataType": "call",
             "data": {
@@ -253,22 +232,22 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                 "params": {}
             }
         }
-        with self.assertRaises(BaseException) as e:
+        with self.assertRaises(AccessDeniedException) as e:
             self._query(query_request)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
-        value2 = 2 * self._icx_factor
-        with self.assertRaises(BaseException) as e:
-            self._make_score_call_tx(self._addr_array[0],
-                                     score_addr1,
-                                     'set_value',
-                                     {"value": hex(value2)})
+        value2 = 2
+        with self.assertRaises(AccessDeniedException) as e:
+            self.create_score_call_tx(from_=self._accounts[0],
+                                      to_=score_addr1,
+                                      func_name='set_value',
+                                      params={"value": hex(value2)})
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
         # indirect external call
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": score_addr2,
             "dataType": "call",
             "data": {
@@ -276,41 +255,43 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                 "params": {}
             }
         }
-        with self.assertRaises(BaseException) as e:
+        with self.assertRaises(AccessDeniedException) as e:
             self._query(query_request)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
     def test_score_add_blacklist_not_version_field(self):
-        self._update_governance()
+        self.update_governance()
 
         # deploy normal SCORE
-        value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score(self._addr_array[0], "test_deploy_scores", "install/test_score", value1)
-        self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
+        value1 = 1
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="install/sample_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={"value": hex(value1 * ICX_IN_LOOP)})
+        score_addr1 = tx_results[0].score_address
 
         # deploy other SCORE which has external call to normal SCORE
-        tx_result = self._deploy_score(self._addr_array[0], "test_internal_call_scores", "test_link_score", value1)
-        self.assertEqual(tx_result.status, int(True))
-        score_addr2 = tx_result.score_address
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_internal_call_scores",
+                                                                  score_name="sample_link_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={"value": hex(value1 * ICX_IN_LOOP)})
+        score_addr2 = tx_results[0].score_address
 
         # link interface SCORE setting
-        tx_result = self._external_call(self._addr_array[0],
-                                        score_addr2,
-                                        'add_score_func',
-                                        {"score_addr": str(score_addr1)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
 
         # add blacklist
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr1)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addToScoreBlackList",
+                        params={"address": str(score_addr1)})
 
         # direct external call
         query_request = {
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": score_addr1,
             "dataType": "call",
             "data": {
@@ -318,21 +299,21 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                 "params": {}
             }
         }
-        with self.assertRaises(BaseException) as e:
+        with self.assertRaises(AccessDeniedException) as e:
             self._query(query_request)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
-        value2 = 2 * self._icx_factor
-        with self.assertRaises(BaseException) as e:
-            self._make_score_call_tx(self._addr_array[0],
-                                     score_addr1,
-                                     'set_value',
-                                     {"value": hex(value2)})
+        value2 = 2 * ICX_IN_LOOP
+        with self.assertRaises(AccessDeniedException) as e:
+            self.create_score_call_tx(from_=self._accounts[0],
+                                      to_=score_addr1,
+                                      func_name='set_value',
+                                      params={"value": hex(value2)})
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
         # indirect external call
         query_request = {
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": score_addr2,
             "dataType": "call",
             "data": {
@@ -340,32 +321,31 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                 "params": {}
             }
         }
-        with self.assertRaises(BaseException) as e:
+        with self.assertRaises(AccessDeniedException) as e:
             self._query(query_request)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
     def test_score_remove_deployer(self):
-        self._update_governance()
+        self.update_governance()
 
         # deploy normal SCORE
-        value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score(self._addr_array[0], "test_deploy_scores", "install/test_score", value1)
-        self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
+        value1 = 1
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="install/sample_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={"value": hex(value1 * ICX_IN_LOOP)})
+        score_addr1 = tx_results[0].score_address
 
         # add blacklist
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'addToScoreBlackList',
-                                        {"address": str(score_addr1)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addToScoreBlackList",
+                        params={"address": str(score_addr1)})
 
-        # remove blacklist
-        tx_result = self._external_call(self._admin,
-                                        GOVERNANCE_SCORE_ADDRESS,
-                                        'removeFromScoreBlackList',
-                                        {"address": str(score_addr1)})
-        self.assertEqual(tx_result.status, int(True))
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="removeFromScoreBlackList",
+                        params={"address": str(score_addr1)})
 
         # access query external call in prev blacklist SCORE
         query_request = {
@@ -379,20 +359,15 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, value1)
+        self.assertEqual(response, value1 * ICX_IN_LOOP)
 
         # access external call in prev blacklist SCORE
-        value2 = 2 * self._icx_factor
-        tx_result = self._external_call(self._addr_array[0],
-                                        score_addr1,
-                                        'set_value',
-                                        {"value": hex(value2)})
-        self.assertEqual(tx_result.status, int(True))
+        value2 = 2
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value2 * ICX_IN_LOOP)})
 
         # access query external call in prev blacklist SCORE
         response = self._query(query_request)
-        self.assertEqual(response, value2)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(response, value2 * ICX_IN_LOOP)

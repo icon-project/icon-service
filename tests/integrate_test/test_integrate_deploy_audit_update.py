@@ -17,16 +17,16 @@
 """IconScoreEngine testcase
 """
 
-import unittest
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
     from iconservice.base.address import Address
 
 
@@ -35,20 +35,14 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
 
-    def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  LATEST_GOVERNANCE,
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        tx_hash1 = tx_results[0].tx_hash
-        self._accept_score(tx_hash1)
+    def _update_governance_score(self, version: str = "latest_version"):
+        tx_results: List['TransactionResult'] = self.update_governance(version=version)
+        self.accept_score(tx_results[0].tx_hash)
 
     def _assert_get_score_status(self, target_addr: 'Address', expect_status: dict):
         query_request = {
             "version": self._version,
-            "from": self._addr_array[0],
+            "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
@@ -59,35 +53,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, expect_status)
 
-    def _deploy_score(self, score_path: str, value: int, update_score_addr: 'Address' = None) -> Any:
-        address = ZERO_SCORE_ADDRESS
-        if update_score_addr:
-            address = update_score_addr
-
-        tx = self._make_deploy_tx("test_deploy_scores",
-                                  score_path,
-                                  self._addr_array[0],
-                                  address,
-                                  deploy_params={'value': hex(value)})
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def _accept_score(self, tx_hash: Union[bytes, str]):
-        if isinstance(tx_hash, bytes):
-            tx_hash_str = f'0x{bytes.hex(tx_hash)}'
-        else:
-            tx_hash_str = tx_hash
-        tx = self._make_score_call_tx(self._admin,
-                                      GOVERNANCE_SCORE_ADDRESS,
-                                      'acceptScore',
-                                      {"txHash": tx_hash_str})
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
-
-    def _assert_get_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, value: Any):
+    def _assert_get_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, value: int):
         query_request = {
             "version": self._version,
             "from": from_addr,
@@ -99,37 +65,43 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, value)
+        self.assertEqual(response, value * ICX_IN_LOOP)
 
-    def _set_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
-        tx = self._make_score_call_tx(from_addr,
-                                      score_addr,
-                                      func_name,
-                                      params)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self.assertEqual(tx_results[0].status, int(True))
-        self._write_precommit_state(prev_block)
-
-    def _install_normal_score(self, value: int):
+    def _install_normal_score(self, value: int) -> Tuple['Address', bytes, bytes]:
         # 1. deploy (wait audit)
 
-        tx_result = self._deploy_score("install/test_score", value)
-        self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
-        tx_hash1 = tx_result.tx_hash
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="install/sample_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={'value': hex(value * ICX_IN_LOOP)})
+        score_addr1: 'Address' = tx_results[0].score_address
+        tx_hash1: bytes = tx_results[0].tx_hash
 
-        # 2. accpt SCORE : tx_hash1
-        tx_result = self._accept_score(tx_hash1)
-        self.assertEqual(tx_result.status, int(True))
-        tx_hash2 = tx_result.tx_hash
+        # 2. accept SCORE : tx_hash1
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash1)
+        tx_hash2: bytes = tx_results[0].tx_hash
 
         return score_addr1, tx_hash1, tx_hash2
 
+    def _deploy_score(self,
+                      score_name: str,
+                      value: int,
+                      expected_status: bool = True,
+                      to_: Optional['Address'] = ZERO_SCORE_ADDRESS,
+                      data: bytes = None) -> List['TransactionResult']:
+        return self.deploy_score(score_root="sample_deploy_scores",
+                                 score_name=score_name,
+                                 from_=self._accounts[0],
+                                 deploy_params={'value': hex(value * ICX_IN_LOOP)},
+                                 expected_status=expected_status,
+                                 to_=to_,
+                                 data=data)
+
     def test_score(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -143,343 +115,440 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             self._value.set(value * 2)
             self.Changed(value)
         """
-        value2 = 2 * self._icx_factor
-        tx_result = self._deploy_score("update/test_score", value2, score_addr1)
-        self.assertEqual(tx_result.status, int(True))
-        tx_hash3 = tx_result.tx_hash
+        value2 = 2
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="update/sample_score",
+                                                                  from_=self._accounts[0],
+                                                                  deploy_params={'value': hex(value2 * ICX_IN_LOOP)},
+                                                                  to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
         # 3. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 4. accept SCORE : tx_hash3
-        tx_result = self._accept_score(tx_hash3)
-        self.assertEqual(tx_result.status, int(True))
+        self.accept_score(tx_hash=tx_hash3)
 
         # 5. assert get value: value1 + value2
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1 + value2)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1 + value2)
 
         # 6. set value: value2
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value2 * ICX_IN_LOOP)})
 
         # 7. assert get value: 2 * value2
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", 2 * value2)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", 2 * value2)
 
     def test_invalid_owner(self):
-
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[1],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value2)})
-
-        raise_exception_start_tag("test_invalid_owner1")
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        raise_exception_end_tag("test_invalid_owner1")
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
+        value2 = 2
+        raise_exception_start_tag("test_invalid_owner -1")
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="update/sample_score",
+                                                                  from_=self._accounts[1],
+                                                                  deploy_params={'value': hex(value2 * ICX_IN_LOOP)},
+                                                                  to_=score_addr1,
+                                                                  expected_status=False)
+        raise_exception_end_tag("test_invalid_owner -1")
+        tx_hash3 = tx_results[0].tx_hash
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[0].failure.message,
-                         f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
-        tx_hash2 = tx_results[0].tx_hash
+                         f'Invalid owner: {str(self._accounts[0].address)} '
+                         f'!= {str(self._accounts[1].address)}')
 
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_invalid_owner2")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_invalid_owner2")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, "Invalid txHash")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Invalid txHash")
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_invalid_owner_update_governance(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[1],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value2)})
-
-        raise_exception_start_tag("test_invalid_owner1")
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        raise_exception_end_tag("test_invalid_owner1")
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
+        value2 = 2
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
+                                                                  score_name="update/sample_score",
+                                                                  from_=self._accounts[1],
+                                                                  deploy_params={'value': hex(value2 * ICX_IN_LOOP)},
+                                                                  to_=score_addr1,
+                                                                  expected_status=False)
+        tx_hash3 = tx_results[0].tx_hash
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[0].failure.message,
-                         f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
-        tx_hash2 = tx_results[0].tx_hash
+                         f'Invalid owner: {str(self._accounts[0].address)} '
+                         f'!= {str(self._accounts[1].address)}')
 
-        # 3. accept SCORE : tx_hash2
-        raise_exception_start_tag("test_invalid_owner2")
-        tx_result = self._accept_score(tx_hash2)
-        raise_exception_end_tag("test_invalid_owner2")
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, "Invalid txHash: None")
+        # 3. accept SCORE : tx_hash3
+        raise_exception_start_tag("test_invalid_owner -2")
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
+        raise_exception_end_tag("test_invalid_owner -2")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Invalid txHash: None")
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_score_no_zip(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   data=b'invalid',
-                                   deploy_params={'value': hex(value1)})
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="install/update",
+                                                                   value=value2,
+                                                                   data=b'invalid',
+                                                                   to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_score_no_zip")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_score_no_zip")
 
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PACKAGE)
-        self.assertEqual(tx_result.failure.message, f'Bad zip file.')
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PACKAGE)
+        self.assertEqual(tx_results[0].failure.message, f'Bad zip file.')
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1,  "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_score_no_scorebase(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_no_scorebase",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value1)})
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="install/sample_score_no_scorebase",
+                                                                   value=value2,
+                                                                   to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_score_no_scorebase")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_score_no_scorebase")
 
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "'SampleScore' object has no attribute 'owner'")
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_score_on_update_error(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score_on_update_error",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value1)})
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="update/sample_score_on_update_error",
+                                                                   value=value2,
+                                                                   to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_score_on_update_error")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_score_on_update_error")
 
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, "raise exception!")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "raise exception!")
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_score_no_external_func(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
-        print(f'tx_hash1: {tx_hash1.hex()}\ntx_hash2: {tx_hash2.hex()}')
 
         # 2. deploy update (wait audit)
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_no_external_func",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value1)})
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="install/sample_score_no_external_func",
+                                                                   value=value2,
+                                                                   to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-        print(f'tx_hash3: {tx_hash2.hex()}')
-
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_score_no_external_func")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_score_no_external_func")
 
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.ILLEGAL_FORMAT)
-        self.assertEqual(tx_result.failure.message, "There is no external method in the SCORE")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
+        self.assertEqual(tx_results[0].failure.message, "There is no external method in the SCORE")
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_score_with_korean_comments(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_with_korean_comments",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value1)})
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(
+            score_name="install/sample_score_with_korean_comments",
+            value=value2,
+            to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_score_with_korean_comments")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_score_with_korean_comments")
 
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
     def test_score_no_python(self):
-        self._update_governance()
+        self._update_governance_score()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_no_python",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value1)})
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(
+            score_name="install/sample_score_no_python",
+            value=value2,
+            to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        # 3. accept SCORE : tx_hash2
+        # 3. accept SCORE : tx_hash3
         raise_exception_start_tag("test_score_no_python")
-        tx_result = self._accept_score(tx_hash2)
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash3,
+                                                                  expected_status=False)
         raise_exception_end_tag("test_score_no_python")
 
-        self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         # 4. assert get value: value1
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
-        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+        value3 = 3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
 
         # 6. assert get value: value3
-        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value3)
 
+    def test_prev_deploy_reject(self):
+        self._update_governance_score()
 
-if __name__ == '__main__':
-    unittest.main()
+        # 1. install done
+        value1 = 1
+        score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
+
+        # 2. deploy update (wait audit)
+        """
+        def on_update(self, value: int) -> None:
+            super().on_update()
+            var = self._value.get()
+            self._value.set(var + value)
+        
+        def set_value(self, value: int):
+            self._value.set(value * 2)
+            self.Changed(value)
+        """
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="update/sample_score",
+                                                                   value=value2,
+                                                                   to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
+
+        # new update deploy
+        value3 = 3
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="update/sample_score",
+                                                                   value=value3,
+                                                                   to_=score_addr1)
+        tx_hash4 = tx_results[0].tx_hash
+
+        # 3. assert get value: value1
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
+
+        # 4. accept SCORE : tx_hash3 (Fail)
+        raise_exception_start_tag("test_prev_deploy_reject")
+        self.reject_score(tx_hash=tx_hash3,
+                          expected_status=False)
+        raise_exception_end_tag("test_prev_deploy_reject")
+
+        # 5. accept SCORE : tx_hash4
+        self.accept_score(tx_hash=tx_hash4)
+
+        # 6. assert get value: value1 + value3
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1 + value3)
+
+        # 7. set value: value3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
+
+        # 8. assert get value: 2 * value3
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", 3 * value2)
+
+    def test_prev_deploy_accept(self):
+        self._update_governance_score()
+
+        # 1. install done
+        value1 = 1
+        score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
+
+        # 2. deploy update (wait audit)
+        """
+        def on_update(self, value: int) -> None:
+            super().on_update()
+            var = self._value.get()
+            self._value.set(var + value)
+        
+        def set_value(self, value: int):
+            self._value.set(value * 2)
+            self.Changed(value)
+        """
+        value2 = 2
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="update/sample_score",
+                                                                   value=value2,
+                                                                   to_=score_addr1)
+        tx_hash3 = tx_results[0].tx_hash
+
+        # new update deploy
+        value3 = 3
+        tx_results: List['TransactionResult'] = self._deploy_score(score_name="update/sample_score",
+                                                                   value=value3,
+                                                                   to_=score_addr1)
+        tx_hash4 = tx_results[0].tx_hash
+
+        # 3. assert get value: value1
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1)
+
+        # 4. accept SCORE : tx_hash3 (Fail)
+        raise_exception_start_tag("test_prev_deploy_accept")
+        self.accept_score(tx_hash=tx_hash3,
+                          expected_status=False)
+        raise_exception_end_tag("test_prev_deploy_accept")
+
+        # 5. accept SCORE : tx_hash4
+        self.accept_score(tx_hash=tx_hash4)
+
+        # 6. assert get value: value1 + value3
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", value1 + value3)
+
+        # 7. set value: value3
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr1,
+                        func_name="set_value",
+                        params={"value": hex(value3 * ICX_IN_LOOP)})
+
+        # 8. assert get value: 2 * value3
+        self._assert_get_value(self._accounts[0], score_addr1, "get_value", 3 * value2)
+

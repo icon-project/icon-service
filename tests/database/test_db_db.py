@@ -17,6 +17,7 @@
 
 import os
 import unittest
+from unittest.mock import patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException
@@ -152,6 +153,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
             }
             db.write_batch(context, data)
 
+    @unittest.skip('context is never none')
     def test_none_context(self):
         context = None
         db = self.context_db
@@ -166,7 +168,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
             db.put(context, b'key1', None)
 
     def test_delete(self):
-        context = self.context        
+        context = self.context
         db = self.context_db
         tx_batch = context.tx_batch
 
@@ -225,12 +227,16 @@ class TestIconScoreDatabase(unittest.TestCase):
     def test_address(self):
         self.assertEqual(self.address, self.db.address)
 
-    def test_put_and_get(self):
+    @patch('iconservice.iconscore.icon_score_context.ContextGetter._context')
+    def test_put_and_get(self, context):
+        context.current_address = self.address
         db = self.db
         key = self.address.body
         value = 100
 
         self.assertIsNone(db.get(key))
 
+        context.readonly = False
+        context.type = IconScoreContextType.DIRECT
         db.put(key, value.to_bytes(32, DATA_BYTE_ORDER))
         self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(key))

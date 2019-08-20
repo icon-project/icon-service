@@ -5,6 +5,16 @@ from setuptools import setup, find_packages
 with open('requirements.txt') as requirements:
     requires = list(requirements)
 
+extra_requires = {
+    "test": [
+        "hypothesis>=4.0.0",
+        "pytest>=3.6",
+        "pytest-cov>=2.5.1",
+        "iconsdk"
+    ]
+}
+test_requires = extra_requires['test']
+
 version = os.environ.get('VERSION')
 if version is None:
     with open(os.path.join('.', 'VERSION')) as version_file:
@@ -24,8 +34,11 @@ setup_options = {
         'icon_service.json',
         'builtin_scores/*/package.json'
     ]},
+    'setup_requires': ['pytest-runner'],
+    'tests_require': test_requires,
     'license': "Apache License 2.0",
     'install_requires': requires,
+    'extras_require': extra_requires,
     'entry_points': {
         'console_scripts': [
             'iconservice=iconservice.icon_service_cli:main'

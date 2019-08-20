@@ -34,7 +34,6 @@ def digest(ordered_dict: OrderedDict):
         data.append(key)
         if value is not None:
             data.append(value)
-
     return hashlib.sha3_256(b'|'.join(data)).digest()
 
 
@@ -154,3 +153,7 @@ class BlockBatch(Batch):
     def clear(self) -> None:
         self.block = None
         super().clear()
+
+
+class ExternalBatch(OrderedDict):
+    pass

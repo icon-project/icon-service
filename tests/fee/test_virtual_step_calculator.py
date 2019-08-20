@@ -18,7 +18,7 @@ from collections import namedtuple
 from decimal import Decimal
 import unittest
 
-from iconservice.fee.fee_engine import VirtualStepCalculator, FIXED_TERM, ICX_IN_LOOP, BLOCKS_IN_ONE_MONTH
+from iconservice.fee.engine import VirtualStepCalculator, FIXED_TERM, ICX_IN_LOOP, BLOCKS_IN_ONE_MONTH
 
 STEP_PRICE = 10 ** 10
 

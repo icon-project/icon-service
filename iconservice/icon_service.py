@@ -13,19 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import signal
 
 import argparse
-import setproctitle
+import asyncio
+import os
+import signal
 import sys
 
-from earlgrey import MessageQueueService, aio_pika, asyncio
+import setproctitle
 
+from earlgrey import MessageQueueService, aio_pika
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
+from iconservice.base.exception import FatalException
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
+from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey, \
+    ICON_EXCEPTION_LOG_TAG
 from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_service_cli import ICON_SERVICE_CLI, ExitCode
 
@@ -65,20 +68,38 @@ class IconService(object):
         Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE)
         Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
 
-        self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
-
+        # Before creating IconScoreInnerService instance,
+        # loop SHOULD be set as a current event loop for the current thread.
+        # Otherwise connection between iconservice and rc will be failed.
         loop = MessageQueueService.loop
+        asyncio.set_event_loop(loop)
+
+        try:
+            self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
+        except FatalException as e:
+            Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
+            Logger.error(e, ICON_EXCEPTION_LOG_TAG)
+            self._inner_service.clean_close()
+        finally:
+            Logger.debug("icon service will be closed while open the icon service engine. "
+                         "check if the config is valid")
+
         loop.create_task(_serve())
         loop.add_signal_handler(signal.SIGINT, self.close)
         loop.add_signal_handler(signal.SIGTERM, self.close)
 
         try:
             loop.run_forever()
+        except FatalException as e:
+            Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
+            Logger.error(e, ICON_EXCEPTION_LOG_TAG)
+            self._inner_service.clean_close()
         finally:
             """
             If the function is called when the operation is not an endless loop 
             in an asynchronous function, the await is terminated immediately.
             """
+            Logger.debug("loop has been stopped and will be closed")
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 

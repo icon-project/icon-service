@@ -17,43 +17,30 @@
 """IconScoreEngine testcase
 """
 
-import unittest
-from typing import Any
+from typing import TYPE_CHECKING, Any, List
 
-from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, Address, AddressPrefix
+from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IconServiceFlag
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 class TestIntegrateServiceConfiguration(TestIntegrateBase):
 
     def setUp(self):
         super().setUp()
-        self._update_governance()
+        self.update_governance()
 
-    def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  LATEST_GOVERNANCE,
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-
-    def _set_service_conf(self, service_flag: Any) -> Any:
-        params = {
-            'serviceFlag': service_flag
-        }
-        tx = self._make_score_call_tx(self._admin,
-                                      GOVERNANCE_SCORE_ADDRESS,
-                                      'updateServiceConfig',
-                                      params=params,
-                                      pre_validation_enabled=False)
-
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        return tx_results[0]
+    def _set_service_conf(self, service_flag: Any, expected_status: bool = True) -> List['TransactionResult']:
+        return self.score_call(from_=self._admin,
+                               to_=GOVERNANCE_SCORE_ADDRESS,
+                               func_name='updateServiceConfig',
+                               params={"serviceFlag": service_flag},
+                               expected_status=expected_status)
 
     def _assert_get_service_conf(self, service_flag: int):
         query_request = {
@@ -76,21 +63,14 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
         self.assertEqual(response, expect_ret)
 
     def test_invalid_owner(self):
-        params = {
-            'serviceFlag': hex(IconServiceFlag.AUDIT)
-        }
-        tx = self._make_score_call_tx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 2),
-                                      GOVERNANCE_SCORE_ADDRESS,
-                                      'updateServiceConfig',
-                                      params=params)
+        raise_exception_start_tag("sample_invalid_owner")
+        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
+                                                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                                                func_name='updateServiceConfig',
+                                                                params={"serviceFlag": hex(IconServiceFlag.AUDIT)},
+                                                                expected_status=False)
+        raise_exception_end_tag("sample_invalid_owner")
 
-        raise_exception_start_tag("test_invalid_owner")
-        prev_block, tx_results = self._make_and_req_block([tx])
-        raise_exception_end_tag("test_invalid_owner")
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[0].failure.message, f'Invalid sender: not owner')
 
@@ -100,26 +80,18 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
             max_flag |= flag
 
         for conf in range(max_flag):
-            tx_result = self._set_service_conf(hex(conf))
-            self.assertEqual(tx_result.status, int(True), f'Failed conf: {conf}')
+            tx_results: List['TransactionResult'] = self._set_service_conf(hex(conf))
+            self.assertEqual(tx_results[0].status, int(True), f'Failed conf: {conf}')
             self._assert_get_service_conf(conf)
 
     def test_set_service_configuration_wrong(self):
         wrong_conf = [
-            1,
-            -1,
-            0xfffff,
-            'abc',
-            True,
-            False,
             hex(-1),
+            str(self._admin.address),
+            "0xfffff",
+            "abc",
             hex(65535),
         ]
 
         for conf in wrong_conf:
-            tx_result = self._set_service_conf(conf)
-            self.assertEqual(tx_result.status, int(False), f'Failed conf: {conf}')
-
-
-if __name__ == '__main__':
-    unittest.main()
+            self._set_service_conf(conf, expected_status=False)

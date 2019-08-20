@@ -16,6 +16,8 @@
 
 from enum import IntEnum
 
+from ..icon_constant import IssueDataKey
+
 
 class ParamType(IntEnum):
     BLOCK = 0
@@ -26,6 +28,7 @@ class ParamType(IntEnum):
     DEPLOY_DATA = 103
     TRANSACTION_PARAMS_DATA = 104
     DEPOSIT_DATA = 105
+    BASE_DATA = 106
 
     INVOKE = 200
 
@@ -47,15 +50,16 @@ class ParamType(IntEnum):
     IISS_GET_STAKE = 702
     IISS_SET_DELEGATION = 703
     IISS_GET_DELEGATION = 704
-    IISS_CLAIM_I_SCORE = 705
-    IISS_QUERY_I_SCORE = 706
-    IISS_REG_PREP_CANDIDATE = 707
-    IISS_UNREG_PREP_CANDIDATE = 708
-    IISS_SET_PREP_CANDIDATE = 709
-    IISS_GET_PREP_CANDIDATE = 710
-    IISS_GET_PREP_CANDIDATE_DELEGATION_INFO = 711
-    IISS_GET_PREP_LIST = 712
-    IISS_GET_PREP_CANDIDATE_LIST = 713
+    IISS_CLAIM_ISCORE = 705
+    IISS_QUERY_ISCORE = 706
+    IISS_REG_PREP = 707
+    IISS_UNREG_PREP = 708
+    IISS_SET_PREP = 709
+    IISS_GET_PREP = 710
+    IISS_GET_PREP_DELEGATION_INFO = 711
+    IISS_GET_MAIN_PREP_LIST = 712
+    IISS_GET_PREP_LIST = 713
+    IISS_SET_GOVERNANCE_VARIABLES = 714
 
 
 class ValueType(IntEnum):
@@ -111,6 +115,30 @@ class ConstantKeys:
     CALL = "call"
     DEPLOY = "deploy"
 
+    BASE = "base"
+    PREP = IssueDataKey.PREP
+    PREP_INCENTIVE = IssueDataKey.IREP
+    PREP_REWARD_RATE = IssueDataKey.RREP
+    PREP_TOTAL_DELEGATION = IssueDataKey.TOTAL_DELEGATION
+    PREP_VALUE = IssueDataKey.VALUE
+
+    EEP = IssueDataKey.EEP
+    EEP_INCENTIVE = IssueDataKey.IEEP
+    EEP_REWARD_RATE = IssueDataKey.REEP
+    EEP_TOTAL_DELEGATION = IssueDataKey.TOTAL_DELEGATION
+    EEP_VALUE = IssueDataKey.VALUE
+
+    DAPP = IssueDataKey.DAPP
+    DAPP_INCENTIVE = IssueDataKey.IDAPP
+    DAPP_REWARD_RATE = IssueDataKey.RDAPP
+    DAPP_TOTAL_DELEGATION = IssueDataKey.TOTAL_DELEGATION
+    DAPP_VALUE = IssueDataKey.VALUE
+
+    ISSUE_RESULT = IssueDataKey.ISSUE_RESULT
+    COVERED_BY_FEE = IssueDataKey.COVERED_BY_FEE
+    COVERED_BY_OVER_ISSUED_ICX = IssueDataKey.COVERED_BY_OVER_ISSUED_ICX
+    ISSUE = IssueDataKey.ISSUE
+
     OLD_TX_HASH = "tx_hash"
 
     GENESIS_DATA = "genesisData"
@@ -119,6 +147,10 @@ class ConstantKeys:
 
     BLOCK = "block"
     TRANSACTIONS = "transactions"
+
+    IS_BLOCK_EDITABLE = 'isBlockEditable'
+    PREV_BLOCK_GENERATOR = "prevBlockGenerator"
+    PREV_BLOCK_VALIDATORS = "prevBlockValidators"
 
     FILTER = "filter"
 
@@ -133,13 +165,17 @@ class ConstantKeys:
 
     # IISS
     DELEGATIONS = "delegations"
-    NETWORK_INFO = "networkInfo"
-    URL = 'url'
-    GOVERNANCE = "governance"
-    ICX_PRICE = "icxPrice"
-    INCENTIVE_REP = "incentiveRep"
-    START_RANK = "startRank"
-    END_RANK = "endRank"
+    COUNTRY = "country"
+    CITY = "city"
+    EMAIL = 'email'
+    WEBSITE = 'website'
+    DETAILS = 'details'
+    P2P_ENDPOINT = 'p2pEndpoint'
+    PREP_ID = 'id'
+    START_RANKING = "startRanking"
+    END_RANKING = "endRanking"
+    IREP = "irep"
+    IREP_BLOCK_HEIGHT = "irepUpdateBlockHeight"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -166,6 +202,33 @@ type_convert_templates[ParamType.DEPLOY_DATA] = {
     ConstantKeys.PARAMS: ValueType.LATER
 }
 
+type_convert_templates[ParamType.BASE_DATA] = {
+    ConstantKeys.PREP: {
+        ConstantKeys.PREP_INCENTIVE: ValueType.INT,
+        ConstantKeys.PREP_REWARD_RATE: ValueType.INT,
+        ConstantKeys.PREP_TOTAL_DELEGATION: ValueType.INT,
+        ConstantKeys.PREP_VALUE: ValueType.INT
+    },
+    ConstantKeys.EEP: {
+        ConstantKeys.EEP_INCENTIVE: ValueType.INT,
+        ConstantKeys.EEP_REWARD_RATE: ValueType.INT,
+        ConstantKeys.EEP_TOTAL_DELEGATION: ValueType.INT,
+        ConstantKeys.EEP_VALUE: ValueType.INT
+    },
+    ConstantKeys.DAPP: {
+        ConstantKeys.DAPP_INCENTIVE: ValueType.INT,
+        ConstantKeys.DAPP_REWARD_RATE: ValueType.INT,
+        ConstantKeys.DAPP_TOTAL_DELEGATION: ValueType.INT,
+        ConstantKeys.DAPP_VALUE: ValueType.INT
+    },
+    ConstantKeys.ISSUE_RESULT: {
+        ConstantKeys.COVERED_BY_FEE: ValueType.INT,
+        ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: ValueType.INT,
+        ConstantKeys.ISSUE: ValueType.INT
+    }
+
+}
+
 type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
     ConstantKeys.VERSION: ValueType.INT,
     ConstantKeys.TX_HASH: ValueType.BYTES,
@@ -182,7 +245,8 @@ type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
         CONVERT_USING_SWITCH_KEY: {
             SWITCH_KEY: ConstantKeys.DATA_TYPE,
             ConstantKeys.CALL: type_convert_templates[ParamType.CALL_DATA],
-            ConstantKeys.DEPLOY: type_convert_templates[ParamType.DEPLOY_DATA]
+            ConstantKeys.DEPLOY: type_convert_templates[ParamType.DEPLOY_DATA],
+            ConstantKeys.BASE: type_convert_templates[ParamType.BASE_DATA]
         }
     },
     KEY_CONVERTER: {
@@ -205,7 +269,10 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.BLOCK: type_convert_templates[ParamType.BLOCK],
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
-    ]
+    ],
+    ConstantKeys.IS_BLOCK_EDITABLE: ValueType.BOOL,
+    ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
+    ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
 }
 
 type_convert_templates[ParamType.ICX_CALL] = {
@@ -280,32 +347,44 @@ type_convert_templates[ParamType.IISS_SET_DELEGATION] = {
 
 type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_CLAIM_I_SCORE] = {}
+type_convert_templates[ParamType.IISS_CLAIM_ISCORE] = {}
 
-type_convert_templates[ParamType.IISS_QUERY_I_SCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_QUERY_ISCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
-    ConstantKeys.NETWORK_INFO: ValueType.STRING,
+type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.NAME: ValueType.STRING,
-    ConstantKeys.URL: ValueType.STRING,
-    ConstantKeys.GOVERNANCE: {
-        ConstantKeys.ICX_PRICE: ValueType.INT,
-        ConstantKeys.INCENTIVE_REP: ValueType.INT
-    }
+    ConstantKeys.COUNTRY: ValueType.STRING,
+    ConstantKeys.CITY: ValueType.STRING,
+    ConstantKeys.EMAIL: ValueType.STRING,
+    ConstantKeys.WEBSITE: ValueType.STRING,
+    ConstantKeys.DETAILS: ValueType.STRING,
+    ConstantKeys.P2P_ENDPOINT: ValueType.STRING
 }
 
-type_convert_templates[ParamType.IISS_UNREG_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
+type_convert_templates[ParamType.IISS_SET_PREP] = {
+    ConstantKeys.NAME: ValueType.STRING,
+    ConstantKeys.COUNTRY: ValueType.STRING,
+    ConstantKeys.CITY: ValueType.STRING,
+    ConstantKeys.EMAIL: ValueType.STRING,
+    ConstantKeys.WEBSITE: ValueType.STRING,
+    ConstantKeys.DETAILS: ValueType.STRING,
+    ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
+}
 
-type_convert_templates[ParamType.IISS_SET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE]
+type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
 
-type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_GET_PREP] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO] = \
+type_convert_templates[ParamType.IISS_GET_PREP_DELEGATION_INFO] = \
     type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_GET_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
+type_convert_templates[ParamType.IISS_GET_MAIN_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
 
-type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_LIST] = {
-    ConstantKeys.START_RANK: ValueType.INT,
-    ConstantKeys.END_RANK: ValueType.INT
+type_convert_templates[ParamType.IISS_GET_PREP_LIST] = {
+    ConstantKeys.START_RANKING: ValueType.INT,
+    ConstantKeys.END_RANKING: ValueType.INT
+}
+
+type_convert_templates[ParamType.IISS_SET_GOVERNANCE_VARIABLES] = {
+    ConstantKeys.IREP: ValueType.INT
 }

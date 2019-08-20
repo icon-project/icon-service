@@ -19,20 +19,13 @@ from typing import TYPE_CHECKING, Optional
 import plyvel
 
 from iconcommons.logger import Logger
-from ..base.exception import DatabaseException, InvalidParamsException
+from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
 
 if TYPE_CHECKING:
     from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
-
-
-def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
-    if context is None:
-        return IconScoreContextType.DIRECT
-    else:
-        return context.type
 
 
 def _is_db_writable_on_context(context: 'IconScoreContext'):
@@ -50,7 +43,7 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
 class KeyValueDatabase(object):
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool=True) -> 'KeyValueDatabase':
+                  create_if_missing: bool = True) -> 'KeyValueDatabase':
         """
 
         :param path: db path
@@ -185,7 +178,7 @@ class ContextDatabase(object):
     Cache + LevelDB
     """
 
-    def __init__(self, db: 'KeyValueDatabase', is_shared: bool=False) -> None:
+    def __init__(self, db: 'KeyValueDatabase', is_shared: bool = False) -> None:
         """Constructor
 
         :param db: KeyValueDatabase instance
@@ -201,7 +194,7 @@ class ContextDatabase(object):
         :param key:
         :return: value
         """
-        context_type = _get_context_type(context)
+        context_type = context.type
 
         if context_type in (IconScoreContextType.DIRECT, IconScoreContextType.QUERY):
             return self.key_value_db.get(key)
@@ -250,7 +243,7 @@ class ContextDatabase(object):
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to write')
 
-        context_type = _get_context_type(context)
+        context_type = context.type
 
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
@@ -266,7 +259,7 @@ class ContextDatabase(object):
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to delete')
 
-        context_type = _get_context_type(context)
+        context_type = context.type
 
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
@@ -296,7 +289,7 @@ class ContextDatabase(object):
 
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool=True) -> 'ContextDatabase':
+                  create_if_missing: bool = True) -> 'ContextDatabase':
         db = KeyValueDatabase.from_path(path, create_if_missing)
         return ContextDatabase(db)
 
@@ -309,7 +302,7 @@ class IconScoreDatabase(ContextGetter):
     def __init__(self,
                  address: 'Address',
                  context_db: 'ContextDatabase',
-                 prefix: bytes=None) -> None:
+                 prefix: bytes = None) -> None:
         """Constructor
 
         :param address: the address of SCORE which this db is assigned to
@@ -341,6 +334,7 @@ class IconScoreDatabase(ContextGetter):
         :param key: key to set
         :param value: value to set
         """
+        self._validate_ownership()
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
@@ -374,6 +368,7 @@ class IconScoreDatabase(ContextGetter):
 
         :param key: key to delete
         """
+        self._validate_ownership()
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
@@ -401,6 +396,13 @@ class IconScoreDatabase(ContextGetter):
         data.append(key)
 
         return b'|'.join(data)
+
+    def _validate_ownership(self):
+        """Prevent a SCORE from accessing the database of another SCORE
+
+        """
+        if self._context.current_address != self.address:
+            raise AccessDeniedException("Invalid database ownership")
 
 
 class IconScoreSubDatabase(object):
@@ -478,3 +480,26 @@ class IconScoreSubDatabase(object):
         data.append(key)
 
         return b'|'.join(data)
+
+
+class ExternalDatabase(KeyValueDatabase):
+    def __init__(self, db: plyvel.DB) -> None:
+        super().__init__(db)
+
+    @staticmethod
+    def from_path(path: str,
+                  create_if_missing: bool = True) -> 'ExternalDatabase':
+        """
+        :param path: db path
+        :param create_if_missing:
+        :return: KeyValueDatabase instance
+        """
+        db = plyvel.DB(path, create_if_missing=create_if_missing)
+        return ExternalDatabase(db)
+
+    def get_sub_db(self, prefix: bytes) -> 'ExternalDatabase':
+        """Return a new prefixed database.
+
+        :param prefix: (bytes): prefix to use
+        """
+        return ExternalDatabase(self._db.prefixed_db(prefix))
