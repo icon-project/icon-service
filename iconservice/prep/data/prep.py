@@ -20,10 +20,10 @@ import iso3166
 
 from .sorted_list import Sortable
 from ... import utils
-from ...base.exception import AccessDeniedException
+from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
 from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
-from ...icon_constant import PRepGrade, PRepStatus
+from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -43,7 +43,7 @@ class PRepDictType(Enum):
 
 class PRep(Sortable):
     PREFIX: bytes = b"prep"
-    _VERSION: int = 0
+    _VERSION: int = 1
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
     class Index(IntEnum):
@@ -69,6 +69,8 @@ class PRep(Sortable):
         TOTAL_BLOCKS = auto()
         VALIDATED_BLOCKS = auto()
 
+        REASON = auto()
+
         SIZE = auto()
 
     def __init__(
@@ -92,7 +94,8 @@ class PRep(Sortable):
             block_height: int = 0,
             tx_index: int = 0,
             total_blocks: int = 0,
-            validated_blocks: int = 0):
+            validated_blocks: int = 0,
+            reason: 'PenaltyReason' = PenaltyReason.NONE):
         """
         Main PRep: top 1 ~ 22 preps in descending order by delegated amount
         Sub PRep: 23 ~ 100 preps
@@ -115,6 +118,9 @@ class PRep(Sortable):
         :param delegated:
         :param block_height:
         :param tx_index:
+        :param total_blocks:
+        :param validated_blocks:
+        :param reason:
         """
         assert irep_block_height == block_height
 
@@ -129,6 +135,7 @@ class PRep(Sortable):
 
         # status
         self._status: 'PRepStatus' = status
+        self._reason: 'PenaltyReason' = reason
         self._grade: 'PRepGrade' = grade
 
         # registration info
@@ -168,6 +175,15 @@ class PRep(Sortable):
     @status.setter
     def status(self, value: 'PRepStatus'):
         self._status = value
+        self._set_dirty(True)
+
+    @property
+    def reason(self) -> 'PenaltyReason':
+        return self._reason
+
+    @reason.setter
+    def reason(self, value: 'PenaltyReason'):
+        self._reason = value
         self._set_dirty(True)
 
     @property
@@ -301,7 +317,8 @@ class PRep(Sortable):
         """
         self._flags |= PRepFlag.FROZEN
 
-    def set(self, *,
+    def set(self,
+            *,
             name: str = None,
             country: str = None,
             city: str = None,
@@ -388,6 +405,7 @@ class PRep(Sortable):
 
             self._total_blocks,
             self._validated_blocks,
+            self._reason.value
         ])
 
     @classmethod
@@ -395,25 +413,50 @@ class PRep(Sortable):
         items: list = MsgPackForDB.loads(data)
         assert len(items) == cls.Index.SIZE
 
-        return PRep(
-            address=items[cls.Index.ADDRESS],
-            status=PRepStatus(items[cls.Index.STATUS]),
-            grade=PRepGrade(items[cls.Index.GRADE]),
-            name=items[cls.Index.NAME],
-            country=items[cls.Index.COUNTRY],
-            city=items[cls.Index.CITY],
-            email=items[cls.Index.EMAIL],
-            website=items[cls.Index.WEBSITE],
-            details=items[cls.Index.DETAILS],
-            p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
-            irep=items[cls.Index.IREP],
-            irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
-            last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
-            block_height=items[cls.Index.BLOCK_HEIGHT],
-            tx_index=items[cls.Index.TX_INDEX],
-            total_blocks=items[cls.Index.TOTAL_BLOCKS],
-            validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
-        )
+        version: int = items[cls.Index.VERSION]
+        if version == 0:
+            return PRep(
+                address=items[cls.Index.ADDRESS],
+                status=PRepStatus(items[cls.Index.STATUS]),
+                grade=PRepGrade(items[cls.Index.GRADE]),
+                name=items[cls.Index.NAME],
+                country=items[cls.Index.COUNTRY],
+                city=items[cls.Index.CITY],
+                email=items[cls.Index.EMAIL],
+                website=items[cls.Index.WEBSITE],
+                details=items[cls.Index.DETAILS],
+                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+                irep=items[cls.Index.IREP],
+                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+                block_height=items[cls.Index.BLOCK_HEIGHT],
+                tx_index=items[cls.Index.TX_INDEX],
+                total_blocks=items[cls.Index.TOTAL_BLOCKS],
+                validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
+            )
+        elif version == 1:
+            return PRep(
+                address=items[cls.Index.ADDRESS],
+                status=PRepStatus(items[cls.Index.STATUS]),
+                grade=PRepGrade(items[cls.Index.GRADE]),
+                name=items[cls.Index.NAME],
+                country=items[cls.Index.COUNTRY],
+                city=items[cls.Index.CITY],
+                email=items[cls.Index.EMAIL],
+                website=items[cls.Index.WEBSITE],
+                details=items[cls.Index.DETAILS],
+                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+                irep=items[cls.Index.IREP],
+                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+                block_height=items[cls.Index.BLOCK_HEIGHT],
+                tx_index=items[cls.Index.TX_INDEX],
+                total_blocks=items[cls.Index.TOTAL_BLOCKS],
+                validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
+                reason=PenaltyReason(items[cls.Index.REASON])
+            )
+        else:
+            raise InvalidParamsException("invalid version")
 
     @staticmethod
     def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':

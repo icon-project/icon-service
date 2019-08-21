@@ -19,7 +19,7 @@ import pytest
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import AccessDeniedException
-from iconservice.icon_constant import IISS_INITIAL_IREP
+from iconservice.icon_constant import IISS_INITIAL_IREP, PenaltyReason
 from iconservice.prep.data import PRep
 
 NAME = "banana"
@@ -38,6 +38,7 @@ TX_INDEX = 0
 TOTAL_BLOCKS = 1000
 VALIDATED_BLOCKS = 900
 IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
+REASON = PenaltyReason.LOW_PRODUCTIVITY
 
 
 @pytest.fixture
@@ -61,6 +62,7 @@ def prep():
         tx_index=TX_INDEX,
         total_blocks=TOTAL_BLOCKS,
         validated_blocks=VALIDATED_BLOCKS,
+        reason=REASON
     )
 
     assert prep.address == address
@@ -78,6 +80,7 @@ def prep():
     assert prep.delegated == DELEGATED
     assert prep.total_blocks == TOTAL_BLOCKS
     assert prep.validated_blocks == VALIDATED_BLOCKS
+    assert prep.reason == REASON
 
     return prep
 
@@ -151,6 +154,7 @@ def test_from_bytes_and_to_bytes(prep):
     assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT
     assert prep.total_blocks == prep2.total_blocks == TOTAL_BLOCKS
     assert prep.validated_blocks == prep2.validated_blocks == VALIDATED_BLOCKS
+    assert prep.reason == prep2.reason == REASON
 
     # Properties which is not serialized in PRep.to_bytes()
     assert prep2.stake == 0

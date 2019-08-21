@@ -22,7 +22,7 @@ from unittest.mock import patch
 from iconservice import ZERO_SCORE_ADDRESS, Address
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, \
     PREP_PENALTY_SIGNATURE, BASE_TRANSACTION_INDEX, PREP_MAIN_AND_SUB_PREPS
-from iconservice.icon_constant import PRepStatus, PRepGrade
+from iconservice.icon_constant import PRepStatus, PRepGrade, PenaltyReason
 from iconservice.iconscore.icon_score_event_log import EventLog
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -143,108 +143,6 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_prep(self._accounts[3])
         self.assertEqual(total_blocks + block_count, response["totalBlocks"])
         self.assertEqual(0, response["validatedBlocks"])
-
-    @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 80)
-    def test_low_productivity_penalty1(self):
-        prep_penalty_event_logs: list = []
-        _MAXIMUM_COUNT_FOR_ISSUE_EVENT_LOG = 5
-        _STEADY_PREPS_COUNT = 13
-        _UNCOOPERATIVE_PREP_COUNT = PREP_MAIN_PREPS - _STEADY_PREPS_COUNT
-
-        offset: int = PREP_MAIN_PREPS
-
-        expected_penalty_event_log_data = [PRepStatus.LOW_PRODUCTIVITY.value, 0]
-        expected_penalty_event_logs = [EventLog(ZERO_SCORE_ADDRESS,
-                                                [PREP_PENALTY_SIGNATURE, prep.address],
-                                                expected_penalty_event_log_data)
-                                       for prep in self._accounts[
-                                                   offset + _STEADY_PREPS_COUNT:
-                                                   offset + PREP_MAIN_PREPS]]
-        initial_main_preps_info = self.get_main_prep_list()['preps']
-        initial_main_preps = list(map(lambda prep_dict: prep_dict['address'], initial_main_preps_info))
-        for prep in self._accounts[:PREP_MAIN_PREPS]:
-            self.assertIn(prep.address, initial_main_preps)
-
-        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
-                            init_balance=3000 * ICX_IN_LOOP)
-
-        # replace new preps
-        tx_list = []
-        for i in range(PREP_MAIN_PREPS, len(self._accounts)):
-            tx = self.create_register_prep_tx(from_=self._accounts[i])
-            tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=self._accounts[i],
-                                          value=1)
-            tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=self._accounts[i],
-                                               origin_delegations=[
-                                                   (
-                                                       self._accounts[i],
-                                                       1
-                                                   )
-                                               ])
-            tx_list.append(tx)
-        self.process_confirm_block_tx(tx_list)
-
-        self.make_blocks_to_end_calculation()
-
-        block_count = 90
-        # make blocks with prev_block_generator and prev_block_validators
-        for i in range(block_count):
-            prev_block, hash_list = self.make_and_req_block(
-                [],
-                prev_block_generator=self._accounts[PREP_MAIN_PREPS].address,
-                prev_block_validators=[account.address
-                                       for account in self._accounts[
-                                                      PREP_MAIN_PREPS + 1:
-                                                      PREP_MAIN_PREPS + _STEADY_PREPS_COUNT]])
-            self._write_precommit_state(prev_block)
-            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-
-            if len(tx_results[BASE_TRANSACTION_INDEX].event_logs) > _MAXIMUM_COUNT_FOR_ISSUE_EVENT_LOG:
-                event_logs = tx_results[BASE_TRANSACTION_INDEX].event_logs
-                for event_log in event_logs:
-                    if event_log.indexed[0] == PREP_PENALTY_SIGNATURE:
-                        prep_penalty_event_logs.append(event_log)
-
-        # uncooperative preps got penalty on 90th block since PENALTY_GRACE_PERIOD is 80
-        for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + _STEADY_PREPS_COUNT):
-            response: dict = self.get_prep(self._accounts[i])
-            self.assertEqual(block_count, response['totalBlocks'])
-            self.assertEqual(block_count, response['validatedBlocks'])
-
-        for i in range(PREP_MAIN_PREPS + _STEADY_PREPS_COUNT, PREP_MAIN_PREPS + PREP_MAIN_PREPS):
-            response: dict = self.get_prep(self._accounts[i])
-            self.assertEqual(block_count, response['totalBlocks'])
-            self.assertEqual(0, response['validatedBlocks'])
-
-        main_preps_info: dict = self.get_main_prep_list()['preps']
-        main_prep_addresses: List['Address'] = \
-            list(map(lambda prep_dict: prep_dict['address'], main_preps_info))
-
-        # prep0~12 are still preps
-        for index, prep in enumerate(self._accounts[
-                                     offset:
-                                     offset + _STEADY_PREPS_COUNT]):
-            self.assertEqual(prep.address, main_prep_addresses[index])
-
-        # prep13~21 got penalty
-        for prep in self._accounts[
-                    offset + _STEADY_PREPS_COUNT:
-                    offset + PREP_MAIN_PREPS]:
-            self.assertNotIn(prep, main_prep_addresses)
-
-        # prep22~30 became new preps(14th prep ~ 22th prep)
-        for index, prep in enumerate(self._accounts[
-                                     offset + PREP_MAIN_PREPS:
-                                     offset + PREP_MAIN_PREPS + _UNCOOPERATIVE_PREP_COUNT]):
-            self.assertEqual(
-                prep.address, main_prep_addresses[index + PREP_MAIN_PREPS - _UNCOOPERATIVE_PREP_COUNT])
-
-        for index, expected_event_log in enumerate(expected_penalty_event_logs):
-            self.assertEqual(expected_event_log.indexed[0], prep_penalty_event_logs[index].indexed[0])
-            self.assertEqual(expected_event_log.indexed[1], prep_penalty_event_logs[index].indexed[1])
-            self.assertEqual(expected_event_log.data, prep_penalty_event_logs[index].data)
 
     def test_set_governance_variables1(self):
 
