@@ -234,9 +234,5 @@ class IconScoreContext(object):
 
         return prep
 
-    def get_prep_by_index(self, index: int) -> 'PRep':
-        ref_prep: 'PRep' = self.preps.get_by_index(index)
-        return self.get_prep(ref_prep.address)
-
     def put_dirty_prep(self, prep: 'PRep'):
         self.tx_dirty_preps[prep.address] = prep
