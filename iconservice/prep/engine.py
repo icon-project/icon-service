@@ -365,8 +365,8 @@ class Engine(EngineBase, IISSEngineListener):
         """
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address)
-        if prep is None:
+        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
@@ -388,7 +388,6 @@ class Engine(EngineBase, IISSEngineListener):
         )
 
         # Update registration info
-        dirty_prep: 'PRep' = prep.copy()
         dirty_prep.set(**kwargs)
         context.put_dirty_prep(dirty_prep)
 
@@ -405,15 +404,15 @@ class Engine(EngineBase, IISSEngineListener):
 
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address)
-        if prep is None:
+        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
 
         # Update incentive rep
         irep: int = kwargs["irep"]
-        validate_irep(context, irep, prep)
+        validate_irep(context, irep, dirty_prep)
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -426,9 +425,8 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Update the changed properties of a P-Rep to stateDB
         # context.storage.prep.put_dirty_prep(context, prep)
-        new_prep: 'PRep' = prep.copy()
-        new_prep.set_irep(irep, context.block.height)
-        context.put_dirty_prep(new_prep)
+        dirty_prep.set_irep(irep, context.block.height)
+        context.put_dirty_prep(dirty_prep)
 
     def handle_unregister_prep(self, context: 'IconScoreContext', _params: dict):
         """Unregister a P-Rep
@@ -453,15 +451,14 @@ class Engine(EngineBase, IISSEngineListener):
     def unregister_prep(
             self, context: 'IconScoreContext',
             address: 'Address', status: 'PRepStatus' = PRepStatus.UNREGISTERED):
-        prep: 'PRep' = context.preps.get_by_address(address)
+        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
 
-        if prep is None:
+        if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        if prep.status != PRepStatus.ACTIVE:
+        if dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        dirty_prep: 'PRep' = prep.copy()
         dirty_prep.status = status
         context.put_dirty_prep(dirty_prep)
 
@@ -570,9 +567,8 @@ class Engine(EngineBase, IISSEngineListener):
         :param account:
         :return:
         """
-        prep: 'PRep' = context.preps.get_by_address(account.address)
-        if prep:
-            dirty_prep: 'PRep' = prep.copy()
+        dirty_prep: 'PRep' = context.get_prep(account.address, mutable=True)
+        if dirty_prep:
             dirty_prep.stake = account.stake
             context.put_dirty_prep(dirty_prep)
 
@@ -591,8 +587,7 @@ class Engine(EngineBase, IISSEngineListener):
             address = account.address
 
             # If a delegated account is a P-Rep, then update its delegated amount
-            prep: 'PRep' = context.preps.get_by_address(address)
-            if prep:
-                dirty_prep: 'PRep' = prep.copy()
+            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+            if dirty_prep:
                 dirty_prep.delegated = account.delegated_amount
                 context.put_dirty_prep(dirty_prep)

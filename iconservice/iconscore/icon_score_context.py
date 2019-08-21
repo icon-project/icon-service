@@ -202,7 +202,7 @@ class IconScoreContext(object):
         self.meta_tx_batch.clear()
 
     def update_dirty_prep_batch(self):
-        """Update context.preps and block_dirty_preps when a tx is done
+        """Update context.preps and when a tx is done
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
@@ -224,7 +224,7 @@ class IconScoreContext(object):
         if self.tx_dirty_preps:
             self.tx_dirty_preps.clear()
 
-    def get_prep(self, address: 'Address', mutable: bool = False):
+    def get_prep(self, address: 'Address', mutable: bool = False) -> 'PRep':
         prep: 'PRep' = self.tx_dirty_preps.get(address)
         if prep is None:
             prep = self.preps.get_by_address(address)
@@ -233,6 +233,10 @@ class IconScoreContext(object):
             prep = prep.copy()
 
         return prep
+
+    def get_prep_by_index(self, index: int) -> 'PRep':
+        ref_prep: 'PRep' = self.preps.get_by_index(index)
+        return self.get_prep(ref_prep.address)
 
     def put_dirty_prep(self, prep: 'PRep'):
         self.tx_dirty_preps[prep.address] = prep
