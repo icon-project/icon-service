@@ -42,5 +42,6 @@ default_icon_config = {
     ConfigKey.PREP_REGISTRATION_FEE: 2_000 * ICX_IN_LOOP,
     ConfigKey.PREP_MAIN_PREPS: 22,
     ConfigKey.PREP_MAIN_AND_SUB_PREPS: 100,
-    ConfigKey.DECENTRALIZE_TRIGGER: 0.002
+    ConfigKey.DECENTRALIZE_TRIGGER: 0.002,
+    ConfigKey.VERBOSE: False
 }

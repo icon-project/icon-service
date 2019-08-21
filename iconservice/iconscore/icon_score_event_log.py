@@ -114,7 +114,7 @@ class EventLogEmitter(object):
 
         # Counting steps only if fee_charge is True
         if fee_charge:
-            context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
+            context.step_counter.apply_step(StepType.EVENT_LOG, event_size, context.step_trace)
 
         event = EventLog(score_address, indexed, data)
         context.event_logs.append(event)
