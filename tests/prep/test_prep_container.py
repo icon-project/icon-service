@@ -236,7 +236,7 @@ def test_add(create_prep_container):
     prep: 'PRep' = preps.get_by_index(index)
     assert prep is not None
 
-    for status in (PRepStatus.UNREGISTERED, PRepStatus.DISQUALIFIED, PRepStatus.LOW_PRODUCTIVITY):
+    for status in (PRepStatus.UNREGISTERED, PRepStatus.DISQUALIFIED):
         preps.remove(prep.address)
         assert preps.size(active_prep_only=True) == size
         assert preps.size(active_prep_only=False) == size
