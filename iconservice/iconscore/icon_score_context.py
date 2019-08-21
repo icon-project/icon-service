@@ -202,7 +202,7 @@ class IconScoreContext(object):
         self.meta_tx_batch.clear()
 
     def update_dirty_prep_batch(self):
-        """Update context.preps and when a tx is done
+        """Update context.preps when a tx is done
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """

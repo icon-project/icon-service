@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice import Address
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
     PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase

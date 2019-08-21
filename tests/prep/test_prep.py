@@ -37,6 +37,7 @@ BLOCK_HEIGHT = 777
 TX_INDEX = 0
 TOTAL_BLOCKS = 1000
 VALIDATED_BLOCKS = 900
+VALIDATION_PENALTY = 100
 IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
 REASON = PenaltyReason.LOW_PRODUCTIVITY
 
@@ -62,7 +63,8 @@ def prep():
         tx_index=TX_INDEX,
         total_blocks=TOTAL_BLOCKS,
         validated_blocks=VALIDATED_BLOCKS,
-        reason=REASON
+        reason=REASON,
+        validation_penalty=VALIDATION_PENALTY
     )
 
     assert prep.address == address
@@ -80,7 +82,8 @@ def prep():
     assert prep.delegated == DELEGATED
     assert prep.total_blocks == TOTAL_BLOCKS
     assert prep.validated_blocks == VALIDATED_BLOCKS
-    assert prep.reason == REASON
+    assert prep.penalty == REASON
+    assert prep.validation_penalty == VALIDATION_PENALTY
 
     return prep
 
@@ -103,7 +106,7 @@ def test_freeze(prep):
         prep.set_irep(10_000, 777)
 
     with pytest.raises(AccessDeniedException):
-        prep.update_productivity(True)
+        prep.update_main_prep_validate(True)
 
 
 def test_set_ok(prep):
@@ -154,7 +157,8 @@ def test_from_bytes_and_to_bytes(prep):
     assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT
     assert prep.total_blocks == prep2.total_blocks == TOTAL_BLOCKS
     assert prep.validated_blocks == prep2.validated_blocks == VALIDATED_BLOCKS
-    assert prep.reason == prep2.reason == REASON
+    assert prep.penalty == prep2.penalty == REASON
+    assert prep.validation_penalty == prep2.validation_penalty == VALIDATION_PENALTY
 
     # Properties which is not serialized in PRep.to_bytes()
     assert prep2.stake == 0

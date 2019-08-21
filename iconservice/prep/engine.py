@@ -24,8 +24,9 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
-from ..icon_constant import PRepGrade, PrepResultState, PRepStatus
+from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
+    PenaltyReason
+from ..icon_constant import PRepGrade, PRepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -136,18 +137,41 @@ class Engine(EngineBase, IISSEngineListener):
 
         Update P-Rep grades according to PRep.delegated
         """
+
+        context.storage.meta.put_last_term_info(context,
+                                                self.term.start_block_height,
+                                                self.term.end_block_height)
+        self._put_last_main_preps(context, self.term.main_preps)
+
         self._update_prep_grades(main_prep_count=context.main_prep_count,
                                  main_and_sub_prep_count=context.main_and_sub_prep_count,
                                  old_preps=self.term.preps,
                                  new_preps=context.preps)
-        main_preps_as_dict: dict = self.get_next_main_preps(context)
-        next_term: 'Term' = self._create_next_term(context)
-        next_term.save(context)
 
-        return main_preps_as_dict, next_term
+        self._release_turn_over(context)
 
-    @staticmethod
-    def _update_prep_grades(main_prep_count: int, main_and_sub_prep_count: int,
+        term: 'Term' = self._create_next_term(context)
+        main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.NORMAL)
+        term.save(context)
+        return main_preps_as_dict, term
+
+    def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
+        self._put_last_main_preps(context, self.term.main_preps)
+
+        term: Optional['Term'] = self._create_updated_term(context)
+        if term:
+            main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.IN_TERM_UPDATED)
+            term.save(context)
+        else:
+            main_preps_as_dict: dict = {}
+        return main_preps_as_dict, term
+
+    @classmethod
+    def _put_last_main_preps(cls, context: 'IconScoreContext', main_preps: List['PRep']):
+        context.storage.meta.put_last_main_preps(context, main_preps)
+
+    @classmethod
+    def _update_prep_grades(cls, main_prep_count: int, main_and_sub_prep_count: int,
                             old_preps: List['PRep'], new_preps: 'PRepContainer'):
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
@@ -182,6 +206,15 @@ class Engine(EngineBase, IISSEngineListener):
             dirty_prep = prep.copy()
             dirty_prep.grade = grades[1]
             new_preps.add(dirty_prep)
+
+    def _release_turn_over(self, context: 'IconScoreContext'):
+        for address in self.term.turn_overs:
+            prep: 'PRep' = context.preps.remove(address)
+            assert prep is not None
+
+            dirty_prep = prep.copy()
+            dirty_prep.reset_validation_penalty()
+            context.preps.add(dirty_prep)
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
@@ -244,8 +277,8 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
-    @staticmethod
-    def _put_reg_prep_in_rc_db(context: 'IconScoreContext', address: 'Address'):
+    @classmethod
+    def _put_reg_prep_in_rc_db(cls, context: 'IconScoreContext', address: 'Address'):
         """Put a newly registered P-Rep in RewardCalcDatabase
 
         :param context:
@@ -268,23 +301,24 @@ class Engine(EngineBase, IISSEngineListener):
         """
         return self.term.end_block_height == context.block.height
 
-    def get_next_main_preps(self, context: 'IconScoreContext') -> Optional[dict]:
+    @classmethod
+    def get_updated_main_preps(cls, term: 'Term', state: 'PRepResultState') -> Optional[dict]:
         """Returns preps which will run as main preps during the next term in dict format
 
         :return:
         """
         prep_as_dict: Optional[dict] = \
-            self.get_main_preps_in_dict(context.main_prep_count, context.preps.get_preps(0, context.main_prep_count))
+            cls.get_main_preps_in_dict(term.main_preps)
 
         if prep_as_dict:
-            prep_as_dict['irep'] = self.term.irep
-            prep_as_dict['state'] = PrepResultState.NORMAL.value
+            prep_as_dict['irep'] = term.irep
+            prep_as_dict['state'] = state.value
 
         return prep_as_dict
 
-    @staticmethod
-    def get_main_preps_in_dict(main_prep_count: int, preps: List['PRep']) -> Optional[dict]:
-        count: int = min(len(preps), main_prep_count)
+    @classmethod
+    def get_main_preps_in_dict(cls, preps: List['PRep']) -> Optional[dict]:
+        count: int = len(preps)
         if count == 0:
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
             return None
@@ -307,32 +341,45 @@ class Engine(EngineBase, IISSEngineListener):
         return prep_as_dict
 
     def _create_next_term(self, context: 'IconScoreContext') -> 'Term':
-        # The current P-Rep term is over. Prepare the next P-Rep term
-        irep: int = self._calculate_weighted_average_of_irep(context)
+        new_preps: List['PRep'] = context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count)
 
-        next_term = Term()
-        next_term.update(
+        # The current P-Rep term is over. Prepare the next P-Rep term
+        irep: int = self._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+
+        term: 'Term' = Term.create_next_term(
             self.term.sequence + 1,
             context.main_prep_count,
             context.main_and_sub_prep_count,
             context.block.height,
-            context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count),
+            new_preps,
             context.total_supply,
+            context.preps.total_delegated,
             self.term.period,
             irep
         )
 
-        return next_term
+        return term
 
-    @staticmethod
-    def _calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
-        preps: 'PRepContainer' = context.preps
+    def _create_updated_term(self, context: 'IconScoreContext') -> Optional['Term']:
+        # gather PReps who has gotten a penalty on this block
+        invalid_preps: List[int] = []
+        for i, main_prep in enumerate(self.term.main_preps):
+            prep: 'PRep' = context.get_prep(main_prep.address)
+            if prep.status != PRepStatus.ACTIVE:
+                invalid_preps.append(i)
 
+        if invalid_preps:
+            term: 'Term' = Term.create_update_term(context.engine.prep.term, invalid_preps)
+        else:
+            term = None
+        return term
+
+    @classmethod
+    def _calculate_weighted_average_of_irep(cls, new_main_preps: List['PRep']) -> int:
         total_delegated = 0  # total delegated of top 22 preps
         total_weighted_irep = 0
 
-        for i in range(context.main_prep_count):
-            prep: 'PRep' = preps.get_by_index(i)
+        for prep in new_main_preps:
             total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated
 
@@ -355,8 +402,8 @@ class Engine(EngineBase, IISSEngineListener):
         response: dict = prep.to_dict(PRepDictType.FULL)
         return response
 
-    @staticmethod
-    def handle_set_prep(context: 'IconScoreContext', params: dict):
+    @classmethod
+    def handle_set_prep(cls, context: 'IconScoreContext', params: dict):
         """Update a P-Rep registration information
 
         :param context:
@@ -391,7 +438,9 @@ class Engine(EngineBase, IISSEngineListener):
         dirty_prep.set(**kwargs)
         context.put_dirty_prep(dirty_prep)
 
-    def handle_set_governance_variables(self, context: 'IconScoreContext', params: dict):
+    def handle_set_governance_variables(self,
+                                        context: 'IconScoreContext',
+                                        params: dict):
         """Handles setGovernanceVariables JSON-RPC API request
 
         :param context:
@@ -437,7 +486,8 @@ class Engine(EngineBase, IISSEngineListener):
         """
         address: 'Address' = context.tx.origin
 
-        self.unregister_prep(context, address)
+        if not self._unregister_prep(context, address, PRepStatus.UNREGISTERED):
+            return
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -448,25 +498,122 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
-    def unregister_prep(
-            self, context: 'IconScoreContext',
-            address: 'Address', status: 'PRepStatus' = PRepStatus.UNREGISTERED):
+    @classmethod
+    def impose_block_validation_penalty(
+            cls,
+            context: 'IconScoreContext',
+            address: 'Address'):
+
         dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
 
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
         if dirty_prep.status != PRepStatus.ACTIVE:
+            return
+
+        dirty_prep.status: 'PRepStatus' = PRepStatus.SUSPENDED
+        dirty_prep.penalty: 'PenaltyReason' = PenaltyReason.BLOCK_VALIDATION
+        context.put_dirty_prep(dirty_prep)
+
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature=PREP_PENALTY_SIGNATURE,
+            arguments=[
+                dirty_prep.address,
+                PRepStatus.SUSPENDED.value,
+                PenaltyReason.BLOCK_VALIDATION.value],
+            indexed_args_count=1)
+
+    @classmethod
+    def impose_low_productivity_penalty(
+            cls,
+            context: 'IconScoreContext',
+            address: 'Address'):
+
+        if not cls._unregister_prep(context,
+                                    address=address,
+                                    status=PRepStatus.DISQUALIFIED,
+                                    reason=PenaltyReason.LOW_PRODUCTIVITY):
+            return
+
+        # TODO slashing
+
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature=PREP_PENALTY_SIGNATURE,
+            arguments=[
+                address,
+                PRepStatus.DISQUALIFIED.value,
+                PenaltyReason.LOW_PRODUCTIVITY.value
+            ],
+            indexed_args_count=1)
+
+    @classmethod
+    def impose_prep_disqualified_penalty(
+            cls,
+            context: 'IconScoreContext',
+            address: 'Address'):
+
+        if not cls._unregister_prep(context,
+                                    address=address,
+                                    status=PRepStatus.DISQUALIFIED,
+                                    reason=PenaltyReason.PREP_DISQUALIFICATION):
+            EventLogEmitter.emit_event_log(
+                context,
+                score_address=ZERO_SCORE_ADDRESS,
+                event_signature="AlreadyImposed(Address)",
+                arguments=[
+                    address
+                ],
+                indexed_args_count=0)
+            return
+
+        # TODO slashing
+
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature=PREP_PENALTY_SIGNATURE,
+            arguments=[
+                address,
+                PRepStatus.DISQUALIFIED.value,
+                PenaltyReason.PREP_DISQUALIFICATION,
+            ],
+            indexed_args_count=1)
+
+    @classmethod
+    def _unregister_prep(
+            cls,
+            context: 'IconScoreContext',
+            address: 'Address',
+            status: 'PRepStatus',
+            reason: 'PenaltyReason' = PenaltyReason.NONE):
+        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        if dirty_prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {address}")
+
+        if dirty_prep.status == status:
+            return False
+
+        if status == PRepStatus.UNREGISTERED and dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        dirty_prep.status = status
+        old_status: 'PRepStatus' = dirty_prep.status
+        dirty_prep.status: 'PRepStatus' = status
+        dirty_prep.penalty: 'PenaltyReason' = reason
         context.put_dirty_prep(dirty_prep)
 
         # Update rcDB
-        self._put_unreg_prep_for_iiss_db(context, address)
+        if old_status in (PRepStatus.ACTIVE, PRepStatus.SUSPENDED):
+            cls._put_unreg_prep_for_iiss_db(context, address)
 
-    @staticmethod
-    def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):
+        return True
+
+    @classmethod
+    def _put_unreg_prep_for_iiss_db(cls, context: 'IconScoreContext', address: 'Address'):
         rc_tx_batch: list = context.rc_tx_batch
         block_height: int = context.block.height
 
