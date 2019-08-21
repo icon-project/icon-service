@@ -139,6 +139,7 @@ class ConfigKey:
     # log
     LOG = 'log'
     LOG_FILE_PATH = 'filePath'
+    VERBOSE = 'verbose'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"

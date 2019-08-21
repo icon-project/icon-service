@@ -331,7 +331,7 @@ class IconScoreStepCounter(object):
         """
         return self._max_step_used
 
-    def apply_step(self, step_type: StepType, count: int) -> int:
+    def apply_step(self, step_type: StepType, count: int, step_trace: list) -> int:
         """ Increases steps for given step cost
         """
 
@@ -341,6 +341,8 @@ class IconScoreStepCounter(object):
                 raise InvalidRequestException('Too many external calls')
 
         step: int = self._step_costs.get(step_type, 0) * count
+        if step_trace is not None:
+            step_trace.append({"stepType": step_type.value, "step": step, "cumulativeStep": self.step_used})
 
         return self.consume_step(step_type, step)
 
