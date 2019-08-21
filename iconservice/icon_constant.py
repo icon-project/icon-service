@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique, IntEnum, Enum, Flag, auto
+from enum import IntFlag, unique, IntEnum, Enum, auto
 
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
@@ -268,18 +268,13 @@ class PRepStatus(Enum):
     SUSPENDED = 3
 
 
-class PenaltyReason(Flag):
+class PenaltyReason(Enum):
     NONE = 0
     # disqualified
     PREP_DISQUALIFICATION = auto()
     LOW_PRODUCTIVITY = auto()
-
-    END1 = 2 ** (8-1)
-
     # suspended
     BLOCK_VALIDATION = auto()
-
-    END2 = 2 ** (16-1)
 
 
 class PRepGrade(Enum):
