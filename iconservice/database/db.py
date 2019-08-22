@@ -289,7 +289,7 @@ class ContextDatabase(object):
                 key: bytes,
                 include_root_hash: bool = True):
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('No permission to write')
+            raise DatabaseException('No permission to delete')
 
         context_type = context.type
 
