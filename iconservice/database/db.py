@@ -241,7 +241,7 @@ class ContextDatabase(object):
                               key: bytes,
                               include_root_hash: bool):
         if not isinstance(context.tx_batch[key], tuple):
-            raise DatabaseException(f'only tuple type is allowed on tx_batch: {context.tx_batch[key]}')
+            raise DatabaseException(f'Only tuple type is allowed on tx_batch: {context.tx_batch[key]}')
         elif context.tx_batch[key][1] != include_root_hash:
             raise DatabaseException('Do not change the include_root_hash on the same data')
 
