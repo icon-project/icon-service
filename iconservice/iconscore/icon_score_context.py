@@ -214,7 +214,7 @@ class IconScoreContext(object):
         if self.tx_dirty_preps:
             self.tx_dirty_preps.clear()
 
-    def get_prep(self, address: 'Address', mutable: bool = False) -> 'PRep':
+    def get_prep(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
         prep: 'PRep' = self.tx_dirty_preps.get(address)
         if prep is None:
             prep = self.preps.get_by_address(address)

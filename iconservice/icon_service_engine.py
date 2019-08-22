@@ -536,7 +536,7 @@ class IconServiceEngine(ContextContainer):
 
         for address in main_preps:
             is_validate: bool = address in validates
-            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+            dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             if dirty_prep:
                 dirty_prep.update_main_prep_validate(is_validate)
                 context.put_dirty_prep(dirty_prep)

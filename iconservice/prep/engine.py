@@ -430,7 +430,7 @@ class Engine(EngineBase, IISSEngineListener):
         """
         address: 'Address' = context.tx.origin
 
-        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
@@ -471,7 +471,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         address: 'Address' = context.tx.origin
 
-        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
@@ -522,7 +522,7 @@ class Engine(EngineBase, IISSEngineListener):
             context: 'IconScoreContext',
             address: 'Address'):
 
-        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
 
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
@@ -602,7 +602,7 @@ class Engine(EngineBase, IISSEngineListener):
             status: 'PRepStatus',
             reason: 'PenaltyReason' = PenaltyReason.NONE):
 
-        dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+        dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
@@ -743,7 +743,7 @@ class Engine(EngineBase, IISSEngineListener):
             address = account.address
 
             # If a delegated account is a P-Rep, then update its delegated amount
-            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+            dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             if dirty_prep:
                 dirty_prep.delegated = account.delegated_amount
                 context.put_dirty_prep(dirty_prep)
