@@ -28,7 +28,6 @@ from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFou
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
-from .database.batch import ExternalBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
@@ -36,8 +35,8 @@ from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
-    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PRepStatus, PREP_PENALTY_SIGNATURE,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, ISCORE_EXCHANGE_RATE, PenaltyReason)
+    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    ISCORE_EXCHANGE_RATE)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -60,7 +59,7 @@ from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
-from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage, is_flag_on
+from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 
@@ -413,9 +412,6 @@ class IconServiceEngine(ContextContainer):
         context.preps = context.engine.prep.preps.copy(mutable=True)
         context.tx_dirty_preps = OrderedDict()
 
-        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
-        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
-
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -475,7 +471,6 @@ class IconServiceEngine(ContextContainer):
             context.block_batch,
             block_result,
             context.rc_block_batch,
-            context.meta_block_batch,
             context.preps,
             term,
             prev_block_generator,
@@ -896,8 +891,6 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
-        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
         context.preps = context.engine.prep.preps.copy(mutable=True)
         context.tx_dirty_preps = OrderedDict()
 

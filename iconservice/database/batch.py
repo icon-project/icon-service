@@ -17,8 +17,8 @@
 
 import hashlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional
 from collections.abc import MutableMapping
+from typing import TYPE_CHECKING, Optional
 
 from ..base.exception import DatabaseException
 
@@ -159,7 +159,3 @@ class BlockBatch(Batch):
     def clear(self) -> None:
         self.block = None
         super().clear()
-
-
-class ExternalBatch(OrderedDict):
-    pass
