@@ -141,7 +141,7 @@ class Engine(EngineBase, IISSEngineListener):
         context.storage.meta.put_last_term_info(context,
                                                 self.term.start_block_height,
                                                 self.term.end_block_height)
-        self._put_last_main_preps(context, self.term.main_preps)
+        context.storage.meta.put_last_main_preps(context, self.term.main_preps)
 
         self._update_prep_grades(main_prep_count=context.main_prep_count,
                                  main_and_sub_prep_count=context.main_and_sub_prep_count,
@@ -159,7 +159,7 @@ class Engine(EngineBase, IISSEngineListener):
         return main_preps_as_dict, term
 
     def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
-        self._put_last_main_preps(context, self.term.main_preps)
+        context.storage.meta.put_last_main_preps(context, self.term.main_preps)
 
         invalid_preps: List[int] = self.get_invalid_preps(self.term, context)
         self.term.update_suspended_preps(invalid_preps)
@@ -171,10 +171,6 @@ class Engine(EngineBase, IISSEngineListener):
         else:
             main_preps_as_dict: dict = {}
         return main_preps_as_dict, term
-
-    @classmethod
-    def _put_last_main_preps(cls, context: 'IconScoreContext', main_preps: List['PRep']):
-        context.storage.meta.put_last_main_preps(context, main_preps)
 
     @classmethod
     def _update_prep_grades(cls, main_prep_count: int, main_and_sub_prep_count: int,
