@@ -579,14 +579,6 @@ class Engine(EngineBase, IISSEngineListener):
                                     address=address,
                                     status=PRepStatus.DISQUALIFIED,
                                     reason=PenaltyReason.PREP_DISQUALIFICATION):
-            EventLogEmitter.emit_event_log(
-                context,
-                score_address=ZERO_SCORE_ADDRESS,
-                event_signature="AlreadyImposed(Address)",
-                arguments=[
-                    address
-                ],
-                indexed_args_count=0)
             return
 
         # TODO slashing
@@ -609,6 +601,7 @@ class Engine(EngineBase, IISSEngineListener):
             address: 'Address',
             status: 'PRepStatus',
             reason: 'PenaltyReason' = PenaltyReason.NONE):
+
         dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
@@ -619,14 +612,12 @@ class Engine(EngineBase, IISSEngineListener):
         if status == PRepStatus.UNREGISTERED and dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        old_status: 'PRepStatus' = dirty_prep.status
         dirty_prep.status: 'PRepStatus' = status
         dirty_prep.penalty: 'PenaltyReason' = reason
         context.put_dirty_prep(dirty_prep)
 
         # Update rcDB
-        if old_status in (PRepStatus.ACTIVE, PRepStatus.SUSPENDED):
-            cls._put_unreg_prep_for_iiss_db(context, address)
+        cls._put_unreg_prep_for_iiss_db(context, address)
 
         return True
 
