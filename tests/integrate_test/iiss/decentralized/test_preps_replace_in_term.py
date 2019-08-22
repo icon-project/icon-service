@@ -604,3 +604,53 @@ class TestPreps(TestIISSBase):
             response: dict = self.get_prep(accounts[i])
             self.assertEqual(block_count3, response["totalBlocks"])
             self.assertEqual(0, response["validatedBlocks"])
+
+        block_count4 = 4
+        self.make_blocks(to=self._block_height + block_count4,
+                         prev_block_generator=accounts[0].address,
+                         prev_block_validators=[
+                             account.address
+                             for account in accounts[1:PREP_MAIN_PREPS]
+                         ])
+
+        response: dict = self.get_main_prep_list()
+        expected_preps: list = []
+        expected_total_delegated: int = 0
+
+        for account in accounts[:PREP_MAIN_PREPS]:
+            expected_preps.append({
+                'address': account.address,
+                'delegated': 1
+            })
+            expected_total_delegated += 1
+
+        expected_response: dict = {
+            "preps": expected_preps,
+            "totalDelegated": expected_total_delegated
+        }
+        self.assertEqual(expected_response, response)
+
+        block_count4 = 5
+        self.make_blocks(to=self._block_height + block_count4,
+                         prev_block_generator=accounts[0].address,
+                         prev_block_validators=[
+                             account.address
+                             for account in accounts[1:half_prep_count]
+                         ])
+
+        response: dict = self.get_main_prep_list()
+        expected_preps: list = []
+        expected_total_delegated: int = 0
+
+        for account in accounts[:PREP_MAIN_PREPS]:
+            expected_preps.append({
+                'address': account.address,
+                'delegated': 1
+            })
+            expected_total_delegated += 1
+
+        expected_response: dict = {
+            "preps": expected_preps,
+            "totalDelegated": expected_total_delegated
+        }
+        self.assertEqual(expected_response, response)
