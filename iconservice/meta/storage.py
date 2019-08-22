@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, Tuple, List
 
+from iconservice.database.db import MetaContextDatabase, ContextDatabase
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 from ..prep.data import PRep
@@ -30,13 +31,16 @@ class Storage(StorageBase):
     _KEY_LAST_TERM_INFO = b'last_term_info'
     _KEY_LAST_MAIN_PREPS = b'last_main_preps'
 
+    def __init__(self, db: 'ContextDatabase'):
+        super().__init__(MetaContextDatabase(db.key_value_db))
+
     def put_last_calc_info(self,
                            context: 'IconScoreContext',
                            start: int,
                            end: int):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, start, end])
-        self._db.put(context, self._KEY_LAST_CALC_INFO, value, include_root_hash=False)
+        self._db.put(context, self._KEY_LAST_CALC_INFO, value)
 
     def get_last_calc_info(self, context: 'IconScoreContext') -> Tuple[int, int]:
         value: bytes = self._db.get(context, self._KEY_LAST_CALC_INFO)
@@ -52,7 +56,7 @@ class Storage(StorageBase):
                            end: int):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, start, end])
-        self._db.put(context, self._KEY_LAST_TERM_INFO, value, include_root_hash=False)
+        self._db.put(context, self._KEY_LAST_TERM_INFO, value)
 
     def get_last_term_info(self, context: 'IconScoreContext') -> Tuple[int, int]:
         value: bytes = self._db.get(context, self._KEY_LAST_TERM_INFO)
@@ -68,7 +72,7 @@ class Storage(StorageBase):
         version = 0
         preps: List['Address'] = [prep.address for prep in main_preps]
         value: bytes = MsgPackForDB.dumps([version, preps])
-        self._db.put(context, self._KEY_LAST_MAIN_PREPS, value, include_root_hash=False)
+        self._db.put(context, self._KEY_LAST_MAIN_PREPS, value)
 
     def get_last_main_preps(self, context: 'IconScoreContext') -> List['Address']:
         value: bytes = self._db.get(context, self._KEY_LAST_MAIN_PREPS)
