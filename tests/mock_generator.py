@@ -98,6 +98,7 @@ def _create_inner_task(
         return rc_db.get(key)
 
     context_db = Mock(spec=ContextDatabase)
+    context_db.key_value_db = state_db
     context_db.get = state_get
     context_db.put = state_put
 
@@ -177,6 +178,7 @@ def _create_service_engine(
         return rc_db.get(key)
 
     context_db = Mock(spec=ContextDatabase)
+    context_db.key_value_db = state_db
     context_db.get = state_get
     context_db.put = state_put
 

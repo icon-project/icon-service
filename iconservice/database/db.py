@@ -13,12 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from typing import TYPE_CHECKING, Optional
 
 import plyvel
-
 from iconcommons.logger import Logger
+
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
@@ -240,15 +239,20 @@ class ContextDatabase(object):
     def put(self,
             context: Optional['IconScoreContext'],
             key: bytes,
-            value: Optional[bytes],
-            include_root_hash: bool = True) -> None:
+            value: Optional[bytes]) -> None:
         """Set the value to StateDB or cache it according to context type
 
         :param context:
         :param key:
         :param value:
-        :param include_root_hash:
         """
+        self._put(context, key, value, include_root_hash=True)
+
+    def _put(self,
+             context: Optional['IconScoreContext'],
+             key: bytes,
+             value: Optional[bytes],
+             include_root_hash: bool) -> None:
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to write')
 
@@ -257,26 +261,34 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
         else:
+            if context.tx_batch[key] and context.tx_batch[key][1] != include_root_hash:
+                raise DatabaseException('Do not change the include_root_hash on the same data')
             context.tx_batch[key] = (value, include_root_hash)
 
     def delete(self,
                context: Optional['IconScoreContext'],
-               key: bytes,
-               include_root_hash: bool = True):
+               key: bytes):
         """Delete key from db
 
         :param context:
         :param key: key to delete from db
-        :param include_root_hash:
         """
+        self._delete(context, key, include_root_hash=True)
+
+    def _delete(self,
+                context: Optional['IconScoreContext'],
+                key: bytes,
+                include_root_hash: bool = True):
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('No permission to delete')
+            raise DatabaseException('No permission to write')
 
         context_type = context.type
 
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
         else:
+            if context.tx_batch[key] and context.tx_batch[key][1] != include_root_hash:
+                raise DatabaseException('Do not change the include_root_hash on the same data')
             context.tx_batch[key] = (None, include_root_hash)
 
     def close(self, context: 'IconScoreContext') -> None:
@@ -307,11 +319,42 @@ class ContextDatabase(object):
         return ContextDatabase(db)
 
 
+class MetaContextDatabase(ContextDatabase):
+    def put(self,
+            context: Optional['IconScoreContext'],
+            key: bytes,
+            value: Optional[bytes]) -> None:
+        """Set the value to StateDB or cache it according to context type
+
+        :param context:
+        :param key:
+        :param value:
+        """
+        self._put(context, key, value, include_root_hash=False)
+
+    def delete(self,
+               context: Optional['IconScoreContext'],
+               key: bytes) -> None:
+        """Set the value to StateDB or cache it according to context type
+
+        :param context:
+        :param key:
+        """
+        self._delete(context, key, include_root_hash=False)
+
+    @staticmethod
+    def from_path(path: str,
+                  create_if_missing: bool = True) -> 'MetaContextDatabase':
+        db = KeyValueDatabase.from_path(path, create_if_missing)
+        return MetaContextDatabase(db)
+
+
 class IconScoreDatabase(ContextGetter):
     """It is used in IconScore
 
     IconScore can access its states only through IconScoreDatabase
     """
+
     def __init__(self,
                  address: 'Address',
                  context_db: 'ContextDatabase',
