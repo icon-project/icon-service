@@ -236,6 +236,15 @@ class ContextDatabase(object):
         # get value from state_db
         return self.key_value_db.get(key)
 
+    @staticmethod
+    def _check_tx_batch_value(context: Optional['IconScoreContext'],
+                              key: bytes,
+                              include_root_hash: bool):
+        if not isinstance(context.tx_batch[key], tuple):
+            raise DatabaseException(f'only tuple type is allowed on tx_batch: {context.tx_batch[key]}')
+        elif context.tx_batch[key][1] != include_root_hash:
+            raise DatabaseException('Do not change the include_root_hash on the same data')
+
     def put(self,
             context: Optional['IconScoreContext'],
             key: bytes,
@@ -261,8 +270,8 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
         else:
-            if context.tx_batch[key] and context.tx_batch[key][1] != include_root_hash:
-                raise DatabaseException('Do not change the include_root_hash on the same data')
+            if context.tx_batch[key]:
+                self._check_tx_batch_value(context, key, include_root_hash)
             context.tx_batch[key] = (value, include_root_hash)
 
     def delete(self,
@@ -287,8 +296,8 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
         else:
-            if context.tx_batch[key] and context.tx_batch[key][1] != include_root_hash:
-                raise DatabaseException('Do not change the include_root_hash on the same data')
+            if context.tx_batch[key]:
+                self._check_tx_batch_value(context, key, include_root_hash)
             context.tx_batch[key] = (None, include_root_hash)
 
     def close(self, context: 'IconScoreContext') -> None:
