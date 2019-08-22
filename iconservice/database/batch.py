@@ -20,7 +20,7 @@ from collections import OrderedDict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import DatabaseException
+from ..base.exception import DatabaseException, IllegalFormatException
 
 if TYPE_CHECKING:
     from ..base.block import Block
@@ -31,11 +31,10 @@ def digest(ordered_dict: OrderedDict):
     data = []
 
     for key, value in ordered_dict.items():
-        if isinstance(value, tuple):
-            if value[1] is True:
-                value = value[0]
-            else:
-                continue
+        if value[1] is True:
+            value = value[0]
+        else:
+            continue
 
         data.append(key)
         if value is not None:
@@ -155,6 +154,11 @@ class BlockBatch(Batch):
         """
         super().__init__()
         self.block = block
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, tuple):
+            raise IllegalFormatException("Can not set data on block batch directly.")
+        super().__setitem__(key, value)
 
     def clear(self) -> None:
         self.block = None

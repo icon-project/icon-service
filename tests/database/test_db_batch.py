@@ -18,6 +18,7 @@
 import unittest
 
 from iconservice.base.block import Block
+from iconservice.base.exception import IllegalFormatException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.utils import sha3_256
 from tests import create_hash_256
@@ -44,17 +45,23 @@ class TestBatch(unittest.TestCase):
         self.assertEqual(
             self.prev_block_hash, self.block_batch.block.prev_hash)
 
+    def test_data_format(self):
+        # Cannot set data to block batch directly
+        key = create_hash_256()
+        with self.assertRaises(IllegalFormatException):
+            self.block_batch[key] = b'value0'
+
     def test_len(self):
         key = create_hash_256()
 
-        self.block_batch[key] = b'value0'
+        self.block_batch[key] = (b'value0', True)
         self.assertEqual(1, len(self.block_batch))
 
-        self.block_batch[key] = b'value1'
+        self.block_batch[key] = (b'value1', True)
         self.assertEqual(1, len(self.block_batch))
 
         key1 = create_hash_256()
-        self.block_batch[key1] = b'value1'
+        self.block_batch[key1] = (b'value0', True)
         self.assertEqual(2, len(self.block_batch))
 
         del self.block_batch[key]
@@ -67,60 +74,60 @@ class TestBatch(unittest.TestCase):
         byteorder = 'big'
         key = create_hash_256()
 
-        self.block_batch[key] = b'value'
-        self.assertEqual(b'value', self.block_batch[key])
+        self.block_batch[key] = (b'value', True)
+        self.assertEqual((b'value', True), self.block_batch[key])
 
         value = 100
-        self.block_batch[key] = value.to_bytes(8, byteorder)
+        self.block_batch[key] = (value.to_bytes(8, byteorder), True)
         self.assertEqual(
             value,
-            int.from_bytes(self.block_batch[key], byteorder))
+            int.from_bytes(self.block_batch[key][0], byteorder))
 
     def test_put_tx_batch(self):
         tx_hash = create_hash_256()
         tx_batch = TransactionBatch(tx_hash)
 
         key = create_hash_256()
-        tx_batch[key] = b'value'
+        tx_batch[key] = (b'value', True)
 
         key0 = create_hash_256()
-        tx_batch[key0] = b'value0'
+        tx_batch[key0] = (b'value0', True)
         key1 = create_hash_256()
-        tx_batch[key1] = b'value1'
+        tx_batch[key1] = (b'value1', True)
         key2 = create_hash_256()
-        tx_batch[key2] = b'value2'
+        tx_batch[key2] = (b'value2', True)
 
         self.assertEqual(4, len(tx_batch))
 
-        self.block_batch[key] = b'haha'
+        self.block_batch[key] = (b'haha', True)
         self.assertEqual(1, len(self.block_batch))
 
         self.block_batch.update(tx_batch)
 
         self.assertEqual(4, len(self.block_batch))
-        self.assertEqual(b'value0', self.block_batch[key0])
-        self.assertEqual(b'value1', self.block_batch[key1])
-        self.assertEqual(b'value2', self.block_batch[key2])
-        self.assertEqual(b'value', self.block_batch[key])
+        self.assertEqual((b'value0', True), self.block_batch[key0])
+        self.assertEqual((b'value1', True), self.block_batch[key1])
+        self.assertEqual((b'value2', True), self.block_batch[key2])
+        self.assertEqual((b'value', True), self.block_batch[key])
 
     def test_digest(self):
         block_batch = self.block_batch
 
         key0 = create_hash_256()
-        block_batch[key0] = b'value0'
+        block_batch[key0] = (b'value0', True)
         key1 = create_hash_256()
-        block_batch[key1] = b'value1'
+        block_batch[key1] = (b'value1', True)
         key2 = create_hash_256()
-        block_batch[key2] = b'value2'
+        block_batch[key2] = (b'value2', True)
 
         data = [key0, b'value0', key1, b'value1', key2, b'value2']
         expected = sha3_256(b'|'.join(data))
         ret = block_batch.digest()
         self.assertEqual(expected, ret)
 
-        block_batch[key2] = None
+        block_batch[key2] = (None, True)
         hash1 = block_batch.digest()
-        block_batch[key2] = b''
+        block_batch[key2] = (b'', True)
         hash2 = block_batch.digest()
         self.assertNotEqual(hash1, hash2)
 

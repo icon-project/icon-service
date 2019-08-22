@@ -112,7 +112,6 @@ class KeyValueDatabase(object):
             for key, value in states.items():
                 if isinstance(value, tuple):
                     value = value[0]
-
                 if value:
                     wb.put(key, value)
                 else:
@@ -227,11 +226,7 @@ class ContextDatabase(object):
 
         # get value from block_batch
         if key in block_batch:
-            value = block_batch[key]
-            if isinstance(value, tuple):
-                return value[0]
-            else:
-                return value
+            return block_batch[key][0]
 
         # get value from state_db
         return self.key_value_db.get(key)
@@ -240,6 +235,9 @@ class ContextDatabase(object):
     def _check_tx_batch_value(context: Optional['IconScoreContext'],
                               key: bytes,
                               include_root_hash: bool):
+        if context.tx_batch.get(key) is None:
+            return
+
         if not isinstance(context.tx_batch[key], tuple):
             raise DatabaseException(f'Only tuple type is allowed on tx_batch: {context.tx_batch[key]}')
         elif context.tx_batch[key][1] != include_root_hash:
@@ -270,8 +268,7 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
         else:
-            if context.tx_batch[key]:
-                self._check_tx_batch_value(context, key, include_root_hash)
+            self._check_tx_batch_value(context, key, include_root_hash)
             context.tx_batch[key] = (value, include_root_hash)
 
     def delete(self,
@@ -296,8 +293,7 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
         else:
-            if context.tx_batch[key]:
-                self._check_tx_batch_value(context, key, include_root_hash)
+            self._check_tx_batch_value(context, key, include_root_hash)
             context.tx_batch[key] = (None, include_root_hash)
 
     def close(self, context: 'IconScoreContext') -> None:
