@@ -54,7 +54,7 @@ def test_save():
     assert term.end_block_height == -1
     assert term._main_prep_count == PREP_MAIN_PREPS
     assert term._main_and_sub_prep_count == PREP_MAIN_AND_SUB_PREPS
-    assert term.turn_overs == []
+    assert term.suspended_preps == []
 
     for _ in range(5):
         next_sequence = term.sequence + 1
@@ -76,7 +76,7 @@ def test_save():
         assert term.irep == irep
         assert term.start_block_height == current_block + 1
         assert term.end_block_height == term.start_block_height + term.period - 1
-        assert term.turn_overs == []
+        assert term.suspended_preps == []
 
 
 def test_save_and_load():

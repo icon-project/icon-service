@@ -438,7 +438,7 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_response, response)
 
     @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 40)
-    @patch('iconservice.prep.data.prep.VALIDATION_PENALTY', 5)
+    @patch('iconservice.prep.data.prep.MAX_UNVALIDATED_SEQUENCE_BLOCKS', 5)
     def test_prep_replace_in_term4(self):
         """
         scenario 4

@@ -148,9 +148,12 @@ class Engine(EngineBase, IISSEngineListener):
                                  old_preps=self.term.preps,
                                  new_preps=context.preps)
 
+        invalid_preps: List[int] = self.get_invalid_preps(self.term, context)
+        self.term.update_suspended_preps(invalid_preps)
+
         self._release_turn_over(context)
 
-        term: 'Term' = self._create_next_term(context)
+        term: 'Term' = self._create_next_term(self.term, context)
         main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.NORMAL)
         term.save(context)
         return main_preps_as_dict, term
@@ -158,7 +161,10 @@ class Engine(EngineBase, IISSEngineListener):
     def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
         self._put_last_main_preps(context, self.term.main_preps)
 
-        term: Optional['Term'] = self._create_updated_term(context)
+        invalid_preps: List[int] = self.get_invalid_preps(self.term, context)
+        self.term.update_suspended_preps(invalid_preps)
+
+        term: Optional['Term'] = self._create_updated_term(self.term, invalid_preps)
         if term:
             main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.IN_TERM_UPDATED)
             term.save(context)
@@ -208,12 +214,12 @@ class Engine(EngineBase, IISSEngineListener):
             new_preps.add(dirty_prep)
 
     def _release_turn_over(self, context: 'IconScoreContext'):
-        for address in self.term.turn_overs:
+        for address in self.term.suspended_preps:
             prep: 'PRep' = context.preps.remove(address)
             assert prep is not None
 
             dirty_prep = prep.copy()
-            dirty_prep.reset_validation_penalty()
+            dirty_prep.release_suspend()
             context.preps.add(dirty_prep)
 
     def handle_register_prep(
@@ -340,39 +346,51 @@ class Engine(EngineBase, IISSEngineListener):
 
         return prep_as_dict
 
-    def _create_next_term(self, context: 'IconScoreContext') -> 'Term':
+    @classmethod
+    def _create_next_term(cls,
+                          src_term: 'Term',
+                          context: 'IconScoreContext') -> 'Term':
         new_preps: List['PRep'] = context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count)
 
         # The current P-Rep term is over. Prepare the next P-Rep term
-        irep: int = self._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+        irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
 
         term: 'Term' = Term.create_next_term(
-            self.term.sequence + 1,
+            src_term.sequence + 1,
             context.main_prep_count,
             context.main_and_sub_prep_count,
             context.block.height,
             new_preps,
             context.total_supply,
             context.preps.total_delegated,
-            self.term.period,
+            src_term.period,
             irep
         )
 
         return term
 
-    def _create_updated_term(self, context: 'IconScoreContext') -> Optional['Term']:
-        # gather PReps who has gotten a penalty on this block
-        invalid_preps: List[int] = []
-        for i, main_prep in enumerate(self.term.main_preps):
-            prep: 'PRep' = context.get_prep(main_prep.address)
-            if prep.status != PRepStatus.ACTIVE:
-                invalid_preps.append(i)
-
+    @classmethod
+    def _create_updated_term(cls,
+                             src_term: 'Term',
+                             invalid_preps: List[int]) -> Optional['Term']:
         if invalid_preps:
-            term: 'Term' = Term.create_update_term(context.engine.prep.term, invalid_preps)
+            term: 'Term' = Term.create_update_term(src_term, invalid_preps)
         else:
             term = None
         return term
+
+    @classmethod
+    def get_invalid_preps(cls,
+                          src_term: 'Term',
+                          context: 'IconScoreContext') -> List[int]:
+
+        # gather PReps who has gotten a penalty on this block
+        invalid_preps: List[int] = []
+        for i, main_prep in enumerate(src_term.main_preps):
+            prep: 'PRep' = context.get_prep(main_prep.address)
+            if prep.status != PRepStatus.ACTIVE:
+                invalid_preps.append(i)
+        return invalid_preps
 
     @classmethod
     def _calculate_weighted_average_of_irep(cls, new_main_preps: List['PRep']) -> int:

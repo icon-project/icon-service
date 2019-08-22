@@ -22,7 +22,7 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, VALIDATION_PENALTY
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS
 from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason
 from ...utils.msgpack_for_db import MsgPackForDB
 
@@ -69,8 +69,8 @@ class PRep(Sortable):
         TOTAL_BLOCKS = auto()
         VALIDATED_BLOCKS = auto()
 
-        REASON = auto()
-        VALIDATION_PENALTY = auto()
+        PENALTY = auto()
+        UNVALIDATED_SEQUENCE_BLOCKS = auto()
 
         SIZE = auto()
 
@@ -79,7 +79,7 @@ class PRep(Sortable):
             *,
             flags: 'PRepFlag' = PRepFlag.NONE,
             status: 'PRepStatus' = PRepStatus.ACTIVE,
-            reason: 'PenaltyReason' = PenaltyReason.NONE,
+            penalty: 'PenaltyReason' = PenaltyReason.NONE,
             grade: 'PRepGrade' = PRepGrade.CANDIDATE,
             name: str = "",
             country: str = "",
@@ -97,7 +97,7 @@ class PRep(Sortable):
             tx_index: int = 0,
             total_blocks: int = 0,
             validated_blocks: int = 0,
-            validation_penalty: int = 0):
+            unvalidated_sequence_blocks: int = 0):
         """
         Main PRep: top 1 ~ 22 preps in descending order by delegated amount
         Sub PRep: 23 ~ 100 preps
@@ -106,6 +106,7 @@ class PRep(Sortable):
         :param address:
         :param flags:
         :param status:
+        :param penalty:
         :param grade:
         :param name:
         :param country: alpha3 country code (ISO3166)
@@ -122,8 +123,7 @@ class PRep(Sortable):
         :param tx_index:
         :param total_blocks:
         :param validated_blocks:
-        :param reason:
-        :param validation_penalty
+        :param unvalidated_sequence_blocks
         """
         assert irep_block_height == block_height
 
@@ -138,7 +138,7 @@ class PRep(Sortable):
 
         # status
         self._status: 'PRepStatus' = status
-        self._penalty: 'PenaltyReason' = reason
+        self._penalty: 'PenaltyReason' = penalty
         self._grade: 'PRepGrade' = grade
 
         # registration info
@@ -164,7 +164,7 @@ class PRep(Sortable):
         # stats
         self._total_blocks: int = total_blocks
         self._validated_blocks: int = validated_blocks
-        self._validation_penalty: int = validation_penalty
+        self._unvalidated_sequence_blocks: int = unvalidated_sequence_blocks
 
     def is_dirty(self) -> bool:
         return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
@@ -230,9 +230,9 @@ class PRep(Sortable):
 
         if is_validate:
             self._validated_blocks += 1
-            self._validation_penalty = 0
+            self._unvalidated_sequence_blocks = 0
         else:
-            self._validation_penalty += 1
+            self._unvalidated_sequence_blocks += 1
         self._total_blocks += 1
 
         self._set_dirty(True)
@@ -252,17 +252,17 @@ class PRep(Sortable):
 
         return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
 
-    def reset_validation_penalty(self):
+    def release_suspend(self):
         if self._status == PRepStatus.SUSPENDED:
             self._status = PRepStatus.ACTIVE
-            self._validation_penalty: int = 0
+            self._unvalidated_sequence_blocks: int = 0
 
-    def is_validation_penalty(self) -> bool:
+    def is_over_unvalidated_sequence_blocks(self) -> bool:
         # A grace period without measuring productivity
         if self._total_blocks < PENALTY_GRACE_PERIOD:
             return False
 
-        return self._validation_penalty >= VALIDATION_PENALTY
+        return self._unvalidated_sequence_blocks >= MAX_UNVALIDATED_SEQUENCE_BLOCKS
 
     @property
     def total_blocks(self) -> int:
@@ -273,8 +273,8 @@ class PRep(Sortable):
         return self._validated_blocks
 
     @property
-    def validation_penalty(self) -> int:
-        return self._validation_penalty
+    def unvalidated_sequence_blocks(self) -> int:
+        return self._unvalidated_sequence_blocks
 
     @property
     def address(self) -> 'Address':
@@ -429,7 +429,7 @@ class PRep(Sortable):
             self._total_blocks,
             self._validated_blocks,
             self.penalty.value,
-            self._validation_penalty
+            self._unvalidated_sequence_blocks
         ])
 
     @classmethod
@@ -462,7 +462,7 @@ class PRep(Sortable):
             return PRep(
                 address=items[cls.Index.ADDRESS],
                 status=PRepStatus(items[cls.Index.STATUS]),
-                reason=PenaltyReason(items[cls.Index.REASON]),
+                penalty=PenaltyReason(items[cls.Index.PENALTY]),
                 grade=PRepGrade(items[cls.Index.GRADE]),
                 name=items[cls.Index.NAME],
                 country=items[cls.Index.COUNTRY],
@@ -478,7 +478,7 @@ class PRep(Sortable):
                 tx_index=items[cls.Index.TX_INDEX],
                 total_blocks=items[cls.Index.TOTAL_BLOCKS],
                 validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
-                validation_penalty=items[cls.Index.VALIDATION_PENALTY]
+                unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS]
             )
         else:
             raise InvalidParamsException("invalid version")

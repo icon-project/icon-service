@@ -41,7 +41,7 @@ class Term(object):
         self._total_delegated: int = -1
         self._main_prep_count: int = PREP_MAIN_PREPS
         self._main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
-        self._turn_overs: List['Address'] = []
+        self._suspended_preps: List['Address'] = []
 
     @property
     def sequence(self) -> int:
@@ -88,8 +88,8 @@ class Term(object):
         return self._total_delegated
 
     @property
-    def turn_overs(self) -> List['Address']:
-        return self._turn_overs
+    def suspended_preps(self) -> List['Address']:
+        return self._suspended_preps
 
     def load(self, context: 'IconScoreContext', term_period: int):
         self._period: int = term_period
@@ -102,7 +102,7 @@ class Term(object):
             self._start_block_height: int = data[2]
             self._end_block_height: int = self._start_block_height + term_period - 1
             self._preps: List['PRep'] = self._make_main_and_sub_preps(context, data[3])
-            self._turn_overs: List['Address'] = data[4]
+            self._suspended_preps: List['Address'] = data[4]
             self._irep: int = data[5]
             self._total_supply: int = data[6]
             self._total_delegated: int = data[7]
@@ -193,14 +193,18 @@ class Term(object):
             term.replace_penalty_main_preps(index)
         return term
 
+    def update_suspended_preps(self,
+                               invalid_preps: List[int]):
+        for index in invalid_preps:
+            prep: 'PRep' = self._preps[index]
+            self._suspended_preps.append(prep.address)
+
     def replace_penalty_main_preps(self, index: int):
         new_index = self._main_prep_count
         new_main_prep: 'PRep' = self._preps[new_index]
 
         old_main_prep: 'PRep' = self._preps[index]
         self._preps[index] = new_main_prep
-
-        self._turn_overs.append(old_main_prep.address)
 
         del self._preps[new_index]
 
@@ -220,7 +224,7 @@ class Term(object):
             self._sequence,
             self._start_block_height,
             self._serialize_preps(self.preps),
-            self._turn_overs,
+            self._suspended_preps,
             self._irep,
             self._total_supply,
             self._total_delegated,

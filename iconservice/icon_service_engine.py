@@ -732,7 +732,7 @@ class IconServiceEngine(ContextContainer):
             if prep.is_low_productivity():
                 low_productivity.append(prep.address)
 
-            if prep.is_validation_penalty():
+            if prep.is_over_unvalidated_sequence_blocks():
                 block_validation.append(prep.address)
 
         for address in block_validation:
