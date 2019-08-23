@@ -186,7 +186,7 @@ class Engine(EngineBase, IISSEngineListener):
         for i in range(main_and_sub_prep_count):
             prep: 'PRep' = new_preps.get_by_index(i)
             if prep is None:
-                Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {new_preps.size(active_prep_only=True)}")
+                Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {new_preps.size(active_suspended_prep_only=True)}")
                 break
 
             prep_address: 'Address' = prep.address
@@ -234,7 +234,7 @@ class Engine(EngineBase, IISSEngineListener):
         icx_storage: 'IcxStorage' = context.storage.icx
 
         address: 'Address' = context.tx.origin
-        if context.preps.contains(address, active_prep_only=False):
+        if context.preps.contains(address, active_suspended_prep_only=False):
             raise InvalidParamsException(f"P-Rep already exists: {address}")
 
         # Check Prep registration fee
@@ -689,7 +689,7 @@ class Engine(EngineBase, IISSEngineListener):
         start_ranking: int = 0
         prep_list: list = []
 
-        prep_count: int = preps.size(active_prep_only=True)
+        prep_count: int = preps.size(active_suspended_prep_only=True)
 
         if prep_count > 0:
             start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)

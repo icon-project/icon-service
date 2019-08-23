@@ -34,7 +34,7 @@ def check_decentralization_condition(context: 'IconScoreContext') -> bool:
 
     """ICON network decentralize when the last prep of main prep count ( default: 22th )
     get delegation more than some value( default: total-supply * 0.002icx )"""
-    if context.preps.size(active_prep_only=True) >= context.main_prep_count:
+    if context.preps.size() >= context.main_prep_count:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
         bottom_prep: 'PRep' = context.preps.get_by_index(context.main_prep_count - 1)
         bottom_prep_delegated = bottom_prep.delegated

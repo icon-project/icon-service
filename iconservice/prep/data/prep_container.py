@@ -32,6 +32,7 @@ class PRepContainer(object):
     PRep objects are sorted in descending order by delegated amount.
     """
     _TAG = "PREP"
+    _ACTIVE_STATUS = (PRepStatus.ACTIVE, PRepStatus.SUSPENDED)
 
     def __init__(self, flags: PRepFlag = PRepFlag.NONE, total_prep_delegated: int = 0):
         self._flags: 'PRepFlag' = flags
@@ -53,12 +54,12 @@ class PRepContainer(object):
     def is_flag_on(self, flags: 'PRepFlag') -> bool:
         return (self._flags & flags) == flags
 
-    def size(self, active_prep_only: bool = False) -> int:
+    def size(self, active_suspended_prep_only: bool = False) -> int:
         """Returns the number of active P-Reps
 
         :return: The number of active P-Reps
         """
-        if active_prep_only:
+        if active_suspended_prep_only:
             return len(self._active_prep_list)
         else:
             return len(self._prep_dict)
@@ -100,11 +101,12 @@ class PRepContainer(object):
 
         self._prep_dict[prep.address] = prep
 
-        if prep.status == PRepStatus.ACTIVE:
+        if prep.status in self._ACTIVE_STATUS:
             self._active_prep_list.add(prep)
 
             # Update self._total_prep_delegated
-            self._total_prep_delegated += prep.delegated
+            if prep.status == PRepStatus.ACTIVE:
+                self._total_prep_delegated += prep.delegated
             assert self._total_prep_delegated >= 0
 
     def remove(self, address: 'Address') -> Optional['PRep']:
@@ -124,9 +126,10 @@ class PRepContainer(object):
     def _remove(self, address: 'Address') -> Optional['PRep']:
         prep: Optional['PRep'] = self._prep_dict.get(address)
         if prep is not None:
-            if prep.status == PRepStatus.ACTIVE:
+            if prep.status in self._ACTIVE_STATUS:
                 self._active_prep_list.remove(prep)
-                self._total_prep_delegated -= prep.delegated
+                if prep.status == PRepStatus.ACTIVE:
+                    self._total_prep_delegated -= prep.delegated
 
             del self._prep_dict[address]
 
@@ -151,18 +154,18 @@ class PRepContainer(object):
 
         return old_prep
 
-    def contains(self, address: 'Address', active_prep_only: bool = True) -> bool:
+    def contains(self, address: 'Address', active_suspended_prep_only: bool = True) -> bool:
         """Check whether the P-Rep is contained regardless of its PRepStatus
 
         :param address: Address
-        :param active_prep_only: bool
+        :param active_suspended_prep_only: bool
         :return: True(contained) False(not contained)
         """
         prep: 'PRep' = self._prep_dict.get(address)
         if prep is None:
             return False
 
-        return prep.status == PRepStatus.ACTIVE if active_prep_only else True
+        return prep.status in self._ACTIVE_STATUS if active_suspended_prep_only else True
 
     def __iter__(self):
         """Active P-Rep iterator
@@ -188,12 +191,17 @@ class PRepContainer(object):
         """
         return self._prep_dict.get(address)
 
-    def get_preps(self, start_index: int, size: int) -> List['PRep']:
+    def get_preps(self, start_index: int, size: int, active_only: bool = False) -> List['PRep']:
         """Returns active P-Reps ranging from start_index to start_index + size - 1
 
         :return: P-Rep list
         """
-        return self._active_prep_list[start_index:start_index + size]
+        if active_only:
+            return self._active_prep_list[start_index:start_index + size]
+        else:
+            return [prep
+                    for prep in self._active_prep_list[start_index: start_index + size]
+                    if prep.status == PRepStatus.ACTIVE]
 
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
@@ -205,7 +213,7 @@ class PRepContainer(object):
             Logger.info(tag="PREP", msg=f"P-Rep not found: {address}")
             return -1
 
-        if prep.status == PRepStatus.ACTIVE:
+        if prep.status in self._ACTIVE_STATUS:
             return self._active_prep_list.index(prep)
 
         return -1
