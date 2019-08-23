@@ -252,6 +252,7 @@ ISCORE_EXCHANGE_RATE = 1_000
 PENALTY_GRACE_PERIOD = IISS_DAY_BLOCK * 2
 
 MIN_PRODUCTIVITY_PERCENTAGE = 85
+MAX_UNVALIDATED_SEQUENCE_BLOCKS = 660
 
 BASE_TRANSACTION_VERSION = 3
 
@@ -260,12 +261,9 @@ PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
 
 class PRepStatus(Enum):
     ACTIVE = 0
-    # Unregistered by P-Rep itself
-    UNREGISTERED = 1
-    # "prep disqualification penalty"
-    DISQUALIFIED = 2
-    # "low productivity penalty"
-    SUSPENDED = 3
+    UNREGISTERED = auto()
+    DISQUALIFIED = auto()
+    SUSPENDED = auto()
 
 
 class PenaltyReason(Enum):
@@ -283,6 +281,6 @@ class PRepGrade(Enum):
     CANDIDATE = 2
 
 
-class PrepResultState(Enum):
+class PRepResultState(Enum):
     NORMAL = 0
-    PENALTY = 1
+    IN_TERM_UPDATED = 1

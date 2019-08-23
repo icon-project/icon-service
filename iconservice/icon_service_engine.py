@@ -28,7 +28,6 @@ from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFou
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
-from .database.batch import ExternalBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
@@ -36,9 +35,8 @@ from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
-    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PRepStatus, PREP_PENALTY_SIGNATURE,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    META_DB, ISCORE_EXCHANGE_RATE)
+    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    ISCORE_EXCHANGE_RATE)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -119,12 +117,9 @@ class IconServiceEngine(ContextContainer):
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
 
-        meta_db_path: str = os.path.join(state_db_root_path, META_DB)
-
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
         os.makedirs(rc_data_path, exist_ok=True)
-        os.makedirs(meta_db_path, exist_ok=True)
 
         # Share one context db with all SCOREs
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
@@ -157,7 +152,6 @@ class IconServiceEngine(ContextContainer):
                                      log_dir,
                                      rc_data_path,
                                      rc_socket_path,
-                                     meta_db_path,
                                      conf[ConfigKey.IISS_META_DATA],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
@@ -182,8 +176,8 @@ class IconServiceEngine(ContextContainer):
                                                    iiss=IISSStorage(self._icx_context_db),
                                                    prep=PRepStorage(self._icx_context_db),
                                                    issue=IssueStorage(self._icx_context_db),
-                                                   rc=RewardCalcStorage(),
-                                                   meta=MetaDBStorage())
+                                                   meta=MetaDBStorage(self._icx_context_db),
+                                                   rc=RewardCalcStorage())
 
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage
@@ -193,7 +187,6 @@ class IconServiceEngine(ContextContainer):
                                 log_dir: str,
                                 rc_data_path: str,
                                 rc_socket_path: str,
-                                meta_db_path: str,
                                 iiss_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
@@ -221,9 +214,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.prep.open(context,
                                            prep_reg_fee)
         IconScoreContext.storage.issue.open(context)
+        IconScoreContext.storage.meta.open(context)
         IconScoreContext.storage.rc.open(rc_data_path)
-
-        IconScoreContext.storage.meta.open(meta_db_path)
 
     def _close_component_context(self, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
@@ -239,8 +231,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.iiss.close(context)
         IconScoreContext.storage.prep.close(context)
         IconScoreContext.storage.issue.close(context)
+        IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
-        IconScoreContext.storage.meta.close()
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
@@ -420,14 +412,10 @@ class IconServiceEngine(ContextContainer):
         context.preps = context.engine.prep.preps.copy(mutable=True)
         context.tx_dirty_preps = OrderedDict()
 
-        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
-        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
-
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
         added_transactions = {}
-        base_tx_result: Optional['TransactionResult'] = None
 
         regulator: Optional['Regulator'] = None
         if is_block_editable and context.is_decentralized():
@@ -453,7 +441,6 @@ class IconServiceEngine(ContextContainer):
                         raise InvalidBaseTransactionException("Invalid block: "
                                                               "first transaction must be an base transaction")
                     tx_result = self._invoke_base_request(context, tx_request, is_block_editable, regulator)
-                    base_tx_result = tx_result
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -472,8 +459,8 @@ class IconServiceEngine(ContextContainer):
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
 
-        main_prep_as_dict, next_term = self.after_transaction_process(
-            context, precommit_flag, base_tx_result, prev_block_generator, prev_block_validators)
+        main_prep_as_dict, term = self.after_transaction_process(
+            context, precommit_flag, prev_block_generator, prev_block_validators)
 
         context.preps.freeze()
 
@@ -484,9 +471,8 @@ class IconServiceEngine(ContextContainer):
             context.block_batch,
             block_result,
             context.rc_block_batch,
-            context.meta_block_batch,
             context.preps,
-            next_term,
+            term,
             prev_block_generator,
             prev_block_validators,
             context.new_icon_score_mapper,
@@ -501,13 +487,11 @@ class IconServiceEngine(ContextContainer):
                                    prev_block_validators: Optional[List['Address']] = None):
         self._update_productivity(context, prev_block_generator, prev_block_validators)
         self._update_last_generate_block_height(context, prev_block_generator)
-        context.update_dirty_prep_batch()
 
     def after_transaction_process(
             self,
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
-            base_tx_result: Optional['TransactionResult'],
             prev_block_generator: Optional['Address'] = None,
             prev_block_validators: Optional[List['Address']] = None) -> Tuple[Optional[dict], Optional['Term']]:
         """If the current term is ended, prepare the next term,
@@ -518,68 +502,25 @@ class IconServiceEngine(ContextContainer):
 
         :param context:
         :param flag:
-        :param base_tx_result:
         :param prev_block_generator:
         :param prev_block_validators:
         :return:
         """
-        main_prep_as_dict: Optional[dict] = None
-        next_term: Optional['Term'] = None
 
         if self._is_prep_term_ended(context, flag):
-            if base_tx_result is not None:
-                self._impose_low_productivity_penalty_on_main_preps(context, base_tx_result)
-
             # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, next_term = context.engine.prep.on_term_ended(context)
-
-            context.storage.meta.put_last_term_end_block(context.meta_block_batch, next_term.start_block_height - 1)
+            main_prep_as_dict, term = context.engine.prep.on_term_ended(context)
+        elif context.is_decentralized():
+            main_prep_as_dict, term = context.engine.prep.on_term_updated(context)
+        else:
+            main_prep_as_dict = None
+            term = None
 
         if context.revision >= REV_IISS:
-            if flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC):
-                last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-                if last_calc_end_block_height is not None:
-                    calc_period: int = context.storage.iiss.get_calc_period(context)
-                    start_block_height: int = last_calc_end_block_height - calc_period + 1
-                    context.storage.meta.put_last_calc_info(context.meta_block_batch,
-                                                            start_block_height,
-                                                            last_calc_end_block_height)
-            context.engine.iiss.update_db(
-                context, next_term, prev_block_generator, prev_block_validators, flag)
+            context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
-
-        return main_prep_as_dict, next_term
-
-    def _impose_low_productivity_penalty_on_main_preps(
-            self, context: 'IconScoreContext', base_tx_result: 'TransactionResult'):
-        """Check the P-Reps to impose low productivity penalty on every block
-
-        :param context:
-        :param base_tx_result:
-        :return:
-        """
-
-        lazy_preps: list = []
-        for main_prep in context.engine.prep.term.main_preps:
-            prep: 'PRep' = context.get_prep(main_prep.address)
-            assert prep is not None
-
-            if prep.is_low_productivity():
-                lazy_preps.append(prep)
-
-        for prep in lazy_preps:
-            dirty_prep: 'PRep' = prep.copy()
-            dirty_prep.status = PRepStatus.LOW_PRODUCTIVITY
-            context.put_dirty_prep(dirty_prep)
-
-            EventLogEmitter.emit_event_log(
-                context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
-                [prep.address, PRepStatus.LOW_PRODUCTIVITY.value, prep.productivity], 1)
-
-        base_tx_result.event_logs.extend(context.event_logs)
-        base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
-        context.update_dirty_prep_batch()
+        return main_prep_as_dict, term
 
     @staticmethod
     def _update_productivity(context: 'IconScoreContext',
@@ -591,13 +532,15 @@ class IconServiceEngine(ContextContainer):
         if prev_block_validators:
             validates.update(prev_block_validators)
 
-        main_preps: list = context.engine.prep.term.main_preps
-        for main_prep in main_preps:
-            is_validate: bool = main_prep.address in validates
-            prep: 'PRep' = context.get_prep(main_prep.address, mutable=True)
-            if prep:
-                prep.update_productivity(is_validate)
-                context.put_dirty_prep(prep)
+        main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
+
+        for address in main_preps:
+            is_validate: bool = address in validates
+            dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
+            if dirty_prep:
+                dirty_prep.update_main_prep_validate(is_validate)
+                context.put_dirty_prep(dirty_prep)
+        context.update_dirty_prep_batch()
 
     @staticmethod
     def _is_prep_term_ended(context: 'IconScoreContext', flag: 'PrecommitFlag') -> bool:
@@ -617,10 +560,11 @@ class IconServiceEngine(ContextContainer):
         if prev_block_generator is None:
             return
 
-        prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        if prep:
-            prep.last_generate_block_height = context.block.height - 1
-            context.put_dirty_prep(prep)
+        dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
+        if dirty_prep:
+            dirty_prep.last_generate_block_height = context.block.height - 1
+            context.put_dirty_prep(dirty_prep)
+        context.update_dirty_prep_batch()
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
@@ -753,12 +697,44 @@ class IconServiceEngine(ContextContainer):
                                                       context.engine.prep.term.end_block_height],
                                            indexed_args_count=0)
 
+        self._impose_penalty_on_main_preps(context)
+
         tx_result.status = TransactionResult.SUCCESS
 
         tx_result.event_logs = context.event_logs
         tx_result.traces = context.traces
 
         return tx_result
+
+    @classmethod
+    def _impose_penalty_on_main_preps(
+            cls,
+            context: 'IconScoreContext'):
+        """Check the P-Reps to impose penalty on every block
+
+        :param context:
+        :return:
+        """
+
+        # assign
+        block_validation: List['Address'] = []
+        low_productivity: List['Address'] = []
+
+        for main_prep in context.engine.prep.term.main_preps:
+            prep: 'PRep' = context.get_prep(main_prep.address)
+            assert prep is not None
+
+            if prep.is_low_productivity():
+                low_productivity.append(prep.address)
+
+            if prep.is_over_unvalidated_sequence_blocks():
+                block_validation.append(prep.address)
+
+        for address in block_validation:
+            context.engine.prep.impose_block_validation_penalty(context, address)
+
+        for address in low_productivity:
+            context.engine.prep.impose_low_productivity_penalty(context, address)
 
     def _invoke_base_request(self,
                              context: 'IconScoreContext',
@@ -915,8 +891,6 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
-        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
         context.preps = context.engine.prep.preps.copy(mutable=True)
         context.tx_dirty_preps = OrderedDict()
 
@@ -1141,7 +1115,7 @@ class IconServiceEngine(ContextContainer):
                 calc_end_block = -1
         response['nextCalculation'] = calc_end_block + 1
 
-        term_end_block: int = context.storage.meta.get_last_term_end_block(context)
+        term_start_block, term_end_block = context.storage.meta.get_last_term_info(context)
         if term_end_block < 0 or context.block.height != term_end_block:
             term_end_block: int = context.engine.prep.term.end_block_height
         response['nextPRepTerm'] = term_end_block + 1
@@ -1625,8 +1599,6 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.revision >= REV_IISS:
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
-            context.storage.meta.commit(precommit_data.meta_block_batch)
-
             context.engine.iiss.send_ipc(context, precommit_data)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:

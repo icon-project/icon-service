@@ -17,13 +17,10 @@
 """IconScoreEngine testcase
 """
 from typing import TYPE_CHECKING, List
-from unittest.mock import patch
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, \
-    PREP_PENALTY_SIGNATURE, BASE_TRANSACTION_INDEX, PREP_MAIN_AND_SUB_PREPS
-from iconservice.icon_constant import PRepStatus, PRepGrade, PenaltyReason
-from iconservice.iconscore.icon_score_event_log import EventLog
+    PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import PRepStatus, PRepGrade
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -125,15 +122,12 @@ class TestPreps(TestIISSBase):
 
         # make blocks with prev_block_generator and prev_block_validators
         block_count: int = 20
-        for i in range(block_count):
-            prev_block, hash_list = self.make_and_req_block(
-                [],
-                prev_block_generator=self._accounts[0].address,
-                prev_block_validators=[self._accounts[1].address,
-                                       self._accounts[2].address])
-
-            self._write_precommit_state(prev_block)
-            tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+        self.make_blocks(
+            to=self._block_height + block_count,
+            prev_block_generator=self._accounts[0].address,
+            prev_block_validators=[self._accounts[1].address,
+                                   self._accounts[2].address]
+        )
 
         for i in range(3):
             response: dict = self.get_prep(self._accounts[i])

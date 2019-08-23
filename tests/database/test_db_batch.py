@@ -123,3 +123,25 @@ class TestBatch(unittest.TestCase):
         block_batch[key2] = b''
         hash2 = block_batch.digest()
         self.assertNotEqual(hash1, hash2)
+
+    def test_digest_with_excluded_data(self):
+        block_batch = self.block_batch
+
+        include_key1 = create_hash_256()
+        block_batch[include_key1] = (b'value0', True)
+        include_key2 = create_hash_256()
+        block_batch[include_key2] = (b'value1', True)
+        include_key3 = create_hash_256()
+        block_batch[include_key3] = (b'', True)
+        include_key4 = create_hash_256()
+        block_batch[include_key4] = (None, True)
+
+        exclude_key1 = create_hash_256()
+        block_batch[exclude_key1] = (b'value2', False)
+        exclude_key2 = create_hash_256()
+        block_batch[exclude_key2] = (b'value3', False)
+
+        data = [include_key1, b'value0', include_key2, b'value1', include_key3, b'', include_key4]
+        expected = sha3_256(b'|'.join(data))
+        ret = block_batch.digest()
+        self.assertEqual(expected, ret)
