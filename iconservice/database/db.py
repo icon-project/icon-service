@@ -110,10 +110,10 @@ class KeyValueDatabase(object):
 
         with self._db.write_batch() as wb:
             for key, value in states.items():
-                if isinstance(value, tuple):
-                    value = value[0]
-                if value:
-                    wb.put(key, value)
+                if not isinstance(value, tuple):
+                    raise DatabaseException("Only tuple data is acceptable when writing batch")
+                if value[0]:
+                    wb.put(key, value[0])
                 else:
                     wb.delete(key)
 
@@ -564,3 +564,19 @@ class ExternalDatabase(KeyValueDatabase):
         :param prefix: (bytes): prefix to use
         """
         return ExternalDatabase(self._db.prefixed_db(prefix))
+
+    def write_batch(self, states: dict) -> None:
+        """Write a batch to the database for the specified states dict.
+
+        :param states: key/value pairs
+            key and value should be bytes type
+        """
+        if states is None or len(states) == 0:
+            return
+
+        with self._db.write_batch() as wb:
+            for key, value in states.items():
+                if value:
+                    wb.put(key, value)
+                else:
+                    wb.delete(key)
