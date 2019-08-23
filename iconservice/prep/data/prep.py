@@ -46,6 +46,19 @@ class PRep(Sortable):
     _VERSION: int = 1
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
+    _penalty_grace_period: int = PENALTY_GRACE_PERIOD
+    _min_productivity_percentage: int = MIN_PRODUCTIVITY_PERCENTAGE
+    _max_unvalidated_sequence_blocks: int = MAX_UNVALIDATED_SEQUENCE_BLOCKS
+
+    @classmethod
+    def init_prep_config(cls,
+                         penalty_grace_period: int,
+                         min_productivity_percentage: int,
+                         max_unvalidated_sequence_block: int):
+        cls._penalty_grace_period: int = penalty_grace_period
+        cls._min_productivity_percentage: int = min_productivity_percentage
+        cls._max_unvalidated_sequence_blocks: int = max_unvalidated_sequence_block
+
     class Index(IntEnum):
         VERSION = 0
 
@@ -247,10 +260,10 @@ class PRep(Sortable):
 
     def is_low_productivity(self) -> bool:
         # A grace period without measuring productivity
-        if self._total_blocks < PENALTY_GRACE_PERIOD:
+        if self._total_blocks < self._penalty_grace_period:
             return False
 
-        return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
+        return self.productivity < self._min_productivity_percentage
 
     def release_suspend(self):
         if self._status == PRepStatus.SUSPENDED:
@@ -259,10 +272,10 @@ class PRep(Sortable):
 
     def is_over_unvalidated_sequence_blocks(self) -> bool:
         # A grace period without measuring productivity
-        if self._total_blocks < PENALTY_GRACE_PERIOD:
+        if self._total_blocks < self._penalty_grace_period:
             return False
 
-        return self._unvalidated_sequence_blocks >= MAX_UNVALIDATED_SEQUENCE_BLOCKS
+        return self._unvalidated_sequence_blocks >= self._max_unvalidated_sequence_blocks
 
     @property
     def total_blocks(self) -> int:

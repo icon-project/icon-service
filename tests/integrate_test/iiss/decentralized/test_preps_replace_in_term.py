@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, List
 from unittest.mock import patch
 
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, PREP_PENALTY_SIGNATURE
+from iconservice.prep.data import PRep
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
@@ -36,8 +37,8 @@ class TestPreps(TestIISSBase):
         super().setUp()
         self.init_decentralized()
 
-    @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 40)
     def test_prep_replace_in_term1(self):
+        PRep._penalty_grace_period = 40
         """
         scenario 1
             when it starts new preps on new term, normal case, while 100 block.
@@ -131,8 +132,8 @@ class TestPreps(TestIISSBase):
             self.assertEqual(block_count, response["totalBlocks"])
             self.assertEqual(block_count, response["validatedBlocks"])
 
-    @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 40)
     def test_prep_replace_in_term2(self):
+        PRep._penalty_grace_period = 40
         """
         scenario 2
             when it starts new preps on new term, half count (MAIN_PREPS // 2) preps have done to validate block until GRACE_PERIOD.
@@ -437,9 +438,10 @@ class TestPreps(TestIISSBase):
         }
         self.assertEqual(expected_response, response)
 
-    @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 40)
-    @patch('iconservice.prep.data.prep.MAX_UNVALIDATED_SEQUENCE_BLOCKS', 5)
     def test_prep_replace_in_term4(self):
+        PRep._penalty_grace_period: int = 40
+        PRep._max_unvalidated_sequence_blocks: int = 5
+
         """
         scenario 4
             when it starts new preps on new term, half count (MAIN_PREPS // 2) preps have done to validate block continuously.

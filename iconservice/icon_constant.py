@@ -151,6 +151,9 @@ class ConfigKey:
     PREP_REGISTRATION_FEE = "prepRegistrationFee"
 
     DECENTRALIZE_TRIGGER = "decentralizeTrigger"
+    PENALTY_GRACE_PERIOD = "penaltyGracePeriod"
+    MIN_PRODUCTIVITY_PERCENTAGE = "minProductivityPercentage"
+    MAX_UNVALIDATED_SEQUENCE_BLOCKS = "maxUnvalidatedSequenceBlocks"
 
 
 class EnableThreadFlag(IntFlag):
