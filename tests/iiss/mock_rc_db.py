@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice.database.db import KeyValueDatabase
+from iconservice.database.db import ExternalDatabase
 from tests.mock_db import MockPlyvelDB
 
 
-class MockIissDataBase(KeyValueDatabase):
+class MockIissDataBase(ExternalDatabase):
     def __init__(self, db) -> None:
         super().__init__(db)
 

@@ -56,8 +56,8 @@ class TestKeyValueDatabase(unittest.TestCase):
 
     def test_write_batch(self):
         data = {
-            b'key0': b'value0',
-            b'key1': b'value1'
+            b'key0': (b'value0', True),
+            b'key1': (b'value1', True)
         }
         db = self.db
 
@@ -149,14 +149,37 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def test_write_batch(self):
         context = self.context
         data = {
-            b'key0': b'value0',
-            b'key1': b'value1'
+            b'key0': (b'value0', True),
+            b'key1': (b'value1', True)
         }
         db = self.context_db
         db.write_batch(context, data)
 
         self.assertEqual(b'value1', db.get(context, b'key1'))
         self.assertEqual(b'value0', db.get(context, b'key0'))
+
+    def test_write_batch_invalid_value_format(self):
+        context = self.context
+        data = {
+            b'key0': b'value0',
+        }
+        db = self.context_db
+        with self.assertRaises(DatabaseException):
+            db.write_batch(context, data)
+
+        data = {
+            b'key0': None,
+        }
+        db = self.context_db
+        with self.assertRaises(DatabaseException):
+            db.write_batch(context, data)
+
+        data = {
+            b'key0': "",
+        }
+        db = self.context_db
+        with self.assertRaises(DatabaseException):
+            db.write_batch(context, data)
 
     def test_write_batch_on_readonly_exception(self):
         db = self.context_db
