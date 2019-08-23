@@ -716,25 +716,16 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        # assign
-        block_validation: List['Address'] = []
-        low_productivity: List['Address'] = []
-
         for main_prep in context.engine.prep.term.main_preps:
             prep: 'PRep' = context.get_prep(main_prep.address)
             assert prep is not None
 
             if prep.is_low_productivity():
-                low_productivity.append(prep.address)
-
-            if prep.is_over_unvalidated_sequence_blocks():
-                block_validation.append(prep.address)
-
-        for address in block_validation:
-            context.engine.prep.impose_block_validation_penalty(context, address)
-
-        for address in low_productivity:
-            context.engine.prep.impose_low_productivity_penalty(context, address)
+                context.engine.prep.impose_low_productivity_penalty(context, prep.address)
+            elif prep.is_over_unvalidated_sequence_blocks():
+                context.engine.prep.impose_block_validation_penalty(context, prep.address)
+            else:
+                pass
 
     def _invoke_base_request(self,
                              context: 'IconScoreContext',
