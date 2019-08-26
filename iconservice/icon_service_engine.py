@@ -1243,7 +1243,16 @@ class IconServiceEngine(ContextContainer):
         if self._check_new_process(params):
 
             if context.revision < REV_IISS:
+                """
                 raise InvalidParamsException(f"Method Not Found")
+                above code is what I want to raise
+                
+                but Main Net block sync fail issue happened when it mismatched updating version case.
+                https://tracker.icon.foundation/transaction/0x76c4c323c6787b2d44565cdaab2a3fc78c37136339a7f0b4faf3fb03fec64939#internaltransactions
+                so we must change raise contents like that.
+                """
+                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+                raise ScoreNotFoundException(f'SCORE not found: {ZERO_SCORE_ADDRESS}')
 
             self._process_new_transaction(context, params, tx_result)
         else:
