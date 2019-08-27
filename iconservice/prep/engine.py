@@ -586,7 +586,7 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[
                 address,
                 PRepStatus.DISQUALIFIED.value,
-                PenaltyReason.PREP_DISQUALIFICATION,
+                PenaltyReason.PREP_DISQUALIFICATION.value,
             ],
             indexed_args_count=1)
 
