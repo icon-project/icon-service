@@ -550,7 +550,7 @@ class Engine(EngineBase):
         self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_validators)
 
         if not self._is_iiss_calc(flag):
-            if term is not None:
+            if term:
                 self._put_gv(context, term)
                 self._put_preps_to_rc_db(context, term)
             return
@@ -611,6 +611,12 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_gv(cls, context: 'IconScoreContext', term: Optional['Term']):
+
+        """
+            we should divide logic that case updated term during normal term.
+            because updated term(only changed preps and total_delegated)
+            must be changed by using determined term before.
+        """
         if term is None:
             current_total_supply: int = context.storage.icx.get_total_supply(context)
             current_total_prep_delegated: int = context.preps.total_delegated
