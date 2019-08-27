@@ -21,14 +21,14 @@ import msgpack
 from iconservice.base.address import Address
 from iconservice.utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
-_next_msg_id: int = 0
+_next_msg_id: int = 1
 
 
 def _get_next_id() -> int:
     global _next_msg_id
 
     msg_id: int = _next_msg_id
-    _next_msg_id = (msg_id + 1) % 0xffffffff
+    _next_msg_id = max(1, (msg_id + 1) % 0xffffffff)
 
     return msg_id
 
