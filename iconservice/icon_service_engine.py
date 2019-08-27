@@ -156,7 +156,10 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.INITIAL_IREP],
-                                     conf[ConfigKey.PREP_REGISTRATION_FEE])
+                                     conf[ConfigKey.PREP_REGISTRATION_FEE],
+                                     conf[ConfigKey.PENALTY_GRACE_PERIOD],
+                                     conf[ConfigKey.MIN_PRODUCTIVITY_PERCENTAGE],
+                                     conf[ConfigKey.MAX_UNVALIDATED_SEQUENCE_BLOCKS])
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -191,7 +194,10 @@ class IconServiceEngine(ContextContainer):
                                 calc_period: int,
                                 term_period: int,
                                 irep: int,
-                                prep_reg_fee: int):
+                                prep_reg_fee: int,
+                                penalty_grace_period: int,
+                                min_productivity_percentage: int,
+                                max_unvalidated_sequence_blocks: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -202,7 +208,10 @@ class IconServiceEngine(ContextContainer):
                                           rc_socket_path)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
-                                          irep)
+                                          irep,
+                                          penalty_grace_period,
+                                          min_productivity_percentage,
+                                          max_unvalidated_sequence_blocks)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)

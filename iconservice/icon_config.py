@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .icon_constant import ConfigKey, ICX_IN_LOOP, IISS_DAY_BLOCK
+from .icon_constant import ConfigKey, ICX_IN_LOOP, \
+    IISS_DAY_BLOCK, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
+    PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, \
+    MAX_UNVALIDATED_SEQUENCE_BLOCKS
 
 default_icon_config = {
     "log": {
@@ -40,7 +43,10 @@ default_icon_config = {
     ConfigKey.TERM_PERIOD: IISS_DAY_BLOCK,
     ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP,
     ConfigKey.PREP_REGISTRATION_FEE: 2_000 * ICX_IN_LOOP,
-    ConfigKey.PREP_MAIN_PREPS: 22,
-    ConfigKey.PREP_MAIN_AND_SUB_PREPS: 100,
-    ConfigKey.DECENTRALIZE_TRIGGER: 0.002
+    ConfigKey.PREP_MAIN_PREPS: PREP_MAIN_PREPS,
+    ConfigKey.PREP_MAIN_AND_SUB_PREPS: PREP_MAIN_AND_SUB_PREPS,
+    ConfigKey.DECENTRALIZE_TRIGGER: 0.002,
+    ConfigKey.PENALTY_GRACE_PERIOD: PENALTY_GRACE_PERIOD,
+    ConfigKey.MIN_PRODUCTIVITY_PERCENTAGE: MIN_PRODUCTIVITY_PERCENTAGE,
+    ConfigKey.MAX_UNVALIDATED_SEQUENCE_BLOCKS: MAX_UNVALIDATED_SEQUENCE_BLOCKS
 }

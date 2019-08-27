@@ -72,7 +72,19 @@ class Engine(EngineBase, IISSEngineListener):
 
         Logger.debug("PRepEngine.__init__() end")
 
-    def open(self, context: 'IconScoreContext', term_period: int, irep: int):
+    def open(self,
+             context: 'IconScoreContext',
+             term_period: int,
+             irep: int,
+             penalty_grace_period: int,
+             min_productivity_percentage: int,
+             max_unvalidated_sequence_block: int):
+
+        # this logic doesn't need to save to DB yet
+        PRep.init_prep_config(penalty_grace_period,
+                              min_productivity_percentage,
+                              max_unvalidated_sequence_block)
+
         self._load_preps(context)
         self.term.load(context, term_period)
         self._initial_irep = irep
