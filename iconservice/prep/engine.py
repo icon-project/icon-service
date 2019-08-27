@@ -346,7 +346,9 @@ class Engine(EngineBase, IISSEngineListener):
     def _create_next_term(cls,
                           src_term: 'Term',
                           context: 'IconScoreContext') -> 'Term':
-        new_preps: List['PRep'] = context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count)
+        new_preps: List['PRep'] = context.preps.get_preps(start_index=0,
+                                                          size=context.main_and_sub_prep_count,
+                                                          active_status_only=True)
 
         # The current P-Rep term is over. Prepare the next P-Rep term
         irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])

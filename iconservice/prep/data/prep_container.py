@@ -191,17 +191,21 @@ class PRepContainer(object):
         """
         return self._prep_dict.get(address)
 
-    def get_preps(self, start_index: int, size: int, active_only: bool = False) -> List['PRep']:
+    def get_preps(self, start_index: int, size: int, active_status_only: bool = False) -> List['PRep']:
         """Returns active P-Reps ranging from start_index to start_index + size - 1
 
         :return: P-Rep list
         """
-        if active_only:
-            return self._active_prep_list[start_index:start_index + size]
+        if active_status_only:
+            active_preps: List['PRep'] = []
+            for prep in self._active_prep_list:
+                if prep.status == PRepStatus.ACTIVE:
+                    active_preps.append(prep)
+                    if len(active_preps) == size:
+                        return active_preps
+            return active_preps
         else:
-            return [prep
-                    for prep in self._active_prep_list[start_index: start_index + size]
-                    if prep.status == PRepStatus.ACTIVE]
+            return self._active_prep_list[start_index:start_index + size]
 
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
