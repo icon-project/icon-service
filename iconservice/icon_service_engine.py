@@ -63,6 +63,7 @@ from .prep import PRepEngine, PRepStorage
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
+from .utils.step_trace import get_step_trace_msg, print_step_trace
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -117,7 +118,8 @@ class IconServiceEngine(ContextContainer):
         rc_data_path: str = os.path.abspath(rc_data_path)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
-        debug_level: str = conf[ConfigKey.LOG].get('level')
+        step_trace_flag: bool = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
+        debug_level: str = conf[ConfigKey.LOG].get("level")
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
@@ -141,7 +143,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.main_prep_count = conf.get(ConfigKey.PREP_MAIN_PREPS, PREP_MAIN_PREPS)
         IconScoreContext.main_and_sub_prep_count = conf.get(ConfigKey.PREP_MAIN_AND_SUB_PREPS, PREP_MAIN_AND_SUB_PREPS)
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
-        IconScoreContext.step_trace = [] if debug_level else None
+        IconScoreContext.step_trace_flag = step_trace_flag
+        IconScoreContext.debug_level = debug_level
         self._init_component_context()
 
         # load last_block_info
@@ -413,7 +416,7 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.validate_block_to_invoke(block)
 
         context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
+        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE, context.step_trace_flag)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
@@ -455,6 +458,9 @@ class IconServiceEngine(ContextContainer):
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
+                if context.step_trace_flag:
+                    step_trace_msg = get_step_trace_msg(context)
+                    print_step_trace(step_trace_msg, context.debug_level)
                 block_result.append(tx_result)
                 context.update_batch()
 
@@ -806,7 +812,7 @@ class IconServiceEngine(ContextContainer):
         context.msg_stack.clear()
         context.event_log_stack.clear()
         context.fee_sharing_proportion = 0
-        context.step_trace = [] if isinstance(context.step_trace, list) else None
+        context.step_counter.step_tracer = [] if isinstance(context.step_counter.step_tracer, list) else None
 
         return self._call(context, method, params)
 
@@ -821,20 +827,20 @@ class IconServiceEngine(ContextContainer):
         data: dict = params.get('data')
         to: Address = params['to']
 
-        context.step_counter.apply_step(StepType.DEFAULT, 1, context.step_trace)
+        context.step_counter.apply_step(StepType.DEFAULT, 1)
 
         input_size = get_input_data_size(context.revision, data)
-        context.step_counter.apply_step(StepType.INPUT, input_size, context.step_trace)
+        context.step_counter.apply_step(StepType.INPUT, input_size)
 
         if data_type == "deploy":
             content_size = get_deploy_content_size(context.revision, data.get('content', None))
-            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size, context.step_trace)
+            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
             # When installing SCORE.
             if to == ZERO_SCORE_ADDRESS:
-                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1, context.step_trace)
+                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             # When updating SCORE.
             else:
-                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1, context.step_trace)
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
         return context.step_counter.step_used
 
@@ -1079,7 +1085,7 @@ class IconServiceEngine(ContextContainer):
             data_type = params.get('dataType', None)
             data = params.get('data', None)
 
-            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1, context.step_trace)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             return IconScoreEngine.query(context,
                                          icon_score_address,
                                          data_type,
@@ -1212,9 +1218,9 @@ class IconServiceEngine(ContextContainer):
                 step_price=context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first
-        context.step_counter.apply_step(StepType.DEFAULT, 1, context.step_trace)
+        context.step_counter.apply_step(StepType.DEFAULT, 1)
         input_size = get_input_data_size(context.revision, params.get('data', None))
-        context.step_counter.apply_step(StepType.INPUT, input_size, context.step_trace)
+        context.step_counter.apply_step(StepType.INPUT, input_size)
 
         # TODO Branch IISS Engine
         if self._check_new_process(params):
@@ -1422,14 +1428,14 @@ class IconServiceEngine(ContextContainer):
                     deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
                     if deploy_info is not None:
                         raise AccessDeniedException(f'SCORE address already in use: {score_address}')
-                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1, context.step_trace)
+                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             else:
                 # SCORE update
                 score_address = to
-                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1, context.step_trace)
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
             content_size = get_deploy_content_size(context.revision, data.get('content', None))
-            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size, context.step_trace)
+            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
 
             context.engine.deploy.invoke(
                 context=context,
@@ -1440,7 +1446,7 @@ class IconServiceEngine(ContextContainer):
         elif data_type == 'deposit':
             self._deposit_handler.handle_deposit_request(context, data)
         else:
-            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1, context.step_trace)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
             return None
 

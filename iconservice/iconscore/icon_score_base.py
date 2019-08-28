@@ -477,7 +477,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             length = 1
             if value:
                 length = len(value)
-            context.step_counter.apply_step(StepType.GET, length, context.step_trace)
+            context.step_counter.apply_step(StepType.GET, length)
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -500,11 +500,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             if old_value:
                 # modifying a value
                 context.step_counter.apply_step(
-                    StepType.REPLACE, len(new_value), context.step_trace)
+                    StepType.REPLACE, len(new_value))
             else:
                 # newly storing a value
                 context.step_counter.apply_step(
-                    StepType.SET, len(new_value), context.step_trace)
+                    StepType.SET, len(new_value))
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -522,7 +522,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if context and context.step_counter and not context.readonly:
             context.step_counter.apply_step(
-                StepType.DELETE, len(old_value), context.step_trace)
+                StepType.DELETE, len(old_value))
 
     @property
     def msg(self) -> 'Message':

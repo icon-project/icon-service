@@ -63,7 +63,7 @@ class InternalCall(object):
         try:
             InternalCall._make_trace(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
-            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1, context.step_trace)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
             context.engine.icx.transfer(context, addr_from, addr_to, amount)
 

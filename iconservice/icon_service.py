@@ -128,7 +128,7 @@ def main():
                         help="icon score config")
     parser.add_argument("-tbears", dest=ConfigKey.TBEARS_MODE, action='store_true',
                         help="tbears mode")
-    parser.add_argument("-debug", dest=ConfigKey.VERBOSE, action="store_true", help="verbose mode flag")
+    parser.add_argument("-steptrace", dest=ConfigKey.STEP_TRACE_FLAG, action="store_true", help="step trace flag")
 
     args = parser.parse_args()
 
@@ -147,8 +147,6 @@ def main():
     conf = IconConfig(conf_path, default_icon_config)
     conf.load()
     conf.update_conf(dict(vars(args)))
-    if conf[ConfigKey.VERBOSE]:
-        conf[ConfigKey.LOG]['level'] = 'debug'
     Logger.load_config(conf)
     Logger.print_config(conf, ICON_SERVICE_CLI)
 

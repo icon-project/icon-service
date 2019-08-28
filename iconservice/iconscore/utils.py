@@ -26,3 +26,4 @@ def get_package_name_by_address_and_tx_hash(address: 'Address', tx_hash: bytes) 
 
 def get_score_deploy_path(score_root_path: str, score_address: 'Address', tx_hash: bytes) -> str:
     return os.path.join(score_root_path, score_address.to_bytes().hex(), f'0x{tx_hash.hex()}')
+

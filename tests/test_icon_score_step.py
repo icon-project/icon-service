@@ -110,14 +110,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, input_length, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CREATE, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.CONTRACT_SET, 25, None), call_args_for_apply_step[3][0])
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[4][0])
-        self.assertEqual((StepType.INPUT, input_length, None), call_args_for_apply_step[5][0])
-        self.assertEqual((StepType.CONTRACT_UPDATE, 1, None), call_args_for_apply_step[6][0])
-        self.assertEqual((StepType.CONTRACT_SET, 25, None), call_args_for_apply_step[7][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, input_length), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CREATE, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.CONTRACT_SET, 25), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[4][0])
+        self.assertEqual((StepType.INPUT, input_length), call_args_for_apply_step[5][0])
+        self.assertEqual((StepType.CONTRACT_UPDATE, 1), call_args_for_apply_step[6][0])
+        self.assertEqual((StepType.CONTRACT_SET, 25), call_args_for_apply_step[7][0])
         self.assertEqual(8, len(call_args_for_apply_step))
 
         step_used_create = self._calc_step_used(0, 4)
@@ -148,9 +148,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         input_length = 25
 
         self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
-                         (StepType.DEFAULT, 1, None))
+                         (StepType.DEFAULT, 1))
         self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
-                         (StepType.INPUT, input_length, None))
+                         (StepType.INPUT, input_length))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
 
         step_used = self._calc_step_used(0, 2)
@@ -171,8 +171,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
         self.assertEqual(2, len(call_args_for_apply_step))
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
@@ -208,10 +208,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[3][0])
         self.assertEqual(4, len(call_args_for_apply_step))
 
         step_used = self._calc_step_used(0, len(self.step_counter.apply_step.call_args_list))
@@ -249,14 +249,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.SET, 100, None), call_args_for_apply_step[3][0])
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[4][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[5][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[6][0])
-        self.assertEqual((StepType.REPLACE, 100, None), call_args_for_apply_step[7][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.SET, 100), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[4][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[5][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[6][0])
+        self.assertEqual((StepType.REPLACE, 100), call_args_for_apply_step[7][0])
         self.assertEqual(8, len(call_args_for_apply_step))
 
         step_used_replace = self._calc_step_used(4, 4)
@@ -311,10 +311,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.GET, 100, None), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.GET, 100), call_args_for_apply_step[3][0])
         self.assertEqual(4, len(call_args_for_apply_step))
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
@@ -359,8 +359,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.GET, 100, None), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.GET, 100), call_args_for_apply_step[1][0])
 
     @patch('iconservice.icon_service_engine.IconServiceEngine.before_transaction_process')
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
@@ -407,10 +407,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.DELETE, 100, None), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.DELETE, 100), call_args_for_apply_step[3][0])
         self.assertEqual(4, len(call_args_for_apply_step))
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
@@ -456,10 +456,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.EVENT_LOG, event_log_data_size, None), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.EVENT_LOG, event_log_data_size), call_args_for_apply_step[3][0])
         self.assertEqual(4, len(call_args_for_apply_step))
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
@@ -508,10 +508,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.EVENT_LOG, event_log_data_size, None), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.EVENT_LOG, event_log_data_size), call_args_for_apply_step[3][0])
         self.assertEqual(4, len(call_args_for_apply_step))
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
@@ -550,9 +550,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
         self.assertEqual(3, len(call_args_for_apply_step))
 
         # step_counter.consume_step should called in sha3_256() only if context.revision is more than 2
@@ -592,9 +592,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
-        self.assertEqual((StepType.DEFAULT, 1, None), call_args_for_apply_step[0][0])
-        self.assertEqual((StepType.INPUT, 0, None), call_args_for_apply_step[1][0])
-        self.assertEqual((StepType.CONTRACT_CALL, 1, None), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
         self.assertEqual(3, len(call_args_for_apply_step))
 
         # step_counter.consume_step() should be called in sha3_256() only if context.revision is more than 2
@@ -741,7 +741,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         step_used: int = 0
 
         for i in range(offset, offset + count):
-            (type, val, _) = self.step_counter.apply_step.call_args_list[i][0]
+            (type, val) = self.step_counter.apply_step.call_args_list[i][0]
             step_used = step_used + self.step_cost_dict[type] * val
 
         return step_used

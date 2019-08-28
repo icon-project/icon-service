@@ -197,10 +197,11 @@ class IconScoreStepCounterFactory(object):
         with self._lock:
             self._max_step_limits[context_type] = max_step_limit
 
-    def create(self, context_type: 'IconScoreContextType') -> 'IconScoreStepCounter':
+    def create(self, context_type: 'IconScoreContextType', step_trace_flag: bool = False) -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
         :param context_type: context type
+        :param step_trace_flag: step trace flag
         :return: step counter
         """
         with self._lock:
@@ -209,7 +210,7 @@ class IconScoreStepCounterFactory(object):
             step_costs: dict = self._step_costs.copy()
             max_step_limit: int = self._max_step_limits.get(context_type, 0)
 
-        return IconScoreStepCounter(step_price, step_costs, max_step_limit)
+        return IconScoreStepCounter(step_price, step_costs, max_step_limit, step_trace_flag)
 
 
 class OutOfStepException(IconServiceBaseException):
@@ -275,7 +276,8 @@ class IconScoreStepCounter(object):
     def __init__(self,
                  step_price: int,
                  step_costs: dict,
-                 max_step_limit: int) -> None:
+                 max_step_limit: int,
+                 step_trace_flag: bool = False) -> None:
         """Constructor
 
         :param step_price: step price
@@ -289,6 +291,7 @@ class IconScoreStepCounter(object):
         self._step_used: int = 0
         self._external_call_count: int = 0
         self._max_step_used: int = 0
+        self._step_tracer: list = [] if step_trace_flag else None
 
     @property
     def step_price(self) -> int:
@@ -331,7 +334,15 @@ class IconScoreStepCounter(object):
         """
         return self._max_step_used
 
-    def apply_step(self, step_type: StepType, count: int, step_trace: list) -> int:
+    @property
+    def step_tracer(self) -> list:
+        return self._step_tracer
+
+    @step_tracer.setter
+    def step_tracer(self, step_tracer):
+        self._step_tracer = step_tracer
+
+    def apply_step(self, step_type: StepType, count: int) -> int:
         """ Increases steps for given step cost
         """
 
@@ -341,8 +352,8 @@ class IconScoreStepCounter(object):
                 raise InvalidRequestException('Too many external calls')
 
         step: int = self._step_costs.get(step_type, 0) * count
-        if step_trace is not None:
-            step_trace.append({"stepType": step_type.value, "step": step, "cumulativeStep": self.step_used})
+        if self.step_tracer is not None:
+            self.step_tracer.append({"stepType": step_type.value, "step": step, "cumulativeStep": self.step_used})
 
         return self.consume_step(step_type, step)
 
