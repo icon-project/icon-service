@@ -20,9 +20,9 @@ import unittest
 from unittest.mock import patch
 
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.base.exception import DatabaseException
+from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
-from iconservice.database.db import ContextDatabase, MetaContextDatabase
+from iconservice.database.db import ContextDatabase, MetaContextDatabase, convert_tx_batch_value
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
@@ -61,7 +61,7 @@ class TestKeyValueDatabase(unittest.TestCase):
         }
         db = self.db
 
-        db.write_batch(data)
+        db.write_batch(data, converter=convert_tx_batch_value)
 
         self.assertEqual(b'value1', db.get(b'key1'))
         self.assertEqual(b'value0', db.get(b'key0'))
@@ -164,21 +164,21 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
             b'key0': b'value0',
         }
         db = self.context_db
-        with self.assertRaises(DatabaseException):
+        with self.assertRaises(InvalidParamsException):
             db.write_batch(context, data)
 
         data = {
             b'key0': None,
         }
         db = self.context_db
-        with self.assertRaises(DatabaseException):
+        with self.assertRaises(InvalidParamsException):
             db.write_batch(context, data)
 
         data = {
             b'key0': "",
         }
         db = self.context_db
-        with self.assertRaises(DatabaseException):
+        with self.assertRaises(InvalidParamsException):
             db.write_batch(context, data)
 
     def test_write_batch_on_readonly_exception(self):

@@ -40,6 +40,12 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
         return not context.readonly
 
 
+def convert_tx_batch_value(tx_batch_value: 'TransactionBatchValue') -> bytes:
+    if not isinstance(tx_batch_value, TransactionBatchValue):
+        raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
+    return tx_batch_value.value
+
+
 class KeyValueDatabase(object):
     @staticmethod
     def from_path(path: str,
@@ -100,9 +106,10 @@ class KeyValueDatabase(object):
     def iterator(self) -> iter:
         return self._db.iterator()
 
-    def write_batch(self, states: dict) -> None:
+    def write_batch(self, states: dict, converter: Optional[callable] = None) -> None:
         """Write a batch to the database for the specified states dict.
 
+        :param converter:
         :param states: key/value pairs
             key and value should be bytes type
         """
@@ -110,11 +117,11 @@ class KeyValueDatabase(object):
             return
 
         with self._db.write_batch() as wb:
-            for key, tx_batch_value in states.items():
-                if not isinstance(tx_batch_value, TransactionBatchValue):
-                    raise DatabaseException("Only tuple data is acceptable when writing batch")
-                if tx_batch_value.value:
-                    wb.put(key, tx_batch_value.value)
+            for key, value in states.items():
+                if converter:
+                    value = converter(value)
+                if value:
+                    wb.put(key, value)
                 else:
                     wb.delete(key)
 
@@ -316,7 +323,7 @@ class ContextDatabase(object):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(states)
+        return self.key_value_db.write_batch(states, converter=convert_tx_batch_value)
 
     @staticmethod
     def from_path(path: str,
@@ -565,19 +572,3 @@ class ExternalDatabase(KeyValueDatabase):
         :param prefix: (bytes): prefix to use
         """
         return ExternalDatabase(self._db.prefixed_db(prefix))
-
-    def write_batch(self, states: dict) -> None:
-        """Write a batch to the database for the specified states dict.
-
-        :param states: key/value pairs
-            key and value should be bytes type
-        """
-        if states is None or len(states) == 0:
-            return
-
-        with self._db.write_batch() as wb:
-            for key, value in states.items():
-                if value:
-                    wb.put(key, value)
-                else:
-                    wb.delete(key)
