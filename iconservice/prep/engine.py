@@ -150,14 +150,10 @@ class Engine(EngineBase, IISSEngineListener):
 
         Update P-Rep grades according to PRep.delegated
         """
-
         self._put_last_term_info(context, self.term)
         context.storage.meta.put_last_main_preps(context, self.term.main_preps)
 
-        self._update_prep_grades(main_prep_count=context.main_prep_count,
-                                 main_and_sub_prep_count=context.main_and_sub_prep_count,
-                                 old_preps=self.term.preps,
-                                 new_preps=context.preps)
+        self._update_prep_grades(context)
 
         invalid_preps: List[int] = self.get_invalid_preps(self.term, context)
         self.term.update_suspended_preps(invalid_preps)
@@ -200,9 +196,12 @@ class Engine(EngineBase, IISSEngineListener):
             main_preps_as_dict: dict = {}
         return main_preps_as_dict, term
 
-    @classmethod
-    def _update_prep_grades(cls, main_prep_count: int, main_and_sub_prep_count: int,
-                            old_preps: List['PRep'], new_preps: 'PRepContainer'):
+    def _update_prep_grades(self, context: 'IconScoreContext'):
+        main_prep_count: int = context.main_prep_count
+        main_and_sub_prep_count: int = context.main_and_sub_prep_count
+        old_preps: List['PRep'] = self.term.preps
+        new_preps: 'PRepContainer' = context.preps
+
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
         # Put the address and grade of a old P-Rep to prep_grades dict
@@ -230,12 +229,13 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Update the grades of P-Reps for the next term
         for address, grades in prep_grades.items():
-            prep: 'PRep' = new_preps.remove(address)
-            assert prep is not None
+            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+            assert dirty_prep is not None
 
-            dirty_prep = prep.copy()
             dirty_prep.grade = grades[1]
-            new_preps.add(dirty_prep)
+            context.put_dirty_prep(dirty_prep)
+
+        context.update_dirty_prep_batch()
 
     def _release_turn_over(self, context: 'IconScoreContext'):
         for address in self.term.suspended_preps:
