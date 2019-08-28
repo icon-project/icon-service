@@ -18,9 +18,10 @@ import os
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from iconcommons import Logger
+
 from ..reward_calc.msg_data import TxData
 from ...base.exception import DatabaseException
-from ...database.db import ExternalDatabase
+from ...database.db import KeyValueDatabase
 from ...icon_constant import DATA_BYTE_ORDER
 from ...utils.msgpack_for_db import MsgPackForDB
 
@@ -37,7 +38,7 @@ class Storage(object):
 
     def __init__(self):
         self._path: str = ""
-        self._db: Optional['ExternalDatabase'] = None
+        self._db: Optional['KeyValueDatabase'] = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
@@ -47,7 +48,7 @@ class Storage(object):
         self._path = path
 
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
-        self._db = ExternalDatabase.from_path(current_db_path, create_if_missing=True)
+        self._db = KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
 
     def close(self):
@@ -119,7 +120,7 @@ class Storage(object):
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
 
-        self._db = ExternalDatabase.from_path(current_db_path)
+        self._db = KeyValueDatabase.from_path(current_db_path)
         self._db_iiss_tx_index = -1
 
         return iiss_rc_db_path
