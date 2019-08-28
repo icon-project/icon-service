@@ -21,7 +21,7 @@ from unittest.mock import patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException
-from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
 from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
@@ -56,8 +56,8 @@ class TestKeyValueDatabase(unittest.TestCase):
 
     def test_write_batch(self):
         data = {
-            b'key0': (b'value0', True),
-            b'key1': (b'value1', True)
+            b'key0': TransactionBatchValue(b'value0', True),
+            b'key1': TransactionBatchValue(b'value1', True)
         }
         db = self.db
 
@@ -149,8 +149,8 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def test_write_batch(self):
         context = self.context
         data = {
-            b'key0': (b'value0', True),
-            b'key1': (b'value1', True)
+            b'key0': TransactionBatchValue(b'value0', True),
+            b'key1': TransactionBatchValue(b'value1', True)
         }
         db = self.context_db
         db.write_batch(context, data)

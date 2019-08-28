@@ -16,26 +16,28 @@
 
 
 import hashlib
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import DatabaseException, IllegalFormatException
+from ..base.exception import DatabaseException, AccessDeniedException
 
 if TYPE_CHECKING:
     from ..base.block import Block
+
+
+TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_root_hash'])
 
 
 def digest(ordered_dict: OrderedDict):
     # items in data MUST be byte-like objects
     data = []
 
-    for key, value in ordered_dict.items():
-        if value[1] is True:
-            value = value[0]
+    for key, tx_batch_value in ordered_dict.items():
+        if tx_batch_value.include_root_hash is True:
+            value = tx_batch_value.value
         else:
             continue
-
         data.append(key)
         if value is not None:
             data.append(value)
@@ -157,9 +159,34 @@ class BlockBatch(Batch):
 
     def __setitem__(self, key, value):
         if not isinstance(value, tuple):
-            raise IllegalFormatException("Can not set data on block batch directly.")
+            raise AccessDeniedException("Can not set data on block batch directly.")
         super().__setitem__(key, value)
 
     def clear(self) -> None:
         self.block = None
         super().clear()
+
+#
+# class BlockBatch(Batch):
+#     """Contains the states changed by a block
+#
+#     key: Address
+#     value: IconScoreBatch
+#     """
+#     def __init__(self, block: Optional['Block'] = None):
+#         """Constructor
+#
+#         :param block: block info
+#         """
+#         super().__init__()
+#         self.block = block
+#
+#     def __setitem__(self, key, value):
+#         raise AccessDeniedException("Can not set data on block batch directly.")
+#
+#     def update(self, tx_batch: 'TransactionBatch', **kwargs):
+#         super().update(tx_batch, **kwargs)
+#
+#     def clear(self) -> None:
+#         self.block = None
+#         super().clear()

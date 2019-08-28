@@ -18,8 +18,8 @@
 import unittest
 
 from iconservice.base.block import Block
-from iconservice.base.exception import IllegalFormatException
-from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.base.exception import IllegalFormatException, DatabaseException, AccessDeniedException
+from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
 from iconservice.utils import sha3_256
 from tests import create_hash_256
 
@@ -48,20 +48,20 @@ class TestBatch(unittest.TestCase):
     def test_data_format(self):
         # Cannot set data to block batch directly
         key = create_hash_256()
-        with self.assertRaises(IllegalFormatException):
+        with self.assertRaises(AccessDeniedException):
             self.block_batch[key] = b'value0'
 
     def test_len(self):
         key = create_hash_256()
 
-        self.block_batch[key] = (b'value0', True)
+        self.block_batch[key] = TransactionBatchValue(b'value0', True)
         self.assertEqual(1, len(self.block_batch))
 
-        self.block_batch[key] = (b'value1', True)
+        self.block_batch[key] = TransactionBatchValue(b'value1', True)
         self.assertEqual(1, len(self.block_batch))
 
         key1 = create_hash_256()
-        self.block_batch[key1] = (b'value0', True)
+        self.block_batch[key1] = TransactionBatchValue(b'value0', True)
         self.assertEqual(2, len(self.block_batch))
 
         del self.block_batch[key]
@@ -114,20 +114,20 @@ class TestBatch(unittest.TestCase):
         block_batch = self.block_batch
 
         key0 = create_hash_256()
-        block_batch[key0] = (b'value0', True)
+        block_batch[key0] = TransactionBatchValue(b'value0', True)
         key1 = create_hash_256()
-        block_batch[key1] = (b'value1', True)
+        block_batch[key1] = TransactionBatchValue(b'value1', True)
         key2 = create_hash_256()
-        block_batch[key2] = (b'value2', True)
+        block_batch[key2] = TransactionBatchValue(b'value2', True)
 
         data = [key0, b'value0', key1, b'value1', key2, b'value2']
         expected = sha3_256(b'|'.join(data))
         ret = block_batch.digest()
         self.assertEqual(expected, ret)
 
-        block_batch[key2] = (None, True)
+        block_batch[key2] = TransactionBatchValue(None, True)
         hash1 = block_batch.digest()
-        block_batch[key2] = (b'', True)
+        block_batch[key2] = TransactionBatchValue(b'', True)
         hash2 = block_batch.digest()
         self.assertNotEqual(hash1, hash2)
 
@@ -135,18 +135,18 @@ class TestBatch(unittest.TestCase):
         block_batch = self.block_batch
 
         include_key1 = create_hash_256()
-        block_batch[include_key1] = (b'value0', True)
+        block_batch[include_key1] = TransactionBatchValue(b'value0', True)
         include_key2 = create_hash_256()
-        block_batch[include_key2] = (b'value1', True)
+        block_batch[include_key2] = TransactionBatchValue(b'value1', True)
         include_key3 = create_hash_256()
-        block_batch[include_key3] = (b'', True)
+        block_batch[include_key3] = TransactionBatchValue(b'', True)
         include_key4 = create_hash_256()
-        block_batch[include_key4] = (None, True)
+        block_batch[include_key4] = TransactionBatchValue(None, True)
 
         exclude_key1 = create_hash_256()
-        block_batch[exclude_key1] = (b'value2', False)
+        block_batch[exclude_key1] = TransactionBatchValue(b'value2', False)
         exclude_key2 = create_hash_256()
-        block_batch[exclude_key2] = (b'value3', False)
+        block_batch[exclude_key2] = TransactionBatchValue(b'value3', False)
 
         data = [include_key1, b'value0', include_key2, b'value1', include_key3, b'', include_key4]
         expected = sha3_256(b'|'.join(data))

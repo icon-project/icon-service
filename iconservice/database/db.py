@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Optional
 import plyvel
 from iconcommons.logger import Logger
 
+from iconservice.database.batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
@@ -109,11 +110,11 @@ class KeyValueDatabase(object):
             return
 
         with self._db.write_batch() as wb:
-            for key, value in states.items():
-                if not isinstance(value, tuple):
+            for key, tx_batch_value in states.items():
+                if not isinstance(tx_batch_value, TransactionBatchValue):
                     raise DatabaseException("Only tuple data is acceptable when writing batch")
-                if value[0]:
-                    wb.put(key, value[0])
+                if tx_batch_value.value:
+                    wb.put(key, tx_batch_value.value)
                 else:
                     wb.delete(key)
 
@@ -222,11 +223,11 @@ class ContextDatabase(object):
 
         # get value from tx_batch
         if key in tx_batch:
-            return tx_batch[key][0]
+            return tx_batch[key].value
 
         # get value from block_batch
         if key in block_batch:
-            return block_batch[key][0]
+            return block_batch[key].value
 
         # get value from state_db
         return self.key_value_db.get(key)
@@ -240,7 +241,7 @@ class ContextDatabase(object):
 
         if not isinstance(context.tx_batch[key], tuple):
             raise DatabaseException(f'Only tuple type is allowed on tx_batch: {context.tx_batch[key]}')
-        elif context.tx_batch[key][1] != include_root_hash:
+        elif context.tx_batch[key].include_root_hash != include_root_hash:
             raise DatabaseException('Do not change the include_root_hash on the same data')
 
     def put(self,
@@ -269,7 +270,7 @@ class ContextDatabase(object):
             self.key_value_db.put(key, value)
         else:
             self._check_tx_batch_value(context, key, include_root_hash)
-            context.tx_batch[key] = (value, include_root_hash)
+            context.tx_batch[key] = TransactionBatchValue(value, include_root_hash)
 
     def delete(self,
                context: Optional['IconScoreContext'],
@@ -294,7 +295,7 @@ class ContextDatabase(object):
             self.key_value_db.delete(key)
         else:
             self._check_tx_batch_value(context, key, include_root_hash)
-            context.tx_batch[key] = (None, include_root_hash)
+            context.tx_batch[key] = TransactionBatchValue(None, include_root_hash)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
