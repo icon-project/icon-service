@@ -289,19 +289,18 @@ def test_replace(create_prep_container):
 
 def test_add_with_suspended(create_prep_container):
     size: int = 10
-    delegated: int = 0
-    preps: 'PRepContainer' = create_prep_container(size, delegated=delegated)
-    total_delegated: int = delegated * size
+    preps: 'PRepContainer' = create_prep_container(size, delegated=0)
 
     # Case: Add an active P-Rep
+    delegated: int = 100
     suspended_prep = _create_dummy_prep(size)
     suspended_prep.status = PRepStatus.SUSPENDED
-    suspended_prep.delegated = 100
+    suspended_prep.delegated = delegated
     preps.add(suspended_prep)
     assert preps.size(active_suspended_prep_only=True) == size + 1
     assert preps.size(active_suspended_prep_only=False) == size + 1
 
-    assert total_delegated == preps.total_delegated
+    assert suspended_prep.delegated == preps.total_delegated
 
     with pytest.raises(InvalidParamsException):
         preps.add(suspended_prep)
@@ -315,11 +314,12 @@ def test_add_with_suspended(create_prep_container):
         assert preps.size(active_suspended_prep_only=False) == size
 
         prep.status = PRepStatus.SUSPENDED
-        prep.delegated = 100
+        prep.delegated = delegated
         preps.add(prep)
         assert preps.size(active_suspended_prep_only=True) == size + 1
         assert preps.size(active_suspended_prep_only=False) == size + 1
-    assert 0 == preps.total_delegated
+    expected_total_delegated: int = delegated * size
+    assert expected_total_delegated == preps.total_delegated
 
 
 def test_remove_with_suspended(create_prep_container):

@@ -103,10 +103,8 @@ class PRepContainer(object):
 
         if prep.status in self._ACTIVE_STATUS:
             self._active_prep_list.add(prep)
-
             # Update self._total_prep_delegated
-            if prep.status == PRepStatus.ACTIVE:
-                self._total_prep_delegated += prep.delegated
+            self._total_prep_delegated += prep.delegated
             assert self._total_prep_delegated >= 0
 
     def remove(self, address: 'Address') -> Optional['PRep']:
@@ -128,8 +126,8 @@ class PRepContainer(object):
         if prep is not None:
             if prep.status in self._ACTIVE_STATUS:
                 self._active_prep_list.remove(prep)
-                if prep.status == PRepStatus.ACTIVE:
-                    self._total_prep_delegated -= prep.delegated
+                # Update self._total_prep_delegated
+                self._total_prep_delegated -= prep.delegated
 
             del self._prep_dict[address]
 
