@@ -144,7 +144,7 @@ class EventLogEmitter(object):
         elif isinstance(data, int):
             return int_to_bytes(data)
         else:
-            raise InvalidEventLogException(f'Invalid data type: {type(data)}')
+            raise InvalidEventLogException(f'Invalid data type: {type(data)}, data: {data}')
 
     @staticmethod
     def get_ordered_bytes(index: int, data: 'BaseType') -> bytes:
