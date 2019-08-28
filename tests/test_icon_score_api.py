@@ -311,7 +311,7 @@ class TestIconScoreApi(unittest.TestCase):
         test_data: List['PRepInfo'] = []
         test_preps: List['PRep'] = []
         for i in range(PREP_MAIN_AND_SUB_PREPS):
-            test_data.append(PRepInfo(address=create_address(), delegated=i))
+            test_data.append(PRepInfo(address=create_address(), delegated=i, name=f"prep{i}"))
             test_preps.append(PRep(address=test_data[i].address, delegated=test_data[i].delegated))
         self.context.engine.prep.term._prep = test_preps
         self.context.engine.prep.term._end_block_height = 100

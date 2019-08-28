@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.data.prep_container import PRep, PRepContainer
     from ..utils import ContextEngine, ContextStorage
-    from ..database.batch import ExternalBatch
 
 _thread_local_data = threading.local()
 
@@ -136,8 +135,6 @@ class IconScoreContext(object):
         self.tx_batch: 'TransactionBatch' = None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
-        self.meta_block_batch: 'ExternalBatch' = None
-        self.meta_tx_batch: 'ExternalBatch' = None
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
@@ -189,7 +186,6 @@ class IconScoreContext(object):
         self.update_dirty_prep_batch()
         self.update_state_db_batch()
         self.update_rc_db_batch()
-        self.update_meta_db_batch()
 
     def update_state_db_batch(self):
         self.block_batch.update(self.tx_batch)
@@ -199,12 +195,8 @@ class IconScoreContext(object):
         self.rc_block_batch.extend(self.rc_tx_batch)
         self.rc_tx_batch.clear()
 
-    def update_meta_db_batch(self):
-        self.meta_block_batch.update(self.meta_tx_batch)
-        self.meta_tx_batch.clear()
-
     def update_dirty_prep_batch(self):
-        """Update context.preps and block_dirty_preps when a tx is done
+        """Update context.preps when a tx is done
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
@@ -221,12 +213,10 @@ class IconScoreContext(object):
             self.tx_batch.clear()
         if self.rc_tx_batch:
             self.rc_tx_batch.clear()
-        if self.meta_tx_batch:
-            self.meta_tx_batch.clear()
         if self.tx_dirty_preps:
             self.tx_dirty_preps.clear()
 
-    def get_prep(self, address: 'Address', mutable: bool = False):
+    def get_prep(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
         prep: 'PRep' = self.tx_dirty_preps.get(address)
         if prep is None:
             prep = self.preps.get_by_address(address)

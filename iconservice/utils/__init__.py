@@ -109,4 +109,4 @@ def set_flag(src_flags: Flag, flag: Flag, on: bool) -> Flag:
 
 
 ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
-ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue rc meta")
+ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc")

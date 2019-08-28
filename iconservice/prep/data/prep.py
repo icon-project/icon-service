@@ -20,10 +20,10 @@ import iso3166
 
 from .sorted_list import Sortable
 from ... import utils
-from ...base.exception import AccessDeniedException
+from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
-from ...icon_constant import PRepGrade, PRepStatus
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS
+from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -43,8 +43,21 @@ class PRepDictType(Enum):
 
 class PRep(Sortable):
     PREFIX: bytes = b"prep"
-    _VERSION: int = 0
+    _VERSION: int = 1
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
+
+    _penalty_grace_period: int = PENALTY_GRACE_PERIOD
+    _min_productivity_percentage: int = MIN_PRODUCTIVITY_PERCENTAGE
+    _max_unvalidated_sequence_blocks: int = MAX_UNVALIDATED_SEQUENCE_BLOCKS
+
+    @classmethod
+    def init_prep_config(cls,
+                         penalty_grace_period: int,
+                         min_productivity_percentage: int,
+                         max_unvalidated_sequence_block: int):
+        cls._penalty_grace_period: int = penalty_grace_period
+        cls._min_productivity_percentage: int = min_productivity_percentage
+        cls._max_unvalidated_sequence_blocks: int = max_unvalidated_sequence_block
 
     class Index(IntEnum):
         VERSION = 0
@@ -69,6 +82,9 @@ class PRep(Sortable):
         TOTAL_BLOCKS = auto()
         VALIDATED_BLOCKS = auto()
 
+        PENALTY = auto()
+        UNVALIDATED_SEQUENCE_BLOCKS = auto()
+
         SIZE = auto()
 
     def __init__(
@@ -76,6 +92,7 @@ class PRep(Sortable):
             *,
             flags: 'PRepFlag' = PRepFlag.NONE,
             status: 'PRepStatus' = PRepStatus.ACTIVE,
+            penalty: 'PenaltyReason' = PenaltyReason.NONE,
             grade: 'PRepGrade' = PRepGrade.CANDIDATE,
             name: str = "",
             country: str = "",
@@ -92,7 +109,8 @@ class PRep(Sortable):
             block_height: int = 0,
             tx_index: int = 0,
             total_blocks: int = 0,
-            validated_blocks: int = 0):
+            validated_blocks: int = 0,
+            unvalidated_sequence_blocks: int = 0):
         """
         Main PRep: top 1 ~ 22 preps in descending order by delegated amount
         Sub PRep: 23 ~ 100 preps
@@ -101,6 +119,7 @@ class PRep(Sortable):
         :param address:
         :param flags:
         :param status:
+        :param penalty:
         :param grade:
         :param name:
         :param country: alpha3 country code (ISO3166)
@@ -115,6 +134,9 @@ class PRep(Sortable):
         :param delegated:
         :param block_height:
         :param tx_index:
+        :param total_blocks:
+        :param validated_blocks:
+        :param unvalidated_sequence_blocks
         """
         assert irep_block_height == block_height
 
@@ -129,6 +151,7 @@ class PRep(Sortable):
 
         # status
         self._status: 'PRepStatus' = status
+        self._penalty: 'PenaltyReason' = penalty
         self._grade: 'PRepGrade' = grade
 
         # registration info
@@ -154,6 +177,7 @@ class PRep(Sortable):
         # stats
         self._total_blocks: int = total_blocks
         self._validated_blocks: int = validated_blocks
+        self._unvalidated_sequence_blocks: int = unvalidated_sequence_blocks
 
     def is_dirty(self) -> bool:
         return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
@@ -168,6 +192,15 @@ class PRep(Sortable):
     @status.setter
     def status(self, value: 'PRepStatus'):
         self._status = value
+        self._set_dirty(True)
+
+    @property
+    def penalty(self) -> 'PenaltyReason':
+        return self._penalty
+
+    @penalty.setter
+    def penalty(self, value: 'PenaltyReason'):
+        self._penalty = value
         self._set_dirty(True)
 
     @property
@@ -200,7 +233,7 @@ class PRep(Sortable):
         return iso3166.countries_by_alpha3.get(
             alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
 
-    def update_productivity(self, is_validate: bool):
+    def update_main_prep_validate(self, is_validate: bool):
         """Update the block validation statistics of P-Rep
 
         :param is_validate:
@@ -210,6 +243,9 @@ class PRep(Sortable):
 
         if is_validate:
             self._validated_blocks += 1
+            self._unvalidated_sequence_blocks = 0
+        else:
+            self._unvalidated_sequence_blocks += 1
         self._total_blocks += 1
 
         self._set_dirty(True)
@@ -224,10 +260,22 @@ class PRep(Sortable):
 
     def is_low_productivity(self) -> bool:
         # A grace period without measuring productivity
-        if self._total_blocks <= PENALTY_GRACE_PERIOD:
+        if self._total_blocks < self._penalty_grace_period:
             return False
 
-        return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
+        return self.productivity < self._min_productivity_percentage
+
+    def release_suspend(self):
+        if self._status == PRepStatus.SUSPENDED:
+            self._status = PRepStatus.ACTIVE
+            self._unvalidated_sequence_blocks: int = 0
+
+    def is_over_unvalidated_sequence_blocks(self) -> bool:
+        # A grace period without measuring productivity
+        if self._total_blocks < self._penalty_grace_period:
+            return False
+
+        return self._unvalidated_sequence_blocks >= self._max_unvalidated_sequence_blocks
 
     @property
     def total_blocks(self) -> int:
@@ -236,6 +284,10 @@ class PRep(Sortable):
     @property
     def validated_blocks(self) -> int:
         return self._validated_blocks
+
+    @property
+    def unvalidated_sequence_blocks(self) -> int:
+        return self._unvalidated_sequence_blocks
 
     @property
     def address(self) -> 'Address':
@@ -301,7 +353,8 @@ class PRep(Sortable):
         """
         self._flags |= PRepFlag.FROZEN
 
-    def set(self, *,
+    def set(self,
+            *,
             name: str = None,
             country: str = None,
             city: str = None,
@@ -388,6 +441,8 @@ class PRep(Sortable):
 
             self._total_blocks,
             self._validated_blocks,
+            self.penalty.value,
+            self._unvalidated_sequence_blocks
         ])
 
     @classmethod
@@ -395,25 +450,51 @@ class PRep(Sortable):
         items: list = MsgPackForDB.loads(data)
         assert len(items) == cls.Index.SIZE
 
-        return PRep(
-            address=items[cls.Index.ADDRESS],
-            status=PRepStatus(items[cls.Index.STATUS]),
-            grade=PRepGrade(items[cls.Index.GRADE]),
-            name=items[cls.Index.NAME],
-            country=items[cls.Index.COUNTRY],
-            city=items[cls.Index.CITY],
-            email=items[cls.Index.EMAIL],
-            website=items[cls.Index.WEBSITE],
-            details=items[cls.Index.DETAILS],
-            p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
-            irep=items[cls.Index.IREP],
-            irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
-            last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
-            block_height=items[cls.Index.BLOCK_HEIGHT],
-            tx_index=items[cls.Index.TX_INDEX],
-            total_blocks=items[cls.Index.TOTAL_BLOCKS],
-            validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
-        )
+        version: int = items[cls.Index.VERSION]
+        if version == 0:
+            return PRep(
+                address=items[cls.Index.ADDRESS],
+                status=PRepStatus(items[cls.Index.STATUS]),
+                grade=PRepGrade(items[cls.Index.GRADE]),
+                name=items[cls.Index.NAME],
+                country=items[cls.Index.COUNTRY],
+                city=items[cls.Index.CITY],
+                email=items[cls.Index.EMAIL],
+                website=items[cls.Index.WEBSITE],
+                details=items[cls.Index.DETAILS],
+                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+                irep=items[cls.Index.IREP],
+                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+                block_height=items[cls.Index.BLOCK_HEIGHT],
+                tx_index=items[cls.Index.TX_INDEX],
+                total_blocks=items[cls.Index.TOTAL_BLOCKS],
+                validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
+            )
+        elif version == 1:
+            return PRep(
+                address=items[cls.Index.ADDRESS],
+                status=PRepStatus(items[cls.Index.STATUS]),
+                penalty=PenaltyReason(items[cls.Index.PENALTY]),
+                grade=PRepGrade(items[cls.Index.GRADE]),
+                name=items[cls.Index.NAME],
+                country=items[cls.Index.COUNTRY],
+                city=items[cls.Index.CITY],
+                email=items[cls.Index.EMAIL],
+                website=items[cls.Index.WEBSITE],
+                details=items[cls.Index.DETAILS],
+                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+                irep=items[cls.Index.IREP],
+                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+                block_height=items[cls.Index.BLOCK_HEIGHT],
+                tx_index=items[cls.Index.TX_INDEX],
+                total_blocks=items[cls.Index.TOTAL_BLOCKS],
+                validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
+                unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS]
+            )
+        else:
+            raise InvalidParamsException("invalid version")
 
     @staticmethod
     def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':

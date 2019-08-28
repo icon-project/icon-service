@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import copy
 from typing import TYPE_CHECKING, List, Optional
 
 from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 
 if TYPE_CHECKING:
-    from .data import PRep, PRepFlag, PRepContainer
+    from .data import PRep, PRepContainer
     from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
 
@@ -35,10 +36,12 @@ class Term(object):
         self._period: int = -1
         # Main and Sub P-Reps
         self._preps: List['PRep'] = []
-        self._main_prep_count: int = PREP_MAIN_PREPS
-        self._main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
         self._irep: int = -1
         self._total_supply: int = -1
+        self._total_delegated: int = -1
+        self._main_prep_count: int = PREP_MAIN_PREPS
+        self._main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
+        self._suspended_preps: List['Address'] = []
 
     @property
     def sequence(self) -> int:
@@ -80,41 +83,51 @@ class Term(object):
     def total_supply(self) -> int:
         return self._total_supply
 
+    @property
+    def total_delegated(self) -> int:
+        return self._total_delegated
+
+    @property
+    def suspended_preps(self) -> List['Address']:
+        return self._suspended_preps
+
     def load(self, context: 'IconScoreContext', term_period: int):
-        self._period = term_period
+        self._period: int = term_period
         data: Optional[list] = context.storage.prep.get_term(context)
         if data:
-            version = data[0]
+            version: int = data[0]
             assert version == self._VERSION
 
-            self._sequence = data[1]
-            self._start_block_height = data[2]
-            self._end_block_height = self._start_block_height + term_period - 1
+            self._sequence: int = data[1]
+            self._start_block_height: int = data[2]
+            self._end_block_height: int = self._start_block_height + term_period - 1
             self._preps: List['PRep'] = self._make_main_and_sub_preps(context, data[3])
-            self._irep = data[4]
-            self._total_supply = data[5]
+            self._suspended_preps: List['Address'] = data[4]
+            self._irep: int = data[5]
+            self._total_supply: int = data[6]
+            self._total_delegated: int = data[7]
         else:
-            self._irep = 0
-            self._total_supply = context.total_supply
+            self._irep: int = 0
+            self._total_supply: int = context.total_supply
 
-        self._main_prep_count = context.main_prep_count
-        self._main_and_sub_prep_count = context.main_and_sub_prep_count
+        self._main_prep_count: int = context.main_prep_count
+        self._main_and_sub_prep_count: int = context.main_and_sub_prep_count
 
     @staticmethod
-    def _make_main_and_sub_preps(context: 'IconScoreContext', data: list) -> List['PRep']:
+    def _make_main_and_sub_preps(context: 'IconScoreContext', data_list: list) -> List['PRep']:
         """Returns tuple of Main P-Rep List and Sub P-Rep List
 
         :param context:
-        :param data:
+        :param data_list:
         :return:
         """
         prep_list: list = []
         frozen_preps: 'PRepContainer' = context.engine.prep.preps
         assert frozen_preps.is_frozen()
 
-        for i in range(0, len(data), 2):
-            address: 'Address' = data[i]
-            delegated: int = data[i + 1]
+        for data in data_list:
+            address: 'Address' = data[0]
+            delegated: int = data[1]
 
             frozen_prep: 'PRep' = frozen_preps.get_by_address(address)
             assert frozen_prep.is_frozen()
@@ -131,39 +144,74 @@ class Term(object):
 
         return prep_list
 
-    def update( self, sequence: int, main_prep_count: int, main_and_sub_prep_count: int,
-                current_block_height: int, preps: List['PRep'], total_supply: int, term_period: int, irep: int):
+    @classmethod
+    def create_next_term(cls,
+                         sequence: int,
+                         main_prep_count: int,
+                         main_and_sub_prep_count: int,
+                         current_block_height: int,
+                         preps: List['PRep'],
+                         total_supply: int,
+                         total_delegated: int,
+                         term_period: int,
+                         irep: int) -> 'Term':
         """
         :param sequence:
         :param main_prep_count
         :param main_and_sub_prep_count
         :param current_block_height:
         :param preps:
-        :param irep:
         :param total_supply:
+        :param total_delegated:
         :param term_period: P-Rep term period in block
+        :param irep:
         :return:
         """
-        self._sequence = sequence
-        self._main_prep_count = main_prep_count
-        self._main_and_sub_prep_count = main_and_sub_prep_count
-        self._start_block_height = current_block_height + 1
-        self._end_block_height = current_block_height + term_period
-        self._period = term_period
-        self._preps = preps[:self._main_and_sub_prep_count]  # shallow copy
-        self._total_supply = total_supply
-        self._irep = irep
 
-    # def _calculate_weighted_average_of_irep(self) -> int:
-    #     total_delegated = 0  # total delegated of top 22 preps
-    #     total_weighted_irep = 0
-    #
-    #     for i in range(self._main_prep_count):
-    #         prep: 'PRep' = self._preps[i]
-    #         total_weighted_irep += prep.irep * prep.delegated
-    #         total_delegated += prep.delegated
-    #
-    #     return total_weighted_irep // total_delegated if total_delegated > 0 else 0
+        term: 'Term' = Term()
+        term._sequence = sequence
+        term._main_prep_count = main_prep_count
+        term._main_and_sub_prep_count = main_and_sub_prep_count
+        term._start_block_height = current_block_height + 1
+        term._end_block_height = current_block_height + term_period
+        term._preps = preps[:main_and_sub_prep_count]  # shallow copy
+        term._total_supply = total_supply
+        term._total_delegated = total_delegated
+        term._period = term_period
+        term._irep = irep
+        return term
+
+    @classmethod
+    def create_update_term(cls,
+                           src_term: 'Term',
+                           invalid_preps: List[int]) -> 'Term':
+        # shallow copy
+        term: 'Term' = copy(src_term)
+        for index in invalid_preps:
+            if not term.is_available_replace():
+                break
+            term.replace_penalty_main_preps(index)
+        return term
+
+    def update_suspended_preps(self,
+                               invalid_preps: List[int]):
+        for index in invalid_preps:
+            prep: 'PRep' = self._preps[index]
+            self._suspended_preps.append(prep.address)
+
+    def replace_penalty_main_preps(self, index: int):
+        new_index = self._main_prep_count
+        new_main_prep: 'PRep' = self._preps[new_index]
+
+        old_main_prep: 'PRep' = self._preps[index]
+        self._preps[index] = new_main_prep
+
+        del self._preps[new_index]
+
+        self._total_delegated -= old_main_prep.delegated
+
+    def is_available_replace(self) -> bool:
+        return len(self.sub_preps) > 0
 
     def save(self, context: 'IconScoreContext'):
         """Save term data to stateDB
@@ -176,8 +224,10 @@ class Term(object):
             self._sequence,
             self._start_block_height,
             self._serialize_preps(self.preps),
+            self._suspended_preps,
             self._irep,
-            self._total_supply
+            self._total_supply,
+            self._total_delegated,
         ]
         context.storage.prep.put_term(context, data)
 
@@ -185,6 +235,5 @@ class Term(object):
     def _serialize_preps(preps: List['PRep']) -> List:
         data: list = []
         for prep in preps:
-            data.append(prep.address)
-            data.append(prep.delegated)
+            data.append([prep.address, prep.delegated])
         return data

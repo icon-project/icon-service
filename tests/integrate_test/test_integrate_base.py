@@ -28,7 +28,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRES
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION, ICX_IN_LOOP
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, ICX_IN_LOOP
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
@@ -195,7 +195,7 @@ class TestIntegrateBase(TestCase):
 
         is_block_editable = False
         self.icon_service_engine._set_revision_to_context(context)
-        if context.revision >= REV_DECENTRALIZATION:
+        if context.is_decentralized():
             is_block_editable = True
 
         tx_results, state_root_hash, added_transactions, main_prep_as_dict = \

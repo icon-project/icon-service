@@ -65,12 +65,14 @@ class TestIISSClaim(TestIISSBase):
         icx = 10 ** 3
         iscore = icx * 10 ** 3
         RewardCalcProxy.claim_iscore = Mock(return_value=(iscore, block_height))
+        RewardCalcProxy.commit_claim = Mock()
 
         # get_treasury account balance
         treasury_balance_before_claim: int = self.get_balance(self._fee_treasury)
 
         # claim iscore
         tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
+        RewardCalcProxy.commit_claim.assert_called()
 
         accumulative_fee = tx_results[0].step_price * tx_results[0].step_used
         # query mocking

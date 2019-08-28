@@ -17,6 +17,7 @@
 
 import unittest
 
+from iconservice.icon_constant import PenaltyReason
 from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes
 from iconservice.utils.hashing.hash_generator import RootHashGenerator
 from tests import create_address
