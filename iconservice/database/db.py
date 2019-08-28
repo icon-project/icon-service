@@ -549,26 +549,3 @@ class IconScoreSubDatabase(object):
         data.append(key)
 
         return b'|'.join(data)
-
-
-class ExternalDatabase(KeyValueDatabase):
-    def __init__(self, db: plyvel.DB) -> None:
-        super().__init__(db)
-
-    @staticmethod
-    def from_path(path: str,
-                  create_if_missing: bool = True) -> 'ExternalDatabase':
-        """
-        :param path: db path
-        :param create_if_missing:
-        :return: KeyValueDatabase instance
-        """
-        db = plyvel.DB(path, create_if_missing=create_if_missing)
-        return ExternalDatabase(db)
-
-    def get_sub_db(self, prefix: bytes) -> 'ExternalDatabase':
-        """Return a new prefixed database.
-
-        :param prefix: (bytes): prefix to use
-        """
-        return ExternalDatabase(self._db.prefixed_db(prefix))

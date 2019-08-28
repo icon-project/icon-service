@@ -158,35 +158,13 @@ class BlockBatch(Batch):
         self.block = block
 
     def __setitem__(self, key, value):
-        if not isinstance(value, tuple):
-            raise AccessDeniedException("Can not set data on block batch directly.")
-        super().__setitem__(key, value)
+        raise AccessDeniedException("Can not set data on block batch directly.")
+
+    def update(self, tx_batch: 'TransactionBatch', **kwargs):
+        # super().update(tx_batch, **kwargs)
+        for key, value in tx_batch.items():
+            super().__setitem__(key, value)
 
     def clear(self) -> None:
         self.block = None
         super().clear()
-
-#
-# class BlockBatch(Batch):
-#     """Contains the states changed by a block
-#
-#     key: Address
-#     value: IconScoreBatch
-#     """
-#     def __init__(self, block: Optional['Block'] = None):
-#         """Constructor
-#
-#         :param block: block info
-#         """
-#         super().__init__()
-#         self.block = block
-#
-#     def __setitem__(self, key, value):
-#         raise AccessDeniedException("Can not set data on block batch directly.")
-#
-#     def update(self, tx_batch: 'TransactionBatch', **kwargs):
-#         super().update(tx_batch, **kwargs)
-#
-#     def clear(self) -> None:
-#         self.block = None
-#         super().clear()
