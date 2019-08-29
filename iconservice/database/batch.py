@@ -161,7 +161,6 @@ class BlockBatch(Batch):
         raise AccessDeniedException("Can not set data on block batch directly.")
 
     def update(self, tx_batch: 'TransactionBatch', **kwargs):
-        # super().update(tx_batch, **kwargs)
         for key, value in tx_batch.items():
             super().__setitem__(key, value)
 
