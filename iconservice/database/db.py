@@ -292,7 +292,7 @@ class ContextDatabase(object):
     def _delete(self,
                 context: Optional['IconScoreContext'],
                 key: bytes,
-                include_root_hash: bool = True):
+                include_root_hash: bool):
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to delete')
 
