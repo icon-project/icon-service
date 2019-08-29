@@ -25,7 +25,9 @@ class MessageUnpacker(object):
             MessageType.CLAIM: ClaimResponse,
             MessageType.QUERY: QueryResponse,
             MessageType.CALCULATE: CalculateResponse,
-            MessageType.COMMIT_BLOCK: CommitBlockResponse
+            MessageType.COMMIT_BLOCK: CommitBlockResponse,
+            MessageType.READY: ReadyNotification,
+            MessageType.CALCULATE_DONE: CalculateDoneNotification
         }
 
     def feed(self, data: bytes):

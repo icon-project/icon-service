@@ -48,7 +48,7 @@ class MessageQueue(object):
         try:
             self.put_response(response)
         except KeyError:
-            if isinstance(response, self.notify_message):
+            if response.is_notification():
                 self.notify_handler(response)
 
     def put_response(self, response: 'Response'):

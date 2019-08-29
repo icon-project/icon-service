@@ -41,6 +41,8 @@ class MessageType(IntEnum):
     CALCULATE = 3
     COMMIT_BLOCK = 4
     COMMIT_CLAIM = 5
+    READY = 100
+    CALCULATE_DONE = 101
 
 
 class Request(metaclass=ABCMeta):
@@ -65,6 +67,9 @@ class Response(metaclass=ABCMeta):
     @abstractmethod
     def from_list(items: list) -> 'Response':
         pass
+
+    def is_notification(self):
+        return self.msg_id == 0
 
 
 class VersionRequest(Request):
@@ -103,7 +108,7 @@ class VersionResponse(Response):
 
 
 class ClaimRequest(Request):
-    def __init__(self, address: 'Address', block_height: int, block_hash):
+    def __init__(self, address: 'Address', block_height: int, block_hash: bytes):
         super().__init__(MessageType.CLAIM)
 
         self.address = address
@@ -168,6 +173,24 @@ class CommitClaimRequest(Request):
                 f"({self.msg_id}, {self.success}, {self.address}, {self.block_height}, {self.block_hash.hex()})"
 
 
+class CommitClaimResponse(Response):
+    MSG_TYPE = MessageType.COMMIT_CLAIM
+
+    def __init__(self, msg_id: int):
+        super().__init__()
+
+        self.msg_id = msg_id
+
+    def __str__(self) -> str:
+        return f"COMMIT_CLAIM({self.msg_id})"
+
+    @staticmethod
+    def from_list(items: list) -> 'CommitClaimResponse':
+        msg_id: int = items[1]
+
+        return CommitClaimResponse(msg_id)
+
+
 class QueryRequest(Request):
     def __init__(self, address: 'Address'):
         super().__init__(MessageType.QUERY)
@@ -227,29 +250,19 @@ class CalculateRequest(Request):
 class CalculateResponse(Response):
     MSG_TYPE = MessageType.CALCULATE
 
-    def __init__(self, msg_id: int, success: bool, block_height: int, iscore: int, state_hash: bytes):
+    def __init__(self, msg_id: int):
         super().__init__()
 
         self.msg_id: int = msg_id
-        self.success: bool = success
-        self.block_height: int = block_height
-        self.iscore: int = iscore
-        self.state_hash: bytes = state_hash
 
     def __str__(self) -> str:
-        return f"CALCULATE({self.msg_id}, {self.success}, {self.block_height}, {self.iscore}, {self.state_hash})"
+        return f"CALCULATE({self.msg_id})"
 
     @staticmethod
     def from_list(items: list) -> 'CalculateResponse':
         msg_id: int = items[1]
-        payload: list = items[2]
 
-        success: bool = payload[0]
-        block_height: int = payload[1]
-        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[2])
-        state_hash: bytes = payload[3]
-
-        return CalculateResponse(msg_id, success, block_height, iscore, state_hash)
+        return CalculateResponse(msg_id)
 
 
 class CommitBlockRequest(Request):
@@ -291,6 +304,58 @@ class CommitBlockResponse(Response):
         block_hash: bytes = payload[2]
 
         return CommitBlockResponse(msg_id, success, block_height, block_hash)
+
+
+class ReadyNotification(Response):
+    MSG_TYPE = MessageType.READY
+
+    def __init__(self, msg_id: int, version: int, block_height: int):
+        super().__init__()
+
+        self.msg_id = msg_id
+        self.version = version
+        self.block_height = block_height
+
+    def __str__(self):
+        return f"READY({self.msg_id}, {self.version}, {self.block_height})"
+
+    @staticmethod
+    def from_list(items: list) -> 'ReadyNotification':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        version: int = payload[0]
+        block_height: int = payload[1]
+
+        return ReadyNotification(msg_id, version, block_height)
+
+
+class CalculateDoneNotification(Response):
+    MSG_TYPE = MessageType.CALCULATE_DONE
+
+    def __init__(self, msg_id: int, success: bool, block_height: int, iscore: int, state_hash: bytes):
+        super().__init__()
+
+        self.msg_id = msg_id
+        self.success = success
+        self.block_height = block_height
+        self.iscore = iscore
+        self.state_hash = state_hash
+
+    def __str__(self):
+        return f"CALCULATE_DONE({self.msg_id}, {self.success}, {self.block_height}, {self.iscore}, {self.state_hash})"
+
+    @staticmethod
+    def from_list(items: list) -> 'CalculateDoneNotification':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        success: bool = payload[0]
+        block_hegiht: int = payload[1]
+        iscore: int = payload[2]
+        state_hash: bytes = payload[3]
+
+        return CalculateDoneNotification(msg_id, success, block_hegiht, iscore, state_hash)
 
 
 class NoneRequest(Request):

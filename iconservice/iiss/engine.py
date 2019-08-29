@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
-from .reward_calc.ipc.message import CalculateResponse, VersionResponse
+from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
@@ -92,23 +92,22 @@ class Engine(EngineBase):
         assert isinstance(listener, EngineListener)
         self._listeners.remove(listener)
 
-    # TODO implement version callback function
     @staticmethod
-    def version_callback(cb_data: 'VersionResponse'):
-        Logger.debug(tag=_TAG, msg=f"version callback called with {cb_data}")
+    def ready_callback(cb_data: 'ReadyNotification'):
+        Logger.debug(tag=_TAG, msg=f"ready callback called with {cb_data}")
 
     @staticmethod
-    def calculate_callback(cb_data: 'CalculateResponse'):
+    def calculate_done_callback(cb_data: 'CalculateDoneNotification'):
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
         if not cb_data.success:
             raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
 
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height)
-        Logger.debug(tag=_TAG, msg=f"calculate callback called with {cb_data}")
+        Logger.debug(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
     def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str):
-        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback,
-                                                  version_callback=self.version_callback)
+        self._reward_calc_proxy = RewardCalcProxy(calc_done_callback=self.calculate_done_callback,
+                                                  ready_callback=self.ready_callback)
         self._reward_calc_proxy.open(log_dir=log_dir, sock_path=socket_path, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 

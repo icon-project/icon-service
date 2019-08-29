@@ -19,7 +19,7 @@ from typing import Optional
 
 from iconcommons import Logger
 
-from .message import MessageType, Request, NoneRequest, NoneResponse, VersionResponse
+from .message import MessageType, Request, NoneRequest, NoneResponse
 from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker
 
