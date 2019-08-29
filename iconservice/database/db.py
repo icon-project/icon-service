@@ -248,8 +248,9 @@ class ContextDatabase(object):
         if tx_batch_value is None:
             return
 
-        if not isinstance(tx_batch_value, tuple):
-            raise DatabaseException(f'Only tuple type is allowed on tx_batch: {tx_batch_value}')
+        if not isinstance(tx_batch_value, TransactionBatchValue):
+            raise DatabaseException(
+                f'Only TransactionBatchValue type is allowed on tx_batch: {type(tx_batch_value)}')
         elif tx_batch_value.include_state_root_hash != include_state_root_hash:
             raise DatabaseException('Do not change the include_state_root_hash on the same data')
 
