@@ -144,9 +144,9 @@ class TestTransactionBatch(unittest.TestCase):
         self.assertEqual(0, len(tx_batch))
         self.assertEqual(1, init_call_count)
 
-        tx_batch[b'key0'] = b'value0'
+        tx_batch[b'key0'] = (b'value0', True)
         self.assertEqual(1, len(tx_batch))
 
         block_batch = BlockBatch()
         block_batch.update(tx_batch)
-        self.assertEqual(b'value0', block_batch[b'key0'])
+        self.assertEqual((b'value0', True), block_batch[b'key0'])

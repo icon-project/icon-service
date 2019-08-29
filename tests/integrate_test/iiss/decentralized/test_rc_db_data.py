@@ -15,7 +15,7 @@
 # limitations under the License.
 import os
 
-from iconservice.database.db import ExternalDatabase
+from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
     IISS_DB, REV_DECENTRALIZATION
 from iconservice.iiss.reward_calc import RewardCalcStorage
@@ -50,7 +50,7 @@ class TestRCDatabase(TestIISSBase):
         # set Revision REV_IISS
         self.set_revision(REV_IISS)
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        rc_db = ExternalDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         for rc_data in rc_db.iterator():
             if rc_data[0][:2] == GovernanceVariable._PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
@@ -106,7 +106,7 @@ class TestRCDatabase(TestIISSBase):
 
         block_height: int = self.make_blocks_to_end_calculation()
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        rc_db = ExternalDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         for rc_data in rc_db.iterator():
             if rc_data[0][:2] == GovernanceVariable._PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
@@ -122,7 +122,7 @@ class TestRCDatabase(TestIISSBase):
         self.make_blocks_to_end_calculation()
         block_height: int = self.make_blocks_to_end_calculation()
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        rc_db = ExternalDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         for rc_data in rc_db.iterator():
             if rc_data[0][:2] == GovernanceVariable._PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
