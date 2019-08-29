@@ -18,7 +18,7 @@
 import unittest
 
 from iconservice.base.block import Block
-from iconservice.base.exception import IllegalFormatException, DatabaseException, AccessDeniedException
+from iconservice.base.exception import AccessDeniedException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
 from iconservice.utils import sha3_256
 from tests import create_hash_256

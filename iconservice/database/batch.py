@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from ..base.block import Block
 
 
-TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_root_hash'])
+TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
 
 
 def digest(ordered_dict: OrderedDict):
@@ -34,8 +34,8 @@ def digest(ordered_dict: OrderedDict):
     data = []
 
     for key, tx_batch_value in ordered_dict.items():
-        if tx_batch_value.include_root_hash is True:
-            value = tx_batch_value.value
+        if tx_batch_value.include_state_root_hash is True:
+            value: bytes = tx_batch_value.value
         else:
             continue
         data.append(key)

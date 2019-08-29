@@ -22,7 +22,7 @@ from unittest.mock import patch
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
-from iconservice.database.db import ContextDatabase, MetaContextDatabase, convert_tx_batch_value
+from iconservice.database.db import ContextDatabase, MetaContextDatabase, tx_batch_value_to_bytes
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
@@ -61,7 +61,7 @@ class TestKeyValueDatabase(unittest.TestCase):
         }
         db = self.db
 
-        db.write_batch(data, converter=convert_tx_batch_value)
+        db.write_batch(data, converter=tx_batch_value_to_bytes)
 
         self.assertEqual(b'value1', db.get(b'key1'))
         self.assertEqual(b'value0', db.get(b'key0'))
