@@ -98,9 +98,9 @@ class Engine(EngineBase):
         Logger.debug(tag=_TAG, msg=f"version callback called with {cb_data}")
 
     @staticmethod
-    def check_calculate_response_block_height(response_block_height: int,
-                                              current_end_block_height_of_calc: int,
-                                              calc_period: int):
+    def check_calculate_request_block_height(response_block_height: int,
+                                             current_end_block_height_of_calc: int,
+                                             calc_period: int):
         prev_calc_end_block_height = current_end_block_height_of_calc - calc_period
 
         if response_block_height != prev_calc_end_block_height:
@@ -117,7 +117,7 @@ class Engine(EngineBase):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
         calc_period: int = context.storage.iiss.get_calc_period(context)
-        self.check_calculate_response_block_height(cb_data.block_height, end_block_height_of_calc, calc_period)
+        self.check_calculate_request_block_height(cb_data.block_height, end_block_height_of_calc, calc_period)
 
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height)
         Logger.debug(tag=_TAG, msg=f"calculate callback called with {cb_data}")

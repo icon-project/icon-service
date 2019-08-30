@@ -61,9 +61,9 @@ class Regulator:
         if end_block_height_of_calc == context.block.height:
             prev_calc_period_issued_iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
             calc_period: int = context.storage.iiss.get_calc_period(context)
-            context.engine.iiss.check_calculate_response_block_height(request_block_height,
-                                                                      end_block_height_of_calc,
-                                                                      calc_period)
+            context.engine.iiss.check_calculate_request_block_height(request_block_height,
+                                                                     end_block_height_of_calc,
+                                                                     calc_period)
 
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
