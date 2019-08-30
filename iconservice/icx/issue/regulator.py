@@ -53,13 +53,18 @@ class Regulator:
     def _set_corrected_issue_data(self, context: 'IconScoreContext', issue_amount: int):
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
         prev_block_cumulative_fee: int = context.storage.icx.last_block.cumulative_fee
-        calc_next_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
 
-        # update current calculated period total issued icx
+        # Update current calculated period total issued icx
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
-        if calc_next_block_height == context.block.height:
-            prev_calc_period_issued_iscore, _ = context.storage.rc.get_calc_response_from_rc()
+        if end_block_height_of_calc == context.block.height:
+            prev_calc_period_issued_iscore, response_block_height = context.storage.rc.get_calc_response_from_rc()
+            calc_period: int = context.storage.iiss.get_calc_period(context)
+            context.engine.iiss.check_calculate_response_block_height(response_block_height,
+                                                                      end_block_height_of_calc,
+                                                                      calc_period)
+
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
