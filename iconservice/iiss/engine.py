@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from ..iiss.storage import RewardRate
     from ..icx import IcxStorage
     from ..prep.term import Term
-
+    from ..base.block import Block
 
 _TAG = IISS_LOG_TAG
 
@@ -168,7 +168,10 @@ class Engine(EngineBase):
             listener.on_set_stake(context, account)
 
     @classmethod
-    def _check_from_can_stake(cls, context: 'IconScoreContext', stake: int, account: 'Account'):
+    def _check_from_can_stake(cls,
+                              context: 'IconScoreContext',
+                              stake: int,
+                              account: 'Account'):
         fee: int = context.step_counter.step_price * context.step_counter.step_used
 
         if account.balance + account.total_stake < stake + fee:
@@ -180,8 +183,9 @@ class Engine(EngineBase):
             raise InvalidParamsException(f"Failed to stake: stake({stake})"
                                          f" < delegations_amount({account.delegations_amount})")
 
-    @staticmethod
-    def _calculate_unstake_lock_period(lmin: int,
+    @classmethod
+    def _calculate_unstake_lock_period(cls,
+                                       lmin: int,
                                        lmax: int,
                                        rpoint: int,
                                        total_stake: int,
@@ -253,8 +257,9 @@ class Engine(EngineBase):
         for listener in self._listeners:
             listener.on_set_delegation(context, updated_accounts)
 
-    @staticmethod
-    def _convert_params_of_set_delegation(params: dict) -> Tuple[int, List[Tuple['Address', int]]]:
+    @classmethod
+    def _convert_params_of_set_delegation(cls,
+                                          params: dict) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
@@ -307,11 +312,11 @@ class Engine(EngineBase):
 
         return total_delegating, converted_delegations
 
-    @staticmethod
-    def _check_voting_power_is_enough(
-            context: 'IconScoreContext',
-            sender: 'Address', delegating: int,
-            cached_accounts: Dict['Address', Tuple['Account', int]]):
+    @classmethod
+    def _check_voting_power_is_enough(cls,
+                                      context: 'IconScoreContext',
+                                      sender: 'Address', delegating: int,
+                                      cached_accounts: Dict['Address', Tuple['Account', int]]):
         """
 
         :param context:
@@ -328,11 +333,11 @@ class Engine(EngineBase):
 
         cached_accounts[sender] = account, 0
 
-    @staticmethod
-    def _get_old_delegations_from_sender_account(
-            context: 'IconScoreContext',
-            sender: 'Address',
-            cached_accounts: Dict['Address', Tuple['Account', int]]):
+    @classmethod
+    def _get_old_delegations_from_sender_account(cls,
+                                                 context: 'IconScoreContext',
+                                                 sender: 'Address',
+                                                 cached_accounts: Dict['Address', Tuple['Account', int]]):
         """Get old delegations from sender account
 
         :param context:
@@ -359,11 +364,11 @@ class Engine(EngineBase):
             assert account.delegated_amount >= old_delegated
             cached_accounts[address] = account, -old_delegated
 
-    @staticmethod
-    def _calc_delegations(
-            context: 'IconScoreContext',
-            new_delegations: List[Tuple['Address', int]],
-            cached_accounts: Dict['Address', Tuple['Account', int]]):
+    @classmethod
+    def _calc_delegations(cls,
+                          context: 'IconScoreContext',
+                          new_delegations: List[Tuple['Address', int]],
+                          cached_accounts: Dict['Address', Tuple['Account', int]]):
         """Calculate new delegated amounts for each address with old and new delegations
 
         :param new_delegations:
@@ -383,12 +388,12 @@ class Engine(EngineBase):
 
             cached_accounts[address] = account, new_delegated + old_delegated
 
-    @staticmethod
-    def _put_delegation_to_state_db(
-            context: 'IconScoreContext',
-            sender: 'Address',
-            delegations: List[Tuple['Address', int]],
-            cached_accounts: Dict['Address', Tuple['Account', int]]) -> List['Account']:
+    @classmethod
+    def _put_delegation_to_state_db(cls,
+                                    context: 'IconScoreContext',
+                                    sender: 'Address',
+                                    delegations: List[Tuple['Address', int]],
+                                    cached_accounts: Dict['Address', Tuple['Account', int]]) -> List['Account']:
         """Put updated delegations to stateDB
 
         :param context:
@@ -414,11 +419,11 @@ class Engine(EngineBase):
 
         return updated_accounts
 
-    @staticmethod
-    def _put_delegation_to_rc_db(
-            context: 'IconScoreContext',
-            address: 'Address',
-            delegations: List[Tuple['Address', int]]):
+    @classmethod
+    def _put_delegation_to_rc_db(cls,
+                                 context: 'IconScoreContext',
+                                 address: 'Address',
+                                 delegations: List[Tuple['Address', int]]):
         """Put new delegations from setDelegation JSON-RPC API request to RewardCalcDB
 
         :param context:
@@ -436,7 +441,9 @@ class Engine(EngineBase):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, context.block.height, delegation_tx)
         context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
 
-    def handle_get_delegation(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_delegation(self,
+                              context: 'IconScoreContext',
+                              params: dict) -> dict:
         """Handles getDelegation JSON-RPC API request
 
         :param context:
@@ -448,7 +455,9 @@ class Engine(EngineBase):
         return self._get_delegation(context, address)
 
     @classmethod
-    def _get_delegation(cls, context: 'IconScoreContext', address: 'Address') -> dict:
+    def _get_delegation(cls,
+                        context: 'IconScoreContext',
+                        address: 'Address') -> dict:
 
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         delegation_list: list = []
@@ -464,7 +473,8 @@ class Engine(EngineBase):
         return data
 
     @classmethod
-    def _iscore_to_icx(cls, iscore: int) -> int:
+    def _iscore_to_icx(cls,
+                       iscore: int) -> int:
         """Exchange iscore to icx
 
         10 ** -18 icx == 1 loop == 1000 iscore
@@ -474,7 +484,9 @@ class Engine(EngineBase):
         """
         return iscore // ISCORE_EXCHANGE_RATE
 
-    def handle_claim_iscore(self, context: 'IconScoreContext', _params: dict):
+    def handle_claim_iscore(self,
+                            context: 'IconScoreContext',
+                            _params: dict):
         """Handles claimIScore JSON-RPC request
 
         :param context:
@@ -524,7 +536,9 @@ class Engine(EngineBase):
 
         Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
-    def handle_query_iscore(self, _context: 'IconScoreContext', params: dict) -> dict:
+    def handle_query_iscore(self,
+                            _context: 'IconScoreContext',
+                            params: dict) -> dict:
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
 
@@ -562,7 +576,9 @@ class Engine(EngineBase):
         self._put_gv(context, term)
         self._put_preps_to_rc_db(context, term)
 
-    def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+    def send_ipc(self,
+                 context: 'IconScoreContext',
+                 precommit_data: 'PrecommitData'):
         block_height: int = precommit_data.block.height
 
         # every block time
@@ -575,11 +591,13 @@ class Engine(EngineBase):
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
-    def _is_iiss_calc(cls, flag: 'PrecommitFlag') -> bool:
+    def _is_iiss_calc(cls,
+                      flag: 'PrecommitFlag') -> bool:
         return bool(flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC))
 
     @classmethod
-    def _check_update_calc_period(cls, context: 'IconScoreContext') -> bool:
+    def _check_update_calc_period(cls,
+                                  context: 'IconScoreContext') -> bool:
         block_height: int = context.block.height
         check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
         if check_end_block_height is None:
@@ -588,29 +606,43 @@ class Engine(EngineBase):
         return block_height == check_end_block_height
 
     @classmethod
-    def _put_last_calc_info(cls, context: 'IconScoreContext'):
-        last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-        if last_calc_end_block_height is not None:
-            calc_period: int = context.storage.iiss.get_calc_period(context)
-            start_block_height: int = last_calc_end_block_height - calc_period + 1
-            context.storage.meta.put_last_calc_info(context,
-                                                    start_block_height,
-                                                    last_calc_end_block_height)
+    def _put_last_calc_info(cls,
+                            context: 'IconScoreContext'):
+
+        _, last_calc_end = context.storage.meta.get_last_calc_info(context)
+        if last_calc_end > 0:
+            current_end: int = context.storage.iiss.get_end_block_height_of_calc(context)
+            current_start: int = last_calc_end + 1
+            current_period: int = current_end - current_start + 1
+
+            start: int = last_calc_end + 1
+            end: int = start + current_period - 1
+        else:
+            # first
+            start: int = -1
+            end: int = context.block.height
+        context.storage.meta.put_last_calc_info(context,
+                                                start,
+                                                end)
 
     @classmethod
-    def _put_end_calc_block_height(cls, context: 'IconScoreContext'):
+    def _put_end_calc_block_height(cls,
+                                   context: 'IconScoreContext'):
         calc_period: int = context.storage.iiss.get_calc_period(context)
         if calc_period is None:
             raise InvalidParamsException("Fail put next calc block height: didn't init yet")
         context.storage.iiss.put_end_block_height_of_calc(context, context.block.height + calc_period)
 
     @classmethod
-    def _put_header_to_rc_db(cls, context: 'IconScoreContext'):
+    def _put_header_to_rc_db(cls,
+                             context: 'IconScoreContext'):
         data: 'Header' = RewardCalcDataCreator.create_header(0, context.block.height)
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_gv(cls, context: 'IconScoreContext', term: Optional['Term']):
+    def _put_gv(cls,
+                context: 'IconScoreContext',
+                term: Optional['Term']):
 
         """
             we should divide logic that case updated term during normal term.
@@ -657,7 +689,9 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_preps_to_rc_db(cls, context: 'IconScoreContext', term: Optional['Term']):
+    def _put_preps_to_rc_db(cls,
+                            context: 'IconScoreContext',
+                            term: Optional['Term']):
         # if not decentralized, term is None.
         if term is None:
             return
