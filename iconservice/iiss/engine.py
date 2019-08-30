@@ -104,9 +104,9 @@ class Engine(EngineBase):
         prev_calc_end_block_height = current_end_block_height_of_calc - calc_period
 
         if response_block_height != prev_calc_end_block_height:
-            raise FatalException(f"Response block height is not matched to the request: "
-                                 f"response block height:{response_block_height} "
-                                 f"request block height:{prev_calc_end_block_height} ")
+            raise FatalException(f"request block height is not matched: "
+                                 f"response from RC:{response_block_height} "
+                                 f"request:{prev_calc_end_block_height} ")
 
     def calculate_callback(self, cb_data: 'CalculateResponse'):
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request

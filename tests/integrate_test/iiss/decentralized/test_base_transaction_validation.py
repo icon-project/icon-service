@@ -389,7 +389,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                                          end_block_height_of_calc - calc_period,
                                          calculate_response_iscore_of_last_calc_period,
                                          b'mocked_response')
-            print(f"calculate response block height: {end_block_height_of_calc - calc_period}")
+            print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
             _self._calculation_callback(response)
 
         self._mock_ipc(mock_calculated)
@@ -418,7 +418,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                 calc_period: int = context.storage.iiss.get_calc_period(context)
                 response = CalculateResponse(0, True, end_block_height_of_calc - calc_period, response_iscore,
                                              b'mocked_response')
-                print(f"calculate response block height: {end_block_height_of_calc - calc_period}")
+                print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
                 _self._calculation_callback(response)
 
             self._mock_ipc(mock_calculated)
