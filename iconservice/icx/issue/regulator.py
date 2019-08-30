@@ -59,9 +59,9 @@ class Regulator:
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if end_block_height_of_calc == context.block.height:
-            prev_calc_period_issued_iscore, response_block_height = context.storage.rc.get_calc_response_from_rc()
+            prev_calc_period_issued_iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
             calc_period: int = context.storage.iiss.get_calc_period(context)
-            context.engine.iiss.check_calculate_response_block_height(response_block_height,
+            context.engine.iiss.check_calculate_response_block_height(request_block_height,
                                                                       end_block_height_of_calc,
                                                                       calc_period)
 
