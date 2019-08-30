@@ -17,7 +17,7 @@
 import json
 from enum import Enum, auto
 from threading import Lock
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List, Tuple, Optional
 
 from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
 from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3, REVISION_4
@@ -269,6 +269,43 @@ class OutOfStepException(IconServiceBaseException):
         return self.__requested_step
 
 
+class StepTracer(object):
+    def __init__(self):
+        super().__init__()
+        self._cumulative_step: int = 0
+        self._steps: List[Tuple[StepType, int, int]] = []
+
+    def __str__(self) -> str:
+        if len(self._steps) == 0:
+            return ""
+
+        lines: List[str] = []
+
+        for i in range(len(self._steps)):
+            item: Tuple[StepType, int, int] = self._steps[i]
+            # index | stepType | step | cumulativeStep
+            lines.append(f"{i:2} | {item[0].name:17} | {item[1]} | {item[2]}")
+
+        return "\n".join(lines)
+
+    def __len__(self) -> int:
+        return len(self._steps)
+
+    @property
+    def cumulative_step(self) -> int:
+        return self._cumulative_step
+
+    def reset(self):
+        self._cumulative_step = 0
+        self._steps.clear()
+
+    def add(self, step_type: 'StepType', step: int, cumulative_step: int):
+        assert cumulative_step == self._cumulative_step + step
+
+        self._cumulative_step += step
+        self._steps.append((step_type, step, cumulative_step))
+
+
 class IconScoreStepCounter(object):
     """ Counts steps in a transaction
     """
@@ -291,7 +328,7 @@ class IconScoreStepCounter(object):
         self._step_used: int = 0
         self._external_call_count: int = 0
         self._max_step_used: int = 0
-        self._step_tracer: list = [] if step_trace_flag else None
+        self._step_tracer: Optional[StepTracer] = StepTracer() if step_trace_flag else None
 
     @property
     def step_price(self) -> int:
@@ -335,12 +372,8 @@ class IconScoreStepCounter(object):
         return self._max_step_used
 
     @property
-    def step_tracer(self) -> list:
+    def step_tracer(self) -> Optional[StepTracer]:
         return self._step_tracer
-
-    @step_tracer.setter
-    def step_tracer(self, step_tracer):
-        self._step_tracer = step_tracer
 
     def apply_step(self, step_type: StepType, count: int) -> int:
         """ Increases steps for given step cost
@@ -352,8 +385,6 @@ class IconScoreStepCounter(object):
                 raise InvalidRequestException('Too many external calls')
 
         step: int = self._step_costs.get(step_type, 0) * count
-        if self.step_tracer is not None:
-            self.step_tracer.append({"stepType": step_type.value, "step": step, "cumulativeStep": self.step_used})
 
         return self.consume_step(step_type, step)
 
@@ -370,7 +401,14 @@ class IconScoreStepCounter(object):
 
         self._step_used = step_used
 
+        # Save the step info to StepTracer to trace step cost
+        self._trace_step(step_type, step)
+
         return step_used
+
+    def _trace_step(self, step_type: StepType, step: int):
+        if self._step_tracer:
+            self._step_tracer.add(step_type, step, self._step_used)
 
     def reset(self, step_limit: int):
         """
@@ -381,6 +419,9 @@ class IconScoreStepCounter(object):
         self._step_used: int = 0
         self._external_call_count: int = 0
         self._max_step_used: int = 0
+
+        if self._step_tracer:
+            self._step_tracer.reset()
 
     def set_step_price(self, step_price: int):
         """Sets the step price

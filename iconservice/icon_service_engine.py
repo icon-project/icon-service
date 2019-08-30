@@ -37,7 +37,7 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
     REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -60,10 +60,10 @@ from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
+from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
-from .utils.step_trace import get_step_trace_msg, print_step_trace
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -118,8 +118,6 @@ class IconServiceEngine(ContextContainer):
         rc_data_path: str = os.path.abspath(rc_data_path)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
-        step_trace_flag: bool = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
-        debug_level: str = conf[ConfigKey.LOG].get("level")
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
@@ -143,8 +141,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.main_prep_count = conf.get(ConfigKey.PREP_MAIN_PREPS, PREP_MAIN_PREPS)
         IconScoreContext.main_and_sub_prep_count = conf.get(ConfigKey.PREP_MAIN_AND_SUB_PREPS, PREP_MAIN_AND_SUB_PREPS)
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
-        IconScoreContext.step_trace_flag = step_trace_flag
-        IconScoreContext.debug_level = debug_level
+        IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
+        IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
         self._init_component_context()
 
         # load last_block_info
@@ -458,9 +456,7 @@ class IconServiceEngine(ContextContainer):
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
-                if context.step_trace_flag:
-                    step_trace_msg = get_step_trace_msg(context)
-                    print_step_trace(step_trace_msg, context.debug_level)
+                self._log_step_trace(context)
                 block_result.append(tx_result)
                 context.update_batch()
 
@@ -497,6 +493,22 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    @classmethod
+    def _log_step_trace(cls, context: 'IconScoreContext'):
+        """If steptrace option is turned on, write step trace messages to a log file
+
+        :param context:
+        :return:
+        """
+        if context.step_counter.step_tracer is None:
+            return
+
+        try:
+            msg: str = f"txHash(0x{context.tx.hash.hex()})\n{context.step_counter.step_tracer}"
+            print_log_with_level(context.log_level, tag=STEP_LOG_TAG, msg=msg)
+        except:
+            pass
 
     def before_transaction_process(self,
                                    context: 'IconScoreContext',
@@ -812,7 +824,6 @@ class IconServiceEngine(ContextContainer):
         context.msg_stack.clear()
         context.event_log_stack.clear()
         context.fee_sharing_proportion = 0
-        context.step_counter.step_tracer = [] if isinstance(context.step_counter.step_tracer, list) else None
 
         return self._call(context, method, params)
 
