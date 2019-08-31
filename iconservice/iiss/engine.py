@@ -612,8 +612,7 @@ class Engine(EngineBase):
         _, last_calc_end = context.storage.meta.get_last_calc_info(context)
         if last_calc_end > 0:
             current_end: int = context.storage.iiss.get_end_block_height_of_calc(context)
-            current_start: int = last_calc_end
-            current_period: int = current_end - current_start
+            current_period: int = current_end - last_calc_end
 
             start: int = last_calc_end + 1
             end: int = start + current_period - 1
