@@ -219,7 +219,6 @@ class RewardCalcProxy(object):
                 f"success({success} address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
         )
 
-        # No need to wait for the response of CommitClaimRequest
         request = CommitClaimRequest(success, address, block_height, block_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
@@ -323,9 +322,9 @@ class RewardCalcProxy(object):
 
     def notify_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"notify_handler() start {type(response)}")
-        if isinstance(response, VersionResponse):
+        if isinstance(response, ReadyNotification):
             self.ready_handler(response=response)
-        elif isinstance(response, CalculateResponse):
+        elif isinstance(response, CalculateDoneNotification):
             self.calculate_done_handler(response=response)
 
     def start_reward_calc(self, log_dir: str, sock_path: str, iiss_db_path: str):

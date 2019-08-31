@@ -13,18 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
+
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException
+from ..base.exception import \
+    InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
@@ -482,18 +483,35 @@ class Engine(EngineBase):
         """
         Logger.debug(tag=_TAG, msg=f"handle_claim_iscore() start")
 
+        iscore, block_height = self._claim_iscore(context)
+
+        if iscore > 0:
+            self._commit_claim(context, iscore)
+
+        else:
+            Logger.info(tag=_TAG, msg="I-Score is zero")
+
+        Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
+
+    def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
-        exception: Optional[BaseException] = None
+
+        if context.type == IconScoreContextType.INVOKE:
+            iscore, block_height = self._reward_calc_proxy.claim_iscore(
+                address, block.height, block.hash)
+        else:
+            # For debug_estimateStep request
+            iscore, block_height = 0, 0
+
+        return iscore, block_height
+
+    def _commit_claim(self, context: 'IconScoreContext', iscore: int):
+        address: 'Address' = context.tx.origin
+        block: 'Block' = context.block
+        success = True
 
         try:
-            if context.type == IconScoreContextType.INVOKE:
-                iscore, block_height = self._reward_calc_proxy.claim_iscore(
-                    address, block.height, block.hash)
-            else:
-                # For debug_estimateStep request
-                iscore, block_height = 0, 0
-
             icx: int = self._iscore_to_icx(iscore)
 
             from_account: 'Account' = context.storage.icx.get_account(context, address)
@@ -514,14 +532,10 @@ class Engine(EngineBase):
             )
         except BaseException as e:
             Logger.exception(tag=_TAG, msg=str(e))
-            exception = e
+            success = False
             raise e
         finally:
-            if context.type == IconScoreContextType.INVOKE:
-                success: bool = exception is None
-                self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash)
-
-        Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
+            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash)
 
     def handle_query_iscore(self, _context: 'IconScoreContext', params: dict) -> dict:
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)

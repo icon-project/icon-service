@@ -352,7 +352,7 @@ class CalculateDoneNotification(Response):
 
         success: bool = payload[0]
         block_hegiht: int = payload[1]
-        iscore: int = payload[2]
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[2])
         state_hash: bytes = payload[3]
 
         return CalculateDoneNotification(msg_id, success, block_hegiht, iscore, state_hash)
