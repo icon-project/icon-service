@@ -121,6 +121,7 @@ class TestIISSStake(TestIISSBase):
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
+        estimate_unstaking_response: dict = self.estimate_unstaking_period()
         expected_response = {
             "stake": stake,
             "unstake": unstake
@@ -128,6 +129,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(estimate_unstaking_response["unstakePeriod"], actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -164,6 +166,7 @@ class TestIISSStake(TestIISSBase):
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
+        estimate_unstaking_response: dict = self.estimate_unstaking_period()
         expected_response = {
             "stake": stake,
             "unstake": unstake
@@ -171,6 +174,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(estimate_unstaking_response["unstakePeriod"], actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -207,6 +211,7 @@ class TestIISSStake(TestIISSBase):
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
+        estimate_unstaking_response: dict = self.estimate_unstaking_period()
         expected_response = {
             "stake": stake,
             "unstake": unstake
@@ -214,6 +219,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(estimate_unstaking_response["unstakePeriod"], actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake

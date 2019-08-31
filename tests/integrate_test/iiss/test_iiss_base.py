@@ -252,6 +252,19 @@ class TestIISSBase(TestIntegrateBase):
         }
         return self._query(query_request)
 
+    def estimate_unstaking_period(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "estimateUnstakingPeriod"
+            }
+
+        }
+        return self._query(query_request)
+
     def get_delegation(self,
                        from_: Union['EOAAccount', 'Address', str]) -> dict:
         address: Optional['Address'] = self._convert_address_from_address_type(from_)

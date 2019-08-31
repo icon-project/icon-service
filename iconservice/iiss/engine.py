@@ -75,7 +75,8 @@ class Engine(EngineBase):
         self._query_handler: dict = {
             'getStake': self.handle_get_stake,
             'getDelegation': self.handle_get_delegation,
-            'queryIScore': self.handle_query_iscore
+            'queryIScore': self.handle_query_iscore,
+            'estimateUnstakingPeriod': self.handle_estimate_unstaking_period
         }
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
@@ -219,6 +220,18 @@ class Engine(EngineBase):
             data["remainingBlocks"] = unstake_block_height - context.block.height
 
         return data
+
+    def handle_estimate_unstaking_period(self, context: 'IconScoreContext', params: dict):
+        total_stake: int = context.storage.iiss.get_total_stake(context)
+        unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
+                                                                       context.storage.iiss.lock_max,
+                                                                       context.storage.iiss.reward_point,
+                                                                       total_stake,
+                                                                       context.total_supply)
+        return {
+            "blockHeight": context.block.height,
+            "unstakePeriod": unstake_lock_period
+        }
 
     def handle_set_delegation(self, context: 'IconScoreContext', params: dict):
         """Handles setDelegation JSON-RPC API request
