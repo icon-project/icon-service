@@ -283,8 +283,8 @@ class StepTracer(object):
 
         for i in range(len(self._steps)):
             item: Tuple[StepType, int, int] = self._steps[i]
-            # index | stepType | step | cumulativeStep
-            lines.append(f"{i:2} | {item[0].name:17} | {item[1]} | {item[2]}")
+            # index stepType step cumulativeStep
+            lines.append(f"{i:2} {item[0].name:17} {item[1]} {item[2]}")
 
         return "\n".join(lines)
 
@@ -407,7 +407,7 @@ class IconScoreStepCounter(object):
         return step_used
 
     def _trace_step(self, step_type: StepType, step: int):
-        if self._step_tracer:
+        if self._step_tracer is not None:
             self._step_tracer.add(step_type, step, self._step_used)
 
     def reset(self, step_limit: int):
