@@ -25,7 +25,9 @@ from collections import namedtuple
 from enum import Flag
 from typing import Any, Union
 
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER
+from iconcommons import Logger
+
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG
 
 
 def int_to_bytes(n: int) -> bytes:
@@ -110,3 +112,8 @@ def set_flag(src_flags: Flag, flag: Flag, on: bool) -> Flag:
 
 ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
 ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc")
+
+
+def print_log_with_level(log_level: str, msg: str, tag: str = ICON_SERVICE_LOG_TAG):
+    logging_function = getattr(Logger, log_level)
+    logging_function(msg, tag)

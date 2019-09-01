@@ -113,6 +113,9 @@ class IconScoreContext(object):
 
     decentralize_trigger: float = 0
 
+    step_trace_flag: bool = False
+    log_level: str = None
+
     """Contains the useful information to process user's JSON-RPC request
     """
 

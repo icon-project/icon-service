@@ -738,7 +738,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         return step_costs
 
     def _calc_step_used(self, offset: int, count: int):
-        step_used : int = 0
+        step_used: int = 0
 
         for i in range(offset, offset + count):
             (type, val) = self.step_counter.apply_step.call_args_list[i][0]
