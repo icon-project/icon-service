@@ -1106,8 +1106,14 @@ class IconServiceEngine(ContextContainer):
         if start_block < 0 or end_block < 0:
             return rc_result
 
-        iscore, _ = context.storage.rc.get_calc_response_from_rc()
+        iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
+            return rc_result
+
+        if request_block_height != end_block:
+            Logger.warning(f"Response block height is not matched to the request: "
+                           f"response block height:{request_block_height} "
+                           f"request block height:{end_block}", ICON_SERVICE_LOG_TAG)
             return rc_result
 
         rc_result['iscore'] = iscore

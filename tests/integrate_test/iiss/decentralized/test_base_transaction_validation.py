@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import InvalidBaseTransactionException
+from iconservice.base.exception import InvalidBaseTransactionException, FatalException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
     ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
     PREP_MAIN_AND_SUB_PREPS
@@ -380,9 +380,18 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         calculate_response_iscore_of_last_calc_period = 5000000000000000000000000000
 
         prev_cumulative_fee = 1000000000000000
+
         def mock_calculated(_self, _path, _block_height):
-            response = CalculateResponse(0, True, 1, calculate_response_iscore_of_last_calc_period, b'mocked_response')
+            context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+            end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+            calc_period: int = context.storage.iiss.get_calc_period(context)
+            response = CalculateResponse(0, True,
+                                         end_block_height_of_calc - calc_period,
+                                         calculate_response_iscore_of_last_calc_period,
+                                         b'mocked_response')
+            print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
             _self._calculation_callback(response)
+
         self._mock_ipc(mock_calculated)
 
         self._init_decentralized()
@@ -404,8 +413,12 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         for term in range(0, 3):
             def mock_calculated(_self, _path, _block_height):
-                response = CalculateResponse(0, True, 0, response_iscore,
+                context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+                end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+                calc_period: int = context.storage.iiss.get_calc_period(context)
+                response = CalculateResponse(0, True, end_block_height_of_calc - calc_period, response_iscore,
                                              b'mocked_response')
+                print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
                 _self._calculation_callback(response)
 
             self._mock_ipc(mock_calculated)
@@ -447,3 +460,30 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                     self.assertEqual(expected_diff_in_calc_period, actual_covered_by_remain)
                     self.assertEqual(prev_cumulative_fee + actual_issue_amount + expected_diff_in_calc_period,
                                      issue_amount)
+
+    def test_calculate_response_invalid_block_height(self):
+        def mock_calculated(_self, _path, _block_height):
+            invalid_block_height: int = 0
+            response = CalculateResponse(0, True,
+                                         invalid_block_height,
+                                         0,
+                                         b'mocked_response')
+            _self._calculation_callback(response)
+
+        self._mock_ipc(mock_calculated)
+
+        with self.assertRaises(FatalException):
+            self._init_decentralized()
+
+    def test_calculate_response_fails(self):
+        def mock_calculated(_self, _path, _block_height):
+            response = CalculateResponse(0, False,
+                                         0,
+                                         0,
+                                         b'mocked_response')
+            _self._calculation_callback(response)
+
+        self._mock_ipc(mock_calculated)
+
+        with self.assertRaises(FatalException):
+            self._init_decentralized()
