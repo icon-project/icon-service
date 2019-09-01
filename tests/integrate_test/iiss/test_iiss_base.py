@@ -252,14 +252,14 @@ class TestIISSBase(TestIntegrateBase):
         }
         return self._query(query_request)
 
-    def estimate_unstaking_period(self) -> dict:
+    def estimate_unstake_lock_period(self) -> dict:
         query_request = {
             "version": self._version,
             "from": self._admin,
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "estimateUnstakingPeriod"
+                "method": "estimateUnstakeLockPeriod"
             }
 
         }

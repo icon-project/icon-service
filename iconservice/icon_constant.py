@@ -209,7 +209,7 @@ IISS_METHOD_TABLE = [
     "getDelegation",
     "claimIScore",
     "queryIScore",
-    "estimateUnstakingPeriod"
+    "estimateUnstakeLockPeriod"
 ]
 
 PREP_METHOD_TABLE = [
