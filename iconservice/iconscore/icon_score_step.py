@@ -283,8 +283,8 @@ class StepTracer(object):
 
         for i in range(len(self._steps)):
             item: Tuple[StepType, int, int] = self._steps[i]
-            # index stepType step cumulativeStep
-            lines.append(f"{i:2} {item[0].name:17} {item[1]} {item[2]}")
+            # index | stepType | step | cumulativeStep
+            lines.append(f"{i:2} | {item[0].name} | {item[1]} | {item[2]}")
 
         return "\n".join(lines)
 

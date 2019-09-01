@@ -501,12 +501,10 @@ class IconServiceEngine(ContextContainer):
         :param context:
         :return:
         """
-        if context.step_counter.step_tracer is None:
-            return
-
         try:
-            msg: str = f"txHash(0x{context.tx.hash.hex()})\n{context.step_counter.step_tracer}"
-            print_log_with_level(context.log_level, tag=STEP_LOG_TAG, msg=msg)
+            if context.step_counter.step_tracer is not None:
+                msg: str = f"txHash(0x{context.tx.hash.hex()})\n{context.step_counter.step_tracer}"
+                print_log_with_level(context.log_level, tag=STEP_LOG_TAG, msg=msg)
         except:
             pass
 
