@@ -20,9 +20,9 @@ import unittest
 from unittest.mock import patch
 
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.base.exception import DatabaseException
-from iconservice.database.batch import BlockBatch, TransactionBatch
-from iconservice.database.db import ContextDatabase, MetaContextDatabase
+from iconservice.base.exception import DatabaseException, InvalidParamsException
+from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
+from iconservice.database.db import ContextDatabase, MetaContextDatabase, tx_batch_value_to_bytes
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
@@ -56,12 +56,12 @@ class TestKeyValueDatabase(unittest.TestCase):
 
     def test_write_batch(self):
         data = {
-            b'key0': b'value0',
-            b'key1': b'value1'
+            b'key0': TransactionBatchValue(b'value0', True),
+            b'key1': TransactionBatchValue(b'value1', True)
         }
         db = self.db
 
-        db.write_batch(data)
+        db.write_batch(data, converter=tx_batch_value_to_bytes)
 
         self.assertEqual(b'value1', db.get(b'key1'))
         self.assertEqual(b'value0', db.get(b'key0'))
@@ -149,14 +149,37 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def test_write_batch(self):
         context = self.context
         data = {
-            b'key0': b'value0',
-            b'key1': b'value1'
+            b'key0': TransactionBatchValue(b'value0', True),
+            b'key1': TransactionBatchValue(b'value1', True)
         }
         db = self.context_db
         db.write_batch(context, data)
 
         self.assertEqual(b'value1', db.get(context, b'key1'))
         self.assertEqual(b'value0', db.get(context, b'key0'))
+
+    def test_write_batch_invalid_value_format(self):
+        context = self.context
+        data = {
+            b'key0': b'value0',
+        }
+        db = self.context_db
+        with self.assertRaises(InvalidParamsException):
+            db.write_batch(context, data)
+
+        data = {
+            b'key0': None,
+        }
+        db = self.context_db
+        with self.assertRaises(InvalidParamsException):
+            db.write_batch(context, data)
+
+        data = {
+            b'key0': "",
+        }
+        db = self.context_db
+        with self.assertRaises(InvalidParamsException):
+            db.write_batch(context, data)
 
     def test_write_batch_on_readonly_exception(self):
         db = self.context_db

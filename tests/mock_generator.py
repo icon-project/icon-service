@@ -19,8 +19,8 @@ from typing import List
 from unittest.mock import Mock, patch
 
 from iconcommons.icon_config import IconConfig
-from iconservice.database.db import ContextDatabase
-from iconservice.database.db import ExternalDatabase
+
+from iconservice.database.db import ContextDatabase, KeyValueDatabase
 from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.fee import FeeEngine, FeeStorage
 from iconservice.icon_config import default_icon_config
@@ -43,7 +43,7 @@ ICX_STORAGE_PATH = 'iconservice.icx.storage'
 DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, value, data_type, data")
 QueryData = namedtuple("QueryData", "from_, to_, data_type, data")
-EXTERNAL_DB_PATH = 'iconservice.database.db.ExternalDatabase'
+KEY_VALUE_DB_PATH = 'iconservice.database.db.KeyValueDatabase'
 IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.reward_calc.storage'
 IISS_ENGINE_PATH = 'iconservice.iiss.engine'
 IISS_STORAGE_PATH = 'iconservice.iiss.storage'
@@ -65,7 +65,7 @@ def generate_inner_task(revision=0):
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
 @patch(f'{ICX_ENGINE_PATH}.Engine.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{EXTERNAL_DB_PATH}.from_path')
+@patch(f'{KEY_VALUE_DB_PATH}.from_path')
 @patch(f'{IISS_RC_DATA_STORAGE_PATH}.Storage._load_last_transaction_index')
 @patch(f'{IISS_ENGINE_PATH}.Engine.open')
 @patch(f'{IISS_STORAGE_PATH}.Storage.open')
@@ -102,7 +102,7 @@ def _create_inner_task(
     context_db.get = state_get
     context_db.put = state_put
 
-    iiss_mock_db = Mock(spec=ExternalDatabase)
+    iiss_mock_db = Mock(spec=KeyValueDatabase)
     iiss_mock_db.get = rc_get
     iiss_mock_db.put = rc_put
 
@@ -145,7 +145,7 @@ def generate_service_engine(revision=0):
 @patch(f'{ICX_STORAGE_PATH}.Storage.open')
 @patch(f'{ICX_ENGINE_PATH}.Engine.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{EXTERNAL_DB_PATH}.from_path')
+@patch(f'{KEY_VALUE_DB_PATH}.from_path')
 def _create_service_engine(
         rc_db_from_path,
         db_factory_create_by_name,
@@ -182,7 +182,7 @@ def _create_service_engine(
     context_db.get = state_get
     context_db.put = state_put
 
-    iiss_mock_db = Mock(spec=ExternalDatabase)
+    iiss_mock_db = Mock(spec=KeyValueDatabase)
     iiss_mock_db.get = rc_get
     iiss_mock_db.put = rc_put
 

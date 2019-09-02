@@ -24,6 +24,7 @@ ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
 ICON_DB_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_DB'
 ICON_INNER_LOG_TAG = f'IconInnerService'
 IISS_LOG_TAG = "IISS"
+STEP_LOG_TAG = "STEP"
 
 JSONRPC_VERSION = '2.0'
 CHARSET_ENCODING = 'utf-8'
@@ -139,6 +140,7 @@ class ConfigKey:
     # log
     LOG = 'log'
     LOG_FILE_PATH = 'filePath'
+    STEP_TRACE_FLAG = 'stepTraceFlag'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
@@ -209,6 +211,7 @@ IISS_METHOD_TABLE = [
     "getDelegation",
     "claimIScore",
     "queryIScore",
+    "estimateUnstakeLockPeriod"
 ]
 
 PREP_METHOD_TABLE = [

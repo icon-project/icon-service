@@ -97,7 +97,10 @@ class TestIntegrateBase(TestCase):
         self._genesis_invoke()
 
     def mock_calculate(self, path, block_height):
-        response = CalculateResponse(0, True, 1, 0, b'mocked_response')
+        context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        calc_period: int = context.storage.iiss.get_calc_period(context)
+        response = CalculateResponse(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
         self._calculation_callback(response)
 
     def _mock_ipc(self, mock_calculate: callable = mock_calculate):

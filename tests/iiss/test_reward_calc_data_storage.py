@@ -25,11 +25,11 @@ from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
 from tests.mock_db import MockPlyvelDB
-from tests.mock_generator import EXTERNAL_DB_PATH
+from tests.mock_generator import KEY_VALUE_DB_PATH
 
 
 class TestRcDataStorage(unittest.TestCase):
-    @patch(f'{EXTERNAL_DB_PATH}.from_path')
+    @patch(f'{KEY_VALUE_DB_PATH}.from_path')
     @patch('os.path.exists')
     def setUp(self, _, mocked_rc_db_from_path) -> None:
         self.path = ""
@@ -62,7 +62,7 @@ class TestRcDataStorage(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @patch(f'{EXTERNAL_DB_PATH}.from_path')
+    @patch(f'{KEY_VALUE_DB_PATH}.from_path')
     @patch('os.path.exists')
     def test_open(self, mocked_path_exists, mocked_rc_db_from_path):
         # success case: when input existing path, make path of current_db and iiss_rc_db
@@ -115,7 +115,7 @@ class TestRcDataStorage(unittest.TestCase):
         for block_height in range(-2, 1):
             self.assertRaises(AssertionError, self.rc_data_storage.create_db_for_calc, block_height)
 
-    @patch(f'{EXTERNAL_DB_PATH}.from_path')
+    @patch(f'{KEY_VALUE_DB_PATH}.from_path')
     @patch('os.rename')
     @patch('os.path.exists')
     def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_rc_db_from_path):

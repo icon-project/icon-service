@@ -77,6 +77,7 @@ def main():
                         help="icon score service run foreground")
     parser.add_argument("-tbears", dest=ConfigKey.TBEARS_MODE, action='store_true',
                         help="tbears mode")
+    parser.add_argument("-steptrace", dest=ConfigKey.STEP_TRACE_FLAG, action="store_true", help="enable step tracing")
 
     args = parser.parse_args()
 
@@ -145,6 +146,8 @@ def _start_process(conf: 'IconConfig'):
         custom_argv.append(str(v))
     if conf[ConfigKey.TBEARS_MODE]:
         custom_argv.append('-tbears')
+    if conf[ConfigKey.STEP_TRACE_FLAG]:
+        custom_argv.append('-steptrace')
 
     is_foreground = conf.get('foreground', False)
     if is_foreground:

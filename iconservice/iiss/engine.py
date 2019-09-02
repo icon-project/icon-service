@@ -76,7 +76,8 @@ class Engine(EngineBase):
         self._query_handler: dict = {
             'getStake': self.handle_get_stake,
             'getDelegation': self.handle_get_delegation,
-            'queryIScore': self.handle_query_iscore
+            'queryIScore': self.handle_query_iscore,
+            'estimateUnstakeLockPeriod': self.handle_estimate_unstake_lock_period
         }
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
@@ -98,10 +99,26 @@ class Engine(EngineBase):
         Logger.debug(tag=_TAG, msg=f"ready callback called with {cb_data}")
 
     @staticmethod
-    def calculate_done_callback(cb_data: 'CalculateDoneNotification'):
+    def check_calculate_request_block_height(response_block_height: int,
+                                             current_end_block_height_of_calc: int,
+                                             calc_period: int):
+        prev_calc_end_block_height = current_end_block_height_of_calc - calc_period
+
+        if response_block_height != prev_calc_end_block_height:
+            raise FatalException(f"request block height is not matched: "
+                                 f"response from RC:{response_block_height} "
+                                 f"request:{prev_calc_end_block_height} ")
+
+    def calculate_done_callback(self, cb_data: 'CalculateDoneNotification'):
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
         if not cb_data.success:
             raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
+
+        # context for searching db data
+        context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        calc_period: int = context.storage.iiss.get_calc_period(context)
+        self.check_calculate_request_block_height(cb_data.block_height, end_block_height_of_calc, calc_period)
 
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height)
         Logger.debug(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
@@ -219,6 +236,17 @@ class Engine(EngineBase):
             data["remainingBlocks"] = unstake_block_height - context.block.height
 
         return data
+
+    def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext', _params: dict):
+        total_stake: int = context.storage.iiss.get_total_stake(context)
+        unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
+                                                                       context.storage.iiss.lock_max,
+                                                                       context.storage.iiss.reward_point,
+                                                                       total_stake,
+                                                                       context.total_supply)
+        return {
+            "unstakeLockPeriod": unstake_lock_period
+        }
 
     def handle_set_delegation(self, context: 'IconScoreContext', params: dict):
         """Handles setDelegation JSON-RPC API request

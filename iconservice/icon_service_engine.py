@@ -19,6 +19,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -36,7 +37,7 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
     REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -59,6 +60,7 @@ from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
+from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
@@ -139,7 +141,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.main_prep_count = conf.get(ConfigKey.PREP_MAIN_PREPS, PREP_MAIN_PREPS)
         IconScoreContext.main_and_sub_prep_count = conf.get(ConfigKey.PREP_MAIN_AND_SUB_PREPS, PREP_MAIN_AND_SUB_PREPS)
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
-
+        IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
+        IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
         self._init_component_context()
 
         # load last_block_info
@@ -411,7 +414,7 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.validate_block_to_invoke(block)
 
         context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
+        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE, context.step_trace_flag)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
@@ -453,6 +456,7 @@ class IconServiceEngine(ContextContainer):
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
+                self._log_step_trace(context)
                 block_result.append(tx_result)
                 context.update_batch()
 
@@ -489,6 +493,20 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    @classmethod
+    def _log_step_trace(cls, context: 'IconScoreContext'):
+        """If steptrace option is turned on, write step trace messages to a log file
+
+        :param context:
+        :return:
+        """
+        try:
+            if context.step_counter.step_tracer is not None:
+                msg: str = f"txHash(0x{context.tx.hash.hex()})\n{context.step_counter.step_tracer}"
+                print_log_with_level(context.log_level, tag=STEP_LOG_TAG, msg=msg)
+        except:
+            pass
 
     def before_transaction_process(self,
                                    context: 'IconScoreContext',
@@ -1088,8 +1106,14 @@ class IconServiceEngine(ContextContainer):
         if start_block < 0 or end_block < 0:
             return rc_result
 
-        iscore, _ = context.storage.rc.get_calc_response_from_rc()
+        iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
+            return rc_result
+
+        if request_block_height != end_block:
+            Logger.warning(f"Response block height is not matched to the request: "
+                           f"response block height:{request_block_height} "
+                           f"request block height:{end_block}", ICON_SERVICE_LOG_TAG)
             return rc_result
 
         rc_result['iscore'] = iscore
