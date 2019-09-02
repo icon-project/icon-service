@@ -1118,11 +1118,12 @@ class IconServiceEngine(ContextContainer):
 
         calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
 
-        if calc_start_block < 0 or context.block.height != calc_end_block:
-            calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-            if calc_end_block is None:
-                calc_end_block = -1
-        response['nextCalculation'] = calc_end_block + 1
+        next_calculation: int = calc_end_block
+        if calc_start_block < 0 or context.block.height != next_calculation:
+            next_calculation: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+            if next_calculation is None:
+                next_calculation = -1
+        response['nextCalculation'] = next_calculation + 1
 
         term_start_block, term_end_block = context.storage.meta.get_last_term_info(context)
 
