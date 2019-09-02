@@ -49,7 +49,7 @@ class PenaltyImposer(object):
         if self._check_block_validation_penalty(prep):
             reason = PenaltyReason.BLOCK_VALIDATION
 
-        if self._on_penalty_imposed:
+        if self._on_penalty_imposed and reason != PenaltyReason.NONE:
             self._on_penalty_imposed(context, prep.address, reason)
 
         return reason
