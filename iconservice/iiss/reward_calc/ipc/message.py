@@ -274,7 +274,7 @@ class CommitBlockRequest(Request):
         self.block_hash = block_hash
 
     def __str__(self):
-        return f"{self.msg_type.name}({self.msg_id}, {self.success}, {self.block_height}, {self.block_hash})"
+        return f"{self.msg_type.name}({self.msg_id}, {self.success}, {self.block_height}, {self.block_hash.hex()})"
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id, (self.success, self.block_height, self.block_hash)
@@ -292,7 +292,7 @@ class CommitBlockResponse(Response):
         self.block_hash: bytes = block_hash
 
     def __str__(self):
-        return f"COMMIT_BLOCK({self.msg_id}, {self.success}, {self.block_height}, {self.block_hash})"
+        return f"COMMIT_BLOCK({self.msg_id}, {self.success}, {self.block_height}, {self.block_hash.hex()})"
 
     @staticmethod
     def from_list(items: list) -> 'CommitBlockResponse':
@@ -343,7 +343,7 @@ class CalculateDoneNotification(Response):
         self.state_hash = state_hash
 
     def __str__(self):
-        return f"CALCULATE_DONE({self.msg_id}, {self.success}, {self.block_height}, {self.iscore}, {self.state_hash})"
+        return f"CALCULATE_DONE({self.msg_id}, {self.success}, {self.block_height}, {self.iscore}, {self.state_hash.hex()})"
 
     @staticmethod
     def from_list(items: list) -> 'CalculateDoneNotification':
