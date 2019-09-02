@@ -31,7 +31,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, ICX_IN_LOOP
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
@@ -100,8 +100,8 @@ class TestIntegrateBase(TestCase):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
         calc_period: int = context.storage.iiss.get_calc_period(context)
-        response = CalculateResponse(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
-        self._calculation_callback(response)
+        response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
+        self._calculate_done_callback(response)
 
     def _mock_ipc(self, mock_calculate: callable = mock_calculate):
         RewardCalcProxy.open = Mock()
@@ -113,6 +113,7 @@ class TestIntegrateBase(TestCase):
         RewardCalcProxy.claim_iscore = Mock()
         RewardCalcProxy.query_iscore = Mock()
         RewardCalcProxy.commit_block = Mock()
+        RewardCalcProxy.commit_claim = Mock()
 
     def tearDown(self):
         self.icon_service_engine.close()
