@@ -22,7 +22,6 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS
 from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason
 from ...utils.msgpack_for_db import MsgPackForDB
 
@@ -38,7 +37,7 @@ class PRepFlag(Flag):
 
 class PRepDictType(Enum):
     FULL = auto()  # getPRep
-    ABRIDGED = auto()  # getXXXList
+    ABRIDGED = auto()  # getPReps
 
 
 class PRep(Sortable):
@@ -46,22 +45,10 @@ class PRep(Sortable):
     _VERSION: int = 1
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
-    _penalty_grace_period: int = PENALTY_GRACE_PERIOD
-    _min_productivity_percentage: int = MIN_PRODUCTIVITY_PERCENTAGE
-    _max_unvalidated_sequence_blocks: int = MAX_UNVALIDATED_SEQUENCE_BLOCKS
-
-    @classmethod
-    def init_prep_config(cls,
-                         penalty_grace_period: int,
-                         min_productivity_percentage: int,
-                         max_unvalidated_sequence_block: int):
-        cls._penalty_grace_period: int = penalty_grace_period
-        cls._min_productivity_percentage: int = min_productivity_percentage
-        cls._max_unvalidated_sequence_blocks: int = max_unvalidated_sequence_block
-
     class Index(IntEnum):
         VERSION = 0
 
+        # Version: 0
         ADDRESS = auto()
         STATUS = auto()
         GRADE = auto()
@@ -75,16 +62,16 @@ class PRep(Sortable):
         IREP = auto()
         IREP_BLOCK_HEIGHT = auto()
         LAST_GENERATE_BLOCK_HEIGHT = auto()
-
         BLOCK_HEIGHT = auto()
         TX_INDEX = auto()
-
         TOTAL_BLOCKS = auto()
         VALIDATED_BLOCKS = auto()
 
+        # Version: 1
         PENALTY = auto()
         UNVALIDATED_SEQUENCE_BLOCKS = auto()
 
+        # Unused
         SIZE = auto()
 
     def __init__(
@@ -196,6 +183,13 @@ class PRep(Sortable):
     def penalty(self) -> 'PenaltyReason':
         return self._penalty
 
+    def is_suspended(self) -> bool:
+        """The suspended P-Rep  cannot serve as Main P-Rep in the Term
+
+        :return:
+        """
+        return self._penalty == PenaltyReason.BLOCK_VALIDATION
+
     @penalty.setter
     def penalty(self, value: 'PenaltyReason'):
         self._penalty = value
@@ -231,49 +225,31 @@ class PRep(Sortable):
         return iso3166.countries_by_alpha3.get(
             alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
 
-    def update_main_prep_validate(self, is_validate: bool):
+    def update_block_statistics(self, is_validator: bool):
         """Update the block validation statistics of P-Rep
 
-        :param is_validate:
-        :return:
+        :param is_validator: If this P-Rep validates a block, then it is True
         """
         self._check_access_permission()
 
-        if is_validate:
+        self._total_blocks += 1
+
+        if is_validator:
             self._validated_blocks += 1
             self._unvalidated_sequence_blocks = 0
         else:
             self._unvalidated_sequence_blocks += 1
-        self._total_blocks += 1
 
         self._set_dirty(True)
 
-    @property
-    def productivity(self) -> int:
+    def reset_block_validation_penalty(self):
+        """Reset block validation penalty and
+        unvalidated sequence blocks before the next term begins
+
+        :return:
         """
-
-        :return: unit: percent
-        """
-        return self._validated_blocks * 100 // self._total_blocks
-
-    def is_low_productivity(self) -> bool:
-        # A grace period without measuring productivity
-        if self._total_blocks < self._penalty_grace_period:
-            return False
-
-        return self.productivity < self._min_productivity_percentage
-
-    def release_suspend(self):
-        if self._status == PRepStatus.SUSPENDED:
-            self._status = PRepStatus.ACTIVE
-            self._unvalidated_sequence_blocks: int = 0
-
-    def is_over_unvalidated_sequence_blocks(self) -> bool:
-        # A grace period without measuring productivity
-        if self._total_blocks < self._penalty_grace_period:
-            return False
-
-        return self._unvalidated_sequence_blocks >= self._max_unvalidated_sequence_blocks
+        self._penalty = PenaltyReason.NONE
+        self._unvalidated_sequence_blocks = 0
 
     @property
     def total_blocks(self) -> int:
@@ -439,7 +415,7 @@ class PRep(Sortable):
 
             self._total_blocks,
             self._validated_blocks,
-            self.penalty.value,
+            self._penalty.value,
             self._unvalidated_sequence_blocks
         ])
 
@@ -535,6 +511,7 @@ class PRep(Sortable):
         """
         data = {
             "status": self._status.value,
+            "penalty": self._penalty.value,
             "grade": self.grade.value,
             "name": self.name,
             "country": self.country,
@@ -543,6 +520,7 @@ class PRep(Sortable):
             "delegated": self._delegated,
             "totalBlocks": self._total_blocks,
             "validatedBlocks": self._validated_blocks,
+            "unvalidatedSequenceBlocks": self._unvalidated_sequence_blocks,
             "irep": self._irep,
             "irepUpdateBlockHeight": self._irep_block_height,
             "lastGenerateBlockHeight": self._last_generate_block_height,
