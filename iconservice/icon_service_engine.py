@@ -908,14 +908,11 @@ class IconServiceEngine(ContextContainer):
 
         :return: The amount of step
         """
-        context = IconScoreContext(IconScoreContextType.ESTIMATION)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = self._get_last_block()
-        context.block_batch = BlockBatch(Block.from_block(context.block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
+        context = self._context_factory.create(
+            IconScoreContextType.ESTIMATION,
+            block=self._get_last_block(),
+            step_counter_factory=self._step_counter_factory
+        )
 
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.

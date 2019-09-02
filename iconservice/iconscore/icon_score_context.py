@@ -236,7 +236,8 @@ class IconScoreContextFactory:
         self.create_handler: dict = {
             IconScoreContextType.INVOKE: self._create_invoke_context,
             IconScoreContextType.QUERY: self._create_query_context,
-            IconScoreContextType.DIRECT: self._create_direct_context
+            IconScoreContextType.DIRECT: self._create_direct_context,
+            IconScoreContextType.ESTIMATION: self._create_estimation_context,
         }
 
     def create(self, context_type: 'IconScoreContextType', **kwargs):
@@ -269,4 +270,18 @@ class IconScoreContextFactory:
     def _create_direct_context(block: 'Block') -> 'IconScoreContext':
         context: IconScoreContext = IconScoreContext(IconScoreContextType.DIRECT)
         context.block = block
+        return context
+
+    @staticmethod
+    def _create_estimation_context(block: 'Block',
+                                   step_counter_factory: 'IconScoreStepCounterFactory') -> 'IconScoreContext':
+        context: IconScoreContext = IconScoreContext(IconScoreContextType.ESTIMATION)
+        context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE)
+        context.block = block
+        context.block_batch = BlockBatch(Block.from_block(block))
+        context.tx_batch = TransactionBatch()
+        context.new_icon_score_mapper = IconScoreMapper()
+        # For PRep management
+        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context.tx_dirty_preps = OrderedDict()
         return context
