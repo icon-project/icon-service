@@ -17,7 +17,7 @@ import asyncio
 from iconcommons.logger import Logger
 from typing import Callable, Any, Optional
 
-from .message import Request, Response, MessageType
+from .message import Request, Response
 from iconservice.base.exception import InvalidParamsException
 
 
