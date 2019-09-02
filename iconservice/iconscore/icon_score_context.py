@@ -232,56 +232,39 @@ class IconScoreContext(object):
 
 
 class IconScoreContextFactory:
-    def __init__(self):
-        self.create_handler: dict = {
-            IconScoreContextType.INVOKE: self._create_invoke_context,
-            IconScoreContextType.QUERY: self._create_query_context,
-            IconScoreContextType.DIRECT: self._create_direct_context,
-            IconScoreContextType.ESTIMATION: self._create_estimation_context,
-        }
+    def __init__(self, step_counter_factory: 'IconScoreStepCounterFactory'):
+        self.step_counter_factory = step_counter_factory
 
-    def create(self, context_type: 'IconScoreContextType', **kwargs):
-        create_handler = self.create_handler[context_type]
-        return create_handler(**kwargs)
+    def create(self, context_type: 'IconScoreContextType', block: 'Block'):
+        context: 'IconScoreContext' = IconScoreContext(context_type)
+        context.block = block
+
+        if context_type == IconScoreContextType.DIRECT:
+            return context
+
+        self._set_step_counter(context)
+        self._set_context_attributes_for_processing_tx(context)
+
+        return context
 
     @staticmethod
-    def _create_invoke_context(block: 'Block',
-                               step_counter_factory: 'IconScoreStepCounterFactory') -> 'IconScoreContext':
-        context: IconScoreContext = IconScoreContext(IconScoreContextType.INVOKE)
-        context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE, context.step_trace_flag)
-        context.block = block
-        context.block_batch = BlockBatch(Block.from_block(block))
+    def _is_step_trace_on(context: 'IconScoreContext') -> bool:
+        return context.step_trace_flag and context.type == IconScoreContextType.INVOKE
+
+    def _set_step_counter(self, context: 'IconScoreContext'):
+        step_trace_flag = self._is_step_trace_on(context)
+        if context.type == IconScoreContextType.ESTIMATION:
+            context.step_counter = self.step_counter_factory.create(IconScoreContextType.INVOKE, step_trace_flag)
+        else:
+            context.step_counter = self.step_counter_factory.create(context.type, step_trace_flag)
+
+    @staticmethod
+    def _set_context_attributes_for_processing_tx(context: 'IconScoreContext'):
+        if context.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            return
+        context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
         # For PRep management
         context.preps = context.engine.prep.preps.copy(mutable=True)
         context.tx_dirty_preps = OrderedDict()
-        return context
-
-    @staticmethod
-    def _create_query_context(block: 'Block',
-                              step_counter_factory: 'IconScoreStepCounterFactory') -> 'IconScoreContext':
-        context: IconScoreContext = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = block
-        context.step_counter = step_counter_factory.create(IconScoreContextType.QUERY)
-        return context
-
-    @staticmethod
-    def _create_direct_context(block: 'Block') -> 'IconScoreContext':
-        context: IconScoreContext = IconScoreContext(IconScoreContextType.DIRECT)
-        context.block = block
-        return context
-
-    @staticmethod
-    def _create_estimation_context(block: 'Block',
-                                   step_counter_factory: 'IconScoreStepCounterFactory') -> 'IconScoreContext':
-        context: IconScoreContext = IconScoreContext(IconScoreContextType.ESTIMATION)
-        context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = block
-        context.block_batch = BlockBatch(Block.from_block(block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
-        # For PRep management
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
-        return context

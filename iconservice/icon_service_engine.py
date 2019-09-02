@@ -129,7 +129,7 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._context_factory = IconScoreContextFactory()
+        self._context_factory = IconScoreContextFactory(self._step_counter_factory)
 
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
@@ -415,11 +415,7 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        context: 'IconScoreContext' = self._context_factory.create(
-            IconScoreContextType.INVOKE,
-            block=block,
-            step_counter_factory=self._step_counter_factory
-        )
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
         self._set_revision_to_context(context)
         block_result = []
@@ -908,11 +904,7 @@ class IconServiceEngine(ContextContainer):
 
         :return: The amount of step
         """
-        context = self._context_factory.create(
-            IconScoreContextType.ESTIMATION,
-            block=self._get_last_block(),
-            step_counter_factory=self._step_counter_factory
-        )
+        context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
 
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.
@@ -945,8 +937,7 @@ class IconServiceEngine(ContextContainer):
         """
         context: 'IconScoreContext' = self._context_factory.create(
             IconScoreContextType.QUERY,
-            block=self._get_last_block(),
-            step_counter_factory=self._step_counter_factory
+            block=self._get_last_block()
         )
         self._set_revision_to_context(context)
         step_limit: int = context.step_counter.max_step_limit
@@ -984,9 +975,7 @@ class IconServiceEngine(ContextContainer):
         params: dict = request['params']
         to: 'Address' = params.get('to')
 
-        context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._get_last_block()
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
+        context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
         self._set_revision_to_context(context)
 
         try:
