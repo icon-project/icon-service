@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .icon_constant import ConfigKey, ICX_IN_LOOP, \
-    IISS_DAY_BLOCK, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
-    PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, \
-    MAX_UNVALIDATED_SEQUENCE_BLOCKS
+
+from .icon_constant import ConfigKey, ICX_IN_LOOP, TERM_PERIOD, IISS_DAY_BLOCK, PREP_MAIN_PREPS, \
+    PREP_MAIN_AND_SUB_PREPS, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS
 
 default_icon_config = {
     "log": {
@@ -39,8 +38,14 @@ default_icon_config = {
         ConfigKey.UN_STAKE_LOCK_MIN: IISS_DAY_BLOCK * 5,
         ConfigKey.UN_STAKE_LOCK_MAX: IISS_DAY_BLOCK * 20
     },
+    # The reason why IISS_CALCULATE_PERIOD and TERM_PERIOD value is different
+    # is to synchronize with the main net without revisioning.
+    # In the main net, calculate period in prevote is 43_200,
+    # and after decentralizing, is set to 43_120.
+    # If you want to change as TERM_PERIOD, you also must change REVISION.
+    # so we determined that only TERM_PERIOD changed without IISS_CALCULATE_PERIOD.
     ConfigKey.IISS_CALCULATE_PERIOD: IISS_DAY_BLOCK,
-    ConfigKey.TERM_PERIOD: IISS_DAY_BLOCK,
+    ConfigKey.TERM_PERIOD: TERM_PERIOD,
     ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP,
     ConfigKey.PREP_REGISTRATION_FEE: 2_000 * ICX_IN_LOOP,
     ConfigKey.PREP_MAIN_PREPS: PREP_MAIN_PREPS,

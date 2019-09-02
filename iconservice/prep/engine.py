@@ -150,9 +150,7 @@ class Engine(EngineBase, IISSEngineListener):
         Update P-Rep grades according to PRep.delegated
         """
 
-        context.storage.meta.put_last_term_info(context,
-                                                self.term.start_block_height,
-                                                self.term.end_block_height)
+        self._put_last_term_info(context, self.term)
         context.storage.meta.put_last_main_preps(context, self.term.main_preps)
 
         self._update_prep_grades(main_prep_count=context.main_prep_count,
@@ -169,6 +167,23 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.NORMAL)
         term.save(context)
         return main_preps_as_dict, term
+
+    @classmethod
+    def _put_last_term_info(cls,
+                            context: 'IconScoreContext',
+                            term: 'Term'):
+
+        _, last_calc_end = context.storage.meta.get_last_term_info(context)
+        if last_calc_end > 0:
+            start: int = term.start_block_height
+            end: int = term.end_block_height
+        else:
+            # first
+            start: int = -1
+            end: int = context.block.height
+        context.storage.meta.put_last_term_info(context,
+                                                start,
+                                                end)
 
     def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
         context.storage.meta.put_last_main_preps(context, self.term.main_preps)

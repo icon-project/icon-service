@@ -70,6 +70,15 @@ class TestIISSBase(TestIntegrateBase):
         iiss_info: dict = self.get_iiss_info()
         next_calculation: int = iiss_info.get('nextCalculation', 0)
 
+        cur_block_height: int = self._block_height
+        if cur_block_height == next_calculation - 1:
+            # last calculate block
+            self.make_blocks(to=next_calculation,
+                             prev_block_generator=prev_block_generator,
+                             prev_block_validators=prev_block_validators)
+            iiss_info: dict = self.get_iiss_info()
+            next_calculation: int = iiss_info.get('nextCalculation', 0)
+
         self.make_blocks(to=next_calculation - 1,
                          prev_block_generator=prev_block_generator,
                          prev_block_validators=prev_block_validators)

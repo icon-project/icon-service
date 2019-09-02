@@ -549,8 +549,9 @@ class IconServiceEngine(ContextContainer):
         context.update_batch()
         return main_prep_as_dict, term
 
-    @staticmethod
-    def _update_productivity(context: 'IconScoreContext',
+    @classmethod
+    def _update_productivity(cls,
+                             context: 'IconScoreContext',
                              prev_block_generator: Optional['Address'] = None,
                              prev_block_validators: Optional[List['Address']] = None):
         validates: set = set()
@@ -569,19 +570,26 @@ class IconServiceEngine(ContextContainer):
                 context.put_dirty_prep(dirty_prep)
         context.update_dirty_prep_batch()
 
-    @staticmethod
-    def _is_prep_term_ended(context: 'IconScoreContext', flag: 'PrecommitFlag') -> bool:
+    @classmethod
+    def _is_prep_term_ended(cls,
+                            context: 'IconScoreContext',
+                            flag: 'PrecommitFlag') -> bool:
         if context.revision < REV_DECENTRALIZATION:
             return False
 
         if context.engine.prep.term.sequence > -1:
             return context.engine.prep.check_end_block_height_of_term(context)
         else:
-            return flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION
+            if flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION:
+                context.storage.iiss.put_calc_period(context, context.engine.prep.term.period)
+                return True
+            else:
+                return False
 
-    @staticmethod
-    def _update_last_generate_block_height(
-            context: 'IconScoreContext', prev_block_generator: Optional['Address']):
+    @classmethod
+    def _update_last_generate_block_height(cls,
+                                           context: 'IconScoreContext',
+                                           prev_block_generator: Optional['Address']):
         if not context.is_decentralized():
             return
         if prev_block_generator is None:
@@ -1133,13 +1141,16 @@ class IconServiceEngine(ContextContainer):
         response['variable']['rrep'] = reward_rate.reward_prep
 
         calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
-        if calc_end_block < 0 or context.block.height != calc_end_block:
-            calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-            if calc_end_block is None:
-                calc_end_block = -1
-        response['nextCalculation'] = calc_end_block + 1
+
+        next_calculation: int = calc_end_block
+        if calc_start_block < 0 or context.block.height != next_calculation:
+            next_calculation: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+            if next_calculation is None:
+                next_calculation = -1
+        response['nextCalculation'] = next_calculation + 1
 
         term_start_block, term_end_block = context.storage.meta.get_last_term_info(context)
+
         if term_end_block < 0 or context.block.height != term_end_block:
             term_end_block: int = context.engine.prep.term.end_block_height
         response['nextPRepTerm'] = term_end_block + 1

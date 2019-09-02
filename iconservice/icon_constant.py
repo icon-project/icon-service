@@ -247,6 +247,9 @@ IISS_MIN_IREP = 10_000 * ICX_IN_LOOP
 IISS_MAX_IREP_PERCENTAGE = 14
 IISS_INITIAL_IREP = 50_000 * ICX_IN_LOOP
 
+# 24 hours * 60 minutes * 60 seconds / 2 - 80 <- for PRep terms
+TERM_PERIOD = 24 * 60 * 60 // 2 - 80
+
 # 24 hours * 60 minutes * 60 seconds / 2
 IISS_DAY_BLOCK = 24 * 60 * 60 // 2
 IISS_MONTH_BLOCK = IISS_DAY_BLOCK * 30
