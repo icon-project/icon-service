@@ -17,6 +17,8 @@
 from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
+
+from iconservice.icon_constant import RC_DB_VERSION_2
 from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 
@@ -27,25 +29,34 @@ if TYPE_CHECKING:
 
 
 class DataCreator:
+
     @staticmethod
-    def create_header(version: int, block_height: int) -> 'Header':
+    def create_header(version: int, block_height: int, revision: int) -> 'Header':
         data = Header()
         data.version: int = version
         data.block_height: int = block_height
+
+        if version >= RC_DB_VERSION_2:
+            data.revision: int = revision
+
         return data
 
     @staticmethod
-    def create_gv_variable(block_height: int,
+    def create_gv_variable(version: int,
+                           block_height: int,
                            calculated_irep: int,
                            reward_rep: int,
                            config_main_prep_count: int,
                            config_main_and_sub_prep_count: int) -> 'GovernanceVariable':
         data = GovernanceVariable()
+        data.version: int = version
         data.block_height: int = block_height
         data.calculated_irep: int = calculated_irep
         data.reward_rep: int = reward_rep
-        data.config_main_prep_count: int = config_main_prep_count
-        data.config_sub_prep_count: int = config_main_and_sub_prep_count - config_main_prep_count
+
+        if version >= RC_DB_VERSION_2:
+            data.config_main_prep_count: int = config_main_prep_count
+            data.config_sub_prep_count: int = config_main_and_sub_prep_count - config_main_prep_count
         return data
 
     @staticmethod
