@@ -755,17 +755,11 @@ class IconServiceEngine(ContextContainer):
         :param context:
         :return:
         """
-
         for main_prep in context.engine.prep.term.main_preps:
             prep: 'PRep' = context.get_prep(main_prep.address)
             assert prep is not None
 
-            if prep.is_low_productivity():
-                context.engine.prep.impose_low_productivity_penalty(context, prep.address)
-            elif prep.is_over_unvalidated_sequence_blocks():
-                context.engine.prep.impose_block_validation_penalty(context, prep.address)
-            else:
-                pass
+            context.engine.prep.impose_penalty(context, prep)
 
     def _invoke_base_request(self,
                              context: 'IconScoreContext',
