@@ -262,6 +262,17 @@ class PRep(Sortable):
         return self._validated_blocks
 
     @property
+    def block_validation_proportion(self) -> int:
+        """Percent without fraction
+
+        :return:
+        """
+        if self._total_blocks == 0:
+            return 0
+
+        return self._validated_blocks * 100 // self._total_blocks
+
+    @property
     def unvalidated_sequence_blocks(self) -> int:
         return self._unvalidated_sequence_blocks
 
