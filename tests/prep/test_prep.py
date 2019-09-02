@@ -20,7 +20,7 @@ import pytest
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import AccessDeniedException
 from iconservice.icon_constant import IISS_INITIAL_IREP, PenaltyReason
-from iconservice.prep.data import PRep
+from iconservice.prep.data.prep import PRep, PRepDictType
 
 NAME = "banana"
 EMAIL = "banana@example.com"
@@ -35,11 +35,11 @@ STAKE = 100
 DELEGATED = 100
 BLOCK_HEIGHT = 777
 TX_INDEX = 0
-TOTAL_BLOCKS = 1000
-VALIDATED_BLOCKS = 900
+TOTAL_BLOCKS = 0
+VALIDATED_BLOCKS = 0
 IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
-PENALTY = PenaltyReason.LOW_PRODUCTIVITY
-UNVALIDATED_SEQUENCE_BLOCKS = 100
+PENALTY = PenaltyReason.NONE
+UNVALIDATED_SEQUENCE_BLOCKS = 0
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ def test_freeze(prep):
         prep.set_irep(10_000, 777)
 
     with pytest.raises(AccessDeniedException):
-        prep.update_main_prep_validate(True)
+        prep.update_block_statistics(is_validator=True)
 
 
 def test_set_ok(prep):
@@ -174,3 +174,101 @@ def test_country(prep):
 
     prep.country = "hello"
     assert prep.country == "ZZZ"
+
+
+def test_is_suspended(prep):
+    prep.penalty = PenaltyReason.NONE
+    assert not prep.is_suspended()
+
+    prep.penalty = PenaltyReason.LOW_PRODUCTIVITY
+    assert not prep.is_suspended()
+
+    prep.penalty = PenaltyReason.BLOCK_VALIDATION
+    assert prep.penalty == PenaltyReason.BLOCK_VALIDATION
+    assert prep.is_suspended()
+
+
+def test_update_block_statistics(prep):
+    assert prep.total_blocks == 0
+    assert prep.validated_blocks == 0
+    assert prep.unvalidated_sequence_blocks == 0
+
+    prep.update_block_statistics(is_validator=False)
+    assert prep.total_blocks == 1
+    assert prep.validated_blocks == 0
+    assert prep.unvalidated_sequence_blocks == 1
+
+    prep.update_block_statistics(is_validator=True)
+    assert prep.total_blocks == 2
+    assert prep.validated_blocks == 1
+    assert prep.unvalidated_sequence_blocks == 0
+
+
+def test_reset_block_validation_penalty(prep):
+    size = 100
+
+    for _ in range(size):
+        prep.update_block_statistics(is_validator=False)
+
+    assert prep.total_blocks == size
+    assert prep.validated_blocks == 0
+    assert prep.unvalidated_sequence_blocks == size
+
+    prep.penalty = PenaltyReason.BLOCK_VALIDATION
+    assert prep.penalty == PenaltyReason.BLOCK_VALIDATION
+
+    prep.reset_block_validation_penalty()
+    assert prep.penalty == PenaltyReason.NONE
+    assert prep.unvalidated_sequence_blocks == 0
+
+
+def test_to_dict_with_full(prep):
+    info: dict = prep.to_dict(PRepDictType.FULL)
+
+    assert "address" not in info
+    assert info["name"] == prep.name == NAME
+    assert info["status"] == prep.status.value
+    assert info["grade"] == prep.grade.value
+    assert info["country"] == prep.country == COUNTRY
+    assert info["city"] == prep.city == CITY
+    assert info["email"] == prep.email == EMAIL
+    assert info["website"] == prep.website == WEBSITE
+    assert info["details"] == prep.details == DETAILS
+    assert info["p2pEndpoint"] == prep.p2p_endpoint == P2P_END_POINT
+    assert info["irep"] == prep.irep == IREP
+    assert info["irepUpdateBlockHeight"] == prep.irep_block_height == BLOCK_HEIGHT
+    assert info["stake"] == prep.stake == STAKE
+    assert info["delegated"] == prep.delegated == DELEGATED
+    assert info["totalBlocks"] == prep.total_blocks == TOTAL_BLOCKS
+    assert info["validatedBlocks"] == prep.validated_blocks == VALIDATED_BLOCKS
+    assert info["penalty"] == prep.penalty.value == PENALTY.value
+    assert info["unvalidatedSequenceBlocks"] == prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+
+    # version and address are not included
+    assert len(info) == PRep.Index.SIZE - 2
+
+
+def test_to_dict_with_abridged(prep):
+    info: dict = prep.to_dict(PRepDictType.ABRIDGED)
+
+    assert info["address"] == prep.address
+    assert info["name"] == prep.name == NAME
+    assert info["status"] == prep.status.value
+    assert info["grade"] == prep.grade.value
+    assert info["country"] == prep.country == COUNTRY
+    assert info["city"] == prep.city == CITY
+    assert "email" not in info
+    assert "website" not in info
+    assert "details" not in info
+    assert "p2pEndpoint" not in info
+    assert info["irep"] == prep.irep == IREP
+    assert info["irepUpdateBlockHeight"] == prep.irep_block_height == BLOCK_HEIGHT
+    assert info["stake"] == prep.stake == STAKE
+    assert info["delegated"] == prep.delegated == DELEGATED
+    assert info["totalBlocks"] == prep.total_blocks == TOTAL_BLOCKS
+    assert info["validatedBlocks"] == prep.validated_blocks == VALIDATED_BLOCKS
+    assert info["penalty"] == prep.penalty.value == PENALTY.value
+    assert info["unvalidatedSequenceBlocks"] == prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+
+    # version, email, website, details and p2pEndpoint are not included
+    assert len(info) == PRep.Index.SIZE - 5
