@@ -29,12 +29,12 @@ from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
     PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 )
+from .icon_score_mapper import IconScoreMapper
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
-    from .icon_score_mapper import IconScoreMapper
-    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
     from ..base.address import Address
     from ..prep.data.prep_container import PRep, PRepContainer
     from ..utils import ContextEngine, ContextStorage
@@ -229,3 +229,44 @@ class IconScoreContext(object):
 
     def put_dirty_prep(self, prep: 'PRep'):
         self.tx_dirty_preps[prep.address] = prep
+
+
+class IconScoreContextFactory:
+    def __init__(self):
+        self.create_handler: dict = {
+            IconScoreContextType.INVOKE: self._create_invoke_context,
+            IconScoreContextType.QUERY: self._create_query_context,
+            IconScoreContextType.DIRECT: self._create_direct_context
+        }
+
+    def create(self, context_type: 'IconScoreContextType', **kwargs):
+        create_handler = self.create_handler[context_type]
+        return create_handler(**kwargs)
+
+    @staticmethod
+    def _create_invoke_context(block: 'Block',
+                               step_counter_factory: 'IconScoreStepCounterFactory') -> 'IconScoreContext':
+        context: IconScoreContext = IconScoreContext(IconScoreContextType.INVOKE)
+        context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE, context.step_trace_flag)
+        context.block = block
+        context.block_batch = BlockBatch(Block.from_block(block))
+        context.tx_batch = TransactionBatch()
+        context.new_icon_score_mapper = IconScoreMapper()
+        # For PRep management
+        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context.tx_dirty_preps = OrderedDict()
+        return context
+
+    @staticmethod
+    def _create_query_context(block: 'Block',
+                              step_counter_factory: 'IconScoreStepCounterFactory') -> 'IconScoreContext':
+        context: IconScoreContext = IconScoreContext(IconScoreContextType.QUERY)
+        context.block = block
+        context.step_counter = step_counter_factory.create(IconScoreContextType.QUERY)
+        return context
+
+    @staticmethod
+    def _create_direct_context(block: 'Block') -> 'IconScoreContext':
+        context: IconScoreContext = IconScoreContext(IconScoreContextType.DIRECT)
+        context.block = block
+        return context
