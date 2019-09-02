@@ -27,7 +27,7 @@ from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAP
     PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
-from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateDoneNotification
 from tests import create_tx_hash, create_block_hash
 from tests.integrate_test import create_timestamp
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -385,12 +385,12 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
             end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
             calc_period: int = context.storage.iiss.get_calc_period(context)
-            response = CalculateResponse(0, True,
+            response = CalculateDoneNotification(0, True,
                                          end_block_height_of_calc - calc_period,
                                          calculate_response_iscore_of_last_calc_period,
                                          b'mocked_response')
             print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
-            _self._calculation_callback(response)
+            _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
 
@@ -416,10 +416,10 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                 context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
                 end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
                 calc_period: int = context.storage.iiss.get_calc_period(context)
-                response = CalculateResponse(0, True, end_block_height_of_calc - calc_period, response_iscore,
+                response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, response_iscore,
                                              b'mocked_response')
                 print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
-                _self._calculation_callback(response)
+                _self._calculate_done_callback(response)
 
             self._mock_ipc(mock_calculated)
             next_calc = self.get_iiss_info()['nextCalculation']
@@ -464,11 +464,11 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
     def test_calculate_response_invalid_block_height(self):
         def mock_calculated(_self, _path, _block_height):
             invalid_block_height: int = 0
-            response = CalculateResponse(0, True,
+            response = CalculateDoneNotification(0, True,
                                          invalid_block_height,
                                          0,
                                          b'mocked_response')
-            _self._calculation_callback(response)
+            _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
 
@@ -477,11 +477,11 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def test_calculate_response_fails(self):
         def mock_calculated(_self, _path, _block_height):
-            response = CalculateResponse(0, False,
+            response = CalculateDoneNotification(0, False,
                                          0,
                                          0,
                                          b'mocked_response')
-            _self._calculation_callback(response)
+            _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
 
