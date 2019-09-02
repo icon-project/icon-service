@@ -45,6 +45,8 @@ class TestRcDataStorage(unittest.TestCase):
 
         self.dummy_gv = GovernanceVariable()
         self.dummy_gv.block_height = dummy_block_height
+        self.dummy_gv.config_main_prep_count = 22
+        self.dummy_gv.config_sub_prep_count = 78
         self.dummy_gv.calculated_irep = 1
         self.dummy_gv.reward_rep = 1000
 

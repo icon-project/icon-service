@@ -707,7 +707,9 @@ class Engine(EngineBase):
         reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_prep)
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(context.block.height,
                                                                               calculated_irep,
-                                                                              reward_prep_for_rc)
+                                                                              reward_prep_for_rc,
+                                                                              context.main_prep_count,
+                                                                              context.main_and_sub_prep_count)
         context.storage.iiss.put_reward_rate(context, reward_rate)
         context.storage.rc.put(context.rc_block_batch, data)
 

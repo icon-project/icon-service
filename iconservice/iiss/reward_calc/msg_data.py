@@ -88,6 +88,8 @@ class GovernanceVariable(Data):
         # value
         self.calculated_irep: int = 0
         self.reward_rep: int = 0
+        self.config_main_prep_count: int = 0
+        self.config_sub_prep_count: int = 0
 
     def make_key(self) -> bytes:
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
@@ -96,7 +98,9 @@ class GovernanceVariable(Data):
     def make_value(self) -> bytes:
         data = [
             self.calculated_irep,
-            self.reward_rep
+            self.reward_rep,
+            self.config_main_prep_count,
+            self.config_sub_prep_count
         ]
         return MsgPackForIpc.dumps(data)
 
@@ -107,11 +111,15 @@ class GovernanceVariable(Data):
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.calculated_irep: int = data_list[0]
         obj.reward_rep: int = data_list[1]
+        obj.config_main_prep_count: int = data_list[2]
+        obj.config_sub_prep_count: int = data_list[3]
         return obj
 
     def __str__(self):
-        return f"[{self._PREFIX}] " \
-            f"key: {self.block_height}, calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
+        return f"[{self._PREFIX}] key: {self.block_height}," \
+               f"config_main_prep_count: {self.config_main_prep_count}, " \
+               f"config_sub_prep_count: {self.config_sub_prep_count}" \
+               f" calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
 
 
 class BlockProduceInfoData(Data):

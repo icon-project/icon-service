@@ -56,8 +56,12 @@ class TestRCDatabase(TestIISSBase):
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_block_height = self._block_height
                 expected_irep = 0
+                expected_main_prep_count = 22
+                expected_sub_prep_count = 100 - expected_main_prep_count
                 expected_rrep = 1200 * 3
                 self.assertEqual(expected_block_height, gv.block_height)
+                self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
+                self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
                 self.assertEqual(expected_irep, gv.calculated_irep)
                 self.assertEqual(expected_rrep, gv.reward_rep)
 
@@ -112,8 +116,12 @@ class TestRCDatabase(TestIISSBase):
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_block_height = block_height
                 expected_irep = 0
+                expected_main_prep_count = 22
+                expected_sub_prep_count = 100 - expected_main_prep_count
                 expected_rrep = 1078 * 3
                 self.assertEqual(expected_block_height, gv.block_height)
+                self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
+                self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
                 self.assertEqual(expected_irep, gv.calculated_irep)
                 self.assertEqual(expected_rrep, gv.reward_rep)
 
@@ -129,8 +137,12 @@ class TestRCDatabase(TestIISSBase):
                 expected_block_height = block_height
                 # calculated irep (irep: 50000 ICX)
                 expected_irep = 19290123456790123
+                expected_main_prep_count = 22
+                expected_sub_prep_count = 100 - expected_main_prep_count
                 expected_rrep = 1078 * 3
                 self.assertEqual(expected_block_height, gv.block_height)
+                self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
+                self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
                 self.assertEqual(expected_irep, gv.calculated_irep)
                 self.assertEqual(expected_rrep, gv.reward_rep)
 

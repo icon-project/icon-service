@@ -40,6 +40,8 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         self.iiss_gv: 'GovernanceVariable' = GovernanceVariable()
         self.iiss_gv.block_height = 20
+        self.iiss_gv.config_main_prep_count = 22
+        self.iiss_gv.config_sub_prep_count = 100
         self.iiss_gv.calculated_irep = 30
         self.iiss_gv.reward_rep = 10_000
 
@@ -115,6 +117,8 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_gv: 'GovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
+        self.assertEqual(self.iiss_gv.config_main_prep_count, ret_gv.config_main_prep_count)
+        self.assertEqual(self.iiss_gv.config_sub_prep_count, ret_gv.config_sub_prep_count)
         self.assertEqual(self.iiss_gv.calculated_irep, ret_gv.calculated_irep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
 
@@ -288,6 +292,8 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_gv: 'GovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
+        self.assertEqual(self.iiss_gv.config_main_prep_count, ret_gv.config_main_prep_count)
+        self.assertEqual(self.iiss_gv.config_sub_prep_count, ret_gv.config_sub_prep_count)
         self.assertEqual(self.iiss_gv.calculated_irep, ret_gv.calculated_irep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
 
