@@ -23,7 +23,7 @@ from ...iconscore.icon_score_context import IconScoreContext
 from ..reward_calc.msg_data import TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
-from ...icon_constant import DATA_BYTE_ORDER, REV_IISS, RC_DATA_VERSION_TABLE
+from ...icon_constant import DATA_BYTE_ORDER, REV_IISS, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -31,6 +31,9 @@ if TYPE_CHECKING:
 
 
 def get_rc_version(revision: int) -> int:
+    if revision < REV_IISS:
+        return RC_DB_VERSION_0
+
     version: Optional[list] = RC_DATA_VERSION_TABLE.get(revision)
     if version is None:
         return get_rc_version(revision - 1)

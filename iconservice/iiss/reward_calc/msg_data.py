@@ -128,6 +128,7 @@ class GovernanceVariable(Data):
         obj.reward_rep: int = data_list[1]
         # need to be refactor
         if len(data_list) > 2:
+            obj.version: int = RC_DB_VERSION_2
             obj.config_main_prep_count: int = data_list[2]
             obj.config_sub_prep_count: int = data_list[3]
         return obj

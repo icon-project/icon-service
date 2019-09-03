@@ -1650,6 +1650,7 @@ class IconServiceEngine(ContextContainer):
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
             context.engine.iiss.send_ipc(context, precommit_data)
+            # todo: consider case when error being raised in send ipc
             context.storage.rc.put_version_and_revision(precommit_data.revision)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
