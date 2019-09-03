@@ -64,6 +64,7 @@ class Header(Data):
             self.block_height
         ]
         if self.version >= RC_DB_VERSION_2:
+            # Added value in version 2
             data.append(self.revision)
 
         return MsgPackForIpc.dumps(data)
@@ -113,6 +114,7 @@ class GovernanceVariable(Data):
             self.reward_rep,
         ]
         if self.version >= RC_DB_VERSION_2:
+            # Added value in version 2
             data.append(self.config_main_prep_count)
             data.append(self.config_sub_prep_count)
 

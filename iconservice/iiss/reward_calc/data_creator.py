@@ -35,10 +35,7 @@ class DataCreator:
         data = Header()
         data.version: int = version
         data.block_height: int = block_height
-
-        if version >= RC_DB_VERSION_2:
-            data.revision: int = revision
-
+        data.revision: int = revision
         return data
 
     @staticmethod
@@ -53,10 +50,8 @@ class DataCreator:
         data.block_height: int = block_height
         data.calculated_irep: int = calculated_irep
         data.reward_rep: int = reward_rep
-
-        if version >= RC_DB_VERSION_2:
-            data.config_main_prep_count: int = config_main_prep_count
-            data.config_sub_prep_count: int = config_main_and_sub_prep_count - config_main_prep_count
+        data.config_main_prep_count: int = config_main_prep_count
+        data.config_sub_prep_count: int = config_main_and_sub_prep_count - config_main_prep_count
         return data
 
     @staticmethod
