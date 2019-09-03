@@ -98,6 +98,9 @@ class Engine(EngineBase):
     def ready_callback(cb_data: 'ReadyNotification'):
         Logger.debug(tag=_TAG, msg=f"ready callback called with {cb_data}")
 
+    def get_ready_future(self):
+        return self._reward_calc_proxy.get_ready_future()
+
     @staticmethod
     def check_calculate_request_block_height(response_block_height: int,
                                              current_end_block_height_of_calc: int,

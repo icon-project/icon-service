@@ -48,6 +48,7 @@ class RewardCalcProxy(object):
         self._ipc_server = IPCServer()
         self._message_queue: Optional['MessageQueue'] = None
         self._reward_calc: Optional[Popen] = None
+        self._ready_future = None
 
         self._ready_callback: Optional[Callable] = ready_callback
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
@@ -65,6 +66,7 @@ class RewardCalcProxy(object):
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
         self.start_reward_calc(log_dir=log_dir, sock_path=sock_path, iiss_db_path=iiss_db_path)
+        self._ready_future = self._loop.create_future()
 
         Logger.debug(tag=_TAG, msg="open() end")
 
@@ -317,8 +319,14 @@ class RewardCalcProxy(object):
     def ready_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"ready_handler() start {response}")
         self._ipc_timeout = self.IPC_TIMEOUT_S
+
         if self._ready_callback is not None:
             self._ready_callback(response)
+
+        self._ready_future.set_result(True)
+
+    def get_ready_future(self):
+        return self._ready_future
 
     def calculate_done_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"calculate_done_handler() start {response}")
