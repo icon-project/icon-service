@@ -16,10 +16,10 @@
 
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Any, TYPE_CHECKING, List, Optional, Tuple
+from typing import Any, TYPE_CHECKING, List, Optional
 
 from ...base.exception import InvalidParamsException
-from ...icon_constant import DATA_BYTE_ORDER, RC_DATA_VERSION_TABLE, RC_DB_VERSION_2
+from ...icon_constant import DATA_BYTE_ORDER, RC_DB_VERSION_2
 from ...utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
 if TYPE_CHECKING:
