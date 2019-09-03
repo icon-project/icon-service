@@ -19,7 +19,7 @@ import pytest
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import AccessDeniedException
-from iconservice.icon_constant import IISS_INITIAL_IREP, PenaltyReason
+from iconservice.icon_constant import IISS_INITIAL_IREP, PenaltyReason, REV_DECENTRALIZATION
 from iconservice.prep.data.prep import PRep, PRepDictType
 
 NAME = "banana"
@@ -141,7 +141,7 @@ def test_set_error(prep):
 
 
 def test_from_bytes_and_to_bytes(prep):
-    data = prep.to_bytes()
+    data = prep.to_bytes(REV_DECENTRALIZATION)
     prep2 = PRep.from_bytes(data)
 
     assert prep.address == prep2.address
