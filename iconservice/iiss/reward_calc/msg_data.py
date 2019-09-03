@@ -33,14 +33,6 @@ class TxType(IntEnum):
     INVALID = 99
 
 
-def get_rc_version(revision: int) -> int:
-    version: Optional[list] = RC_DATA_VERSION_TABLE.get(revision)
-    if version is None:
-        return get_rc_version(revision - 1)
-    latest_version: int = version[-1]
-    return latest_version
-
-
 class Data:
     @abstractmethod
     def make_key(self, *args, **kwargs) -> bytes:

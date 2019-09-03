@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
 
-from iconservice.icon_constant import RC_DB_VERSION_2
+from ...icon_constant import RC_DB_VERSION_2
 from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 

@@ -19,14 +19,23 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from iconcommons import Logger
 
+from ...iconscore.icon_score_context import IconScoreContext
 from ..reward_calc.msg_data import TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
-from ...icon_constant import DATA_BYTE_ORDER
+from ...icon_constant import DATA_BYTE_ORDER, REV_IISS, RC_DATA_VERSION_TABLE
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..reward_calc.msg_data import Data
+
+
+def get_rc_version(revision: int) -> int:
+    version: Optional[list] = RC_DATA_VERSION_TABLE.get(revision)
+    if version is None:
+        return get_rc_version(revision - 1)
+    latest_version: int = version[-1]
+    return latest_version
 
 
 class Storage(object):
@@ -35,6 +44,7 @@ class Storage(object):
 
     _KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
     _KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
+    _KEY_FOR_VERSION_AND_REVISION = b'version_and_revision'
 
     def __init__(self):
         self._path: str = ""
@@ -42,7 +52,10 @@ class Storage(object):
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
-    def open(self, path: str):
+        self.current_version: Optional[int] = None
+        self.current_revision: Optional[int] = None
+
+    def open(self, context: 'IconScoreContext', path: str):
         if not os.path.exists(path):
             raise DatabaseException(f"Invalid IISS DB path: {path}")
         self._path = path
@@ -50,6 +63,10 @@ class Storage(object):
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
         self._db = KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
+
+        self.current_version, self.current_revision = self._load_version_and_revision()
+        if context.revision >= REV_IISS and self.current_version == -1:
+            self.put_version_and_revision(context.revision)
 
     def close(self):
         """Close the embedded database.
@@ -99,8 +116,29 @@ class Storage(object):
 
         self._db.write_batch(batch_dict)
 
+    # todo: naming
+    def put_version_and_revision(self, revision: int):
+        version: int = get_rc_version(revision)
+        version_and_revision: bytes = MsgPackForDB.dumps([version, revision])
+        self._db.put(self._KEY_FOR_VERSION_AND_REVISION, version_and_revision)
+
+        self.current_version = version
+        self.current_revision = revision
+
+    def _load_version_and_revision(self) -> Tuple[int, int]:
+        version_and_revision: Optional[bytes] = self._db.get(self._KEY_FOR_VERSION_AND_REVISION)
+        version: int = -1
+        revision: int = -1
+        if version_and_revision is None:
+            return version, revision
+        else:
+            version_and_revision: list = MsgPackForDB.loads(version_and_revision)
+        version: int = version_and_revision[0]
+        revision: int = version_and_revision[1]
+        return version, revision
+
     def _load_last_transaction_index(self) -> int:
-        encoded_last_index = self._db.get(self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX)
+        encoded_last_index: Optional[bytes] = self._db.get(self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX)
         if encoded_last_index is None:
             return -1
         else:
