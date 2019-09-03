@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 from iconcommons.logger import Logger
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
+from .penalty_imposer import PenaltyImposer
 from .term import Term
 from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
@@ -48,6 +49,7 @@ class Engine(EngineBase, IISSEngineListener):
     * Manages term and preps
     * Handles P-Rep related JSON-RPC API requests
     """
+
     def __init__(self):
         super().__init__()
         Logger.debug("PRepEngine.__init__() start")
@@ -69,6 +71,7 @@ class Engine(EngineBase, IISSEngineListener):
         self.preps = PRepContainer()
         self.term = Term()
         self._initial_irep: Optional[int] = None
+        self._penalty_imposer: Optional['PenaltyImposer'] = None
 
         Logger.debug("PRepEngine.__init__() end")
 
@@ -77,19 +80,35 @@ class Engine(EngineBase, IISSEngineListener):
              term_period: int,
              irep: int,
              penalty_grace_period: int,
-             min_productivity_percentage: int,
-             max_unvalidated_sequence_block: int):
+             low_productivity_penalty_threshold: int,
+             block_validation_penalty_threshold: int):
 
         # this logic doesn't need to save to DB yet
-        PRep.init_prep_config(penalty_grace_period,
-                              min_productivity_percentage,
-                              max_unvalidated_sequence_block)
+        self._init_penalty_imposer(penalty_grace_period,
+                                   low_productivity_penalty_threshold,
+                                   block_validation_penalty_threshold)
 
         self._load_preps(context)
         self.term.load(context, term_period)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
+
+    def _init_penalty_imposer(self,
+                              penalty_grace_period: int,
+                              low_productivity_penalty_threshold: int,
+                              block_validation_penalty_threshold: int):
+        """Initialize PenaltyImposer
+
+        :param penalty_grace_period:
+        :param low_productivity_penalty_threshold:
+        :param block_validation_penalty_threshold:
+        :return:
+        """
+        self._penalty_imposer = PenaltyImposer(penalty_grace_period,
+                                               low_productivity_penalty_threshold,
+                                               block_validation_penalty_threshold,
+                                               self._on_penalty_imposed)
 
     def _load_preps(self, context: 'IconScoreContext'):
         """Load a prep from db
@@ -242,7 +261,7 @@ class Engine(EngineBase, IISSEngineListener):
             assert prep is not None
 
             dirty_prep = prep.copy()
-            dirty_prep.release_suspend()
+            dirty_prep.reset_block_validation_penalty()
             context.preps.add(dirty_prep)
 
     def handle_register_prep(
@@ -397,7 +416,7 @@ class Engine(EngineBase, IISSEngineListener):
                              src_term: 'Term',
                              invalid_preps: List[int]) -> Optional['Term']:
         if invalid_preps:
-            term: 'Term' = Term.create_update_term(src_term, invalid_preps)
+            term: Optional['Term'] = Term.create_update_term(src_term, invalid_preps)
         else:
             term = None
         return term
@@ -539,22 +558,42 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
+    def impose_penalty(self, context: 'IconScoreContext', prep: 'PRep'):
+        """Called on IconServiceEngine._impose_penalty_on_main_preps
+
+        :param context:
+        :param prep:
+        :return:
+        """
+
+        self._penalty_imposer.run(context, prep)
+
     @classmethod
-    def impose_block_validation_penalty(
-            cls,
-            context: 'IconScoreContext',
-            address: 'Address'):
+    def _on_penalty_imposed(cls,
+                            context: 'IconScoreContext',
+                            address: 'Address',
+                            reason: 'PenaltyReason'):
+        """Called on PenaltyImposer.run()
+
+        :param context:
+        :param address:
+        :param reason:
+        :return:
+        """
 
         dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
 
-        if dirty_prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {address}")
+        assert dirty_prep is not None
+        assert dirty_prep.status == PRepStatus.ACTIVE
 
-        if dirty_prep.status != PRepStatus.ACTIVE:
-            return
+        if reason == PenaltyReason.LOW_PRODUCTIVITY:
+            if not cls._unregister_prep(context,
+                                        address=address,
+                                        status=PRepStatus.DISQUALIFIED,
+                                        reason=PenaltyReason.LOW_PRODUCTIVITY):
+                return
 
-        dirty_prep.status: 'PRepStatus' = PRepStatus.SUSPENDED
-        dirty_prep.penalty: 'PenaltyReason' = PenaltyReason.BLOCK_VALIDATION
+        dirty_prep.penalty = reason
         context.put_dirty_prep(dirty_prep)
 
         EventLogEmitter.emit_event_log(
@@ -563,33 +602,8 @@ class Engine(EngineBase, IISSEngineListener):
             event_signature=PREP_PENALTY_SIGNATURE,
             arguments=[
                 dirty_prep.address,
-                PRepStatus.SUSPENDED.value,
-                PenaltyReason.BLOCK_VALIDATION.value],
-            indexed_args_count=1)
-
-    @classmethod
-    def impose_low_productivity_penalty(
-            cls,
-            context: 'IconScoreContext',
-            address: 'Address'):
-
-        if not cls._unregister_prep(context,
-                                    address=address,
-                                    status=PRepStatus.DISQUALIFIED,
-                                    reason=PenaltyReason.LOW_PRODUCTIVITY):
-            return
-
-        # TODO slashing
-
-        EventLogEmitter.emit_event_log(
-            context,
-            score_address=ZERO_SCORE_ADDRESS,
-            event_signature=PREP_PENALTY_SIGNATURE,
-            arguments=[
-                address,
-                PRepStatus.DISQUALIFIED.value,
-                PenaltyReason.LOW_PRODUCTIVITY.value
-            ],
+                dirty_prep.status.value,
+                dirty_prep.penalty.value],
             indexed_args_count=1)
 
     @classmethod
@@ -635,8 +649,8 @@ class Engine(EngineBase, IISSEngineListener):
         if status == PRepStatus.UNREGISTERED and dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        dirty_prep.status: 'PRepStatus' = status
-        dirty_prep.penalty: 'PenaltyReason' = reason
+        dirty_prep.status = status
+        dirty_prep.penalty = reason
         context.put_dirty_prep(dirty_prep)
 
         # Update rcDB
