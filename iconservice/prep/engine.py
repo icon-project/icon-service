@@ -63,7 +63,8 @@ class Engine(EngineBase, IISSEngineListener):
             "getPRep": self.handle_get_prep,
             "getMainPReps": self.handle_get_main_prep_list,
             "getSubPReps": self.handle_get_sub_prep_list,
-            "getPReps": self.handle_get_prep_list
+            "getPReps": self.handle_get_prep_list,
+            "getP2PEndpoints": self.handle_get_p2p_endpoints
         }
 
         self.preps = PRepContainer()
@@ -737,6 +738,11 @@ class Engine(EngineBase, IISSEngineListener):
             "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
         }
+
+    def handle_get_p2p_endpoints(self, context: 'IconScoreContext', params: dict) -> list:
+        preps: List['PRep'] = self.term.main_preps + self.term.sub_preps
+        endpoints: list = [prep.p2p_endpoint for prep in preps]
+        return endpoints
 
     # IISSEngineListener implementation ---------------------------
     def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
