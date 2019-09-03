@@ -81,13 +81,13 @@ class Engine(EngineBase, IISSEngineListener):
              term_period: int,
              irep: int,
              penalty_grace_period: int,
-             min_productivity_percentage: int,
-             max_unvalidated_sequence_block: int):
+             low_productivity_penalty_threshold: int,
+             block_validation_penalty_threshold: int):
 
         # this logic doesn't need to save to DB yet
         self._init_penalty_imposer(penalty_grace_period,
-                                   min_productivity_percentage,
-                                   max_unvalidated_sequence_block)
+                                   low_productivity_penalty_threshold,
+                                   block_validation_penalty_threshold)
 
         self._load_preps(context)
         self.term.load(context, term_period)
@@ -97,18 +97,18 @@ class Engine(EngineBase, IISSEngineListener):
 
     def _init_penalty_imposer(self,
                               penalty_grace_period: int,
-                              low_productivity_threshold: int,
-                              block_validation_threshold: int):
+                              low_productivity_penalty_threshold: int,
+                              block_validation_penalty_threshold: int):
         """Initialize PenaltyImposer
 
         :param penalty_grace_period:
-        :param low_productivity_threshold:
-        :param block_validation_threshold:
+        :param low_productivity_penalty_threshold:
+        :param block_validation_penalty_threshold:
         :return:
         """
         self._penalty_imposer = PenaltyImposer(penalty_grace_period,
-                                               low_productivity_threshold,
-                                               block_validation_threshold,
+                                               low_productivity_penalty_threshold,
+                                               block_validation_penalty_threshold,
                                                self._on_penalty_imposed)
 
     def _load_preps(self, context: 'IconScoreContext'):

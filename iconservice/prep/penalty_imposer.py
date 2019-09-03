@@ -26,17 +26,17 @@ class PenaltyImposer(object):
 
     def __init__(self,
                  penalty_grace_period: int,
-                 low_productivity_threshold: int,
-                 block_validation_threshold: int,
+                 low_productivity_penalty_threshold: int,
+                 block_validation_penalty_threshold: int,
                  on_penalty_imposed: Callable[['IconScoreContext', 'Address', 'PenaltyReason'], None]):
         # Low productivity penalty is not imposed during penalty_grace_period
         self._penalty_grace_period: int = penalty_grace_period
 
         # Unit: percent without fraction
-        self._low_productivity_threshold: int = low_productivity_threshold
+        self._low_productivity_penalty_threshold: int = low_productivity_penalty_threshold
 
         # Unit: The number of blocks
-        self._block_validation_threshold: int = block_validation_threshold
+        self._block_validation_penalty_threshold: int = block_validation_penalty_threshold
 
         self._on_penalty_imposed: Optional[Callable[['IconScoreContext', 'Address', 'PenaltyReason'], None]] = \
             on_penalty_imposed
@@ -56,7 +56,7 @@ class PenaltyImposer(object):
 
     def _check_low_productivity_penalty(self, prep: 'PRep') -> bool:
         return prep.total_blocks > self._penalty_grace_period and \
-               prep.block_validation_proportion < self._low_productivity_threshold
+               prep.block_validation_proportion < self._low_productivity_penalty_threshold
 
     def _check_block_validation_penalty(self, prep: 'PRep') -> bool:
-        return prep.unvalidated_sequence_blocks >= self._block_validation_threshold
+        return prep.unvalidated_sequence_blocks >= self._block_validation_penalty_threshold
