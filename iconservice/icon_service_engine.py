@@ -252,6 +252,9 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
 
+    def get_ready_future(self):
+        return IconScoreContext.engine.iiss.get_ready_future()
+
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
         make_flag = 0
