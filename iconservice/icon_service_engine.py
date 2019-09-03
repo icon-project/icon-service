@@ -161,8 +161,8 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.INITIAL_IREP],
                                      conf[ConfigKey.PREP_REGISTRATION_FEE],
                                      conf[ConfigKey.PENALTY_GRACE_PERIOD],
-                                     conf[ConfigKey.MIN_PRODUCTIVITY_PERCENTAGE],
-                                     conf[ConfigKey.MAX_UNVALIDATED_SEQUENCE_BLOCKS])
+                                     conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
+                                     conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD])
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -199,8 +199,8 @@ class IconServiceEngine(ContextContainer):
                                 irep: int,
                                 prep_reg_fee: int,
                                 penalty_grace_period: int,
-                                min_productivity_percentage: int,
-                                max_unvalidated_sequence_blocks: int):
+                                low_productivity_penalty_threshold: int,
+                                block_validation_penalty_threshold: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -213,8 +213,8 @@ class IconServiceEngine(ContextContainer):
                                           term_period,
                                           irep,
                                           penalty_grace_period,
-                                          min_productivity_percentage,
-                                          max_unvalidated_sequence_blocks)
+                                          low_productivity_penalty_threshold,
+                                          block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)
