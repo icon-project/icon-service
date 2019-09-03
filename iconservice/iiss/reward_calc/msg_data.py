@@ -70,17 +70,23 @@ class Header(Data):
 
     @staticmethod
     def from_bytes(value: bytes) -> 'Header':
-        # todo: code refactoring
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = Header()
         obj.version: int = data_list[0]
         obj.block_height: int = data_list[1]
+
+        if obj.version >= RC_DB_VERSION_2:
+            obj.revision: int = data_list[2]
+
         return obj
 
     def __str__(self):
-        # todo: code refactoring
-        return f"[{self._PREFIX}] " \
-               f"version: {self.version}, block_height: {self.block_height}"
+        info: str = f"[{self._PREFIX}] version: {self.version}, block_height: {self.block_height} "
+
+        if self.version >= RC_DB_VERSION_2:
+            info += f"revision: {self.revision} "
+        return info
 
 
 class GovernanceVariable(Data):
@@ -114,22 +120,25 @@ class GovernanceVariable(Data):
 
     @staticmethod
     def from_bytes(key: bytes, value: bytes) -> 'GovernanceVariable':
-        # todo: code refactoring
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = GovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.calculated_irep: int = data_list[0]
         obj.reward_rep: int = data_list[1]
-        obj.config_main_prep_count: int = data_list[2]
-        obj.config_sub_prep_count: int = data_list[3]
+        # need to be refactor
+        if len(data_list) > 2:
+            obj.config_main_prep_count: int = data_list[2]
+            obj.config_sub_prep_count: int = data_list[3]
         return obj
 
     def __str__(self):
-        # todo: code refactoring
-        return f"[{self._PREFIX}] key: {self.block_height}," \
-               f"config_main_prep_count: {self.config_main_prep_count}, " \
-               f"config_sub_prep_count: {self.config_sub_prep_count}" \
-               f" calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
+        info: str = f"[{self._PREFIX}] key: {self.block_height}," \
+                    f" calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
+        if self.version >= RC_DB_VERSION_2:
+            info += f"config_main_prep_count: {self.config_main_prep_count}, " \
+                    f"config_sub_prep_count: {self.config_sub_prep_count}"
+        return info
 
 
 class BlockProduceInfoData(Data):
@@ -156,6 +165,7 @@ class BlockProduceInfoData(Data):
 
     @staticmethod
     def from_bytes(key: bytes, value: bytes) -> 'BlockProduceInfoData':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = BlockProduceInfoData()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
@@ -198,6 +208,7 @@ class PRepsData(Data):
 
     @staticmethod
     def from_bytes(key: bytes, value: bytes) -> 'PRepsData':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = PRepsData()
         obj.prep_list = []
@@ -257,6 +268,7 @@ class TxData(Data):
 
     @staticmethod
     def from_bytes(value: bytes) -> 'TxData':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = TxData()
         obj.address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
