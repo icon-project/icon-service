@@ -151,7 +151,11 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.last_block: 'Block' = IconScoreContext.storage.icx.last_block
         context.block: 'Block' = self._get_last_block()
 
-        self._set_revision_to_context(context)
+        # set revision (if governance SCORE does not exist, remain revision to default).
+        try:
+            self._set_revision_to_context(context)
+        except ScoreNotFoundException:
+            pass
 
         self._open_component_context(context,
                                      log_dir,
