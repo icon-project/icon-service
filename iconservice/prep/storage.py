@@ -75,7 +75,7 @@ class Storage(StorageBase):
 
     def put_prep(self, context: 'IconScoreContext', prep: 'PRep'):
         key: bytes = PRep.make_key(prep.address)
-        value: bytes = prep.to_bytes()
+        value: bytes = prep.to_bytes(context.revision)
         self._db.put(context, key, value)
 
     def delete_prep(self, context: 'IconScoreContext', address: 'Address'):
