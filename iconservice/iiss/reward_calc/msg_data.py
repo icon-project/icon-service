@@ -19,7 +19,7 @@ from enum import IntEnum
 from typing import Any, TYPE_CHECKING, List, Optional
 
 from ...base.exception import InvalidParamsException
-from ...icon_constant import DATA_BYTE_ORDER
+from ...icon_constant import DATA_BYTE_ORDER, RC_DB_VERSION_2, RC_DB_VERSION_0
 from ...utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
 if TYPE_CHECKING:
@@ -53,6 +53,7 @@ class Header(Data):
     def __init__(self):
         self.version: int = 0
         self.block_height: int = 0
+        self.revision: int = 0
 
     def make_key(self) -> bytes:
         return self._PREFIX
@@ -62,20 +63,42 @@ class Header(Data):
             self.version,
             self.block_height
         ]
+        if self.version >= RC_DB_VERSION_2:
+            # Added value in version 2
+            data.append(self.revision)
 
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
     def from_bytes(value: bytes) -> 'Header':
         data_list: list = MsgPackForIpc.loads(value)
+        version: int = data_list[0]
+        if version == RC_DB_VERSION_2:
+            return Header._from_bytes_v2(data_list)
+        elif version == RC_DB_VERSION_0:
+            return Header._from_bytes_v1(data_list)
+
+    @staticmethod
+    def _from_bytes_v1(data_list: list) -> 'Header':
         obj = Header()
         obj.version: int = data_list[0]
         obj.block_height: int = data_list[1]
         return obj
 
+    @staticmethod
+    def _from_bytes_v2(data_list: list) -> 'Header':
+        obj = Header()
+        obj.version: int = data_list[0]
+        obj.block_height: int = data_list[1]
+        obj.revision: int = data_list[2]
+        return obj
+
     def __str__(self):
-        return f"[{self._PREFIX}] " \
-            f"version: {self.version}, block_height: {self.block_height}"
+        info: str = f"[{self._PREFIX}] version: {self.version}, block_height: {self.block_height} "
+
+        if self.version >= RC_DB_VERSION_2:
+            info += f"revision: {self.revision} "
+        return info
 
 
 class GovernanceVariable(Data):
@@ -86,6 +109,7 @@ class GovernanceVariable(Data):
         self.block_height: int = 0
 
         # value
+        self.version: int = 0
         self.calculated_irep: int = 0
         self.reward_rep: int = 0
         self.config_main_prep_count: int = 0
@@ -99,16 +123,39 @@ class GovernanceVariable(Data):
         data = [
             self.calculated_irep,
             self.reward_rep,
-            self.config_main_prep_count,
-            self.config_sub_prep_count
         ]
+        if self.version >= RC_DB_VERSION_2:
+            # Added value in version 2
+            data.append(self.config_main_prep_count)
+            data.append(self.config_sub_prep_count)
+
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
     def from_bytes(key: bytes, value: bytes) -> 'GovernanceVariable':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
+
+        # need to be refactor
+        if len(data_list) > 2:
+            return GovernanceVariable._from_bytes_v2(key, data_list)
+        else:
+            return GovernanceVariable._from_bytes_v1(key, data_list)
+
+    @staticmethod
+    def _from_bytes_v1(key: bytes, data_list: list) -> 'GovernanceVariable':
         obj = GovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
+        obj.version: int = RC_DB_VERSION_0
+        obj.calculated_irep: int = data_list[0]
+        obj.reward_rep: int = data_list[1]
+        return obj
+
+    @staticmethod
+    def _from_bytes_v2(key: bytes, data_list: list) -> 'GovernanceVariable':
+        obj = GovernanceVariable()
+        obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
+        obj.version: int = RC_DB_VERSION_2
         obj.calculated_irep: int = data_list[0]
         obj.reward_rep: int = data_list[1]
         obj.config_main_prep_count: int = data_list[2]
@@ -116,10 +163,12 @@ class GovernanceVariable(Data):
         return obj
 
     def __str__(self):
-        return f"[{self._PREFIX}] key: {self.block_height}," \
-               f"config_main_prep_count: {self.config_main_prep_count}, " \
-               f"config_sub_prep_count: {self.config_sub_prep_count}" \
-               f" calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
+        info: str = f"[{self._PREFIX}] key: {self.block_height}," \
+                    f" calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
+        if self.version >= RC_DB_VERSION_2:
+            info += f"config_main_prep_count: {self.config_main_prep_count}, " \
+                    f"config_sub_prep_count: {self.config_sub_prep_count}"
+        return info
 
 
 class BlockProduceInfoData(Data):
@@ -146,6 +195,7 @@ class BlockProduceInfoData(Data):
 
     @staticmethod
     def from_bytes(key: bytes, value: bytes) -> 'BlockProduceInfoData':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = BlockProduceInfoData()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
@@ -157,9 +207,9 @@ class BlockProduceInfoData(Data):
 
     def __str__(self):
         return f"[{self._PREFIX}] " \
-            f"key: {self.block_height}, " \
-            f"block_generator: {str(self.block_generator)}, " \
-            f"block_validators: {[str(addr) for addr in self.block_validator_list]}"
+               f"key: {self.block_height}, " \
+               f"block_generator: {str(self.block_generator)}, " \
+               f"block_validators: {[str(addr) for addr in self.block_validator_list]}"
 
 
 class PRepsData(Data):
@@ -188,6 +238,7 @@ class PRepsData(Data):
 
     @staticmethod
     def from_bytes(key: bytes, value: bytes) -> 'PRepsData':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = PRepsData()
         obj.prep_list = []
@@ -207,7 +258,7 @@ class PRepsData(Data):
 
     def __str__(self):
         return f"[{self._PREFIX}] " \
-            f"key: {self.block_height}, total_delegation: {str(self.total_delegation)}"
+               f"key: {self.block_height}, total_delegation: {str(self.total_delegation)}"
 
 
 class TxData(Data):
@@ -247,6 +298,7 @@ class TxData(Data):
 
     @staticmethod
     def from_bytes(value: bytes) -> 'TxData':
+        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
         obj = TxData()
         obj.address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])

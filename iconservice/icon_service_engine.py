@@ -151,6 +151,12 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.last_block: 'Block' = IconScoreContext.storage.icx.last_block
         context.block: 'Block' = self._get_last_block()
 
+        # set revision (if governance SCORE does not exist, remain revision to default).
+        try:
+            self._set_revision_to_context(context)
+        except ScoreNotFoundException:
+            pass
+
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
@@ -227,7 +233,7 @@ class IconServiceEngine(ContextContainer):
                                            prep_reg_fee)
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.meta.open(context)
-        IconScoreContext.storage.rc.open(rc_data_path)
+        IconScoreContext.storage.rc.open(context.revision, rc_data_path)
 
     def _close_component_context(self, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
@@ -1644,6 +1650,7 @@ class IconServiceEngine(ContextContainer):
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
             context.engine.iiss.send_ipc(context, precommit_data)
+            # todo: consider case when error being raised in send ipc
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state

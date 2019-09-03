@@ -56,8 +56,8 @@ class TestRCDatabase(TestIISSBase):
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_block_height = self._block_height
                 expected_irep = 0
-                expected_main_prep_count = 22
-                expected_sub_prep_count = 100 - expected_main_prep_count
+                expected_main_prep_count = 0
+                expected_sub_prep_count = 0
                 expected_rrep = 1200 * 3
                 self.assertEqual(expected_block_height, gv.block_height)
                 self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
@@ -116,8 +116,8 @@ class TestRCDatabase(TestIISSBase):
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_block_height = block_height
                 expected_irep = 0
-                expected_main_prep_count = 22
-                expected_sub_prep_count = 100 - expected_main_prep_count
+                expected_main_prep_count = 0
+                expected_sub_prep_count = 0
                 expected_rrep = 1078 * 3
                 self.assertEqual(expected_block_height, gv.block_height)
                 self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)

@@ -629,6 +629,7 @@ class Engine(EngineBase):
             return
 
         path: str = context.storage.rc.create_db_for_calc(block_height)
+        context.storage.rc.put_version_and_revision(precommit_data.revision)
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
@@ -673,7 +674,9 @@ class Engine(EngineBase):
     @classmethod
     def _put_header_to_rc_db(cls,
                              context: 'IconScoreContext'):
-        data: 'Header' = RewardCalcDataCreator.create_header(0, context.block.height)
+        version: int = context.storage.rc.current_version
+        revision: int = context.storage.rc.current_revision
+        data: 'Header' = RewardCalcDataCreator.create_header(version, context.block.height, revision)
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
@@ -705,7 +708,11 @@ class Engine(EngineBase):
         calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
 
         reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_prep)
-        data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(context.block.height,
+
+        # todo: versioning at this point?
+        version: int = context.storage.rc.current_version
+        data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(version,
+                                                                              context.block.height,
                                                                               calculated_irep,
                                                                               reward_prep_for_rc,
                                                                               context.main_prep_count,

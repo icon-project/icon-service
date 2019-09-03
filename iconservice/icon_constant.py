@@ -111,6 +111,18 @@ LATEST_REVISION = REVISION_4
 REV_IISS = REVISION_5
 REV_DECENTRALIZATION = REV_IISS + 1
 
+RC_DB_VERSION_0 = 0
+RC_DB_VERSION_2 = 2
+
+
+# The case that version is updated but not revision, set the version to the current revision
+# The case that both version and revision is updated, add revision field to the version table
+# The case that only revision is changed, do not update this table
+RC_DATA_VERSION_TABLE = {
+    REV_IISS: RC_DB_VERSION_0,
+    REV_DECENTRALIZATION: RC_DB_VERSION_2
+}
+
 IISS_DB = 'iiss'
 RC_SOCKET = 'iiss.sock'
 
