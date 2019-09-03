@@ -115,9 +115,9 @@ RC_DB_VERSION_0 = 0
 RC_DB_VERSION_2 = 2
 
 
-# If version is changed but revision not being changed, append to the list of same revision
-# If both version and revision is changed, update table
-# If only revision is changed, do not update this table
+# The case that version is updated but not revision append the version info to the list of the latest revision
+# The case that both version and revision is updated, add revision field to the version table
+# The case that only revision is changed, do not update this table
 RC_DATA_VERSION_TABLE = {
     REV_IISS: [RC_DB_VERSION_0],
     REV_DECENTRALIZATION: [RC_DB_VERSION_2]
