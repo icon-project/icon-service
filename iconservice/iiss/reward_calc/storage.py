@@ -54,8 +54,8 @@ class Storage(object):
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
-        self.current_version: Optional[int] = None
-        self.current_revision: Optional[int] = None
+        self._current_version: Optional[int] = None
+        self._current_revision: Optional[int] = None
 
     def open(self, revision: int, path: str):
         if not os.path.exists(path):
@@ -66,9 +66,17 @@ class Storage(object):
         self._db = KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
 
-        self.current_version, self.current_revision = self._load_version_and_revision()
-        if revision >= REV_IISS and self.current_version == -1:
+        self._current_version, self._current_revision = self._load_version_and_revision()
+        if revision >= REV_IISS and self._current_version == -1:
             self.put_version_and_revision(revision)
+
+    @property
+    def current_version(self) -> int:
+        return self._current_version if self._current_version != -1 else 0
+
+    @property
+    def current_revision(self) -> int:
+        return self._current_revision if self._current_version != -1 else 0
 
     def close(self):
         """Close the embedded database.
@@ -124,8 +132,8 @@ class Storage(object):
         version_and_revision: bytes = MsgPackForDB.dumps([version, revision])
         self._db.put(self._KEY_FOR_VERSION_AND_REVISION, version_and_revision)
 
-        self.current_version = version
-        self.current_revision = revision
+        self._current_version = version
+        self._current_revision = revision
 
     def _load_version_and_revision(self) -> Tuple[int, int]:
         version_and_revision: Optional[bytes] = self._db.get(self._KEY_FOR_VERSION_AND_REVISION)
