@@ -37,10 +37,8 @@ class TestRcDataStorage(unittest.TestCase):
     def setUp(self, _, mocked_rc_db_from_path) -> None:
         self.path = ""
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
-        self.context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.INVOKE)
-        self.context.revision = REV_DECENTRALIZATION
         self.rc_data_storage = RewardCalcStorage()
-        self.rc_data_storage.open(self.context, self.path)
+        self.rc_data_storage.open(REV_DECENTRALIZATION, self.path)
 
         dummy_block_height = 1
 
@@ -73,14 +71,12 @@ class TestRcDataStorage(unittest.TestCase):
     @patch('os.path.exists')
     def test_rc_storage_check_data_format_by_revision(self, _, mocked_rc_db_from_path):
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
-        context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.INVOKE)
         for revision in range(REV_DECENTRALIZATION):
-            context.revision = revision
-            current_version = get_rc_version(context.revision)
+            current_version = get_rc_version(revision)
             rc_data_storage = RewardCalcStorage()
-            rc_data_storage.open(context, self.path)
+            rc_data_storage.open(revision, self.path)
             self.dummy_header.version = current_version
-            self.dummy_header.revision = context.revision
+            self.dummy_header.revision = revision
             self.dummy_gv.version = current_version
             iiss_data = [self.dummy_header, self.dummy_gv]
             rc_data_storage.commit(iiss_data)
@@ -97,12 +93,12 @@ class TestRcDataStorage(unittest.TestCase):
             self.assertEqual(0, gv.config_main_prep_count)
             self.assertEqual(0, gv.config_sub_prep_count)
 
-        context.revision = REV_DECENTRALIZATION
-        current_version = get_rc_version(context.revision)
+        revision = REV_DECENTRALIZATION
+        current_version = get_rc_version(revision)
         rc_data_storage = RewardCalcStorage()
-        rc_data_storage.open(context, self.path)
+        rc_data_storage.open(revision, self.path)
         self.dummy_header.version = current_version
-        self.dummy_header.revision = context.revision
+        self.dummy_header.revision = revision
         self.dummy_gv.version = current_version
         iiss_data = [self.dummy_header, self.dummy_gv]
         rc_data_storage.commit(iiss_data)
@@ -141,7 +137,7 @@ class TestRcDataStorage(unittest.TestCase):
             db = MockPlyvelDB(MockPlyvelDB.make_db())
             return MockIissDataBase(db)
         mocked_rc_db_from_path.side_effect = from_path
-        rc_data_storage.open(self.context, test_db_path)
+        rc_data_storage.open(REV_DECENTRALIZATION, test_db_path)
         mocked_path_exists.assert_called()
 
         expected_tx_index = -1

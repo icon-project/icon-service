@@ -58,7 +58,7 @@ class Storage(object):
         self.current_version: Optional[int] = None
         self.current_revision: Optional[int] = None
 
-    def open(self, context: 'IconScoreContext', path: str):
+    def open(self, revision: int, path: str):
         if not os.path.exists(path):
             raise DatabaseException(f"Invalid IISS DB path: {path}")
         self._path = path
@@ -68,8 +68,8 @@ class Storage(object):
         self._db_iiss_tx_index = self._load_last_transaction_index()
 
         self.current_version, self.current_revision = self._load_version_and_revision()
-        if context.revision >= REV_IISS and self.current_version == -1:
-            self.put_version_and_revision(context.revision)
+        if revision >= REV_IISS and self.current_version == -1:
+            self.put_version_and_revision(revision)
 
     def close(self):
         """Close the embedded database.
