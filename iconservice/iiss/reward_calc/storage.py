@@ -34,11 +34,10 @@ def get_rc_version(revision: int) -> int:
     if revision < REV_IISS:
         return RC_DB_VERSION_0
 
-    version: Optional[list] = RC_DATA_VERSION_TABLE.get(revision)
+    version: Optional[int] = RC_DATA_VERSION_TABLE.get(revision)
     if version is None:
         return get_rc_version(revision - 1)
-    latest_version: int = version[-1]
-    return latest_version
+    return version
 
 
 class Storage(object):

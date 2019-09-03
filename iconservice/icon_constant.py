@@ -115,12 +115,12 @@ RC_DB_VERSION_0 = 0
 RC_DB_VERSION_2 = 2
 
 
-# The case that version is updated but not revision append the version info to the list of the latest revision
+# The case that version is updated but not revision, set the version to the current revision
 # The case that both version and revision is updated, add revision field to the version table
 # The case that only revision is changed, do not update this table
 RC_DATA_VERSION_TABLE = {
-    REV_IISS: [RC_DB_VERSION_0],
-    REV_DECENTRALIZATION: [RC_DB_VERSION_2]
+    REV_IISS: RC_DB_VERSION_0,
+    REV_DECENTRALIZATION: RC_DB_VERSION_2
 }
 
 IISS_DB = 'iiss'

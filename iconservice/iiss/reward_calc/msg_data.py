@@ -19,7 +19,7 @@ from enum import IntEnum
 from typing import Any, TYPE_CHECKING, List, Optional
 
 from ...base.exception import InvalidParamsException
-from ...icon_constant import DATA_BYTE_ORDER, RC_DB_VERSION_2
+from ...icon_constant import DATA_BYTE_ORDER, RC_DB_VERSION_2, RC_DB_VERSION_0
 from ...utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
 if TYPE_CHECKING:
@@ -71,15 +71,26 @@ class Header(Data):
 
     @staticmethod
     def from_bytes(value: bytes) -> 'Header':
-        # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
+        version: int = data_list[0]
+        if version == RC_DB_VERSION_2:
+            return Header._from_bytes_v2(data_list)
+        elif version == RC_DB_VERSION_0:
+            return Header._from_bytes_v1(data_list)
+
+    @staticmethod
+    def _from_bytes_v1(data_list: list) -> 'Header':
         obj = Header()
         obj.version: int = data_list[0]
         obj.block_height: int = data_list[1]
+        return obj
 
-        if obj.version >= RC_DB_VERSION_2:
-            obj.revision: int = data_list[2]
-
+    @staticmethod
+    def _from_bytes_v2(data_list: list) -> 'Header':
+        obj = Header()
+        obj.version: int = data_list[0]
+        obj.block_height: int = data_list[1]
+        obj.revision: int = data_list[2]
         return obj
 
     def __str__(self):
@@ -124,15 +135,31 @@ class GovernanceVariable(Data):
     def from_bytes(key: bytes, value: bytes) -> 'GovernanceVariable':
         # Method for debugging
         data_list: list = MsgPackForIpc.loads(value)
-        obj = GovernanceVariable()
-        obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
-        obj.calculated_irep: int = data_list[0]
-        obj.reward_rep: int = data_list[1]
+
         # need to be refactor
         if len(data_list) > 2:
-            obj.version: int = RC_DB_VERSION_2
-            obj.config_main_prep_count: int = data_list[2]
-            obj.config_sub_prep_count: int = data_list[3]
+            return GovernanceVariable._from_bytes_v2(key, data_list)
+        else:
+            return GovernanceVariable._from_bytes_v1(key, data_list)
+
+    @staticmethod
+    def _from_bytes_v1(key: bytes, data_list: list) -> 'GovernanceVariable':
+        obj = GovernanceVariable()
+        obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
+        obj.version: int = RC_DB_VERSION_0
+        obj.calculated_irep: int = data_list[0]
+        obj.reward_rep: int = data_list[1]
+        return obj
+
+    @staticmethod
+    def _from_bytes_v2(key: bytes, data_list: list) -> 'GovernanceVariable':
+        obj = GovernanceVariable()
+        obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
+        obj.version: int = RC_DB_VERSION_2
+        obj.calculated_irep: int = data_list[0]
+        obj.reward_rep: int = data_list[1]
+        obj.config_main_prep_count: int = data_list[2]
+        obj.config_sub_prep_count: int = data_list[3]
         return obj
 
     def __str__(self):
