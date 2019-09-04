@@ -14,7 +14,7 @@
 
 import copy
 from enum import auto, Flag, IntEnum, Enum
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, Any
 
 import iso3166
 
@@ -36,8 +36,8 @@ class PRepFlag(Flag):
 
 
 class PRepDictType(Enum):
-    FULL = auto()  # getPRep
-    ABRIDGED = auto()  # getPReps
+    FULL = auto()       # getPRep
+    ABRIDGED = auto()   # getPReps
 
 
 class PRep(Sortable):
@@ -166,6 +166,13 @@ class PRep(Sortable):
         self._validated_blocks: int = validated_blocks
         self._unvalidated_sequence_blocks: int = unvalidated_sequence_blocks
 
+        # This field is used to save delegated amount at the beginning of a term
+        # DO NOT STORE THIS TO DB
+        self._voting_power: int = -1
+
+        # DO NOT STORE IT TO DB (MEMORY ONLY)
+        self.extension: Any = None
+
     def is_dirty(self) -> bool:
         return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
 
@@ -186,11 +193,18 @@ class PRep(Sortable):
         return self._penalty
 
     def is_suspended(self) -> bool:
-        """The suspended P-Rep  cannot serve as Main P-Rep in the Term
+        """The suspended P-Rep cannot serve as Main P-Rep during this term
 
         :return:
         """
         return self._penalty == PenaltyReason.BLOCK_VALIDATION
+
+    def is_electable(self) -> bool:
+        """Returns whether this P-Rep can be elected as a Main P-Rep or Sub P-Rep
+
+        :return:
+        """
+        return self._status == PRepStatus.ACTIVE and self._penalty == PenaltyReason.NONE
 
     @penalty.setter
     def penalty(self, value: 'PenaltyReason'):
@@ -586,7 +600,10 @@ class PRep(Sortable):
         return data
 
     def __str__(self) -> str:
-        return str(self.to_dict(PRepDictType.FULL))
+        info: dict = self.to_dict(PRepDictType.FULL)
+        info["votingPower"] = self._voting_power
+
+        return str(info)
 
     def copy(self, flags: 'PRepFlag' = PRepFlag.NONE) -> 'PRep':
         prep = copy.copy(self)
@@ -597,3 +614,16 @@ class PRep(Sortable):
     def _check_access_permission(self):
         if self.is_frozen():
             raise AccessDeniedException("P-Rep access denied")
+
+    @property
+    def voting_power(self):
+        return self._voting_power
+
+    @voting_power.setter
+    def voting_power(self, value: int):
+        """This field is used for saving voting power which is fixed at the beginning of a term
+        USE IT ONLY IN Term class
+
+        :return:
+        """
+        self._voting_power = value

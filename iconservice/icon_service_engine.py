@@ -15,7 +15,7 @@
 
 import os
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Any, Optional, Tuple
+from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Set
 
 from iconcommons.logger import Logger
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
@@ -34,7 +34,7 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
     REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
@@ -139,6 +139,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.iiss_initial_irep = conf.get(ConfigKey.INITIAL_IREP, IISS_INITIAL_IREP)
         IconScoreContext.main_prep_count = conf.get(ConfigKey.PREP_MAIN_PREPS, PREP_MAIN_PREPS)
         IconScoreContext.main_and_sub_prep_count = conf.get(ConfigKey.PREP_MAIN_AND_SUB_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        IconScoreContext.term_period = conf.get(ConfigKey.TERM_PERIOD, TERM_PERIOD)
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
         IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
         IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
@@ -518,6 +519,10 @@ class IconServiceEngine(ContextContainer):
                                    context: 'IconScoreContext',
                                    prev_block_generator: Optional['Address'] = None,
                                    prev_block_validators: Optional[List['Address']] = None):
+
+        if not context.is_decentralized():
+            return
+
         self._update_productivity(context, prev_block_generator, prev_block_validators)
         self._update_last_generate_block_height(context, prev_block_generator)
 
@@ -560,20 +565,44 @@ class IconServiceEngine(ContextContainer):
                              context: 'IconScoreContext',
                              prev_block_generator: Optional['Address'] = None,
                              prev_block_validators: Optional[List['Address']] = None):
-        validates: set = set()
+        """Update block validation statistics of Main P-Reps
+        This method should be called only after decentralization
+
+        :param context:
+        :param prev_block_generator:
+        :param prev_block_validators:
+        :return:
+        """
+        # TODO: Skip data from the first block which are received after decentralization (goldworm)
+
+        # validators set contains not only prev_block_validators but also a prev_block_generator
+        validators: Set['Address'] = set()
+
         if prev_block_generator:
-            validates.add(prev_block_generator)
+            validators.add(prev_block_generator)
         if prev_block_validators:
-            validates.update(prev_block_validators)
+            validators.update(prev_block_validators)
 
-        main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
+        if len(validators) == 0:
+            Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
+            return
 
-        for address in main_preps:
-            is_validate: bool = address in validates
+        main_preps: List['PRep'] = context.engine.prep.term.main_preps
+
+        for prep in main_preps:
+            address = prep.address
+            is_validator: bool = address in validators
+            if is_validator:
+                validators.remove(address)
+
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
+            assert isinstance(dirty_prep, PRep)
+
             if dirty_prep:
-                dirty_prep.update_main_prep_validate(is_validate)
+                dirty_prep.update_block_statistics(is_validator)
                 context.put_dirty_prep(dirty_prep)
+
+        assert len(validators) == 0
         context.update_dirty_prep_batch()
 
     @classmethod
@@ -583,28 +612,39 @@ class IconServiceEngine(ContextContainer):
         if context.revision < REV_DECENTRALIZATION:
             return False
 
-        if context.engine.prep.term.sequence > -1:
-            return context.engine.prep.check_end_block_height_of_term(context)
-        else:
-            if flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION:
-                context.storage.iiss.put_calc_period(context, context.engine.prep.term.period)
-                return True
-            else:
-                return False
+        term: Optional['Term'] = context.engine.prep.term
+
+        if term:
+            return term.end_block_height == context.block.height
+
+        if flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION:
+            # When decentralization begins,
+            # change the reward calculation period from 43200 to 43120 which is the same as term_period
+            context.storage.iiss.put_calc_period(context, context.term_period)
+            return True
+
+        return False
 
     @classmethod
     def _update_last_generate_block_height(cls,
                                            context: 'IconScoreContext',
                                            prev_block_generator: Optional['Address']):
-        if not context.is_decentralized():
-            return
+        """This method should be called only after decentralization
+
+        :param context:
+        :param prev_block_generator:
+        :return:
+        """
         if prev_block_generator is None:
             return
 
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
+        assert isinstance(dirty_prep, PRep)
+
         if dirty_prep:
             dirty_prep.last_generate_block_height = context.block.height - 1
             context.put_dirty_prep(dirty_prep)
+
         context.update_dirty_prep_batch()
 
     def _update_revision_if_necessary(self,
@@ -726,10 +766,7 @@ class IconServiceEngine(ContextContainer):
                                    treasury_address,
                                    issue_data,
                                    regulator)
-        # proceed term
-        # todo: in case of issuing from IISS_REV, should use below comments
-        # if context.engine.prep.term.sequence != -1 and \
-        # context.engine.prep.term.start_block_height == context.block.height:
+
         if context.engine.prep.term.start_block_height == context.block.height:
             EventLogEmitter.emit_event_log(context,
                                            score_address=ZERO_SCORE_ADDRESS,
@@ -739,27 +776,14 @@ class IconServiceEngine(ContextContainer):
                                                       context.engine.prep.term.end_block_height],
                                            indexed_args_count=0)
 
-        cls._impose_penalty_on_main_preps(context)
+        # Handles to impose low productivity and block validation penalties, if exists
+        context.engine.prep.impose_penalty(context)
 
         tx_result.status = TransactionResult.SUCCESS
-
         tx_result.event_logs = context.event_logs
         tx_result.traces = context.traces
 
         return tx_result
-
-    @classmethod
-    def _impose_penalty_on_main_preps(cls, context: 'IconScoreContext'):
-        """Check the P-Reps to impose penalty on every block
-
-        :param context:
-        :return:
-        """
-        for main_prep in context.engine.prep.term.main_preps:
-            prep: 'PRep' = context.get_prep(main_prep.address)
-            assert prep is not None
-
-            context.engine.prep.impose_penalty(context, prep)
 
     def _invoke_base_request(self,
                              context: 'IconScoreContext',

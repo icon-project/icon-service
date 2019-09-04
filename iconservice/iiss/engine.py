@@ -611,11 +611,13 @@ class Engine(EngineBase):
         self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_validators)
 
         if not self._is_iiss_calc(flag):
+            # In-term P-Rep replacement
             if term:
                 self._put_gv(context, term)
                 self._put_preps_to_rc_db(context, term)
             return
 
+        # every term
         self._put_last_calc_info(context)
         self._put_end_calc_block_height(context)
 
@@ -731,6 +733,13 @@ class Engine(EngineBase):
                                          context: 'IconScoreContext',
                                          prev_block_generator: Optional['Address'] = None,
                                          prev_block_validators: Optional[List['Address']] = None):
+        """Called on every block
+
+        :param context:
+        :param prev_block_generator:
+        :param prev_block_validators:
+        :return:
+        """
         if prev_block_generator is None or prev_block_validators is None:
             return
 
