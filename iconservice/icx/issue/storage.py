@@ -31,7 +31,7 @@ class Storage(StorageBase):
         if regulator_variable:
             return RegulatorVariable.from_bytes(regulator_variable)
         return RegulatorVariable(current_calc_period_issued_icx=0,
-                                 prev_calc_period_issued_icx=-1,
+                                 prev_calc_period_issued_icx=0,
                                  over_issued_iscore=0)
 
     def put_regulator_variable(self, context: 'IconScoreContext', rv: 'RegulatorVariable'):

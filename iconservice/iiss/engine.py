@@ -104,6 +104,36 @@ class Engine(EngineBase):
     def is_reward_calculator_ready(self):
         return self._reward_calc_proxy.is_reward_calculator_ready()
 
+    def get_prev_iscore(self, context: 'IconScoreContext', end_block_height_of_calc: int) -> int:
+        iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
+        calc_period: int = context.storage.iiss.get_calc_period(context)
+
+        # Check if the response has been received
+        if iscore == -1:
+            iscore: int = self._query_calculate_result(end_block_height_of_calc - calc_period)
+        else:
+            context.engine.iiss.check_calculate_request_block_height(request_block_height,
+                                                                     end_block_height_of_calc,
+                                                                     calc_period)
+        return iscore
+
+    def _query_calculate_result(self, block_height: int) -> int:
+        rc_status, rc_block_height, iscore, state_hash = \
+            self._reward_calc_proxy.query_calculate_result(block_height)
+        # todo: use constant
+        # todo: consider when status == 2
+        if rc_status == 1 or rc_status == 3:
+            FatalException(f'Calculate failure: {rc_status}')
+
+        if rc_block_height != block_height:
+            FatalException(f'Invalid calculate point '
+                           f'(reward calc: {rc_block_height} icon service: {block_height}')
+
+        if iscore < 0:
+            FatalException(f'Invalid I-SCORE value: {iscore}')
+
+        return iscore
+
     @staticmethod
     def check_calculate_request_block_height(response_block_height: int,
                                              current_end_block_height_of_calc: int,
@@ -116,6 +146,7 @@ class Engine(EngineBase):
                                  f"request:{prev_calc_end_block_height} ")
 
     def calculate_done_callback(self, cb_data: 'CalculateDoneNotification'):
+        Logger.debug(tag=_TAG, msg=f"calculate_done_callback start")
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
         if not cb_data.success:
             raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
