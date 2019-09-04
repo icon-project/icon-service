@@ -280,6 +280,11 @@ BASE_TRANSACTION_VERSION = 3
 PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
 
 
+class RCStatus(IntEnum):
+    NOT_READY = 0
+    READY = 1
+
+
 class PRepStatus(Enum):
     ACTIVE = 0
     UNREGISTERED = auto()

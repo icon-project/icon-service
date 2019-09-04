@@ -17,8 +17,9 @@ import asyncio
 from iconcommons.logger import Logger
 from typing import Callable, Any, Optional
 
+from iconservice.icon_constant import RCStatus
 from .message import Request, Response, MessageType
-from iconservice.base.exception import InvalidParamsException, InvalidResponseMessage
+from iconservice.base.exception import InvalidParamsException, InvalidResponseMessageException
 
 
 class MessageQueue(object):
@@ -31,7 +32,7 @@ class MessageQueue(object):
         self._msg_id_to_future = {}
         self.notify_message: Optional[tuple] = notify_message
         self.notify_handler = notify_handler
-        self._get_ready = False
+        self._rc_status = RCStatus.NOT_READY
 
     async def get(self) -> 'Request':
         return await self._requests.get()
@@ -48,12 +49,12 @@ class MessageQueue(object):
 
     def message_handler(self, response: 'Response'):
 
-        if self._get_ready is False:
+        if self._rc_status == RCStatus.NOT_READY:
             if response.MSG_TYPE == MessageType.READY:
-                self._get_ready = True
+                self._rc_status = RCStatus.READY
             else:
-                raise InvalidResponseMessage("Ready notification is not arrived."
-                                             "Failed to receive response message.")
+                raise InvalidResponseMessageException("Ready notification is not arrived."
+                                                      "Failed to receive response message.")
 
         if response.is_notification():
             self.notify_handler(response)

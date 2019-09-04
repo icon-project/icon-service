@@ -22,11 +22,11 @@ from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBaseTransactionException, \
-    FatalException
+    FatalException, InvalidRPCRequestException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
-    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey
+    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey, RCStatus
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case
 
@@ -43,6 +43,7 @@ class IconScoreInnerTask(object):
     def __init__(self, conf: 'IconConfig'):
         self._conf = conf
         self._thread_flag = ENABLE_THREAD_FLAG
+        self._rc_ready_flag = RCStatus.NOT_READY
 
         self._icon_service_engine = IconServiceEngine()
         self._open()
@@ -58,6 +59,9 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
+    def _is_reward_calculator_ready(self) -> bool:
+        return self._rc_ready_flag.value & RCStatus.READY.value
+
     @staticmethod
     def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
@@ -69,6 +73,8 @@ class IconScoreInnerTask(object):
 
         ready_future = self._icon_service_engine.get_ready_future()
         await ready_future
+
+        self._rc_ready_flag = ready_future.result()
 
         Logger.info('icon_score_hello_end', ICON_INNER_LOG_TAG)
 
@@ -89,6 +95,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def invoke(self, request: dict):
         Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -161,6 +171,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def query(self, request: dict):
         Logger.info(f'query request with {request}', ICON_INNER_LOG_TAG)
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
@@ -201,6 +215,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def call(self, request: dict):
         Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
@@ -232,6 +250,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def write_precommit_state(self, request: dict):
         Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -277,6 +299,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
         Logger.info(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -310,6 +336,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def validate_transaction(self, request: dict):
         Logger.info(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         if self._is_thread_flag_on(EnableThreadFlag.VALIDATE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
@@ -340,6 +370,10 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def change_block_hash(self, params):
+
+        if not self._is_reward_calculator_ready():
+            raise InvalidRPCRequestException("Reward Calculator is not ready")
+
         return ExceptionCode.OK
 
 

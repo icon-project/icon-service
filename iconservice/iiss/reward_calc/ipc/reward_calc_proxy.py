@@ -21,6 +21,7 @@ import os
 from subprocess import Popen
 from typing import Optional, Callable, Any, Tuple
 
+from iconservice.icon_constant import RCStatus
 from iconcommons.logger import Logger
 from .message import *
 from .message_queue import MessageQueue
@@ -379,7 +380,7 @@ class RewardCalcProxy(object):
         if self._ready_callback is not None:
             self._ready_callback(response)
 
-        self._ready_future.set_result(True)
+        self._ready_future.set_result(RCStatus.READY)
 
     def get_ready_future(self):
         return self._ready_future
