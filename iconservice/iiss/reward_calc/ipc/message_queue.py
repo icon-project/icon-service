@@ -19,7 +19,7 @@ from typing import Callable, Any, Optional
 
 from iconservice.icon_constant import RCStatus
 from .message import Request, Response, MessageType
-from iconservice.base.exception import InvalidParamsException, InvalidResponseMessageException
+from iconservice.base.exception import InvalidParamsException, IconServiceNotReadyException
 
 
 class MessageQueue(object):
@@ -53,8 +53,8 @@ class MessageQueue(object):
             if response.MSG_TYPE == MessageType.READY:
                 self._rc_status = RCStatus.READY
             else:
-                raise InvalidResponseMessageException("Ready notification is not arrived."
-                                                      "Failed to receive response message.")
+                raise IconServiceNotReadyException("Ready notification is not arrived."
+                                                   "Failed to receive response message.")
 
         if response.is_notification():
             self.notify_handler(response)

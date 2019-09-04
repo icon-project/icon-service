@@ -22,7 +22,7 @@ from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBaseTransactionException, \
-    FatalException, InvalidRPCRequestException
+    FatalException, IconServiceNotReadyException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
@@ -62,6 +62,11 @@ class IconScoreInnerTask(object):
     def _is_reward_calculator_ready(self) -> bool:
         return self._rc_ready_flag.value & RCStatus.READY.value
 
+    def _check_icon_service_ready(self):
+
+        if not self._is_reward_calculator_ready():
+            raise IconServiceNotReadyException("Reward Calculator is not ready")
+
     @staticmethod
     def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
@@ -96,8 +101,7 @@ class IconScoreInnerTask(object):
     async def invoke(self, request: dict):
         Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
@@ -172,8 +176,7 @@ class IconScoreInnerTask(object):
     async def query(self, request: dict):
         Logger.info(f'query request with {request}', ICON_INNER_LOG_TAG)
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
@@ -216,8 +219,7 @@ class IconScoreInnerTask(object):
     async def call(self, request: dict):
         Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
@@ -251,8 +253,7 @@ class IconScoreInnerTask(object):
     async def write_precommit_state(self, request: dict):
         Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
@@ -300,8 +301,7 @@ class IconScoreInnerTask(object):
     async def remove_precommit_state(self, request: dict):
         Logger.info(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
@@ -337,8 +337,7 @@ class IconScoreInnerTask(object):
     async def validate_transaction(self, request: dict):
         Logger.info(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.VALIDATE):
             loop = get_event_loop()
@@ -371,8 +370,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def change_block_hash(self, params):
 
-        if not self._is_reward_calculator_ready():
-            raise InvalidRPCRequestException("Reward Calculator is not ready")
+        self._check_icon_service_ready()
 
         return ExceptionCode.OK
 
