@@ -56,6 +56,7 @@ def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
 
 
 def _split_float_to_numerator_and_denominator(float_data: float) -> tuple:
+    assert 1.0 > float_data >= 0
     str_float: str = format(decimal.Decimal(str(float_data)), 'f')
     str_decimal: str = str_float[str_float.find('.') + 1:]
     numerator = int(str_decimal)

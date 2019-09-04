@@ -36,8 +36,8 @@ def range_positive(start, stop=None, step=None):
 
 
 def test__split_float_to_numerator_and_denominator():
-    test_step = 0.0000001
-    for i, float_data in enumerate(range_positive(0, 1, 0.00003)):
+    test_step = 0.00003
+    for i, float_data in enumerate(range_positive(0, 1, test_step)):
         numerator, denominator = \
             _split_float_to_numerator_and_denominator(float_data)
         assert float_data == numerator / denominator
