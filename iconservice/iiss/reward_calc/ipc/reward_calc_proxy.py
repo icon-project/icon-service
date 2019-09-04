@@ -275,6 +275,62 @@ class RewardCalcProxy(object):
 
         return future.result()
 
+    def query_calculate_status(self) -> tuple:
+        Logger.debug(tag=_TAG, msg="query_calculate_status() start")
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._query_calculate_status(), self._loop)
+
+        try:
+            response: QueryCalculateStatusResponse = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("query_calculate_status message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg="query_calculate_status() end")
+
+        return response.status, response.block_height
+
+    async def _query_calculate_status(self) -> list:
+        Logger.debug(tag=_TAG, msg="_query_calculate_status() start")
+
+        request = QueryCalculateStatusRequest()
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="_query_calculate_status() end")
+
+        return future.result()
+
+    def query_calculate_result(self, block_height) -> tuple:
+        Logger.debug(tag=_TAG, msg="query_calculate_result() start")
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._query_calculate_result(block_height), self._loop)
+
+        try:
+            response: QueryCalculateResultResponse = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("query_calculate_result message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg="query_calculate_result() end")
+
+        return response.status, response.block_height, response.iscore, response.state_hash
+
+    async def _query_calculate_result(self, block_height) -> list:
+        Logger.debug(tag=_TAG, msg="_query_calculate_result() start")
+
+        request = QueryCalculateResultRequest(block_height)
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="_query_calculate_result() end")
+
+        return future.result()
+
     def commit_block(self, success: bool, block_height: int, block_hash: bytes) -> tuple:
         """Notify reward calculator of block confirmation
 
