@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING
+import decimal
 
 from .engine import Engine as IISSEngine
 from .engine import EngineListener as IISSEngineListener
@@ -45,13 +46,18 @@ def check_decentralization_condition(context: 'IconScoreContext') -> bool:
 def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
     """Minimum delegate default value = total_supply * 0.002 ICX"""
     assert 1.0 > context.decentralize_trigger >= 0
-
-    str_float: str = str(context.decentralize_trigger)
-    decimal: str = str_float[str_float.find('.') + 1:]
-    numerator = int(decimal)
-    denominator = 10 ** len(decimal)
+    numerator, denominator = _split_float_to_numerator_and_denominator(context.decentralize_trigger)
+    if numerator == 0:
+        return 0
 
     total_supply: int = context.storage.icx.get_total_supply(context)
-
     minimum_delegate: int = total_supply * numerator // denominator
     return minimum_delegate
+
+
+def _split_float_to_numerator_and_denominator(float_data: float) -> tuple:
+    str_float: str = format(decimal.Decimal(str(float_data)), 'f')
+    str_decimal: str = str_float[str_float.find('.') + 1:]
+    numerator = int(str_decimal)
+    denominator = 10 ** len(str_decimal)
+    return numerator, denominator
