@@ -42,7 +42,10 @@ class RewardCalcProxy(object):
 
     def __init__(self,
                  ready_callback: Callable[['Response'], Any] = None,
-                 calc_done_callback: Callable[['Response'], Any] = None):
+                 calc_done_callback: Callable[['Response'], Any] = None,
+                 query_calculate_result_callback: Callable[['Response'], Any] = None,
+                 query_calculate_status_callback: Callable[['Response'], Any] = None
+                 ):
         Logger.debug(tag=_TAG, msg="__init__() start")
 
         self._loop = None
@@ -53,6 +56,8 @@ class RewardCalcProxy(object):
 
         self._ready_callback: Optional[Callable] = ready_callback
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
+        self._query_calculate_status_callback: Optional[Callable] = query_calculate_status_callback
+        self._query_calculate_result_callback: Optional[Callable] = query_calculate_result_callback
         self._ipc_timeout = self.IPC_TIMEOUT_NOT_READY_S
 
         Logger.debug(tag=_TAG, msg="__init__() end")
@@ -301,11 +306,21 @@ class RewardCalcProxy(object):
         request = QueryCalculateStatusRequest()
 
         future: asyncio.Future = self._message_queue.put(request)
-        await future
+        future.add_done_callback(self.on_query_calculate_status)
 
         Logger.debug(tag=_TAG, msg="_query_calculate_status() end")
 
         return future.result()
+
+    def on_query_calculate_status(self, future: asyncio.Future):
+        Logger.debug(tag=_TAG, msg="on_query_calculate_result() start")
+
+        response: 'QueryCalculateStatusResponse' = future.result()
+
+        if self._query_calculate_status_callback is not None:
+            self._query_calculate_status_callback(response)
+
+        Logger.debug(tag=_TAG, msg="on_query_calculate_result() end")
 
     def query_calculate_result(self, block_height) -> tuple:
         Logger.debug(tag=_TAG, msg="query_calculate_result() start")
@@ -329,11 +344,21 @@ class RewardCalcProxy(object):
         request = QueryCalculateResultRequest(block_height)
 
         future: asyncio.Future = self._message_queue.put(request)
-        await future
+        future.add_done_callback(self.on_query_calculate_result)
 
         Logger.debug(tag=_TAG, msg="_query_calculate_result() end")
 
         return future.result()
+
+    def on_query_calculate_result(self, future: asyncio.Future):
+        Logger.debug(tag=_TAG, msg="on_query_calculate_result() start")
+
+        response: 'QueryCalculateResultResponse' = future.result()
+
+        if self._query_calculate_result_callback is not None:
+            self._query_calculate_result_callback(response)
+
+        Logger.debug(tag=_TAG, msg="on_query_calculate_result() end")
 
     def commit_block(self, success: bool, block_height: int, block_hash: bytes) -> tuple:
         """Notify reward calculator of block confirmation

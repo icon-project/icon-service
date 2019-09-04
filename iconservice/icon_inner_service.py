@@ -43,7 +43,6 @@ class IconScoreInnerTask(object):
     def __init__(self, conf: 'IconConfig'):
         self._conf = conf
         self._thread_flag = ENABLE_THREAD_FLAG
-        self._rc_ready_flag = RCStatus.NOT_READY
 
         self._icon_service_engine = IconServiceEngine()
         self._open()
@@ -58,9 +57,6 @@ class IconScoreInnerTask(object):
 
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
-
-    def _is_reward_calculator_ready(self) -> bool:
-        return self._rc_ready_flag.value & RCStatus.READY.value
 
     def _check_icon_service_ready(self):
         if not self._icon_service_engine.is_reward_calculator_ready():
@@ -77,8 +73,6 @@ class IconScoreInnerTask(object):
 
         ready_future = self._icon_service_engine.get_ready_future()
         await ready_future
-
-        self._rc_ready_flag = ready_future.result()
 
         Logger.info('icon_score_hello_end', ICON_INNER_LOG_TAG)
 
