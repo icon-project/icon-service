@@ -63,8 +63,7 @@ class IconScoreInnerTask(object):
         return self._rc_ready_flag.value & RCStatus.READY.value
 
     def _check_icon_service_ready(self):
-
-        if not self._is_reward_calculator_ready():
+        if not self._icon_service_engine.is_reward_calculator_ready():
             raise IconServiceNotReadyException("Reward Calculator is not ready")
 
     @staticmethod

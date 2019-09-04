@@ -93,6 +93,9 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="close() end")
 
+    def is_reward_calculator_ready(self) -> bool:
+        return self._ready_future.done()
+
     def get_version(self):
         Logger.debug(tag=_TAG, msg="get_version() start")
 
