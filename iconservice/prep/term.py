@@ -15,8 +15,14 @@
 
 from copy import copy
 from typing import TYPE_CHECKING, List, Optional
+import enum
+import copy
+from collections import OrderedDict
 
+from ..iconscore.icon_score_context import IconScoreContext
 from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ..base.exception import AccessDeniedException
+from iconcommons.logger import Logger
 
 if TYPE_CHECKING:
     from .data import PRep, PRepContainer
@@ -25,11 +31,20 @@ if TYPE_CHECKING:
 
 
 class Term(object):
-    """Defines P-Rep Term information
+    """Manages P-Rep Term information
+
     """
+
+    _TAG = "TERM"
     _VERSION = 0
 
+    class _Flag(enum.Flag):
+        NONE = 0
+        FROZEN = enum.auto()
+
     def __init__(self):
+        self._flag: Term._Flag.FROZEN = Term._Flag.NONE
+
         self._sequence: int = -1
         self._start_block_height: int = -1
         self._end_block_height: int = -1
@@ -38,10 +53,23 @@ class Term(object):
         self._preps: List['PRep'] = []
         self._irep: int = -1
         self._total_supply: int = -1
+        # Total amount of delegation which all active P-Reps get
         self._total_delegated: int = -1
+        # Total amount of delegation which Main and Sub P-Reps get
+        self._total_main_and_sub_prep_delegated: int = -1
         self._main_prep_count: int = PREP_MAIN_PREPS
         self._main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
         self._suspended_preps: List['Address'] = []
+
+    def is_frozen(self) -> bool:
+        return bool(self._flag & self._Flag.FROZEN)
+
+    def freeze(self):
+        self._flag |= self._Flag.FROZEN
+
+    def _check_access_permission(self):
+        if self.is_frozen():
+            raise AccessDeniedException("Term access denied")
 
     @property
     def sequence(self) -> int:
@@ -85,7 +113,13 @@ class Term(object):
 
     @property
     def total_delegated(self) -> int:
+        """Total amount of delegation which all active P-Reps got when this term started
+        """
         return self._total_delegated
+
+    @property
+    def total_main_and_sub_prep_delegated(self) -> int:
+        return self._total_main_and_sub_prep_delegated
 
     @property
     def suspended_preps(self) -> List['Address']:
@@ -113,8 +147,10 @@ class Term(object):
         self._main_prep_count: int = context.main_prep_count
         self._main_and_sub_prep_count: int = context.main_and_sub_prep_count
 
-    @staticmethod
-    def _make_main_and_sub_preps(context: 'IconScoreContext', data_list: list) -> List['PRep']:
+    @classmethod
+    def _make_main_and_sub_preps(cls,
+                                 context: 'IconScoreContext',
+                                 data_list: List['Address', int]) -> List['PRep']:
         """Returns tuple of Main P-Rep List and Sub P-Rep List
 
         :param context:
@@ -127,17 +163,15 @@ class Term(object):
 
         for data in data_list:
             address: 'Address' = data[0]
+            # Delegated amount that a P-Rep has at the beginning of a term
             delegated: int = data[1]
 
             frozen_prep: 'PRep' = frozen_preps.get_by_address(address)
             assert frozen_prep.is_frozen()
 
-            if delegated == frozen_prep.delegated:
-                prep: 'PRep' = frozen_prep
-            else:
-                prep: 'PRep' = frozen_prep.copy()
-                prep.delegated = delegated
-                prep.freeze()
+            prep: 'PRep' = frozen_prep.copy()
+            prep.voting_power = delegated
+            prep.freeze()
 
             assert prep.is_frozen()
             prep_list.append(prep)
@@ -195,11 +229,15 @@ class Term(object):
 
     def update_suspended_preps(self,
                                invalid_preps: List[int]):
+        self._check_access_permission()
+
         for index in invalid_preps:
             prep: 'PRep' = self._preps[index]
             self._suspended_preps.append(prep.address)
 
     def replace_penalty_main_preps(self, index: int):
+        self._check_access_permission()
+
         new_index = self._main_prep_count
         new_main_prep: 'PRep' = self._preps[new_index]
 

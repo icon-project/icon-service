@@ -297,7 +297,6 @@ class PRepStatus(Enum):
     ACTIVE = 0
     UNREGISTERED = auto()
     DISQUALIFIED = auto()
-    SUSPENDED = auto()
 
 
 class PenaltyReason(Enum):

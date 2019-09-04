@@ -23,12 +23,14 @@ if TYPE_CHECKING:
 
 
 class PenaltyImposer(object):
+    """Check for the block validation statistics of P-Rep and impose a proper penalty on it
+
+    """
 
     def __init__(self,
                  penalty_grace_period: int,
                  low_productivity_penalty_threshold: int,
-                 block_validation_penalty_threshold: int,
-                 on_penalty_imposed: Callable[['IconScoreContext', 'Address', 'PenaltyReason'], None]):
+                 block_validation_penalty_threshold: int):
         # Low productivity penalty is not imposed during penalty_grace_period
         self._penalty_grace_period: int = penalty_grace_period
 
@@ -38,10 +40,10 @@ class PenaltyImposer(object):
         # Unit: The number of blocks
         self._block_validation_penalty_threshold: int = block_validation_penalty_threshold
 
-        self._on_penalty_imposed: Optional[Callable[['IconScoreContext', 'Address', 'PenaltyReason'], None]] = \
-            on_penalty_imposed
-
-    def run(self, context: 'IconScoreContext', prep: 'PRep') -> 'PenaltyReason':
+    def run(self,
+            context: 'IconScoreContext',
+            prep: 'PRep',
+            on_penalty_imposed: Callable[['IconScoreContext', 'Address', 'PenaltyReason'], None]) -> 'PenaltyReason':
         reason: 'PenaltyReason' = PenaltyReason.NONE
 
         if self._check_low_productivity_penalty(prep):
@@ -49,8 +51,8 @@ class PenaltyImposer(object):
         if self._check_block_validation_penalty(prep):
             reason = PenaltyReason.BLOCK_VALIDATION
 
-        if self._on_penalty_imposed and reason != PenaltyReason.NONE:
-            self._on_penalty_imposed(context, prep.address, reason)
+        if on_penalty_imposed and reason != PenaltyReason.NONE:
+            on_penalty_imposed(context, prep.address, reason)
 
         return reason
 

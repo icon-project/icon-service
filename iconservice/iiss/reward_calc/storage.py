@@ -41,6 +41,10 @@ def get_rc_version(revision: int) -> int:
 
 
 class Storage(object):
+    """Manages RC DB which Reward Calculator will use to calculate a reward for each address
+
+    """
+
     _CURRENT_IISS_DB_NAME = "current_db"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
