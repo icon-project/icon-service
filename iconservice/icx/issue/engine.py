@@ -37,7 +37,7 @@ class Engine(EngineBase):
         self._formula: Optional['IssueFormula'] = None
 
     def open(self, context: 'IconScoreContext'):
-        self._formula = IssueFormula(context.main_prep_count, context.main_and_sub_prep_count)
+        self._formula = IssueFormula(context.main_prep_count)
 
     def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
         irep: int = context.engine.prep.term.irep
