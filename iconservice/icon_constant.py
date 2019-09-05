@@ -285,7 +285,7 @@ class RCStatus(IntEnum):
     READY = 1
 
 
-class RCCalculateResult(Enum):
+class RCCalculateResult(IntEnum):
     SUCCESS = 0
     FAIL = 1
     CALCULATING = 2

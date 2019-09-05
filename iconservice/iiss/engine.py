@@ -125,16 +125,13 @@ class Engine(EngineBase):
         calc_result_status, calc_result_bh, iscore, state_hash = \
             self._reward_calc_proxy.query_calculate_result(calc_bh)
 
-        # todo: consider when status == 2
         if calc_result_status != RCCalculateResult.SUCCESS and calc_result_status in RCCalculateResult:
             FatalException(f'RC has a problem about calculating: {calc_result_status}')
 
-        # todo: should i consider this condition?
         if calc_result_bh != calc_bh:
             FatalException(f'Unexpected calculate result response '
                            f'(reward calc: {calc_result_bh} icon service: {calc_bh}')
 
-        # todo: should i consider this condition?
         if iscore < 0:
             FatalException(f'Invalid I-SCORE value: {iscore}')
 
