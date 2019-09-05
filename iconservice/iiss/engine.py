@@ -29,7 +29,7 @@ from ..base.exception import \
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG
+    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -104,46 +104,50 @@ class Engine(EngineBase):
     def is_reward_calculator_ready(self):
         return self._reward_calc_proxy.is_reward_calculator_ready()
 
-    def get_prev_iscore(self, context: 'IconScoreContext', end_block_height_of_calc: int) -> int:
-        iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
+    def get_prev_period_iscore(self,
+                               context: 'IconScoreContext',
+                               end_block_height_of_calc: Optional[int] = None) -> int:
+        iscore, rc_latest_calculate_bh = context.storage.rc.get_calc_response_from_rc()
+        if end_block_height_of_calc is None:
+            end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
         calc_period: int = context.storage.iiss.get_calc_period(context)
+        latest_calculate_bh: int = end_block_height_of_calc - calc_period
 
         # Check if the response has been received
         if iscore == -1:
-            iscore: int = self._query_calculate_result(end_block_height_of_calc - calc_period)
+            iscore: int = self._query_calculate_result(latest_calculate_bh)
         else:
-            context.engine.iiss.check_calculate_request_block_height(request_block_height,
-                                                                     end_block_height_of_calc,
-                                                                     calc_period)
+            context.engine.iiss.check_calculate_request_block_height(rc_latest_calculate_bh,
+                                                                     latest_calculate_bh)
         return iscore
 
-    def _query_calculate_result(self, block_height: int) -> int:
-        rc_status, rc_block_height, iscore, state_hash = \
-            self._reward_calc_proxy.query_calculate_result(block_height)
-        # todo: use constant
+    def _query_calculate_result(self, calc_bh: int) -> int:
+        calc_result_status, calc_result_bh, iscore, state_hash = \
+            self._reward_calc_proxy.query_calculate_result(calc_bh)
+
         # todo: consider when status == 2
-        if rc_status == 1 or rc_status == 3:
-            FatalException(f'Calculate failure: {rc_status}')
+        if calc_result_status != RCCalculateResult.SUCCESS and calc_result_status in RCCalculateResult:
+            FatalException(f'RC has a problem about calculating: {calc_result_status}')
 
-        if rc_block_height != block_height:
-            FatalException(f'Invalid calculate point '
-                           f'(reward calc: {rc_block_height} icon service: {block_height}')
+        # todo: should i consider this condition?
+        if calc_result_bh != calc_bh:
+            FatalException(f'Unexpected calculate result response '
+                           f'(reward calc: {calc_result_bh} icon service: {calc_bh}')
 
+        # todo: should i consider this condition?
         if iscore < 0:
             FatalException(f'Invalid I-SCORE value: {iscore}')
 
         return iscore
 
     @staticmethod
-    def check_calculate_request_block_height(response_block_height: int,
-                                             current_end_block_height_of_calc: int,
-                                             calc_period: int):
-        prev_calc_end_block_height = current_end_block_height_of_calc - calc_period
+    def check_calculate_request_block_height(reward_calc_bh: int,
+                                             icon_service_bh: int):
 
-        if response_block_height != prev_calc_end_block_height:
+        if reward_calc_bh != icon_service_bh:
             raise FatalException(f"request block height is not matched: "
-                                 f"response from RC:{response_block_height} "
-                                 f"request:{prev_calc_end_block_height} ")
+                                 f"response from RC:{reward_calc_bh} "
+                                 f"request:{reward_calc_bh} ")
 
     def calculate_done_callback(self, cb_data: 'CalculateDoneNotification'):
         Logger.debug(tag=_TAG, msg=f"calculate_done_callback start")
@@ -155,7 +159,9 @@ class Engine(EngineBase):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
         calc_period: int = context.storage.iiss.get_calc_period(context)
-        self.check_calculate_request_block_height(cb_data.block_height, end_block_height_of_calc, calc_period)
+
+        latest_calculate_bh: int = end_block_height_of_calc - calc_period
+        self.check_calculate_request_block_height(cb_data.block_height, latest_calculate_bh)
 
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height)
         Logger.debug(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
