@@ -19,14 +19,14 @@ from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
 
 
 class IssueFormula(object):
-    def __init__(self, prep_count: int, sub_prep_count: int):
+    _PERCENTAGE_FOR_BETA_2: int = 100
+
+    def __init__(self, main_prep_count: int):
         self._handler: dict = {
             'prep': self._handle_icx_issue_formula_for_prep
         }
         # todo: in case of issuing from IISS_REV, get from the storage (not constant value)
-        self._prep_count: int = prep_count
-        # todo: in case of issuing from IISS_REV, get from the storage (not constant value)
-        self._sub_prep_count: int = sub_prep_count
+        self._main_prep_count: int = main_prep_count
 
     def calculate(self, group: str, data: dict) -> int:
         handler = self._handler[group]
@@ -52,8 +52,8 @@ class IssueFormula(object):
 
     def _handle_icx_issue_formula_for_prep(self, irep: int, rrep: int, total_delegation: int) -> int:
         calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
-        beta_1: int = calculated_irep * self._prep_count
-        beta_2: int = calculated_irep * self._sub_prep_count
+        beta_1: int = calculated_irep * self._main_prep_count
+        beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2
 
         temp_rrep = IssueFormula.calculate_temporary_reward_prep(rrep)
         beta_3: int = temp_rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
@@ -64,8 +64,8 @@ class IssueFormula(object):
 
     def get_limit_inflation_beta(self, irep: int) -> int:
         calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
-        beta_1: int = calculated_irep * self._prep_count
-        beta_2: int = calculated_irep * self._sub_prep_count
+        beta_1: int = calculated_irep * self._main_prep_count
+        beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2
         return beta_1 + beta_2
 
     @staticmethod
