@@ -14,12 +14,10 @@
 # limitations under the License.
 
 import os
-from collections import OrderedDict
 from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -28,7 +26,6 @@ from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFou
     MethodNotFoundException
 from .base.message import Message
 from .base.transaction import Transaction
-from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
@@ -256,10 +253,12 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
 
-    def get_ready_future(self):
+    @classmethod
+    def get_ready_future(cls):
         return IconScoreContext.engine.iiss.get_ready_future()
 
-    def is_reward_calculator_ready(self) -> bool:
+    @classmethod
+    def is_reward_calculator_ready(cls) -> bool:
         return IconScoreContext.engine.iiss.is_reward_calculator_ready()
 
     @staticmethod
@@ -740,7 +739,7 @@ class IconServiceEngine(ContextContainer):
                                                       context.engine.prep.term.end_block_height],
                                            indexed_args_count=0)
 
-        self._impose_penalty_on_main_preps(context)
+        cls._impose_penalty_on_main_preps(context)
 
         tx_result.status = TransactionResult.SUCCESS
 
@@ -750,9 +749,7 @@ class IconServiceEngine(ContextContainer):
         return tx_result
 
     @classmethod
-    def _impose_penalty_on_main_preps(
-            cls,
-            context: 'IconScoreContext'):
+    def _impose_penalty_on_main_preps(cls, context: 'IconScoreContext'):
         """Check the P-Reps to impose penalty on every block
 
         :param context:
