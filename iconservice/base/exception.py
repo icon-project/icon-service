@@ -36,6 +36,7 @@ class ExceptionCode(IntEnum):
     STACK_OVERFLOW = 13
     INVALID_PACKAGE = 14
     SERVICE_NOT_READY = 15
+    INTERNAL_SERVICE_ERROR = 16
 
     # Caused by revert call or user-defined exception.
     SCORE_ERROR = 32
@@ -169,6 +170,11 @@ class InvalidPackageException(IconServiceBaseException):
 class ServiceNotReadyException(IconServiceBaseException):
     def __init__(self, message: Optional[str]):
         super().__init__(message, ExceptionCode.SERVICE_NOT_READY)
+
+
+class InternalServiceErrorException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.INTERNAL_SERVICE_ERROR)
 
 
 class IconScoreException(IconServiceBaseException):

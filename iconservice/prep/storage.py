@@ -90,14 +90,11 @@ class Storage(StorageBase):
                     yield PRep.from_bytes(value)
 
     def put_term(self, context: 'IconScoreContext', term: 'Term'):
-        data: list = term.to_list()
-        value: bytes = MsgPackForDB.dumps(data)
+        value: bytes = MsgPackForDB.dumps(term.to_list())
         self._db.put(context, self.TERM_KEY, value)
 
     def get_term(self, context: 'IconScoreContext') -> Optional['Term']:
         value: bytes = self._db.get(context, self.TERM_KEY)
-        if value is None:
-            return
-
-        data: list = MsgPackForDB.loads(value)
-        return Term.from_list(data)
+        if value:
+            data: list = MsgPackForDB.loads(value)
+            return Term.from_list(data)
