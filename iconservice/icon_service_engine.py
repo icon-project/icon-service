@@ -123,7 +123,7 @@ class IconServiceEngine(ContextContainer):
         os.makedirs(state_db_root_path, exist_ok=True)
         os.makedirs(rc_data_path, exist_ok=True)
 
-        # Share one context db with all SCOREs
+        # Share one context db with all SCORE
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
@@ -148,8 +148,8 @@ class IconServiceEngine(ContextContainer):
         # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
         context.storage.icx.load_last_block_info(context)
-        self._precommit_data_manager.last_block: 'Block' = IconScoreContext.storage.icx.last_block
-        context.block: 'Block' = self._get_last_block()
+        self._precommit_data_manager.last_block = IconScoreContext.storage.icx.last_block
+        context.block = self._get_last_block()
 
         # set revision (if governance SCORE does not exist, remain revision to default).
         try:
@@ -194,7 +194,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage
 
-    def _open_component_context(self,
+    @classmethod
+    def _open_component_context(cls,
                                 context: 'IconScoreContext',
                                 log_dir: str,
                                 rc_data_path: str,
@@ -235,7 +236,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.meta.open(context)
         IconScoreContext.storage.rc.open(context.revision, rc_data_path)
 
-    def _close_component_context(self, context: 'IconScoreContext'):
+    @classmethod
+    def _close_component_context(cls, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
         IconScoreContext.engine.fee.close()
         IconScoreContext.engine.icx.close()
@@ -322,7 +324,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _get_governance_score(context: 'IconScoreContext') -> 'Governance':
-        governance_score: 'Governance' = \
+        governance_score = \
             IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ScoreNotFoundException('Governance SCORE not found')
@@ -717,7 +719,8 @@ class IconServiceEngine(ContextContainer):
 
         return tx_result
 
-    def _process_base_transaction(self,
+    @classmethod
+    def _process_base_transaction(cls,
                                   context: 'IconScoreContext',
                                   issue_data: dict,
                                   regulator: 'Regulator'):
@@ -797,8 +800,8 @@ class IconServiceEngine(ContextContainer):
                                  timestamp=context.block.timestamp,
                                  nonce=None)
 
-        context.event_logs: List['EventLog'] = []
-        context.traces: List['Trace'] = []
+        context.event_logs = []
+        context.traces = []
         context.msg_stack.clear()
         context.event_log_stack.clear()
 
@@ -836,8 +839,8 @@ class IconServiceEngine(ContextContainer):
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
-        context.event_logs: List['EventLog'] = []
-        context.traces: List['Trace'] = []
+        context.event_logs = []
+        context.traces = []
         context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
@@ -845,7 +848,8 @@ class IconServiceEngine(ContextContainer):
 
         return self._call(context, method, params)
 
-    def _estimate_step_by_request(self, request, context) -> int:
+    @classmethod
+    def _estimate_step_by_request(cls, request, context) -> int:
         """Calculates simply and estimates step with request data.
 
         :param request:
@@ -895,8 +899,8 @@ class IconServiceEngine(ContextContainer):
                                  nonce=params.get('nonce', None))
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
-        context.event_logs: List['EventLog'] = []
-        context.traces: List['Trace'] = []
+        context.event_logs = []
+        context.traces = []
 
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = context.storage.icx.get_account(context, from_)
@@ -972,7 +976,7 @@ class IconServiceEngine(ContextContainer):
             context.msg = Message(sender=from_)
             step_limit: int = params.get('stepLimit', step_limit)
 
-        context.traces: List['Trace'] = []
+        context.traces = []
         context.step_counter.reset(step_limit)
 
         ret = self._call(context, method, params)
@@ -1063,7 +1067,8 @@ class IconServiceEngine(ContextContainer):
 
         return ret
 
-    def _handle_icx_get_balance(self,
+    @classmethod
+    def _handle_icx_get_balance(cls,
                                 context: 'IconScoreContext',
                                 params: dict) -> int:
         """Returns the icx balance of the given address
@@ -1075,12 +1080,14 @@ class IconServiceEngine(ContextContainer):
         address = params['address']
         return context.engine.icx.get_balance(context, address)
 
-    def _handle_icx_get_total_supply(self,
+    @classmethod
+    def _handle_icx_get_total_supply(cls,
                                      context: 'IconScoreContext',
-                                     params: dict) -> int:
+                                     _params: dict) -> int:
         """Returns the amount of icx total supply
 
         :param context:
+        :param _params:
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
         return context.storage.icx.get_total_supply(context)
@@ -1143,7 +1150,7 @@ class IconServiceEngine(ContextContainer):
 
         return rc_result
 
-    def _handle_get_iiss_info(self, context: 'IconScoreContext', params: dict) -> dict:
+    def _handle_get_iiss_info(self, context: 'IconScoreContext', _params: dict) -> dict:
         response = dict()
 
         response['blockHeight'] = context.block.height
@@ -1346,11 +1353,13 @@ class IconServiceEngine(ContextContainer):
     def _process_new_transaction(self,
                                  context: 'IconScoreContext',
                                  params: dict,
-                                 tx_result: 'TransactionResult') -> None:
+                                 _tx_result: 'TransactionResult') -> None:
         """
         Processes the iiss transaction
 
+        :param context:
         :param params: JSON-RPC params
+        :param _tx_result:
         """
 
         to: Address = params['to']
@@ -1369,7 +1378,8 @@ class IconServiceEngine(ContextContainer):
         else:
             raise InvalidParamsException("Invalid method")
 
-    def _transfer_coin(self,
+    @classmethod
+    def _transfer_coin(cls,
                        context: 'IconScoreContext',
                        params: dict) -> None:
         """Transfer coin between EOA and EOA based on protocol v2
@@ -1385,7 +1395,8 @@ class IconServiceEngine(ContextContainer):
 
         context.engine.icx.transfer(context, from_, to, value)
 
-    def _charge_transaction_fee(self,
+    @classmethod
+    def _charge_transaction_fee(cls,
                                 context: 'IconScoreContext',
                                 params: dict,
                                 status: int,
@@ -1521,8 +1532,8 @@ class IconServiceEngine(ContextContainer):
                 code = int(e.code)
                 message = str(e.message)
             else:
-                Logger.exception(e, ICON_SERVICE_LOG_TAG)
-                Logger.error(e, ICON_SERVICE_LOG_TAG)
+                Logger.exception(str(e), ICON_SERVICE_LOG_TAG)
+                Logger.error(str(e), ICON_SERVICE_LOG_TAG)
 
                 code: int = ExceptionCode.SYSTEM_ERROR.value
                 message = str(e)
@@ -1565,10 +1576,11 @@ class IconServiceEngine(ContextContainer):
 
         return logs_bloom
 
-    def _handle_icx_get_score_api(self,
+    @classmethod
+    def _handle_icx_get_score_api(cls,
                                   context: 'IconScoreContext',
                                   params: dict) -> object:
-        """Handles an icx_get_score_api jsonrpc request
+        """Handles an icx_get_score_api JSON-RPC request
 
         get score api
 
@@ -1580,7 +1592,7 @@ class IconServiceEngine(ContextContainer):
         return IconScoreEngine.get_score_api(
             context, icon_score_address)
 
-    def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
+    def _handle_ise_get_status(self, _context: 'IconScoreContext', params: dict) -> dict:
 
         response = dict()
         if not bool(params) or params.get('filter'):
@@ -1616,10 +1628,10 @@ class IconServiceEngine(ContextContainer):
         prev_block_hash = block_hash
         return Block(block_height, block_hash, timestamp, prev_block_hash, 0)
 
-    def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
+    def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
-        :param block_height: height of block being committed
+        :param _block_height: height of block being committed
         :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed
         """
@@ -1664,11 +1676,12 @@ class IconServiceEngine(ContextContainer):
         :param block_height: height of block which is needed to be removed from the pre-commit data manager
         :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
-        # Check for block validation before rollback
+        Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}")
 
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
         self._precommit_data_manager.rollback(instant_block_hash)
-        # TODO add rollback
+
+        Logger.warning(tag=self.TAG, msg="rollback() end")
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks
