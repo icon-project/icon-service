@@ -41,6 +41,8 @@ class MessageType(IntEnum):
     CALCULATE = 3
     COMMIT_BLOCK = 4
     COMMIT_CLAIM = 5
+    QUERY_CALCULATE_STATUS = 6
+    QUERY_CALCULATE_RESULT = 7
     READY = 100
     CALCULATE_DONE = 101
 
@@ -189,6 +191,84 @@ class CommitClaimResponse(Response):
         msg_id: int = items[1]
 
         return CommitClaimResponse(msg_id)
+
+
+class QueryCalculateStatusRequest(Request):
+    def __init__(self):
+        super().__init__(MessageType.QUERY_CALCULATE_STATUS)
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id
+
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id})"
+
+
+class QueryCalculateStatusResponse(Response):
+    MSG_TYPE = MessageType.QUERY_CALCULATE_STATUS
+
+    def __init__(self, msg_id: int, status: int, block_height: int):
+        super().__init__()
+
+        self.msg_id: int = msg_id
+        self.status: int = status
+        self.block_height: int = block_height
+
+    def __str__(self) -> str:
+        return f"QUERY_CALCULATE_STATUS_RESPONSE({self.msg_id}, {self.status}, {self.block_height})"
+
+    @staticmethod
+    def from_list(items: list) -> 'QueryCalculateStatusResponse':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        status: int = payload[0]
+        block_height: int = payload[2]
+
+        return QueryCalculateStatusResponse(msg_id, status, block_height)
+
+
+class QueryCalculateResultRequest(Request):
+
+    def __init__(self, block_height):
+        super().__init__(MessageType.QUERY_CALCULATE_RESULT)
+
+        self.block_height = block_height
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id, self.block_height
+
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id},{self.block_height})"
+
+
+class QueryCalculateResultResponse(Response):
+    MSG_TYPE = MessageType.QUERY_CALCULATE_RESULT
+
+    def __init__(self, msg_id: int, status: int, block_height: int, iscore: int, state_hash: bytes):
+        super().__init__()
+
+        self.msg_id = msg_id
+        self.status = status
+        self.block_height = block_height
+        self.iscore = iscore
+        self.state_hash = state_hash
+
+    def __str__(self):
+        return f"QUERY_CALCULATE_RESULT_RESPONSE({self.msg_id}, " \
+            f"{self.status}, {self.block_height}, {self.iscore}, {self.state_hash.hex()})"
+
+    @staticmethod
+    def from_list(items: list) -> 'QueryCalculateResultResponse':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        status: int = payload[0]
+        block_hegiht: int = payload[1]
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[2])
+        state_hash: bytes = payload[3]
+
+        return QueryCalculateResultResponse(msg_id, status, block_hegiht, iscore, state_hash)
 
 
 class QueryRequest(Request):

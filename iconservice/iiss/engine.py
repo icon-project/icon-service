@@ -101,6 +101,9 @@ class Engine(EngineBase):
     def get_ready_future(self):
         return self._reward_calc_proxy.get_ready_future()
 
+    def is_reward_calculator_ready(self):
+        return self._reward_calc_proxy.is_reward_calculator_ready()
+
     @staticmethod
     def check_calculate_request_block_height(response_block_height: int,
                                              current_end_block_height_of_calc: int,
