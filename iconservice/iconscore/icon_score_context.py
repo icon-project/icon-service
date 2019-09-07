@@ -20,6 +20,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
+from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.exception import FatalException
@@ -27,11 +28,9 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
-    IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    IconScoreContextType, IconScoreFuncType, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     TERM_PERIOD
 )
-from .icon_score_mapper import IconScoreMapper
 from ..prep.data.prep import PRepGrade
 
 if TYPE_CHECKING:
@@ -185,7 +184,11 @@ class IconScoreContext(object):
         return self._invalid_elected_preps
 
     def is_decentralized(self) -> bool:
-        return self.revision >= REV_DECENTRALIZATION and self.engine.prep.term is not None
+        return self.engine.prep.term is not None
+
+    def is_the_first_block_on_decentralization(self) -> bool:
+        term = self.engine.prep.term
+        return term.sequence == 0 and self.block.height == term.start_block_height
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')

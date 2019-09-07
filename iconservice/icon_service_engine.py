@@ -21,9 +21,11 @@ from iconcommons.logger import Logger
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
-from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException, \
-    MethodNotFoundException
+from .base.exception import (
+    ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
+    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
+    MethodNotFoundException, InternalServiceErrorException
+)
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.factory import ContextDatabaseFactory
@@ -66,9 +68,8 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
-    from .prep.data import PRep
+    from .prep.data import PRep, Term
     from .iiss.storage import RewardRate
-    from .prep.term import Term
 
 
 class IconServiceEngine(ContextContainer):
@@ -478,6 +479,8 @@ class IconServiceEngine(ContextContainer):
             precommit_flag |= PrecommitFlag.IISS_CALC
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
+                Logger.info(tag=self.TAG,
+                            msg=f"Decentralization conditions are satisfied: blockHeight={context.block.height}")
 
         main_prep_as_dict, term = self.after_transaction_process(
             context, precommit_flag, prev_block_generator, prev_block_validators)
@@ -521,6 +524,11 @@ class IconServiceEngine(ContextContainer):
                                    prev_block_validators: Optional[List['Address']] = None):
 
         if not context.is_decentralized():
+            return
+
+        # Skip the first block after decentralization
+        if context.is_the_first_block_on_decentralization():
+            Logger.info(tag=self.TAG, msg=f"DECENTRALIZATION start: {context.block}")
             return
 
         self._update_productivity(context, prev_block_generator, prev_block_validators)
@@ -573,8 +581,6 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_validators:
         :return:
         """
-        # TODO: Skip data from the first block which are received after decentralization (goldworm)
-
         # validators set contains not only prev_block_validators but also a prev_block_generator
         validators: Set['Address'] = set()
 
@@ -587,10 +593,9 @@ class IconServiceEngine(ContextContainer):
             Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
             return
 
-        main_preps: List['PRep'] = context.engine.prep.term.main_preps
+        for prep_snapshot in context.engine.prep.term.main_preps:
+            address = prep_snapshot.address
 
-        for prep in main_preps:
-            address = prep.address
             is_validator: bool = address in validators
             if is_validator:
                 validators.remove(address)
@@ -598,11 +603,12 @@ class IconServiceEngine(ContextContainer):
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             assert isinstance(dirty_prep, PRep)
 
-            if dirty_prep:
-                dirty_prep.update_block_statistics(is_validator)
-                context.put_dirty_prep(dirty_prep)
+            dirty_prep.update_block_statistics(is_validator)
+            context.put_dirty_prep(dirty_prep)
 
-        assert len(validators) == 0
+        if len(validators) > 0:
+            raise InternalServiceErrorException(f"Main P-Reps mismatch: {validators}")
+
         context.update_dirty_prep_batch()
 
     @classmethod
@@ -641,9 +647,8 @@ class IconServiceEngine(ContextContainer):
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
         assert isinstance(dirty_prep, PRep)
 
-        if dirty_prep:
-            dirty_prep.last_generate_block_height = context.block.height - 1
-            context.put_dirty_prep(dirty_prep)
+        dirty_prep.last_generate_block_height = context.block.height - 1
+        context.put_dirty_prep(dirty_prep)
 
         context.update_dirty_prep_batch()
 

@@ -65,6 +65,9 @@ class Block(object):
         # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
 
+    def __str__(self):
+        return f"Block(height={self._height} timestamp={self._timestamp}"
+
     @property
     def height(self) -> int:
         return self._height
@@ -120,8 +123,7 @@ class Block(object):
         byteorder = DATA_BYTE_ORDER
 
         version, block_height_bytes, block_hash_bytes, \
-        timestamp_bytes, block_prev_hash_bytes = \
-            Block._struct.unpack(buf)
+            timestamp_bytes, block_prev_hash_bytes = Block._struct.unpack(buf)
 
         block_height = int.from_bytes(block_height_bytes, byteorder)
         block_hash = block_hash_bytes

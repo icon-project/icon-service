@@ -163,6 +163,9 @@ class Address(object):
         """
         return f'{str(self.prefix)}{self.body.hex()}'
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __hash__(self) -> int:
         """Returns a hash value for this object
 
