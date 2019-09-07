@@ -18,6 +18,7 @@
 """
 from typing import TYPE_CHECKING, List
 
+from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, \
     PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import PRepStatus, PRepGrade
@@ -346,3 +347,30 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_prep(self._accounts[PREP_MAIN_PREPS + 1])
         self.assertEqual(expected_avg_irep, response['irep'])
         self.assertEqual(expected_block_height, response['irepUpdateBlockHeight'])
+
+    def test_p2p_endpoints(self):
+        bottom_preps = self.create_eoa_accounts(10)
+        accounts = self._accounts + bottom_preps
+        endpoints: list = self.get_p2p_endpoints()
+        for i, account in enumerate(accounts[:PREP_MAIN_PREPS]):
+            data: dict = self.create_register_prep_params(account)
+            self.assertEqual(endpoints[i], data[ConstantKeys.P2P_ENDPOINT])
+
+        # distribute icx for register
+        self.distribute_icx(accounts=accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=3000 * ICX_IN_LOOP)
+        # register PReps
+        tx_list: list = []
+        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]:
+            tx: dict = self.create_register_prep_tx(from_=account)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        self.make_blocks_to_end_calculation()
+
+        endpoints: list = self.get_p2p_endpoints()
+
+        self.assertEqual(len(endpoints), PREP_MAIN_AND_SUB_PREPS)
+        for i, account in enumerate(accounts[:PREP_MAIN_AND_SUB_PREPS]):
+            data: dict = self.create_register_prep_params(account)
+            self.assertEqual(endpoints[i], data[ConstantKeys.P2P_ENDPOINT])

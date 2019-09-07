@@ -234,7 +234,8 @@ PREP_METHOD_TABLE = [
     "getPRep",
     "getMainPReps",
     "getSubPReps",
-    "getPReps"
+    "getPReps",
+    "getP2PEndpoints"
 ]
 
 DEBUG_METHOD_TABLE = [
