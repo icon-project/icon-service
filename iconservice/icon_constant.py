@@ -288,7 +288,7 @@ class RCStatus(IntEnum):
 class RCCalculateResult(IntEnum):
     SUCCESS = 0
     FAIL = 1
-    CALCULATING = 2
+    IN_PROGRESS = 2
     INVALID_BLOCK_HEIGHT = 3
 
 
