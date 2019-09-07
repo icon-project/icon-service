@@ -424,7 +424,7 @@ class IconServiceEngine(ContextContainer):
         if precommit_data is not None:
             Logger.info(
                 tag=ICON_SERVICE_LOG_TAG,
-                msg=f"Block result already exists: {block.height}, 0x{block.hash.hex()}")
+                msg=f"Block result already exists: {block}")
             return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
 
         # Check for block validation before invoke
@@ -458,8 +458,8 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
-                        raise InvalidBaseTransactionException("Invalid block: "
-                                                              "first transaction must be an base transaction")
+                        raise InvalidBaseTransactionException(
+                            "Invalid block: first transaction must be an base transaction")
                     tx_result = self._invoke_base_request(context, tx_request, is_block_editable, regulator)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
@@ -475,17 +475,19 @@ class IconServiceEngine(ContextContainer):
                 if context.revision >= REV_IISS:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-        if self.check_end_block_height_of_calc(context):
+        if self._check_end_block_height_of_calc(context):
             precommit_flag |= PrecommitFlag.IISS_CALC
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
                 Logger.info(tag=self.TAG,
-                            msg=f"Decentralization conditions are satisfied: blockHeight={context.block.height}")
+                            msg=f"Decentralization condition is met: blockHeight={context.block.height}")
+
+                # When decentralization begins,
+                # change the reward calculation period from 43200 to 43120 which is the same as term_period
+                context.storage.iiss.put_calc_period(context, context.term_period)
 
         main_prep_as_dict, term = self.after_transaction_process(
             context, precommit_flag, prev_block_generator, prev_block_validators)
-
-        context.preps.freeze()
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -528,7 +530,8 @@ class IconServiceEngine(ContextContainer):
 
         # Skip the first block after decentralization
         if context.is_the_first_block_on_decentralization():
-            Logger.info(tag=self.TAG, msg=f"DECENTRALIZATION start: {context.block}")
+            Logger.info(tag=self.TAG,
+                        msg=f"The first block of decentralization: {context.block}")
             return
 
         self._update_productivity(context, prev_block_generator, prev_block_validators)
@@ -566,6 +569,8 @@ class IconServiceEngine(ContextContainer):
             context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
+        context.preps.freeze()
+
         return main_prep_as_dict, term
 
     @classmethod
@@ -623,7 +628,7 @@ class IconServiceEngine(ContextContainer):
         if term:
             return term.end_block_height == context.block.height
 
-        if flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION:
+        if flag & PrecommitFlag.DECENTRALIZATION:
             # When decentralization begins,
             # change the reward calculation period from 43200 to 43120 which is the same as term_period
             context.storage.iiss.put_calc_period(context, context.term_period)
@@ -686,7 +691,7 @@ class IconServiceEngine(ContextContainer):
         return flags
 
     @staticmethod
-    def check_end_block_height_of_calc(context: 'IconScoreContext') -> bool:
+    def _check_end_block_height_of_calc(context: 'IconScoreContext') -> bool:
         if context.revision < REV_IISS:
             return False
 

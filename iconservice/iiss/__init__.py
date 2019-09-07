@@ -28,7 +28,9 @@ if TYPE_CHECKING:
 
 
 def check_decentralization_condition(context: 'IconScoreContext') -> bool:
-    if context.revision < REV_DECENTRALIZATION:
+    if context.revision < REV_DECENTRALIZATION or context.is_decentralized():
+        # If revision is less than REV_DECENTRALIZATION or
+        # network has been already decentralized
         return False
 
     context.update_dirty_prep_batch()

@@ -85,13 +85,13 @@ class Engine(EngineBase, IISSEngineListener):
              low_productivity_penalty_threshold: int,
              block_validation_penalty_threshold: int):
 
-        # this logic doesn't need to save to DB yet
+        # This logic doesn't need to save to DB yet
         self._init_penalty_imposer(penalty_grace_period,
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
 
         self._load_preps(context)
-        self.term = context.storage.prep.get_term()
+        self.term: Optional['Term'] = context.storage.prep.get_term()
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)

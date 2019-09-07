@@ -20,6 +20,7 @@ from typing import Optional
 from .exception import InvalidParamsException
 from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, REV_IISS
 from ..utils.msgpack_for_db import MsgPackForDB
+from ..utils import bytes_to_hex
 
 
 @unique
@@ -66,7 +67,7 @@ class Block(object):
         self.cumulative_fee = cumulative_fee
 
     def __str__(self):
-        return f"Block(height={self._height} timestamp={self._timestamp}"
+        return f"Block(height={self._height} hash={bytes_to_hex(self._hash)} timestamp={self._timestamp})"
 
     @property
     def height(self) -> int:
