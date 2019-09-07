@@ -79,7 +79,7 @@ class Term(object):
         self._main_preps: List['PRepSnapshot'] = []
         self._sub_preps: List['PRepSnapshot'] = []
 
-        # made with the addresses of main P-Reps
+        # made from main P-Rep addresses
         self._merkle_root_hash: Optional[bytes] = None
 
     def is_frozen(self) -> bool:
