@@ -29,12 +29,12 @@ from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
     PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 )
+from .icon_score_mapper import IconScoreMapper
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
-    from .icon_score_mapper import IconScoreMapper
-    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
     from ..base.address import Address
     from ..prep.data.prep_container import PRep, PRepContainer
     from ..utils import ContextEngine, ContextStorage
@@ -229,3 +229,42 @@ class IconScoreContext(object):
 
     def put_dirty_prep(self, prep: 'PRep'):
         self.tx_dirty_preps[prep.address] = prep
+
+
+class IconScoreContextFactory:
+    def __init__(self, step_counter_factory: 'IconScoreStepCounterFactory'):
+        self.step_counter_factory = step_counter_factory
+
+    def create(self, context_type: 'IconScoreContextType', block: 'Block'):
+        context: 'IconScoreContext' = IconScoreContext(context_type)
+        context.block = block
+
+        if context_type == IconScoreContextType.DIRECT:
+            return context
+
+        self._set_step_counter(context)
+        self._set_context_attributes_for_processing_tx(context)
+
+        return context
+
+    @staticmethod
+    def _is_step_trace_on(context: 'IconScoreContext') -> bool:
+        return context.step_trace_flag and context.type == IconScoreContextType.INVOKE
+
+    def _set_step_counter(self, context: 'IconScoreContext'):
+        step_trace_flag = self._is_step_trace_on(context)
+        if context.type == IconScoreContextType.ESTIMATION:
+            context.step_counter = self.step_counter_factory.create(IconScoreContextType.INVOKE, step_trace_flag)
+        else:
+            context.step_counter = self.step_counter_factory.create(context.type, step_trace_flag)
+
+    @staticmethod
+    def _set_context_attributes_for_processing_tx(context: 'IconScoreContext'):
+        if context.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            return
+        context.block_batch = BlockBatch(Block.from_block(context.block))
+        context.tx_batch = TransactionBatch()
+        context.new_icon_score_mapper = IconScoreMapper()
+        # For PRep management
+        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context.tx_dirty_preps = OrderedDict()

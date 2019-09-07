@@ -40,7 +40,7 @@ from .icon_constant import (
     ISCORE_EXCHANGE_RATE, STEP_LOG_TAG)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
-from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
+from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
@@ -90,6 +90,7 @@ class IconServiceEngine(ContextContainer):
         self._step_counter_factory = None
         self._icon_pre_validator = None
         self._deposit_handler = None
+        self._context_factory = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -128,6 +129,7 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
+        self._context_factory = IconScoreContextFactory(self._step_counter_factory)
 
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
@@ -427,16 +429,7 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE, context.step_trace_flag)
-        context.block = block
-        context.block_batch = BlockBatch(Block.from_block(block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
-
-        # For PRep management
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
         self._set_revision_to_context(context)
         block_result = []
@@ -927,14 +920,7 @@ class IconServiceEngine(ContextContainer):
 
         :return: The amount of step
         """
-        context = IconScoreContext(IconScoreContextType.ESTIMATION)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = self._get_last_block()
-        context.block_batch = BlockBatch(Block.from_block(context.block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
+        context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
 
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.
@@ -965,9 +951,10 @@ class IconServiceEngine(ContextContainer):
         :param params:
         :return: the result of query
         """
-        context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._get_last_block()
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(
+            IconScoreContextType.QUERY,
+            block=self._get_last_block()
+        )
         self._set_revision_to_context(context)
         step_limit: int = context.step_counter.max_step_limit
 
@@ -1004,9 +991,7 @@ class IconServiceEngine(ContextContainer):
         params: dict = request['params']
         to: 'Address' = params.get('to')
 
-        context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._get_last_block()
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
+        context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
         self._set_revision_to_context(context)
 
         try:
@@ -1652,8 +1637,7 @@ class IconServiceEngine(ContextContainer):
         if new_icon_score_mapper:
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
-        context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.block = block_batch.block
+        context = self._context_factory.create(IconScoreContextType.DIRECT, block=block_batch.block)
 
         self._icx_context_db.write_batch(context=context, states=block_batch)
 
