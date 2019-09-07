@@ -22,7 +22,7 @@ from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBaseTransactionException, \
-    FatalException, IconServiceNotReadyException
+    FatalException, ServiceNotReadyException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
@@ -60,7 +60,7 @@ class IconScoreInnerTask(object):
 
     def _check_icon_service_ready(self):
         if not self._icon_service_engine.is_reward_calculator_ready():
-            raise IconServiceNotReadyException("Reward Calculator is not ready")
+            raise ServiceNotReadyException("Reward Calculator is not ready")
 
     @staticmethod
     def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:

@@ -35,7 +35,7 @@ class ExceptionCode(IntEnum):
     TIMEOUT_ERROR = 12
     STACK_OVERFLOW = 13
     INVALID_PACKAGE = 14
-    ICON_SERVICE_NOT_READY = 15
+    SERVICE_NOT_READY = 15
 
     # Caused by revert call or user-defined exception.
     SCORE_ERROR = 32
@@ -166,9 +166,9 @@ class InvalidPackageException(IconServiceBaseException):
         super().__init__(message, ExceptionCode.INVALID_PACKAGE)
 
 
-class IconServiceNotReadyException(IconServiceBaseException):
+class ServiceNotReadyException(IconServiceBaseException):
     def __init__(self, message: Optional[str]):
-        super().__init__(message, ExceptionCode.ICON_SERVICE_NOT_READY)
+        super().__init__(message, ExceptionCode.SERVICE_NOT_READY)
 
 
 class IconScoreException(IconServiceBaseException):

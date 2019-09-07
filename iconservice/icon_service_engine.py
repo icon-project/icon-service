@@ -255,7 +255,7 @@ class IconServiceEngine(ContextContainer):
     def get_ready_future(self):
         return IconScoreContext.engine.iiss.get_ready_future()
 
-    def is_reward_calculator_ready(self):
+    def is_reward_calculator_ready(self) -> bool:
         return IconScoreContext.engine.iiss.is_reward_calculator_ready()
 
     @staticmethod

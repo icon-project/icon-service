@@ -49,7 +49,7 @@ class RewardCalcProxy(object):
         self._ipc_server = IPCServer()
         self._message_queue: Optional['MessageQueue'] = None
         self._reward_calc: Optional[Popen] = None
-        self._ready_future = None
+        self._ready_future: Optional[asyncio.Future] = None
 
         self._ready_callback: Optional[Callable] = ready_callback
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
