@@ -25,8 +25,7 @@ from .iconscore.icon_score_mapper import IconScoreMapper
 
 if TYPE_CHECKING:
     from .base.address import Address
-    from .prep.data.prep_container import PRepContainer
-    from .prep.term import Term
+    from .prep.data import PRepContainer, Term
 
 
 class PrecommitFlag(IntFlag):

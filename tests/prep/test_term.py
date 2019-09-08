@@ -21,12 +21,9 @@ from iconservice.base.address import Address
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxStorage
-from iconservice.meta import MetaDBStorage
 from iconservice.prep import PRepStorage
-from iconservice.prep.data import PRep
-from iconservice.prep.term import Term
+from iconservice.prep.data import PRep, Term
 from iconservice.utils import ContextStorage
-from tests import create_address
 
 PREPS = [PRep(Address.from_bytes(os.urandom(32))) for _ in range(PREP_MAIN_AND_SUB_PREPS)]
 

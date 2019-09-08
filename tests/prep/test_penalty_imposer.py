@@ -15,13 +15,13 @@
 
 import os
 import unittest
-from unittest.mock import MagicMock
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.prep.data.prep import PRep, PenaltyReason, PRepStatus, PRepGrade
 from iconservice.prep.penalty_imposer import PenaltyImposer
-from iconservice.iconscore.icon_score_context import IconScoreContext
 
 if TYPE_CHECKING:
     pass
@@ -102,11 +102,12 @@ class TestPenaltyImposer(unittest.TestCase):
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold,
-            on_penalty_imposed=on_penalty_imposed
+            block_validation_penalty_threshold=block_validation_penalty_threshold
         )
 
-        penalty_imposer.run(context=self.context, prep=prep)
+        penalty_imposer.run(context=self.context,
+                            prep=prep,
+                            on_penalty_imposed=on_penalty_imposed)
         on_penalty_imposed.assert_not_called()
 
         prep.update_block_statistics(is_validator=True)
@@ -114,7 +115,8 @@ class TestPenaltyImposer(unittest.TestCase):
         assert prep.validated_blocks == validated_blocks + 1
         assert prep.unvalidated_sequence_blocks == 0
 
-        penalty_imposer.run(context=self.context, prep=prep)
+        penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
         on_penalty_imposed.assert_not_called()
 
     def test_block_validation_penalty(self):
@@ -132,12 +134,12 @@ class TestPenaltyImposer(unittest.TestCase):
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold,
-            on_penalty_imposed=on_penalty_imposed
+            block_validation_penalty_threshold=block_validation_penalty_threshold
         )
 
         # Block validation penalty works regardless of penalty_grace_period
-        penalty_imposer.run(context=self.context, prep=prep)
+        penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
         on_penalty_imposed.assert_called_with(
             self.context, prep.address, PenaltyReason.BLOCK_VALIDATION)
 
@@ -156,12 +158,12 @@ class TestPenaltyImposer(unittest.TestCase):
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold,
-            on_penalty_imposed=on_penalty_imposed
+            block_validation_penalty_threshold=block_validation_penalty_threshold
         )
 
         # Low productivity penalty does not work during penalty_grace_period
-        penalty_imposer.run(context=self.context, prep=prep)
+        penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
         on_penalty_imposed.assert_not_called()
 
         prep.update_block_statistics(is_validator=False)
@@ -170,6 +172,7 @@ class TestPenaltyImposer(unittest.TestCase):
         assert prep.unvalidated_sequence_blocks == 1
         assert prep.block_validation_proportion < 85
 
-        penalty_imposer.run(context=self.context, prep=prep)
+        penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
         on_penalty_imposed.assert_called_with(
             self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY)
