@@ -152,7 +152,7 @@ class IconScoreContext(object):
 
         # PReps to update on invoke
         self.preps: Optional['PRepContainer'] = None
-        self.tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
+        self._tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
         # Collect Main and Sub P-Reps which have just been invalidated by penalty or unregister
         # to use for updating term info at the end of invoke
         self._invalid_elected_preps: Optional[OrderedDict['Address', 'PRep']] = None
@@ -221,7 +221,7 @@ class IconScoreContext(object):
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
-        for dirty_prep in self.tx_dirty_preps.values():
+        for dirty_prep in self._tx_dirty_preps.values():
             self.preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
@@ -229,7 +229,7 @@ class IconScoreContext(object):
 
             self._put_to_invalid_elected_prep(dirty_prep)
 
-        self.tx_dirty_preps.clear()
+        self._tx_dirty_preps.clear()
 
     def _put_to_invalid_elected_prep(self, dirty_prep: 'PRep'):
         """Collect main and sub preps which cannot serve as a main and sub prep
@@ -255,13 +255,13 @@ class IconScoreContext(object):
             self.tx_batch.clear()
         if self.rc_tx_batch:
             self.rc_tx_batch.clear()
-        if self.tx_dirty_preps:
-            self.tx_dirty_preps.clear()
+        if self._tx_dirty_preps:
+            self._tx_dirty_preps.clear()
         if self._invalid_elected_preps:
             self._invalid_elected_preps.clear()
 
     def get_prep(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
-        prep: 'PRep' = self.tx_dirty_preps.get(address)
+        prep: 'PRep' = self._tx_dirty_preps.get(address)
         if prep is None:
             prep = self.preps.get_by_address(address)
 
@@ -273,7 +273,7 @@ class IconScoreContext(object):
     def put_dirty_prep(self, prep: 'PRep'):
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
 
-        self.tx_dirty_preps[prep.address] = prep
+        self._tx_dirty_preps[prep.address] = prep
 
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() end")
 
@@ -314,4 +314,5 @@ class IconScoreContextFactory:
         context.new_icon_score_mapper = IconScoreMapper()
         # For PRep management
         context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
+        context._tx_dirty_preps = OrderedDict()
+        context._invalid_elected_preps = OrderedDict()

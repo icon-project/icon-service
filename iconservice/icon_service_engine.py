@@ -447,7 +447,7 @@ class IconServiceEngine(ContextContainer):
             added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
             tx_requests.insert(0, base_transaction)
 
-        self.before_transaction_process(context, prev_block_generator, prev_block_validators)
+        self._before_transaction_process(context, prev_block_generator, prev_block_validators)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -481,13 +481,13 @@ class IconServiceEngine(ContextContainer):
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
                 Logger.info(tag=self.TAG,
-                            msg=f"Decentralization condition is met: blockHeight={context.block.height}")
+                            msg=f"Decentralization condition is met: {context.block}")
 
                 # When decentralization begins,
                 # change the reward calculation period from 43200 to 43120 which is the same as term_period
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
-        main_prep_as_dict, term = self.after_transaction_process(
+        main_prep_as_dict, term = self._after_transaction_process(
             context, precommit_flag, prev_block_generator, prev_block_validators)
 
         # Save precommit data
@@ -521,10 +521,10 @@ class IconServiceEngine(ContextContainer):
         except:
             pass
 
-    def before_transaction_process(self,
-                                   context: 'IconScoreContext',
-                                   prev_block_generator: Optional['Address'] = None,
-                                   prev_block_validators: Optional[List['Address']] = None):
+    def _before_transaction_process(self,
+                                    context: 'IconScoreContext',
+                                    prev_block_generator: Optional['Address'] = None,
+                                    prev_block_validators: Optional[List['Address']] = None):
 
         if not context.is_decentralized():
             return
@@ -538,8 +538,9 @@ class IconServiceEngine(ContextContainer):
         self._update_productivity(context, prev_block_generator, prev_block_validators)
         self._update_last_generate_block_height(context, prev_block_generator)
 
-    def after_transaction_process(
-            self,
+    @classmethod
+    def _after_transaction_process(
+            cls,
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
             prev_block_generator: Optional['Address'] = None,
@@ -557,14 +558,8 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        if self._is_prep_term_ended(context, flag):
-            # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, term = context.engine.prep.on_term_ended(context)
-        elif context.is_decentralized():
-            main_prep_as_dict, term = context.engine.prep.on_term_updated(context)
-        else:
-            main_prep_as_dict = None
-            term = None
+        main_prep_as_dict, term = context.engine.prep.on_block_invoked(
+            context, bool(flag & PrecommitFlag.DECENTRALIZATION))
 
         if context.revision >= REV_IISS:
             context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_validators, flag)
@@ -618,26 +613,6 @@ class IconServiceEngine(ContextContainer):
         context.update_dirty_prep_batch()
 
     @classmethod
-    def _is_prep_term_ended(cls,
-                            context: 'IconScoreContext',
-                            flag: 'PrecommitFlag') -> bool:
-        if context.revision < REV_DECENTRALIZATION:
-            return False
-
-        term: Optional['Term'] = context.engine.prep.term
-
-        if term:
-            return term.end_block_height == context.block.height
-
-        if flag & PrecommitFlag.DECENTRALIZATION:
-            # When decentralization begins,
-            # change the reward calculation period from 43200 to 43120 which is the same as term_period
-            context.storage.iiss.put_calc_period(context, context.term_period)
-            return True
-
-        return False
-
-    @classmethod
     def _update_last_generate_block_height(cls,
                                            context: 'IconScoreContext',
                                            prev_block_generator: Optional['Address']):
@@ -665,6 +640,7 @@ class IconServiceEngine(ContextContainer):
         """Updates the revision code of given context
         if governance or its state has been updated
 
+        :param flags:
         :param context: current context
         :param tx_result: transaction result
         :return:
