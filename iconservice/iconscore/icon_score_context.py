@@ -29,9 +29,8 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    TERM_PERIOD
+    TERM_PERIOD, PRepGrade
 )
-from ..prep.data.prep import PRepGrade
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -177,7 +176,8 @@ class IconScoreContext(object):
 
     @property
     def invalid_elected_preps(self) -> OrderedDict['Address', 'PRep']:
-        """Invalid main and sub P-Reps
+        """Return invalid main and sub P-Reps
+        This property is only available on invoke process
 
         :return:
         """

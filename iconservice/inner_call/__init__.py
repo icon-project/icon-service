@@ -19,7 +19,7 @@ from ..base.type_converter import TypeConverter
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..base.block import Block
-    from ..prep.term import Term
+    from ..prep.data import Term
 
 
 def get_main_preps(context: 'IconScoreContext', **_kwargs):

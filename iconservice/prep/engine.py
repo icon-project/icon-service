@@ -15,6 +15,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Iterable
 
 from iconcommons.logger import Logger
+
 from .data import Term, PRepSnapshot
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -48,12 +49,11 @@ class Engine(EngineBase, IISSEngineListener):
     * Manages term and preps
     * Handles P-Rep related JSON-RPC API requests
     """
-
     TAG = "PREP"
 
     def __init__(self):
         super().__init__()
-        Logger.debug("PRepEngine.__init__() start")
+        Logger.debug(tag=self.TAG, msg="PRepEngine.__init__() start")
 
         self._invoke_handlers: dict = {
             "registerPRep": self.handle_register_prep,
@@ -71,11 +71,12 @@ class Engine(EngineBase, IISSEngineListener):
         }
 
         self.preps = PRepContainer()
+        # self.term should be None before decentralization
         self.term: Optional['Term'] = None
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
-        Logger.debug("PRepEngine.__init__() end")
+        Logger.debug(tag=self.TAG, msg="PRepEngine.__init__() end")
 
     def open(self,
              context: 'IconScoreContext',

@@ -23,8 +23,7 @@ from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERC
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from .data import PRep
-    from .term import Term
+    from .data import PRep, Term
 
 scheme_pattern = r'^(http:\/\/|https:\/\/)'
 path_pattern = r'(\/\S*)?$'

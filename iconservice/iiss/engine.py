@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from .reward_calc.msg_data import GovernanceVariable
     from ..iiss.storage import RewardRate
     from ..icx import IcxStorage
-    from ..prep.term import Term
+    from ..prep.data import Term
     from ..base.block import Block
 
 _TAG = IISS_LOG_TAG
@@ -66,6 +66,7 @@ class Engine(EngineBase):
     """IISSEngine class
 
     """
+    TAG = "IISS"
 
     def __init__(self):
         super().__init__()
@@ -359,7 +360,7 @@ class Engine(EngineBase):
         """
 
         if len(params) == 1:
-            delegations: List[Dict[str, str]] = params[ConstantKeys.DELEGATIONS]
+            delegations: Optional[List[Dict[str, str]]] = params[ConstantKeys.DELEGATIONS]
         elif len(params) == 0:
             delegations = None
         else:
@@ -809,16 +810,14 @@ class Engine(EngineBase):
                             context: 'IconScoreContext',
                             term: Optional['Term']):
         # if not decentralized, term is None.
-        if term is None:
+        if not context.is_decentralized():
             return
 
-        total_100_delegated: int = 0
-        for prep in term.preps:
-            total_100_delegated += prep.delegated
+        Logger.debug(
+            tag=cls.TAG,
+            msg="_put_preps_for_rc_db() start: "
+                f"total_elected_prep_delegated={term.total_elected_prep_delegated}")
 
-        Logger.debug(f"put_preps_for_rc: total_prep_delegated{total_100_delegated}", "iiss")
-
-        data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(context.block.height,
-                                                                   total_100_delegated,
-                                                                   term.preps)
+        data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(
+            context.block.height, term.total_elected_prep_delegated, term.preps)
         context.storage.rc.put(context.rc_block_batch, data)
