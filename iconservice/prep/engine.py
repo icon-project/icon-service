@@ -15,7 +15,6 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Iterable
 
 from iconcommons.logger import Logger
-
 from .data import Term, PRepSnapshot
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -167,16 +166,33 @@ class Engine(EngineBase, IISSEngineListener):
     def rollback(self):
         pass
 
-    def on_block_invoked(self, context: 'IconScoreContext'):
-        """Called on IconServiceEngine.invoke()
+    def on_block_invoked(
+            self,
+            context: 'IconScoreContext',
+            is_decentralization_started: bool) -> Tuple[Optional[dict], Optional['Term']]:
+        """Called on IconServiceEngine._after_transaction_process()
 
         1. Adjust the grade for invalid P-Reps
         2. Update elected P-Reps in this term
 
         :param context:
+        :param is_decentralization_started:
+            True: Decentralization will begin at the next block
         :return:
         """
         self._handle_invalid_elected_preps(context)
+
+        if is_decentralization_started or self._is_term_ended(context):
+            # The current P-Rep term is over. Prepare the next P-Rep term
+            main_prep_as_dict, term = self._on_term_ended(context)
+        elif context.is_decentralized():
+            # In-term P-Rep replacement
+            main_prep_as_dict, term = self._on_term_updated(context)
+        else:
+            main_prep_as_dict = None
+            term = None
+
+        return main_prep_as_dict, term
 
     def _handle_invalid_elected_preps(self, context: 'IconScoreContext'):
         """Handles invalid P-Reps
@@ -190,7 +206,13 @@ class Engine(EngineBase, IISSEngineListener):
         assert self.term is not None
         self.term.update(context.invalid_elected_preps.keys())
 
-    def on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
+    def _is_term_ended(self, context: 'IconScoreContext') -> bool:
+        if self.term is None:
+            return False
+
+        return self.term.end_block_height == context.block.height
+
+    def _on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
         """Called in IconServiceEngine.invoke() every time when a term is ended
 
         Update P-Rep grades according to PRep.delegated
@@ -204,13 +226,13 @@ class Engine(EngineBase, IISSEngineListener):
         self._update_prep_grades_on_term_ended(context)
 
         # Create a term with context.preps whose grades are up-to-date
-        next_term: 'Term' = self._create_next_term(self.term, context)
+        new_term: 'Term' = self._create_next_term(self.term, context)
         main_preps_as_dict: dict = \
-            self._get_updated_main_preps(context, next_term, PRepResultState.NORMAL)
+            self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
 
-        context.storage.prep.put_term(context, next_term)
+        context.storage.prep.put_term(context, new_term)
 
-        return main_preps_as_dict, next_term
+        return main_preps_as_dict, new_term
 
     @classmethod
     def _put_last_term_info(cls, context: 'IconScoreContext', term: 'Term'):
@@ -226,14 +248,15 @@ class Engine(EngineBase, IISSEngineListener):
 
         context.storage.meta.put_last_term_info(context, start, end)
 
-    def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
+    def _on_term_updated(self, context: 'IconScoreContext') -> Tuple[Optional[dict], Optional['Term']]:
         """Update term with invalid elected P-Rep list during this term
+        (In-term P-Rep replacement)
 
         We have to consider 4 cases below:
         1. No invalid elected P-Rep
             - Nothing to do
         2. Only main P-Reps are invalidated
-            - Send new main P-Rep list to loopchain
+            - Send a new main P-Rep list to loopchain
             - Save the new term to DB
         3. Only sub P-Reps are invalidated
             - Save the new term to DB
@@ -246,7 +269,7 @@ class Engine(EngineBase, IISSEngineListener):
         """
         # No invalid elected P-Reps in this block
         if len(context.invalid_elected_preps) == 0:
-            return {}, None
+            return None, None
 
         new_term = self.term.copy()
         new_term.update(context.invalid_elected_preps)
@@ -254,12 +277,12 @@ class Engine(EngineBase, IISSEngineListener):
         new_term.freeze()
 
         if self.term.root_hash != new_term.root_hash:
-            # Case 2 or 4: Some main P-Reps are invalidated
-            main_preps_as_dict: dict = self._get_updated_main_preps(
-                context, new_term, PRepResultState.IN_TERM_UPDATED)
+            # Case 2 or 4: Some main P-Reps are replaced or removed
+            main_preps_as_dict: Optional[dict] = \
+                self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
             # Case 3: Only sub P-Reps are invalidated
-            main_preps_as_dict = {}
+            main_preps_as_dict = None
 
         context.storage.prep.put_term(context, new_term)
         return main_preps_as_dict, new_term
