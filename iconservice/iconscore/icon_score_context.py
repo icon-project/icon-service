@@ -17,7 +17,7 @@
 import threading
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Dict
 
 from iconcommons.logger import Logger
 from .icon_score_mapper import IconScoreMapper
@@ -175,7 +175,7 @@ class IconScoreContext(object):
         return self.storage.icx.get_total_supply(self)
 
     @property
-    def invalid_elected_preps(self) -> OrderedDict['Address', 'PRep']:
+    def invalid_elected_preps(self) -> Dict['Address', 'PRep']:
         """Return invalid main and sub P-Reps
         This property is only available on invoke process
 

@@ -45,10 +45,14 @@ class PRepSnapshot(object):
     @property
     def address(self) -> 'Address':
         return self._address
-    
+
     @property
     def delegated(self) -> int:
         return self._delegated
+
+    def __eq__(self, other: 'PRepSnapshot') -> bool:
+        return self.address == other.address \
+               and self.delegated == other.delegated
 
 
 class Term(object):
@@ -194,31 +198,7 @@ class Term(object):
                 self._sub_preps.append(snapshot)
 
         self._total_elected_prep_delegated = total_elected_prep_delegated
-        self._merkle_root_hash: bytes = self._generate_root_hash(self._main_preps)
-
-    def set_main_preps(self,
-                       it: Union[Iterable['PRep'], Iterable['PRepSnapshot']],
-                       size: int):
-        self._set_preps(it, size, self._main_preps)
-
-    def set_sub_preps(self,
-                      it: Union[Iterable['PRep'], Iterable['PRepSnapshot']],
-                      size: int):
-        self._set_preps(it, size, self._sub_preps)
-
-    @classmethod
-    def _set_preps(cls,
-                   it: Union[Iterable['PRep'], Iterable['PRepSnapshot']],
-                   size: int,
-                   preps: List['PRepSnapshot']):
-        preps.clear()
-
-        for item in it:
-            if len(preps) >= size:
-                break
-
-            snapshot = PRepSnapshot(item.address, item.delegated)
-            preps.append(snapshot)
+        self._generate_root_hash()
 
     def update(self, invalid_elected_preps: Iterable['Address']):
         self._check_access_permission()
@@ -232,7 +212,7 @@ class Term(object):
             raise AssertionError(f"{address} not in term: {self}")
 
         if self.is_dirty():
-            self._merkle_root_hash: bytes = self._generate_root_hash(self._main_preps)
+            self._generate_root_hash()
 
     def _replace_invalid_main_prep(self, address: 'Address') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
@@ -250,12 +230,12 @@ class Term(object):
             self._main_preps.pop(index)
             Logger.warning(tag=self.TAG,
                            msg=f"Not enough sub P-Rep to replace an invalid main P-Rep")
-
-        self._main_preps[index] = self._sub_preps.pop(0)
-        Logger.info(
-            tag=self.TAG,
-            msg=f"Replace a main P-Rep: "
-                f"index={index} {address} -> {self._main_preps[index].address}")
+        else:
+            self._main_preps[index] = self._sub_preps.pop(0)
+            Logger.info(
+                tag=self.TAG,
+                msg=f"Replace a main P-Rep: "
+                    f"index={index} {address} -> {self._main_preps[index].address}")
 
         self._flag |= _Flag.DIRTY
         return index
@@ -268,11 +248,12 @@ class Term(object):
             if not exists, returns -1
         """
         index: int = self._index_of_prep(self._sub_preps, address)
-        if index < 0:
-            return index
 
-        self._sub_preps.pop(index)
-        self._flag |= _Flag.DIRTY
+        if index >= 0:
+            self._sub_preps.pop(index)
+            self._flag |= _Flag.DIRTY
+
+        return index
 
     @classmethod
     def _index_of_prep(cls, preps: List['PRepSnapshot'], address: 'Address') -> int:
@@ -282,14 +263,14 @@ class Term(object):
 
         return -1
 
-    @classmethod
-    def _generate_root_hash(cls, preps: Iterable['PRepSnapshot']) -> bytes:
+    def _generate_root_hash(self):
 
         def _gen(snapshots: Iterable['PRepSnapshot']) -> bytes:
             for snapshot in snapshots:
                 yield snapshot.address.to_bytes_including_prefix()
 
-        return RootHashGenerator.generate_root_hash(values=_gen(preps), do_hash=True)
+        self._merkle_root_hash: bytes = \
+            RootHashGenerator.generate_root_hash(values=_gen(self._main_preps), do_hash=True)
 
     @classmethod
     def from_list(cls, data: List) -> 'Term':
@@ -311,6 +292,8 @@ class Term(object):
         for address, delegated in sub_preps:
             term._sub_preps.append(PRepSnapshot(address, delegated))
 
+        term._generate_root_hash()
+
         return term
 
     def to_list(self) -> List:
@@ -329,5 +312,8 @@ class Term(object):
     def copy(self) -> 'Term':
         term = copy.copy(self)
         term._flag = _Flag.NONE
+
+        term._main_preps = [prep_snapshot for prep_snapshot in self._main_preps]
+        term._sub_preps = [prep_snapshot for prep_snapshot in self._sub_preps]
 
         return term
