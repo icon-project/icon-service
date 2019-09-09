@@ -363,8 +363,8 @@ class Term(object):
             self._irep,
             self._total_supply,
             self._total_delegated,
-            [(snapshot.address, snapshot.delegated) for snapshot in self._main_preps],
-            [(snapshot.address, snapshot.delegated) for snapshot in self._sub_preps],
+            [[snapshot.address, snapshot.delegated] for snapshot in self._main_preps],
+            [[snapshot.address, snapshot.delegated] for snapshot in self._sub_preps],
         ]
 
     def copy(self) -> 'Term':

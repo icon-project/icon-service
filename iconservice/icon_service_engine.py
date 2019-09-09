@@ -36,7 +36,7 @@ from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
-    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -60,6 +60,7 @@ from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
+from .prep.data import PRep
 from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
@@ -69,7 +70,7 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
-    from .prep.data import PRep, Term
+    from .prep.data import Term
     from .iiss.storage import RewardRate
 
 
@@ -1142,11 +1143,12 @@ class IconServiceEngine(ContextContainer):
 
     def _handle_get_iiss_info(self, context: 'IconScoreContext', _params: dict) -> dict:
         response = dict()
+        term = context.engine.prep.term
 
         response['blockHeight'] = context.block.height
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         response['variable'] = dict()
-        response['variable']['irep'] = context.engine.prep.term.irep
+        response['variable']['irep'] = term.irep if term else -1
         response['variable']['rrep'] = reward_rate.reward_prep
 
         calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
@@ -1161,7 +1163,7 @@ class IconServiceEngine(ContextContainer):
         term_start_block, term_end_block = context.storage.meta.get_last_term_info(context)
 
         if term_end_block < 0 or context.block.height != term_end_block:
-            term_end_block: int = context.engine.prep.term.end_block_height
+            term_end_block: int = term.end_block_height if term else -1
         response['nextPRepTerm'] = term_end_block + 1
 
         response['rcResult'] = self._create_rc_result(context, calc_start_block, calc_end_block)
