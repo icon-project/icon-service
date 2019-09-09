@@ -59,11 +59,8 @@ class Regulator:
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if end_block_height_of_calc == context.block.height:
-            prev_calc_period_issued_iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
-            calc_period: int = context.storage.iiss.get_calc_period(context)
-            context.engine.iiss.check_calculate_request_block_height(request_block_height,
-                                                                     end_block_height_of_calc,
-                                                                     calc_period)
+            prev_calc_period_issued_iscore: int = \
+                context.engine.iiss.get_prev_period_iscore(context, end_block_height_of_calc)
 
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
@@ -167,10 +164,7 @@ class Regulator:
                                              prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
         assert icx_issue_amount >= 0
         assert prev_block_cumulative_fee >= 0
-
-        # check if RC has sent response about 'CALCULATE' requests. every period should get response
-        if prev_calc_period_issued_iscore == -1:
-            raise FatalException("There is no prev_calc_period_iscore")
+        assert prev_calc_period_issued_iscore >= 0
 
         # get difference between icon_service and reward_calc after set exchange rates
         prev_calc_over_issued_iscore: int = \
