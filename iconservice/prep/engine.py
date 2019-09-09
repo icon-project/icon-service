@@ -204,7 +204,7 @@ class Engine(EngineBase, IISSEngineListener):
             return
 
         assert self.term is not None
-        self.term.update(context.invalid_elected_preps.keys())
+        self.term.update_preps(context.invalid_elected_preps.values())
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
@@ -272,7 +272,7 @@ class Engine(EngineBase, IISSEngineListener):
             return None, None
 
         new_term = self.term.copy()
-        new_term.update(context.invalid_elected_preps)
+        new_term.update_preps(context.invalid_elected_preps.values())
         assert new_term.is_dirty()
         new_term.freeze()
 
