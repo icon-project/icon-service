@@ -754,9 +754,11 @@ class Engine(EngineBase):
             must be changed by using determined term before.
         """
         if term is None:
+            # Prevoting
             current_total_supply: int = context.storage.icx.get_total_supply(context)
             current_total_prep_delegated: int = context.preps.total_delegated
         else:
+            # Decentralization
             current_total_supply: int = term.total_supply
             current_total_prep_delegated: int = term.total_delegated
 
@@ -774,6 +776,7 @@ class Engine(EngineBase):
         reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_prep)
 
         # todo: versioning at this point?
+        # end block height of term
         version: int = context.storage.rc.current_version
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(version,
                                                                               context.block.height,

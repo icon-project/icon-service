@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List, Iterable, Union, Optional
 
 from iconcommons.logger import Logger
 from ...base.exception import AccessDeniedException
-from ...icon_constant import PenaltyReason
+from ...icon_constant import PRepStatus, PenaltyReason
 from ...utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
@@ -134,11 +134,24 @@ class Term(object):
     def total_supply(self) -> int:
         return self._total_supply
 
+    # @total_supply.setter
+    # def total_supply(self, value: int):
+    #     self._total_supply = value
+
     @property
     def total_delegated(self) -> int:
         """Total amount of delegation which all active P-Reps got when this term started
         """
         return self._total_delegated
+
+    # @total_delegated.setter
+    # def total_delegated(self, value: int):
+    #     """Called on PRepEngine._on_term_updated()
+    #
+    #     :param value:
+    #     :return:
+    #     """
+    #     self._total_delegated = value
 
     @property
     def total_elected_prep_delegated(self) -> int:
@@ -169,10 +182,12 @@ class Term(object):
         return self._merkle_root_hash
 
     def set_preps(self,
-                  it: Union[Iterable['PRep'], Iterable['PRepSnapshot']],
+                  it: Iterable['PRep'],
                   main_prep_count: int,
                   elected_prep_count: int):
         """Set elected P-Rep data to term
+
+        This method MUST BE called at the end of the term
 
         :param it:
         :param main_prep_count:
@@ -190,6 +205,9 @@ class Term(object):
             if i >= elected_prep_count:
                 break
 
+            # active and no penalty
+            assert prep.is_electable()
+
             snapshot = PRepSnapshot(prep.address, prep.delegated)
             total_elected_prep_delegated += prep.delegated
 
@@ -201,14 +219,22 @@ class Term(object):
         self._total_elected_prep_delegated = total_elected_prep_delegated
         self._generate_root_hash()
 
-    def update_preps(self, invalid_elected_preps: Iterable['PRep']):
+    def update_preps(self,
+                     total_supply: int,
+                     total_delegated: int,
+                     invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
 
+        :param total_supply:
+        :param total_delegated:
         :param invalid_elected_preps:
             elected P-Reps that cannot keep governance during this term as their penalties
         :return:
         """
         self._check_access_permission()
+
+        self._total_supply = total_supply
+        self._total_delegated = total_delegated
 
         for prep in invalid_elected_preps:
             if self._replace_invalid_main_prep(prep) >= 0:
@@ -247,7 +273,7 @@ class Term(object):
                 msg=f"Replace a main P-Rep: "
                     f"index={index} {address} -> {self._main_preps[index].address}")
 
-        self._reduce_total_elected_prep_delegated(invalid_prep_snapshot, invalid_prep.penalty)
+        self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
 
         self._flag |= _Flag.DIRTY
         return index
@@ -263,29 +289,25 @@ class Term(object):
 
         if index >= 0:
             invalid_prep_snapshot = self._sub_preps.pop(index)
-            self._reduce_total_elected_prep_delegated(
-                invalid_prep_snapshot, invalid_prep.penalty)
+            self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
 
             self._flag |= _Flag.DIRTY
 
         return index
 
-    def _reduce_total_elected_prep_delegated(self,
-                                             invalid_prep_snapshot: 'PRepSnapshot',
-                                             penalty: 'PenaltyReason'):
+    def _reduce_total_elected_prep_delegated(self, invalid_prep: 'PRep', delegated: int):
         """Reduce total_elected_prep_delegated by the delegated amount of the given invalid P-Rep
 
-        :param invalid_prep_snapshot:
-        :param penalty:
+        :param invalid_prep:
+        :param delegated:
         :return:
         """
-        assert penalty != PenaltyReason.NONE
-
         # The P-Rep that gets BLOCK_VALIDATION penalty cannot serve as a main or sub P-Rep during this term,
         # but its B2 reward has been provided
-        if penalty != PenaltyReason.BLOCK_VALIDATION:
+        if invalid_prep.status != PRepStatus.ACTIVE \
+                or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
             old_delegated = self._total_elected_prep_delegated
-            self._total_elected_prep_delegated -= invalid_prep_snapshot.delegated
+            self._total_elected_prep_delegated -= delegated
 
             Logger.info(tag=self.TAG,
                         msg="Reduce total_elected_prep_delegated: "

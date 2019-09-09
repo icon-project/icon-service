@@ -15,12 +15,14 @@
 
 import random
 import unittest
+import copy
 from typing import List
 from unittest.mock import Mock
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.icon_constant import (
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, TERM_PERIOD, IconScoreContextType
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, TERM_PERIOD,
+    IconScoreContextType, PenaltyReason, PRepStatus
 )
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxStorage
@@ -61,14 +63,18 @@ class TestTerm(unittest.TestCase):
 
         self.preps = []
         self.total_elected_prep_delegated = 0
-        for i in range(PREP_MAIN_AND_SUB_PREPS):
+        for i in range(PREP_MAIN_AND_SUB_PREPS + 10):
             delegated = 100 * 10 ** 18 - i
 
             self.preps.append(PRep(
                 Address.from_prefix_and_int(AddressPrefix.EOA, i),
                 delegated=delegated
             ))
-            self.total_elected_prep_delegated += delegated
+
+            if i < PREP_MAIN_AND_SUB_PREPS:
+                self.total_elected_prep_delegated += delegated
+
+        self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
 
     def test_set_preps(self):
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
@@ -90,46 +96,89 @@ class TestTerm(unittest.TestCase):
             assert prep.address == prep_snapshot.address
             assert prep.delegated == prep_snapshot.delegated
 
-    def test_update(self):
+    def test_update_preps_with_critical_penalty(self):
+        # Remove an invalid Main P-Rep which gets a penalty
+        penalties = [
+            PenaltyReason.LOW_PRODUCTIVITY,
+            PenaltyReason.PREP_DISQUALIFICATION
+        ]
+
+        for penalty in penalties:
+            self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+            assert isinstance(self.term.root_hash, bytes)
+            assert len(self.term.root_hash) == 32
+
+            term = self.term.copy()
+            invalid_main_prep = copy.deepcopy(self.preps[0])
+            invalid_main_prep.penalty = penalty
+            invalid_elected_preps: List['PRep'] = [invalid_main_prep]
+
+            term.update_preps(invalid_elected_preps)
+            assert len(term.main_preps) == PREP_MAIN_PREPS
+            assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
+            assert isinstance(term.root_hash, bytes)
+            assert term.root_hash != self.term.root_hash
+            assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+
+    def test_update_preps_with_block_validation_penalty(self):
+        # Remove an invalid Main P-Rep which gets a block validation penalty
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
         assert isinstance(self.term.root_hash, bytes)
         assert len(self.term.root_hash) == 32
 
-        # Remove an invalid Main P-Rep
         term = self.term.copy()
-        invalid_elected_preps: List['Address'] = [
-            self.preps[0].address,
-        ]
-        term.update(invalid_elected_preps)
+        invalid_main_prep = copy.deepcopy(self.preps[0])
+        invalid_main_prep.penalty = PenaltyReason.BLOCK_VALIDATION
+        invalid_elected_preps: List['PRep'] = [invalid_main_prep]
+
+        term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
+        assert term.total_elected_prep_delegated == self.total_elected_prep_delegated
 
-        # Remove an invalid sub P-Rep
+    def test_update_preps_with_unregistered_prep(self):
+        self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        assert isinstance(self.term.root_hash, bytes)
+        assert len(self.term.root_hash) == 32
+
         term = self.term.copy()
-        invalid_elected_preps: List['Address'] = [
-            self.preps[PREP_MAIN_PREPS].address,
-        ]
-        term.update(invalid_elected_preps)
+        invalid_main_prep = copy.deepcopy(self.preps[0])
+        invalid_main_prep.status = PRepStatus.UNREGISTERED
+        invalid_elected_preps: List['PRep'] = [invalid_main_prep]
+
+        term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
         assert isinstance(term.root_hash, bytes)
-        assert term.root_hash == self.term.root_hash
+        assert term.root_hash != self.term.root_hash
+        assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
 
+    def test_update_preps_with_sub_preps_only(self):
         # Remove all sub P-Reps
+
+        self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+
         term = self.term.copy()
-        invalid_elected_preps: List['Address'] = [prep.address for prep in self.preps[PREP_MAIN_PREPS:]]
-        term.update(invalid_elected_preps)
+        invalid_elected_preps: List['PRep'] = []
+        for i in range(PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS):
+            prep = self.preps[i]
+            prep.penalty = PenaltyReason.LOW_PRODUCTIVITY
+            invalid_elected_preps.append(prep)
+        assert len(invalid_elected_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS
+
+        term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == 0
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash == self.term.root_hash
 
+    def test_update_preps_2(self):
         # Remove all main P-Reps
         term = self.term.copy()
-        invalid_elected_preps: List['Address'] = [prep.address for prep in self.preps[:PREP_MAIN_PREPS]]
-        term.update(invalid_elected_preps)
+        invalid_elected_preps: List['PRep'] = [prep.copy() for prep in self.preps[:PREP_MAIN_PREPS]]
+        term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS * 2
         assert isinstance(term.root_hash, bytes)
@@ -137,8 +186,8 @@ class TestTerm(unittest.TestCase):
 
         # Remove all P-Reps except for a P-Rep
         term = self.term.copy()
-        invalid_elected_preps: List['Address'] = [prep.address for prep in self.preps[1:]]
-        term.update(invalid_elected_preps)
+        invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[1:]]
+        term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == 1
         assert len(term.sub_preps) == 0
         assert isinstance(term.root_hash, bytes)
