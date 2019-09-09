@@ -273,7 +273,11 @@ class Engine(EngineBase, IISSEngineListener):
             return None, None
 
         new_term = self.term.copy()
-        new_term.update_preps(context.invalid_elected_preps.values())
+        new_term.update_preps(
+            context.total_supply,
+            context.preps.total_delegated,
+            context.invalid_elected_preps.values())
+
         assert new_term.is_dirty()
         new_term.freeze()
 
