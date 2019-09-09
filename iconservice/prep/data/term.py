@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, List, Iterable, Union, Optional
 
 from iconcommons.logger import Logger
 from ...base.exception import AccessDeniedException
+from ...icon_constant import PenaltyReason
 from ...utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
@@ -200,31 +201,40 @@ class Term(object):
         self._total_elected_prep_delegated = total_elected_prep_delegated
         self._generate_root_hash()
 
-    def update(self, invalid_elected_preps: Iterable['Address']):
+    def update_preps(self, invalid_elected_preps: Iterable['PRep']):
+        """Update main and sub P-Reps with invalid elected P-Reps
+
+        :param invalid_elected_preps:
+            elected P-Reps that cannot keep governance during this term as their penalties
+        :return:
+        """
         self._check_access_permission()
 
-        for address in invalid_elected_preps:
-            if self._replace_invalid_main_prep(address) >= 0:
+        for prep in invalid_elected_preps:
+            if self._replace_invalid_main_prep(prep) >= 0:
                 continue
-            if self._remove_invalid_sub_prep(address) >= 0:
+            if self._remove_invalid_sub_prep(prep) >= 0:
                 continue
 
-            raise AssertionError(f"{address} not in term: {self}")
+            raise AssertionError(f"{prep.address} not in term: {self}")
 
         if self.is_dirty():
             self._generate_root_hash()
 
-    def _replace_invalid_main_prep(self, address: 'Address') -> int:
+    def _replace_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
 
-        :param address: The address of an invalid main P-Rep
+        :param invalid_prep: an invalid main P-Rep
         :return: the index of an given address in self._main_preps
             if not exists, returns -1
         """
 
+        address = invalid_prep.address
         index: int = self._index_of_prep(self._main_preps, address)
         if index < 0:
             return index
+
+        invalid_prep_snapshot = self._main_preps[index]
 
         if len(self._sub_preps) == 0:
             self._main_preps.pop(index)
@@ -237,23 +247,49 @@ class Term(object):
                 msg=f"Replace a main P-Rep: "
                     f"index={index} {address} -> {self._main_preps[index].address}")
 
+        self._reduce_total_elected_prep_delegated(invalid_prep_snapshot, invalid_prep.penalty)
+
         self._flag |= _Flag.DIRTY
         return index
 
-    def _remove_invalid_sub_prep(self, address: 'Address') -> int:
+    def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
         """Remove an invalid sub P-Rep from self._sub_preps
 
-        :param address: The address of an invalid sub P-Rep
+        :param invalid_prep: an invalid sub P-Rep
         :return: the index of an given address in self._sub_preps
             if not exists, returns -1
         """
-        index: int = self._index_of_prep(self._sub_preps, address)
+        index: int = self._index_of_prep(self._sub_preps, invalid_prep.address)
 
         if index >= 0:
-            self._sub_preps.pop(index)
+            invalid_prep_snapshot = self._sub_preps.pop(index)
+            self._reduce_total_elected_prep_delegated(
+                invalid_prep_snapshot, invalid_prep.penalty)
+
             self._flag |= _Flag.DIRTY
 
         return index
+
+    def _reduce_total_elected_prep_delegated(self,
+                                             invalid_prep_snapshot: 'PRepSnapshot',
+                                             penalty: 'PenaltyReason'):
+        """Reduce total_elected_prep_delegated by the delegated amount of the given invalid P-Rep
+
+        :param invalid_prep_snapshot:
+        :param penalty:
+        :return:
+        """
+        assert penalty != PenaltyReason.NONE
+
+        # The P-Rep that gets BLOCK_VALIDATION penalty cannot serve as a main or sub P-Rep during this term,
+        # but its B2 reward has been provided
+        if penalty != PenaltyReason.BLOCK_VALIDATION:
+            old_delegated = self._total_elected_prep_delegated
+            self._total_elected_prep_delegated -= invalid_prep_snapshot.delegated
+
+            Logger.info(tag=self.TAG,
+                        msg="Reduce total_elected_prep_delegated: "
+                        f"{old_delegated} -> {self.total_elected_prep_delegated}")
 
     @classmethod
     def _index_of_prep(cls, preps: List['PRepSnapshot'], address: 'Address') -> int:
