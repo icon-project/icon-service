@@ -13,15 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 import unittest
 from typing import List, Tuple
-import random
+from unittest import mock
 
-from iconservice.prep import PRepEngine
-from iconservice.prep.data import PRep, PRepContainer
+from iconservice.base.address import AddressPrefix, Address
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import PRepGrade
-from iconservice.base.address import AddressPrefix, Address
+from iconservice.prep import PRepEngine
+from iconservice.prep.data import PRep, PRepContainer
 
 
 class TestEngine(unittest.TestCase):
@@ -46,11 +47,17 @@ class TestEngine(unittest.TestCase):
         delegated_list: List[Tuple[int, int]] = []
         new_preps: 'PRepContainer' = self.new_preps
 
+        term = mock.MagicMock()
+        term.preps = []
+
+        context = mock.MagicMock()
+        context.main_prep_count = PREP_MAIN_PREPS
+        context.main_and_sub_prep_count = PREP_MAIN_AND_SUB_PREPS
+        context.preps = new_preps
+        context.term = term
+
         # Case0: Network has just decentralized without any delegation
-        PRepEngine._update_prep_grades_on_term_ended(main_prep_count=PREP_MAIN_PREPS,
-                                                     main_and_sub_prep_count=PREP_MAIN_AND_SUB_PREPS,
-                                                     old_preps=[],
-                                                     new_preps=new_preps)
+        PRepEngine._update_prep_grades_on_term_ended(context)
 
         for i, prep in enumerate(new_preps):
             if i < PREP_MAIN_PREPS:

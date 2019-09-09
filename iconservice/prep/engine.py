@@ -91,7 +91,7 @@ class Engine(EngineBase, IISSEngineListener):
                                    block_validation_penalty_threshold)
 
         self._load_preps(context)
-        self.term: Optional['Term'] = context.storage.prep.get_term()
+        self.term: Optional['Term'] = context.storage.prep.get_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
@@ -305,16 +305,18 @@ class Engine(EngineBase, IISSEngineListener):
 
         main_prep_count: int = context.main_prep_count
         main_and_sub_prep_count: int = context.main_and_sub_prep_count
-        old_preps: Iterable['PRepSnapshot'] = self.term.preps
         new_preps: 'PRepContainer' = context.preps
 
         # 0: old grade, 1: new grade
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
-        # Put the address and grade of a old P-Rep to prep_grades dict
-        for prep in old_preps:
-            # grades[0] is an old grade and grades[1] is a new grade
-            prep_grades[prep.address] = (prep.grade, PRepGrade.CANDIDATE)
+        if self.term:
+            # Put the address and grade of a old P-Rep to prep_grades dict
+            old_preps: Iterable['PRepSnapshot'] = self.term.preps
+            for prep_snapshot in old_preps:
+                # grades[0] is an old grade and grades[1] is a new grade
+                prep = context.preps.get_by_address(prep_snapshot.address)
+                prep_grades[prep.address] = (prep.grade, PRepGrade.CANDIDATE)
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
         for i in range(main_and_sub_prep_count):
