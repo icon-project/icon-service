@@ -552,6 +552,10 @@ class IconServiceEngine(ContextContainer):
             context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
+
+        if main_prep_as_dict is not None:
+            Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")
+
         return main_prep_as_dict, term
 
     @classmethod
