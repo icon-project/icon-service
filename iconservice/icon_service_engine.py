@@ -440,7 +440,8 @@ class IconServiceEngine(ContextContainer):
             # todo: if the txHash field is add to addedTransaction, should remove this logic
             tx_params_to_added = deepcopy(base_transaction["params"])
             del tx_params_to_added["txHash"]
-            added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
+            tx_hash: bytes = base_transaction["params"]["txHash"]
+            added_transactions[tx_hash.hex()] = tx_params_to_added
             tx_requests.insert(0, base_transaction)
 
         self.before_transaction_process(context, prev_block_generator, prev_block_validators)

@@ -40,7 +40,7 @@ class HashGenerator:
         return '.'.join(_gen())
 
     @classmethod
-    def generate_hash(cls, origin_data: dict) -> str:
+    def generate_hash(cls, origin_data: dict) -> bytes:
         origin = cls.generate_salted_origin(origin_data)
         return hashlib.sha3_256(origin.encode()).digest()
 

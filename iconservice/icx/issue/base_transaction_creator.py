@@ -36,7 +36,7 @@ class BaseTransactionCreator(object):
             "dataType": "base",
             "data": issue_data
         }
-        params["txHash"]: str = BaseTransactionCreator._generate_transaction_hash(params)
+        params["txHash"]: bytes = BaseTransactionCreator._generate_transaction_hash(params)
 
         transaction = {
             "method": "icx_sendTransaction",
@@ -45,7 +45,7 @@ class BaseTransactionCreator(object):
         return transaction, regulator
 
     @staticmethod
-    def _generate_transaction_hash(transaction_params: dict) -> str:
+    def _generate_transaction_hash(transaction_params: dict) -> bytes:
         copied_transaction_params: dict = deepcopy(transaction_params)
         converted_transaction_params: dict = TypeConverter.convert_type_reverse(copied_transaction_params)
         return HashGenerator.generate_hash(converted_transaction_params)
