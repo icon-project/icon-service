@@ -26,7 +26,8 @@ def get_main_preps(context: 'IconScoreContext', **_kwargs):
     term: 'Term' = context.engine.prep.term
     preps: Optional[dict] = None
     if context.is_decentralized():
-        preps: Optional[dict] = context.engine.prep.get_main_preps_in_dict(term.main_preps)
+        preps: Optional[dict] = \
+            context.engine.prep.get_main_preps_in_dict(context, term)
     if preps is None:
         preps = {}
 

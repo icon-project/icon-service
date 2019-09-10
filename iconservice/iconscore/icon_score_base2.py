@@ -323,18 +323,22 @@ class PRepInfo(object):
         self.name = name
 
 
-def __create_prep_info_from_prep(prep: 'PRep') -> 'PRepInfo':
-    return PRepInfo(prep.address, prep.delegated, prep.name)
-
-
 def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    if context:
+    # TODO: goldworm
+    term = context.engine.prep.term
+
+    if term:
         prep_info_list: List[PRepInfo] = []
-        for prep in context.engine.prep.term.main_preps:
-            prep_info_list.append(__create_prep_info_from_prep(prep))
+        for prep_snapshot in term.main_preps:
+            prep = context.get_prep(prep_snapshot.address)
+            prep_info_list.append(PRepInfo(
+                prep_snapshot.address,
+                prep_snapshot.delegated,
+                prep.name
+            ))
         return prep_info_list, context.engine.prep.term.end_block_height
     else:
         return [], -1
@@ -344,10 +348,17 @@ def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    if context:
+    term = context.engine.prep.term
+
+    if term:
         prep_info_list: List[PRepInfo] = []
-        for prep in context.engine.prep.term.sub_preps:
-            prep_info_list.append(__create_prep_info_from_prep(prep))
+        for prep_snapshot in term.sub_preps:
+            prep = context.get_prep(prep_snapshot.address)
+            prep_info_list.append(PRepInfo(
+                prep_snapshot.address,
+                prep_snapshot.delegated,
+                prep.name
+            ))
         return prep_info_list, context.engine.prep.term.end_block_height
     else:
         return [], -1

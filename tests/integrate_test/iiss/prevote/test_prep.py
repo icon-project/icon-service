@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, List
 from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus
+from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus, PenaltyReason
 from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
@@ -110,7 +110,9 @@ class TestIntegratePrep(TestIISSBase):
                 "totalBlocks": 0,
                 "validatedBlocks": 0,
                 "status": PRepStatus.ACTIVE.value,
-                "grade": PRepGrade.CANDIDATE.value
+                "grade": PRepGrade.CANDIDATE.value,
+                "penalty": PenaltyReason.NONE.value,
+                "unvalidatedSequenceBlocks": 0
             }
             self.assertEqual(expected_response, response)
 
@@ -237,7 +239,9 @@ class TestIntegratePrep(TestIISSBase):
                     "irep": IISS_INITIAL_IREP,
                     "irepUpdateBlockHeight": irep_update_block_height,
                     "totalBlocks": 0,
-                    "validatedBlocks": 0
+                    "validatedBlocks": 0,
+                    "penalty": PenaltyReason.NONE.value,
+                    "unvalidatedSequenceBlocks": 0
                 }
             )
         expected_response: dict = \

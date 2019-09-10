@@ -261,7 +261,11 @@ class IconScoreContext(object):
             self._invalid_elected_preps.clear()
 
     def get_prep(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
-        prep: 'PRep' = self._tx_dirty_preps.get(address)
+        prep: Optional['PRep'] = None
+
+        if self._tx_dirty_preps is not None:
+            prep = self._tx_dirty_preps.get(address)
+
         if prep is None:
             prep = self.preps.get_by_address(address)
 
@@ -273,7 +277,8 @@ class IconScoreContext(object):
     def put_dirty_prep(self, prep: 'PRep'):
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
 
-        self._tx_dirty_preps[prep.address] = prep
+        if self._tx_dirty_preps is not None:
+            self._tx_dirty_preps[prep.address] = prep
 
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() end")
 
@@ -307,12 +312,14 @@ class IconScoreContextFactory:
 
     @staticmethod
     def _set_context_attributes_for_processing_tx(context: 'IconScoreContext'):
-        if context.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
-            return
-        context.block_batch = BlockBatch(Block.from_block(context.block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
-        # For PRep management
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context._tx_dirty_preps = OrderedDict()
-        context._invalid_elected_preps = OrderedDict()
+        if context.type in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            context.block_batch = BlockBatch(Block.from_block(context.block))
+            context.tx_batch = TransactionBatch()
+            context.new_icon_score_mapper = IconScoreMapper()
+
+            # For PRep management
+            context.preps = context.engine.prep.preps.copy(mutable=True)
+            context._tx_dirty_preps = OrderedDict()
+            context._invalid_elected_preps = OrderedDict()
+        else:
+            context.preps = context.engine.prep.preps  # Readonly

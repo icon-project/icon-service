@@ -99,6 +99,7 @@ class TestPreps(TestIISSBase):
                                                                               account.address
                                                                               for account in accounts[1:PREP_MAIN_PREPS]
                                                                           ])
+        # 0: base transaction index
         for tx_result in tx_results[1:]:
             self.assertEqual("PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0])
 
@@ -172,16 +173,14 @@ class TestPreps(TestIISSBase):
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
-        expected_total_delegated: int = 0
         for account in accounts[:PREP_MAIN_PREPS]:
             expected_preps.append({
                 'address': account.address,
                 'delegated': 1
             })
-            expected_total_delegated += 1
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": 1 * test_prep_count
         }
         self.assertEqual(expected_response, response)
 
@@ -190,7 +189,7 @@ class TestPreps(TestIISSBase):
         for account in self._accounts[:PREP_MAIN_PREPS]:
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
-        tx_results: ['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list,
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list,
                                                                           prev_block_generator=accounts[0].address,
                                                                           prev_block_validators=[
                                                                               account.address
@@ -211,16 +210,14 @@ class TestPreps(TestIISSBase):
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
-        expected_total_delegated: int = 0
         for account in accounts[:PREP_MAIN_PREPS]:
             expected_preps.append({
                 'address': account.address,
                 'delegated': 1
             })
-            expected_total_delegated += 1
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": 1 * test_prep_count
         }
         self.assertEqual(expected_response, response)
 

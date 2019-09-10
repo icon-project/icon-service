@@ -18,8 +18,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from iconservice.icon_constant import IconScoreContextType, REV_DECENTRALIZATION, RC_DB_VERSION_0
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import REV_DECENTRALIZATION, RC_DB_VERSION_0, RC_DB_VERSION_2
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.data_creator import *
 from iconservice.iiss.reward_calc.msg_data import TxType

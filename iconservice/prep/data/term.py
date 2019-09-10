@@ -17,12 +17,13 @@ __all__ = ("Term", "PRepSnapshot")
 
 import copy
 import enum
-from typing import TYPE_CHECKING, List, Iterable, Union, Optional
+from typing import TYPE_CHECKING, List, Iterable, Optional
 
 from iconcommons.logger import Logger
 from ...base.exception import AccessDeniedException
 from ...icon_constant import PRepStatus, PenaltyReason
 from ...utils.hashing.hash_generator import RootHashGenerator
+from ...utils import bytes_to_hex
 
 if TYPE_CHECKING:
     from ...base.address import Address
@@ -104,7 +105,16 @@ class Term(object):
         return True
 
     def __str__(self) -> str:
-        return f"Term(seq={self._sequence} totalSupply=f{self._total_supply})"
+        return \
+            f"Term:" \
+            f"seq={self._sequence} " \
+            f"start_block_height={self._start_block_height} " \
+            f"period={self._period} " \
+            f"irep={self._irep}" \
+            f"total_supply={self._total_supply} " \
+            f"total_delegated={self._total_delegated} " \
+            f"total_elected_prep_delegated={self._total_elected_prep_delegated} " \
+            f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
 
     @property
     def sequence(self) -> int:
@@ -219,22 +229,14 @@ class Term(object):
         self._total_elected_prep_delegated = total_elected_prep_delegated
         self._generate_root_hash()
 
-    def update_preps(self,
-                     total_supply: int,
-                     total_delegated: int,
-                     invalid_elected_preps: Iterable['PRep']):
+    def update_preps(self, invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
 
-        :param total_supply:
-        :param total_delegated:
         :param invalid_elected_preps:
             elected P-Reps that cannot keep governance during this term as their penalties
         :return:
         """
         self._check_access_permission()
-
-        self._total_supply = total_supply
-        self._total_delegated = total_delegated
 
         for prep in invalid_elected_preps:
             if self._replace_invalid_main_prep(prep) >= 0:
@@ -242,7 +244,7 @@ class Term(object):
             if self._remove_invalid_sub_prep(prep) >= 0:
                 continue
 
-            raise AssertionError(f"{prep.address} not in term: {self}")
+            raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
 
         if self.is_dirty():
             self._generate_root_hash()
