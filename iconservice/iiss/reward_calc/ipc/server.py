@@ -89,7 +89,7 @@ class IPCServer(object):
 
             data: bytes = request.to_bytes()
             Logger.debug(f"on_send(): data({data.hex()}")
-
+            Logger.info(f"Sending Data : {request}")
             writer.write(data)
             await writer.drain()
 
@@ -110,6 +110,7 @@ class IPCServer(object):
             self._unpacker.feed(data)
 
             for response in self._unpacker:
+                Logger.info(f"Received Data : {response}")
                 self._queue.message_handler(response)
 
         await self._queue.put(NoneRequest())
