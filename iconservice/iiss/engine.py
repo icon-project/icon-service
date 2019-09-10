@@ -142,17 +142,17 @@ class Engine(EngineBase):
                 Logger.debug(tag=_TAG, msg=f"Repeat query calculate result {repeat_cnt}")
                 continue
             else:
-                FatalException(f'RC has a problem about calculating: {calc_result_status}')
+                raise FatalException(f'RC has a problem about calculating: {calc_result_status}')
 
         if calc_result_status != RCCalculateResult.SUCCESS:
-            FatalException(f'RC has a problem about calculating: {calc_result_status}')
+            raise FatalException(f'RC has a problem about calculating: {calc_result_status}')
 
         if calc_result_bh != calc_bh:
-            FatalException(f'Unexpected calculate result response '
+            raise FatalException(f'Unexpected calculate result response '
                            f'(reward calc: {calc_result_bh} icon service: {calc_bh}')
 
         if iscore < 0:
-            FatalException(f'Invalid I-SCORE value: {iscore}')
+            raise FatalException(f'Invalid I-SCORE value: {iscore}')
         Logger.debug(tag=_TAG, msg=f"_query_calculate_result end with "
                                    f"status:{calc_result_status} calc_result_bh: {calc_result_bh} iscore: {iscore}")
 
