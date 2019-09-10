@@ -386,9 +386,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
             calc_period: int = context.storage.iiss.get_calc_period(context)
             response = CalculateDoneNotification(0, True,
-                                         end_block_height_of_calc - calc_period,
-                                         calculate_response_iscore_of_last_calc_period,
-                                         b'mocked_response')
+                                                 end_block_height_of_calc - calc_period,
+                                                 calculate_response_iscore_of_last_calc_period,
+                                                 b'mocked_response')
             print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
             _self._calculate_done_callback(response)
 
@@ -417,7 +417,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                 end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
                 calc_period: int = context.storage.iiss.get_calc_period(context)
                 response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, response_iscore,
-                                             b'mocked_response')
+                                                     b'mocked_response')
                 print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
                 _self._calculate_done_callback(response)
 
@@ -465,9 +465,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         def mock_calculated(_self, _path, _block_height):
             invalid_block_height: int = 0
             response = CalculateDoneNotification(0, True,
-                                         invalid_block_height,
-                                         0,
-                                         b'mocked_response')
+                                                 invalid_block_height,
+                                                 0,
+                                                 b'mocked_response')
             _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
@@ -478,9 +478,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
     def test_calculate_response_fails(self):
         def mock_calculated(_self, _path, _block_height):
             response = CalculateDoneNotification(0, False,
-                                         0,
-                                         0,
-                                         b'mocked_response')
+                                                 0,
+                                                 0,
+                                                 b'mocked_response')
             _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)

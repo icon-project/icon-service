@@ -286,6 +286,13 @@ class RCStatus(IntEnum):
     READY = 1
 
 
+class RCCalculateResult(IntEnum):
+    SUCCESS = 0
+    FAIL = 1
+    IN_PROGRESS = 2
+    INVALID_BLOCK_HEIGHT = 3
+
+
 class PRepStatus(Enum):
     ACTIVE = 0
     UNREGISTERED = auto()
