@@ -128,19 +128,24 @@ class Engine(EngineBase):
 
     def _query_calculate_result(self, calc_bh: int, repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> int:
         Logger.debug(tag=_TAG, msg=f"_query_calculate_result start")
-        if repeat_cnt <= 0:
-            FatalException(f'Exceed repeat count about querying calculate result')
+        calc_result_status: int = -1
+        calc_result_bh: int = -1
+        iscore: int = -1
 
-        calc_result_status, calc_result_bh, iscore, state_hash = \
-            self._reward_calc_proxy.query_calculate_result(calc_bh)
-
-        if calc_result_status != RCCalculateResult.SUCCESS and calc_result_status in RCCalculateResult:
-            if calc_result_status == RCCalculateResult.IN_PROGRESS:
+        for cnt in range(repeat_cnt):
+            calc_result_status, calc_result_bh, iscore, state_hash = \
+                self._reward_calc_proxy.query_calculate_result(calc_bh)
+            if calc_result_status == RCCalculateResult.SUCCESS:
+                break
+            elif calc_result_status == RCCalculateResult.IN_PROGRESS:
                 time.sleep(1)
                 Logger.debug(tag=_TAG, msg=f"Repeat query calculate result {repeat_cnt}")
-                return self._query_calculate_result(calc_bh, repeat_cnt - 1)
+                continue
             else:
                 FatalException(f'RC has a problem about calculating: {calc_result_status}')
+
+        if calc_result_status != RCCalculateResult.SUCCESS:
+            FatalException(f'RC has a problem about calculating: {calc_result_status}')
 
         if calc_result_bh != calc_bh:
             FatalException(f'Unexpected calculate result response '
