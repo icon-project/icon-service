@@ -29,6 +29,37 @@ if TYPE_CHECKING:
     from .prep.term import Term
 
 
+def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
+    """Print the latest updated states stored in IconServiceEngine
+    :return:
+    """
+    lines = []
+
+    for i, key in enumerate(block_batch):
+        value: bytes = block_batch[key]
+
+        if value:
+            lines.append(f"{i}: {key.hex()} - {value.hex()}")
+        else:
+            lines.append(f"{i}: {key.hex()} - None")
+
+    return lines
+
+
+def _print_rc_block_batch(rc_block_batch: list) -> List[str]:
+    lines = []
+
+    try:
+        for i, data in enumerate(rc_block_batch):
+            key: bytes = data.make_key()
+            value: bytes = data.make_value()
+            lines.append(f"{i}: {key.hex()} - {value.hex()}")
+    except:
+        pass
+
+    return lines
+
+
 class PrecommitFlag(IntFlag):
     # Empty
     NONE = 0x0
@@ -80,6 +111,25 @@ class PrecommitData(object):
 
         self.state_root_hash: bytes = self.block_batch.digest()
         self.block = block_batch.block
+
+    def __str__(self):
+        lines = [
+            f"revision: {self.revision}",
+            f"block: {self.block.height} {self.block.hash.hex()}",
+            f"state_root_hash: {self.state_root_hash.hex()}",
+            f"prev_block_generator: {self.prev_block_generator}",
+            f"precommit_flag: {self.precommit_flag}"
+            "",
+            "block_batch"
+        ]
+
+        lines.extend(_print_block_batch(self.block_batch))
+
+        lines.append("")
+        lines.append("rc_block_batch")
+        lines.extend(_print_rc_block_batch(self.rc_block_batch))
+
+        return "\n".join(lines)
 
 
 class PrecommitDataManager(object):
