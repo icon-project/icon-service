@@ -88,8 +88,11 @@ class Regulator:
         self._covered_icx_by_fee = covered_icx_by_fee
         self._covered_icx_by_remain = covered_icx_by_remain
         self._corrected_icx_issue_amount = corrected_icx_issue_amount
-        Logger.debug(f"Block height of this block: {context.block.height} "
-                     f"Regulator variable: {self._regulator_variable}", IISS_LOG_TAG)
+        Logger.info(f"Regulate BH: {context.block.height} "
+                    f"Covered by fee: {self._covered_icx_by_fee} "
+                    f"Covered by remain: {self._covered_icx_by_remain} "
+                    f"Corrected issue amount {self._corrected_icx_issue_amount}"
+                    f"Regulator variable: {self._regulator_variable}", IISS_LOG_TAG)
 
     def put_regulate_variable(self, context: 'IconScoreContext'):
         context.storage.issue.put_regulator_variable(context, self._regulator_variable)
