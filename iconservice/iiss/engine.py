@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
 from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
@@ -47,6 +48,8 @@ if TYPE_CHECKING:
     from ..base.block import Block
 
 _TAG = IISS_LOG_TAG
+
+QUERY_CALCULATE_REPEAT_COUNT = 3
 
 
 class EngineListener(metaclass=ABCMeta):
@@ -123,13 +126,21 @@ class Engine(EngineBase):
         Logger.debug(tag=_TAG, msg=f"get_prev_period_iscore end with {iscore}")
         return iscore
 
-    def _query_calculate_result(self, calc_bh: int) -> int:
+    def _query_calculate_result(self, calc_bh: int, repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> int:
         Logger.debug(tag=_TAG, msg=f"_query_calculate_result start")
+        if repeat_cnt <= 0:
+            FatalException(f'Exceed repeat count about querying calculate result')
+
         calc_result_status, calc_result_bh, iscore, state_hash = \
             self._reward_calc_proxy.query_calculate_result(calc_bh)
 
         if calc_result_status != RCCalculateResult.SUCCESS and calc_result_status in RCCalculateResult:
-            FatalException(f'RC has a problem about calculating: {calc_result_status}')
+            if calc_result_status == RCCalculateResult.IN_PROGRESS:
+                time.sleep(1)
+                Logger.debug(tag=_TAG, msg=f"Repeat query calculate result {repeat_cnt}")
+                return self._query_calculate_result(calc_bh, repeat_cnt - 1)
+            else:
+                FatalException(f'RC has a problem about calculating: {calc_result_status}')
 
         if calc_result_bh != calc_bh:
             FatalException(f'Unexpected calculate result response '
