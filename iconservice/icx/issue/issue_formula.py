@@ -57,9 +57,10 @@ class IssueFormula(object):
 
         temp_rrep = IssueFormula.calculate_temporary_reward_prep(rrep)
         beta_3: int = temp_rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
-        Logger.debug("Calculated issue amount about this block. "
-                     f"irep: {irep} rrep: {temp_rrep} total_delegation: {total_delegation} "
-                     f"beta1: {beta_1} beta2: {beta_2} beta3: {beta_3}", IISS_LOG_TAG)
+        Logger.info("Calculated issue amount about this block. "
+                    f"calculated_irep: {calculated_irep} irep: {irep} rrep: {temp_rrep} "
+                    f"total_delegation: {total_delegation} "
+                    f"beta1: {beta_1} beta2: {beta_2} beta3: {beta_3}", IISS_LOG_TAG)
         return beta_1 + beta_2 + beta_3
 
     def get_limit_inflation_beta(self, irep: int) -> int:

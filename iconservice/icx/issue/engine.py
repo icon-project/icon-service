@@ -15,12 +15,14 @@
 
 from typing import TYPE_CHECKING, Tuple, Optional
 
+from iconcommons import Logger
+
 from .issue_formula import IssueFormula
 from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
 from ...base.exception import OutOfBalanceException
-from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
@@ -73,6 +75,9 @@ class Engine(EngineBase):
             current_total_supply = context.storage.icx.get_total_supply(context)
             context.storage.icx.put_account(context, to_account)
             context.storage.icx.put_total_supply(context, current_total_supply + amount)
+            Logger.info(f"Issue icx. amount: {amount} "
+                        f"Total supply: {current_total_supply + amount} "
+                        f"Treasury: {to_account.balance}", ICX_LOG_TAG)
 
     def issue(self,
               context: 'IconScoreContext',
