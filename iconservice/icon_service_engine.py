@@ -420,9 +420,8 @@ class IconServiceEngine(ContextContainer):
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
-            Logger.info(
-                tag=ICON_SERVICE_LOG_TAG,
-                msg=f"Block result already exists: {block.height}, 0x{block.hash.hex()}")
+            Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                        msg=f"Block result already exists: \n{precommit_data}")
             return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
 
         # Check for block validation before invoke
