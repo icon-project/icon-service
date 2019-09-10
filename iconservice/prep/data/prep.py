@@ -448,7 +448,6 @@ class PRep(Sortable):
     @classmethod
     def from_bytes(cls, data: bytes) -> 'PRep':
         items: list = MsgPackForDB.loads(data)
-        assert len(items) == cls.Index.SIZE
 
         version: int = items[cls.Index.VERSION]
         if version == 0:

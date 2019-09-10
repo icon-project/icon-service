@@ -19,6 +19,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Optional, List
 
 from .base.block import Block, EMPTY_BLOCK
+from .database.batch import TransactionBatchValue
 from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
@@ -35,13 +36,18 @@ def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
     """
     lines = []
 
-    for i, key in enumerate(block_batch):
-        value: bytes = block_batch[key]
+    try:
+        for i, key in enumerate(block_batch):
+            value = block_batch[key]
 
-        if value:
-            lines.append(f"{i}: {key.hex()} - {value.hex()}")
-        else:
-            lines.append(f"{i}: {key.hex()} - None")
+            if isinstance(value, TransactionBatchValue):
+                lines.append(f"{i}: {key.hex()} - {value.value.hex()}")
+            elif isinstance(value, bytes):
+                lines.append(f"{i}: {key.hex()} - {value.hex()}")
+            else:
+                lines.append(f"{i}: {key.hex()} - None")
+    except:
+        pass
 
     return lines
 
