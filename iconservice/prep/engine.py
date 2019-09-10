@@ -180,8 +180,6 @@ class Engine(EngineBase, IISSEngineListener):
             True: Decentralization will begin at the next block
         :return:
         """
-        self._handle_invalid_elected_preps(context)
-
         if is_decentralization_started or self._is_term_ended(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
             main_prep_as_dict, term = self._on_term_ended(context)
@@ -192,25 +190,16 @@ class Engine(EngineBase, IISSEngineListener):
             main_prep_as_dict = None
             term = None
 
+        if term:
+            context.storage.prep.put_term(context, term)
+
         return main_prep_as_dict, term
-
-    def _handle_invalid_elected_preps(self, context: 'IconScoreContext'):
-        """Handles invalid P-Reps
-        Exchange invalid main P-Reps with sub P-Reps
-
-        :param context:
-        """
-        if len(context.invalid_elected_preps) == 0:
-            return
-
-        assert self.term is not None
-        self.term.update_preps(context.invalid_elected_preps.values())
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
             return False
 
-        return self.term.end_block_height == context.block.height
+        return context.block.height == self.term.end_block_height
 
     def _on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
         """Called in IconServiceEngine.invoke() every time when a term is ended
@@ -227,11 +216,9 @@ class Engine(EngineBase, IISSEngineListener):
         self._update_prep_grades_on_term_ended(context)
 
         # Create a term with context.preps whose grades are up-to-date
-        new_term: 'Term' = self._create_next_term(self.term, context)
+        new_term: 'Term' = self._create_next_term(context, self.term)
         main_preps_as_dict: dict = \
             self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
-
-        context.storage.prep.put_term(context, new_term)
 
         return main_preps_as_dict, new_term
 
@@ -273,10 +260,7 @@ class Engine(EngineBase, IISSEngineListener):
             return None, None
 
         new_term = self.term.copy()
-        new_term.update_preps(
-            context.total_supply,
-            context.preps.total_delegated,
-            context.invalid_elected_preps.values())
+        new_term.update_preps(context.invalid_elected_preps.values())
 
         assert new_term.is_dirty()
         new_term.freeze()
@@ -289,7 +273,6 @@ class Engine(EngineBase, IISSEngineListener):
             # Case 3: Only sub P-Reps are invalidated
             main_preps_as_dict = None
 
-        context.storage.prep.put_term(context, new_term)
         return main_preps_as_dict, new_term
 
     def _update_prep_grades_on_term_ended(self, context: 'IconScoreContext'):
@@ -444,7 +427,7 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         prep_as_dict: Optional[dict] = \
-            cls._get_main_preps_in_dict(context, term)
+            cls.get_main_preps_in_dict(context, term)
 
         if prep_as_dict:
             prep_as_dict['irep'] = term.irep
@@ -453,9 +436,9 @@ class Engine(EngineBase, IISSEngineListener):
         return prep_as_dict
 
     @classmethod
-    def _get_main_preps_in_dict(cls,
-                                context: 'IconScoreContext',
-                                term: 'Term') -> Optional[dict]:
+    def get_main_preps_in_dict(cls,
+                               context: 'IconScoreContext',
+                               term: 'Term') -> Optional[dict]:
         if len(term.main_preps) == 0:
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
             return None
@@ -477,8 +460,14 @@ class Engine(EngineBase, IISSEngineListener):
 
     @classmethod
     def _create_next_term(cls,
-                          prev_term: Optional['Term'],
-                          context: 'IconScoreContext') -> 'Term':
+                          context: 'IconScoreContext',
+                          prev_term: Optional['Term']) -> 'Term':
+        """Create the next term instance at the end of the current term
+
+        :param prev_term:
+        :param context:
+        :return:
+        """
         new_preps: List['PRep'] = context.preps.get_preps(
             start_index=0, size=context.main_and_sub_prep_count)
 

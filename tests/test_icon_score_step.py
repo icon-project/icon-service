@@ -264,7 +264,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used_replace, request, tx_hash)
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.before_transaction_process')
+    @patch('iconservice.icon_service_engine.IconServiceEngine._before_transaction_process')
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_get_db(self, score_invoke, before_transaction_process):
         tx_hash = bytes.hex(create_tx_hash())
@@ -362,7 +362,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.GET, 100), call_args_for_apply_step[1][0])
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.before_transaction_process')
+    @patch('iconservice.icon_service_engine.IconServiceEngine._before_transaction_process')
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_remove_db(self, score_invoke, before_transaction_process):
         tx_hash = bytes.hex(create_tx_hash())

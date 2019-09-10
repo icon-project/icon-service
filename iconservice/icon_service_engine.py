@@ -1145,7 +1145,7 @@ class IconServiceEngine(ContextContainer):
         response['blockHeight'] = context.block.height
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         response['variable'] = dict()
-        response['variable']['irep'] = term.irep if term else -1
+        response['variable']['irep'] = term.irep if term else 0
         response['variable']['rrep'] = reward_rate.reward_prep
 
         calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
@@ -1691,6 +1691,9 @@ class IconServiceEngine(ContextContainer):
         return EMPTY_BLOCK
 
     def inner_call(self, request: dict):
-        context = IconScoreContext(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(
+            IconScoreContextType.QUERY, block=self._get_last_block()
+        )
+
         self._set_revision_to_context(context)
         return inner_call(context, request)
