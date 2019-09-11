@@ -113,7 +113,7 @@ class TestTerm(unittest.TestCase):
             invalid_main_prep.penalty = penalty
             invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
-            term.update_preps(self.total_supply, self.total_delegated, invalid_elected_preps)
+            term.update_preps(invalid_elected_preps)
             assert len(term.main_preps) == PREP_MAIN_PREPS
             assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
             assert isinstance(term.root_hash, bytes)
