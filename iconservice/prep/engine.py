@@ -330,6 +330,12 @@ class Engine(EngineBase, IISSEngineListener):
         context.update_dirty_prep_batch()
 
     def _release_block_validation_penalty(self, context: 'IconScoreContext'):
+        """Release block validation penalty every term end
+
+        :param context:
+        :return:
+        """
+
         old_preps = self.preps
 
         for prep in old_preps:
