@@ -138,8 +138,6 @@ class PRep(Sortable):
         :param validated_blocks:
         :param unvalidated_sequence_blocks
         """
-        assert irep_block_height == block_height
-
         # key
         self._address: 'Address' = address
 
