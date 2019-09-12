@@ -26,7 +26,7 @@ from enum import Flag
 from typing import Any, Union, Optional
 
 from iconcommons import Logger
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG, ICX_IN_LOOP
 
 
 def int_to_bytes(n: int) -> bytes:
@@ -50,6 +50,10 @@ def bytes_to_hex(data: Optional[bytes], prefix: str = "0x") -> str:
         return "None"
 
     return f"{prefix}{data.hex()}"
+
+
+def icx_to_loop(icx: int) -> int:
+    return icx * ICX_IN_LOOP
 
 
 def is_lowercase_hex_string(value: str) -> bool:
