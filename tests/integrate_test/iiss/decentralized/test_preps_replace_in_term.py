@@ -17,7 +17,6 @@
 """IconScoreEngine testcase
 """
 from typing import TYPE_CHECKING, List
-from unittest.mock import patch
 
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, PREP_PENALTY_SIGNATURE
 from iconservice.prep.data import PRep
@@ -38,7 +37,6 @@ class TestPreps(TestIISSBase):
         self.init_decentralized()
 
     def test_prep_replace_in_term1(self):
-        PRep._penalty_grace_period = 40
         """
         scenario 1
             when it starts new preps on new term, normal case, while 100 block.
@@ -72,7 +70,7 @@ class TestPreps(TestIISSBase):
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
 
-        # check new PREPS to MAIN_PREPS
+        # check whether new PREPS become MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
@@ -93,12 +91,12 @@ class TestPreps(TestIISSBase):
         for account in self._accounts[:PREP_MAIN_PREPS]:
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
-        tx_results: ['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list,
-                                                                          prev_block_generator=accounts[0].address,
-                                                                          prev_block_validators=[
-                                                                              account.address
-                                                                              for account in accounts[1:PREP_MAIN_PREPS]
-                                                                          ])
+
+        tx_results: ['TransactionResult'] = self.process_confirm_block_tx(
+            tx_list=tx_list,
+            prev_block_generator=self._accounts[0].address,
+            prev_block_validators=[account.address for account in self._accounts[1:PREP_MAIN_PREPS]]
+        )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
             self.assertEqual("PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0])
