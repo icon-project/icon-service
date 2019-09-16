@@ -66,8 +66,15 @@ class Block(object):
         # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
 
-    def __str__(self):
-        return f"Block(height={self._height} hash={bytes_to_hex(self._hash)} timestamp={self._timestamp})"
+    def __str__(self) -> str:
+        return f"Block(height={self._height}, " \
+                f"hash={bytes_to_hex(self._hash)}, " \
+                f"prev_hash={bytes_to_hex(self._prev_hash)}, " \
+                f"timestamp={self._timestamp}, " \
+                f"cumulative_fee={self.cumulative_fee})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     @property
     def height(self) -> int:
