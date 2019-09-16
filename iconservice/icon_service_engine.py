@@ -567,6 +567,8 @@ class IconServiceEngine(ContextContainer):
 
         context.update_batch()
         context.preps.freeze()
+        if context.term:
+            context.term.freeze()
 
         return main_prep_as_dict, term
 

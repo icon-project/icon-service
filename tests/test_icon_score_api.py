@@ -321,8 +321,10 @@ class TestIconScoreApi(unittest.TestCase):
                     total_supply=1_000_000_000,
                     total_delegated=1_000_000_000)
         term.set_preps(test_preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        term.freeze()
 
         self.context.engine.prep.term = term
+        self.context._term = term.copy()
 
         # check main P-Rep info
         main_prep_list, end_block_height = get_main_prep_info()

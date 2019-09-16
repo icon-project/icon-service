@@ -17,7 +17,7 @@
 import threading
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional, List, Dict
+from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
 from .icon_score_mapper import IconScoreMapper
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from .icon_score_event_log import EventLog
     from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
     from ..base.address import Address
-    from ..prep.data.prep_container import PRep, PRepContainer
+    from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
 
 _thread_local_data = threading.local()
@@ -151,11 +151,11 @@ class IconScoreContext(object):
         self.event_log_stack = []
 
         # PReps to update on invoke
-        self.preps: Optional['PRepContainer'] = None
+        self._preps: Optional['PRepContainer'] = None
         self._tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
         # Collect Main and Sub P-Reps which have just been invalidated by penalty or unregister
         # to use for updating term info at the end of invoke
-        self._invalid_elected_preps: Optional[OrderedDict['Address', 'PRep']] = None
+        self._term: Optional['Term'] = None
 
     @classmethod
     def set_decentralize_trigger(cls, decentralize_trigger: float):
@@ -175,13 +175,19 @@ class IconScoreContext(object):
         return self.storage.icx.get_total_supply(self)
 
     @property
-    def invalid_elected_preps(self) -> Dict['Address', 'PRep']:
-        """Return invalid main and sub P-Reps
-        This property is only available on invoke process
+    def preps(self) -> Optional['PRepContainer']:
+        return self._preps
+
+    @property
+    def term(self) -> Optional['Term']:
+        return self._term
+
+    def is_term_updated(self) -> bool:
+        """Returns whether info in self._term is changed
 
         :return:
         """
-        return self._invalid_elected_preps
+        return self._term and self._term.is_dirty()
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
@@ -203,6 +209,11 @@ class IconScoreContext(object):
         self.engine.deploy.deploy(self, tx_hash)
 
     def update_batch(self):
+        """Called when a transaction is done
+
+        :return:
+        """
+
         # Call update_dirty_prep_batch before update_state_db_batch()
         self.update_dirty_prep_batch()
         self.update_state_db_batch()
@@ -222,32 +233,38 @@ class IconScoreContext(object):
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
         for dirty_prep in self._tx_dirty_preps.values():
-            self.preps.replace(dirty_prep)
+            # If dirty_prep is an invalid elected P-Rep,
+            # we should update P-Reps in this term
+            self._update_elected_preps_in_term(dirty_prep)
+
+            self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
             dirty_prep.freeze()
 
-            self._put_to_invalid_elected_prep(dirty_prep)
-
         self._tx_dirty_preps.clear()
 
-    def _put_to_invalid_elected_prep(self, dirty_prep: 'PRep'):
+    def _update_elected_preps_in_term(self, dirty_prep: 'PRep'):
         """Collect main and sub preps which cannot serve as a main and sub prep
         to update the current term at the end of invoke
 
         :param dirty_prep: dirty prep
         """
+        if self._term is None:
+            return
+
         if dirty_prep.is_electable():
             return
 
-        prep: 'PRep' = self.engine.prep.preps.get_by_address(dirty_prep.address)
-        if prep.grade == PRepGrade.CANDIDATE:
+        # If dirty_prep is not in term, no need to update elected P-Reps
+        if dirty_prep.address not in self._term:
             return
 
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
 
-        self._invalid_elected_preps[dirty_prep.address] = dirty_prep
+        self._term.update_preps([dirty_prep])
+
         Logger.info(tag=self.TAG, msg=f"Invalid main and sub prep: {dirty_prep}")
 
     def clear_batch(self):
@@ -257,8 +274,6 @@ class IconScoreContext(object):
             self.rc_tx_batch.clear()
         if self._tx_dirty_preps:
             self._tx_dirty_preps.clear()
-        if self._invalid_elected_preps:
-            self._invalid_elected_preps.clear()
 
     def get_prep(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
         prep: Optional['PRep'] = None
@@ -267,7 +282,7 @@ class IconScoreContext(object):
             prep = self._tx_dirty_preps.get(address)
 
         if prep is None:
-            prep = self.preps.get_by_address(address)
+            prep = self._preps.get_by_address(address)
 
         if prep and prep.is_frozen() and mutable:
             prep = prep.copy()
@@ -318,8 +333,11 @@ class IconScoreContextFactory:
             context.new_icon_score_mapper = IconScoreMapper()
 
             # For PRep management
-            context.preps = context.engine.prep.preps.copy(mutable=True)
+            context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
-            context._invalid_elected_preps = OrderedDict()
+            if context.engine.prep.term:
+                context._term = context.engine.prep.term.copy()
         else:
-            context.preps = context.engine.prep.preps  # Readonly
+            # Readonly
+            context._preps = context.engine.prep.preps
+            context._term = context.engine.prep.term
