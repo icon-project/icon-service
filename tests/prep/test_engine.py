@@ -115,7 +115,7 @@ class TestEngine(unittest.TestCase):
         context.engine.prep.preps = context.preps
         context.engine.prep.preps.freeze()
 
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
 
         for i in range(100):
             prep = context.preps.get_by_index(i + context.main_and_sub_prep_count)

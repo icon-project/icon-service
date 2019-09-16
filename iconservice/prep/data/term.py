@@ -17,13 +17,13 @@ __all__ = ("Term", "PRepSnapshot")
 
 import copy
 import enum
-from typing import TYPE_CHECKING, List, Iterable, Optional
+from typing import TYPE_CHECKING, List, Iterable, Optional, Dict
 
 from iconcommons.logger import Logger
 from ...base.exception import AccessDeniedException
 from ...icon_constant import PRepStatus, PenaltyReason
-from ...utils.hashing.hash_generator import RootHashGenerator
 from ...utils import bytes_to_hex
+from ...utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
     from ...base.address import Address
@@ -84,6 +84,7 @@ class Term(object):
 
         self._main_preps: List['PRepSnapshot'] = []
         self._sub_preps: List['PRepSnapshot'] = []
+        self._preps_dict: Dict['Address', 'PRepSnapshot'] = {}
 
         # made from main P-Rep addresses
         self._merkle_root_hash: Optional[bytes] = None
@@ -191,6 +192,9 @@ class Term(object):
         assert isinstance(self._merkle_root_hash, bytes)
         return self._merkle_root_hash
 
+    def __contains__(self, address: 'Address') -> bool:
+        return address in self._preps_dict
+
     def set_preps(self,
                   it: Iterable['PRep'],
                   main_prep_count: int,
@@ -207,6 +211,7 @@ class Term(object):
 
         self._main_preps.clear()
         self._sub_preps.clear()
+        self._preps_dict.clear()
 
         # Main and sub P-Reps
         total_elected_prep_delegated: int = 0
@@ -226,6 +231,8 @@ class Term(object):
             else:
                 self._sub_preps.append(snapshot)
 
+            self._preps_dict[snapshot.address] = snapshot
+
         self._total_elected_prep_delegated = total_elected_prep_delegated
         self._generate_root_hash()
 
@@ -239,7 +246,7 @@ class Term(object):
         self._check_access_permission()
 
         for prep in invalid_elected_preps:
-            if self._replace_invalid_main_prep(prep) >= 0:
+            if self._remove_invalid_main_prep(prep) >= 0:
                 continue
             if self._remove_invalid_sub_prep(prep) >= 0:
                 continue
@@ -249,7 +256,7 @@ class Term(object):
         if self.is_dirty():
             self._generate_root_hash()
 
-    def _replace_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
 
         :param invalid_prep: an invalid main P-Rep
@@ -276,6 +283,7 @@ class Term(object):
                     f"index={index} {address} -> {self._main_preps[index].address}")
 
         self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
+        del self._preps_dict[address]
 
         self._flag |= _Flag.DIRTY
         return index
@@ -292,6 +300,7 @@ class Term(object):
         if index >= 0:
             invalid_prep_snapshot = self._sub_preps.pop(index)
             self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
+            del self._preps_dict[invalid_prep.address]
 
             self._flag |= _Flag.DIRTY
 
@@ -305,10 +314,10 @@ class Term(object):
         :return:
         """
         # The P-Rep that gets BLOCK_VALIDATION penalty cannot serve as a main or sub P-Rep during this term,
-        # but its B2 reward has been provided
+        # but its B2 reward should be provided continuously
         if invalid_prep.status != PRepStatus.ACTIVE \
                 or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
-            old_delegated = self._total_elected_prep_delegated
+            old_delegated: int = self._total_elected_prep_delegated
             self._total_elected_prep_delegated -= delegated
 
             Logger.info(tag=self.TAG,

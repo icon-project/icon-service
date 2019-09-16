@@ -255,14 +255,11 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         # No invalid elected P-Reps in this block
-        if len(context.invalid_elected_preps) == 0:
+        if not context.is_term_updated():
             return None, None
 
-        new_term = self.term.copy()
-        new_term.update_preps(context.invalid_elected_preps.values())
-
+        new_term = context.term
         assert new_term.is_dirty()
-        new_term.freeze()
 
         if self.term.root_hash != new_term.root_hash:
             # Case 2 or 4: Some main P-Reps are replaced or removed
@@ -617,6 +614,7 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
         dirty_prep.status = PRepStatus.UNREGISTERED
+        dirty_prep.grade = PRepGrade.CANDIDATE
         context.put_dirty_prep(dirty_prep)
 
         # Update rcDB

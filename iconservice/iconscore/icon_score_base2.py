@@ -327,38 +327,36 @@ def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    # TODO: Fix an error on unittest first before remvoing the commet below (goldworm)
-    term = context.engine.prep.term
-
-    if term:
-        prep_info_list: List[PRepInfo] = []
-        for prep_snapshot in term.main_preps:
-            # prep = context.get_prep(prep_snapshot.address)
-            prep_info_list.append(PRepInfo(
-                prep_snapshot.address,
-                prep_snapshot.delegated,
-                ""
-            ))
-        return prep_info_list, context.engine.prep.term.end_block_height
-    else:
+    # TODO: Fix an error on unittest first before removing the commit below (goldworm)
+    term = context.term
+    if term is None:
         return [], -1
+
+    prep_info_list: List[PRepInfo] = []
+    for prep_snapshot in term.main_preps:
+        # prep = context.get_prep(prep_snapshot.address)
+        prep_info_list.append(PRepInfo(
+            prep_snapshot.address,
+            prep_snapshot.delegated,
+            ""
+        ))
+    return prep_info_list, context.engine.prep.term.end_block_height
 
 
 def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    term = context.engine.prep.term
-
-    if term:
-        prep_info_list: List[PRepInfo] = []
-        for prep_snapshot in term.sub_preps:
-            # prep = context.get_prep(prep_snapshot.address)
-            prep_info_list.append(PRepInfo(
-                prep_snapshot.address,
-                prep_snapshot.delegated,
-                ""
-            ))
-        return prep_info_list, context.engine.prep.term.end_block_height
-    else:
+    term = context.term
+    if term is None:
         return [], -1
+
+    prep_info_list: List[PRepInfo] = []
+    for prep_snapshot in term.sub_preps:
+        # prep = context.get_prep(prep_snapshot.address)
+        prep_info_list.append(PRepInfo(
+            prep_snapshot.address,
+            prep_snapshot.delegated,
+            ""
+        ))
+    return prep_info_list, context.engine.prep.term.end_block_height
