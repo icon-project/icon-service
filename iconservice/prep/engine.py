@@ -21,7 +21,7 @@ from .term import Term
 from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, MethodNotFoundException
+from ..base.exception import InvalidParamsException, MethodNotFoundException, ServiceNotReadyException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
@@ -64,7 +64,7 @@ class Engine(EngineBase, IISSEngineListener):
             "getMainPReps": self.handle_get_main_prep_list,
             "getSubPReps": self.handle_get_sub_prep_list,
             "getPReps": self.handle_get_prep_list,
-            "getP2PEndpoints": self.handle_get_p2p_endpoints
+            "getPRepTerm": self.handle_get_prep_term
         }
 
         self.preps = PRepContainer()
@@ -739,10 +739,40 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_p2p_endpoints(self, context: 'IconScoreContext', params: dict) -> list:
-        preps: List['PRep'] = self.term.main_preps + self.term.sub_preps
-        endpoints: list = [prep.p2p_endpoint for prep in preps]
-        return endpoints
+    def handle_get_prep_term(self, context: 'IconScoreContext', params: dict) -> dict:
+        """Provides the information on the current term
+
+        :param context:
+        :param params:
+        :return:
+        """
+        if self.term.sequence < 0:
+            raise ServiceNotReadyException("Term is not ready")
+
+        preps: List['PRep'] = self.term.preps
+        preps_data = []
+        for prep in preps:
+            preps_data.append(
+                {
+                    "name": prep.name,
+                    "country": prep.country,
+                    "city": prep.city,
+                    "grade": prep.grade.value,
+                    "address": prep.address,
+                    "p2pEndpoint": prep.p2p_endpoint
+                }
+            )
+
+        return {
+            "blockHeight": context.block.height,
+            "sequence": self.term.sequence,
+            "startBlockHeight": self.term.start_block_height,
+            "endBlockHeight": self.term.end_block_height,
+            "totalSupply": context.total_supply,
+            "totalDelegated": self.term.total_delegated,
+            "irep": self.term.irep,
+            "preps": preps_data
+        }
 
     # IISSEngineListener implementation ---------------------------
     def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):

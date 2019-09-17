@@ -229,14 +229,14 @@ class TestIISSBase(TestIntegrateBase):
         }
         return self._query(query_request)
 
-    def get_p2p_endpoints(self):
+    def get_prep_term(self):
         query_request = {
             "version": self._version,
             "from": self._admin,
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getP2PEndpoints"
+                "method": "getPRepTerm"
             }
         }
         return self._query(query_request)
