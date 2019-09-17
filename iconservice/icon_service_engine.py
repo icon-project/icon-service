@@ -15,7 +15,7 @@
 
 import os
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Set
+from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Set, Union
 
 from iconcommons.logger import Logger
 
@@ -408,6 +408,7 @@ class IconServiceEngine(ContextContainer):
                tx_requests: list,
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
+               prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None,
                is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
 
         """Process transactions in a block sent by loopchain
@@ -415,7 +416,8 @@ class IconServiceEngine(ContextContainer):
         :param block:
         :param tx_requests: transactions in a block
         :param prev_block_generator: previous block generator
-        :param prev_block_validators: previous block validators
+        :param prev_block_validators: previous block validators (legacy)
+        :param prev_block_votes: previous block vote info
         :param is_block_editable: boolean which imply whether creating base transaction or not
         :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
@@ -434,6 +436,12 @@ class IconServiceEngine(ContextContainer):
 
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
+        # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
+        prev_block_votes: List[List['Address', bool]] = self._get_prev_block_votes(context,
+                                                                                   prev_block_generator,
+                                                                                   prev_block_validators,
+                                                                                   prev_block_votes)
+
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -448,7 +456,7 @@ class IconServiceEngine(ContextContainer):
             added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
             tx_requests.insert(0, base_transaction)
 
-        self._before_transaction_process(context, prev_block_generator, prev_block_validators)
+        self._before_transaction_process(context, prev_block_generator, prev_block_votes)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -489,7 +497,7 @@ class IconServiceEngine(ContextContainer):
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
         main_prep_as_dict, term = self._after_transaction_process(
-            context, precommit_flag, prev_block_generator, prev_block_validators)
+            context, precommit_flag, prev_block_generator, prev_block_votes)
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -509,6 +517,41 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
     @classmethod
+    def _get_prev_block_votes(cls,
+                              context: 'IconScoreContext',
+                              prev_block_generator: Optional['Address'] = None,
+                              prev_block_validators: Optional[List['Address']] = None,
+                              prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+            -> Optional[List[List[Union['Address', bool]]]]:
+
+        """
+        If prev_block_votes is valid field, you can just return origin data but if not,
+        you have to make prev_block_votes by using meta storage and prev_block_validators params for being simple logic.
+
+        :param context:
+        :param prev_block_validators:
+        :param prev_block_votes:
+        :return:
+        """
+
+        if prev_block_votes:
+            return prev_block_votes
+
+        if prev_block_generator is None or prev_block_validators is None:
+            return None
+
+        new_prev_block_votes: List[List['Address', bool]] = []
+        last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
+
+        for address in last_main_preps:
+            if address == prev_block_generator:
+                continue
+            else:
+                is_validator: bool = address in prev_block_validators
+                new_prev_block_votes.append([address, is_validator])
+        return new_prev_block_votes
+
+    @classmethod
     def _log_step_trace(cls, context: 'IconScoreContext'):
         """If steptrace option is turned on, write step trace messages to a log file
 
@@ -525,7 +568,7 @@ class IconServiceEngine(ContextContainer):
     def _before_transaction_process(self,
                                     context: 'IconScoreContext',
                                     prev_block_generator: Optional['Address'] = None,
-                                    prev_block_validators: Optional[List['Address']] = None):
+                                    prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None):
 
         if not context.is_decentralized():
             return
@@ -536,7 +579,7 @@ class IconServiceEngine(ContextContainer):
                         msg=f"The first block of decentralization: {context.block}")
             return
 
-        self._update_productivity(context, prev_block_generator, prev_block_validators)
+        self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
 
     @classmethod
@@ -545,7 +588,8 @@ class IconServiceEngine(ContextContainer):
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
             prev_block_generator: Optional['Address'] = None,
-            prev_block_validators: Optional[List['Address']] = None) -> Tuple[Optional[dict], Optional['Term']]:
+            prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+            -> Tuple[Optional[dict], Optional['Term']]:
         """If the current term is ended, prepare the next term,
         - Prepare the list of main P-Reps for the next term which is passed to loopchain
         - Calculate the weighted average of ireps
@@ -555,7 +599,7 @@ class IconServiceEngine(ContextContainer):
         :param context:
         :param flag:
         :param prev_block_generator:
-        :param prev_block_validators:
+        :param prev_block_votes:
         :return:
         """
 
@@ -563,7 +607,7 @@ class IconServiceEngine(ContextContainer):
             context, bool(flag & PrecommitFlag.DECENTRALIZATION))
 
         if context.revision >= REV_IISS:
-            context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_validators, flag)
+            context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_votes, flag)
 
         context.update_batch()
         context.preps.freeze()
@@ -575,43 +619,31 @@ class IconServiceEngine(ContextContainer):
     @classmethod
     def _update_productivity(cls,
                              context: 'IconScoreContext',
-                             prev_block_generator: Optional['Address'] = None,
-                             prev_block_validators: Optional[List['Address']] = None):
+                             prev_block_generator: Optional['Address'],
+                             prev_block_votes: Optional[List[List[Union['Address', bool]]]]):
+
         """Update block validation statistics of Main P-Reps
         This method should be called only after decentralization
 
         :param context:
         :param prev_block_generator:
-        :param prev_block_validators:
+        :param prev_block_votes:
         :return:
         """
-        # validators set contains not only prev_block_validators but also a prev_block_generator
-        validators: Set['Address'] = set()
 
-        if prev_block_generator:
-            validators.add(prev_block_generator)
-        if prev_block_validators:
-            validators.update(prev_block_validators)
-
-        if len(validators) == 0:
+        if prev_block_generator is None or prev_block_votes is None:
             Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
             return
 
-        for prep_snapshot in context.engine.prep.term.main_preps:
-            address = prep_snapshot.address
+        validators: List[List['Address', bool]] = [[prev_block_generator, True]]
+        validators.extend(prev_block_votes)
 
-            is_validator: bool = address in validators
-            if is_validator:
-                validators.remove(address)
-
+        for address, is_validator in validators:
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             assert isinstance(dirty_prep, PRep)
 
             dirty_prep.update_block_statistics(is_validator)
             context.put_dirty_prep(dirty_prep)
-
-        if len(validators) > 0:
-            raise InternalServiceErrorException(f"Main P-Reps mismatch: {validators}")
 
         context.update_dirty_prep_batch()
 

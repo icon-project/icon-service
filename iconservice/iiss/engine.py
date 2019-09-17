@@ -644,11 +644,11 @@ class Engine(EngineBase):
                   context: 'IconScoreContext',
                   term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
-                  prev_block_validators: Optional[List['Address']],
+                  prev_block_votes: Optional[List[List[Union['Address', bool]]]],
                   flag: 'PrecommitFlag'):
 
         # every block time
-        self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_validators)
+        self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_votes)
 
         if not self._is_iiss_calc(flag):
             # In-term P-Rep replacement
@@ -775,21 +775,21 @@ class Engine(EngineBase):
     def _put_block_produce_info_to_rc_db(cls,
                                          context: 'IconScoreContext',
                                          prev_block_generator: Optional['Address'] = None,
-                                         prev_block_validators: Optional[List['Address']] = None):
+                                         prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None):
         """Called on every block
 
         :param context:
         :param prev_block_generator:
-        :param prev_block_validators:
+        :param prev_block_votes:
         :return:
         """
-        if prev_block_generator is None or prev_block_validators is None:
+        if prev_block_generator is None or prev_block_votes is None:
             return
 
         Logger.debug(f"put_block_produce_info_for_rc", "iiss")
         data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(context.block.height,
                                                                                             prev_block_generator,
-                                                                                            prev_block_validators)
+                                                                                            prev_block_votes)
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod

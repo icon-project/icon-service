@@ -50,7 +50,9 @@ class TestIISSBase(TestIntegrateBase):
     def make_blocks(self,
                     to: int,
                     prev_block_generator: Optional['Address'] = None,
-                    prev_block_validators: Optional[List['Address']] = None) -> List[List['TransactionResult']]:
+                    prev_block_validators: Optional[List['Address']] = None,
+                    prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+            -> List[List['TransactionResult']]:
         block_height = self._block_height
         tx_results: List[List['TransactionResult']] = []
 
@@ -60,13 +62,15 @@ class TestIISSBase(TestIntegrateBase):
                                              0)
             tx_results.append(self.process_confirm_block_tx([tx],
                                                             prev_block_generator=prev_block_generator,
-                                                            prev_block_validators=prev_block_validators))
+                                                            prev_block_validators=prev_block_validators,
+                                                            prev_block_votes=prev_block_votes))
             block_height = self._block_height
         return tx_results
 
     def make_blocks_to_end_calculation(self,
                                        prev_block_generator: Optional['Address'] = None,
-                                       prev_block_validators: Optional[List['Address']] = None) -> int:
+                                       prev_block_validators: Optional[List['Address']] = None,
+                                       prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None) -> int:
         iiss_info: dict = self.get_iiss_info()
         next_calculation: int = iiss_info.get('nextCalculation', 0)
 
@@ -75,13 +79,15 @@ class TestIISSBase(TestIntegrateBase):
             # last calculate block
             self.make_blocks(to=next_calculation,
                              prev_block_generator=prev_block_generator,
-                             prev_block_validators=prev_block_validators)
+                             prev_block_validators=prev_block_validators,
+                             prev_block_votes=prev_block_votes)
             iiss_info: dict = self.get_iiss_info()
             next_calculation: int = iiss_info.get('nextCalculation', 0)
 
         self.make_blocks(to=next_calculation - 1,
                          prev_block_generator=prev_block_generator,
-                         prev_block_validators=prev_block_validators)
+                         prev_block_validators=prev_block_validators,
+                         prev_block_votes=prev_block_votes)
 
         self.assertEqual(self._block_height, next_calculation - 1)
 
