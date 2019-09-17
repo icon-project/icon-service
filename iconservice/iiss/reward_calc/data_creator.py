@@ -59,7 +59,7 @@ class DataCreator:
                                        block_generator: 'Address',
                                        block_votes: List[List[Union['Address', bool]]]) -> 'BlockProduceInfoData':
 
-        block_validators = [address for address, is_valid in block_votes]
+        block_validators = [address for address, is_valid in block_votes if is_valid]
 
         data = BlockProduceInfoData()
         data.block_height = block_height
