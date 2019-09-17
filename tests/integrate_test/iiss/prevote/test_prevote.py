@@ -17,7 +17,7 @@
 from unittest.mock import Mock
 
 from iconservice import ZERO_SCORE_ADDRESS
-from iconservice.base.exception import MethodNotFoundException
+from iconservice.base.exception import MethodNotFoundException, ServiceNotReadyException
 from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -173,3 +173,11 @@ class TestIISS(TestIISSBase):
 
         with self.assertRaises(MethodNotFoundException):
             self._query(query_request)
+
+    def test_prep_term(self):
+        self.update_governance()
+        self.set_revision(REV_IISS)
+
+        with self.assertRaises(ServiceNotReadyException) as e:
+            self.get_prep_term()
+        self.assertEqual(e.exception.message, "Term is not ready")

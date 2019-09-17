@@ -348,13 +348,25 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_avg_irep, response['irep'])
         self.assertEqual(expected_block_height, response['irepUpdateBlockHeight'])
 
-    def test_p2p_endpoints(self):
+    def test_get_prep_term(self):
         bottom_preps = self.create_eoa_accounts(10)
         accounts = self._accounts + bottom_preps
-        endpoints: list = self.get_p2p_endpoints()
+        term_info: dict = self.get_prep_term()
+        preps = term_info['preps']
+        required_fields = ["blockHeight", 'sequence', 'startBlockHeight',
+                           'endBlockHeight', 'totalSupply', 'totalDelegated', 'irep']
+        for field in required_fields:
+            self.assertIn(field, term_info)
+
         for i, account in enumerate(accounts[:PREP_MAIN_PREPS]):
             data: dict = self.create_register_prep_params(account)
-            self.assertEqual(endpoints[i], data[ConstantKeys.P2P_ENDPOINT])
+            prep = preps[i]
+            self.assertEqual(prep[ConstantKeys.NAME], data[ConstantKeys.NAME])
+            self.assertEqual(prep[ConstantKeys.COUNTRY], data[ConstantKeys.COUNTRY])
+            self.assertEqual(prep[ConstantKeys.CITY], data[ConstantKeys.CITY])
+            self.assertEqual(prep["grade"], PRepGrade.MAIN.value)
+            self.assertEqual(prep[ConstantKeys.ADDRESS], account.address)
+            self.assertEqual(prep[ConstantKeys.P2P_ENDPOINT], data[ConstantKeys.P2P_ENDPOINT])
 
         # distribute icx for register
         self.distribute_icx(accounts=accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
@@ -368,9 +380,16 @@ class TestPreps(TestIISSBase):
 
         self.make_blocks_to_end_calculation()
 
-        endpoints: list = self.get_p2p_endpoints()
+        term_info: dict = self.get_prep_term()
+        preps = term_info['preps']
 
-        self.assertEqual(len(endpoints), PREP_MAIN_AND_SUB_PREPS)
+        self.assertEqual(len(preps), PREP_MAIN_AND_SUB_PREPS)
         for i, account in enumerate(accounts[:PREP_MAIN_AND_SUB_PREPS]):
             data: dict = self.create_register_prep_params(account)
-            self.assertEqual(endpoints[i], data[ConstantKeys.P2P_ENDPOINT])
+            prep = preps[i]
+            self.assertEqual(prep[ConstantKeys.NAME], data[ConstantKeys.NAME])
+            self.assertEqual(prep[ConstantKeys.COUNTRY], data[ConstantKeys.COUNTRY])
+            self.assertEqual(prep[ConstantKeys.CITY], data[ConstantKeys.CITY])
+            self.assertIn(prep["grade"], (PRepGrade.MAIN.value, PRepGrade.SUB.value))
+            self.assertEqual(prep[ConstantKeys.ADDRESS], account.address)
+            self.assertEqual(prep[ConstantKeys.P2P_ENDPOINT], data[ConstantKeys.P2P_ENDPOINT])
