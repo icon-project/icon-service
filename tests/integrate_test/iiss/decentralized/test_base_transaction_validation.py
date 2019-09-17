@@ -136,7 +136,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _make_issue_info(self) -> tuple:
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
@@ -152,7 +152,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
