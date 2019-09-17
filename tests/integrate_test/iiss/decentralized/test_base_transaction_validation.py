@@ -278,7 +278,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list, None, None, None, True, 0)
+                          tx_list, None, None, None, None, True, 0)
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is True

@@ -188,7 +188,9 @@ class TestIntegrateBase(TestCase):
                            tx_list: list,
                            block_height: int = None,
                            prev_block_generator: Optional['Address'] = None,
-                           prev_block_validators: Optional[List['Address']] = None) -> Tuple['Block', List[bytes]]:
+                           prev_block_validators: Optional[List['Address']] = None,
+                           prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+            -> Tuple['Block', List[bytes]]:
         if block_height is None:
             block_height: int = self._block_height + 1
         block_hash = create_block_hash()
@@ -207,6 +209,7 @@ class TestIntegrateBase(TestCase):
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
                                             prev_block_validators=prev_block_validators,
+                                            prev_block_votes=prev_block_votes,
                                             is_block_editable=is_block_editable)
 
         self.add_tx_result(tx_results)
@@ -217,6 +220,7 @@ class TestIntegrateBase(TestCase):
                                            block_height: int = None,
                                            prev_block_generator: Optional['Address'] = None,
                                            prev_block_validators: Optional[List['Address']] = None,
+                                           prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None,
                                            is_block_editable=False,
                                            cumulative_fee: int = 0) -> Tuple['Block', List[bytes]]:
         if block_height is None:
@@ -231,6 +235,7 @@ class TestIntegrateBase(TestCase):
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
                                             prev_block_validators=prev_block_validators,
+                                            prev_block_votes=prev_block_votes,
                                             is_block_editable=is_block_editable)
 
         self.add_tx_result(tx_results)
@@ -282,12 +287,14 @@ class TestIntegrateBase(TestCase):
                                  expected_status: bool = True,
                                  prev_block_generator: Optional['Address'] = None,
                                  prev_block_validators: Optional[List['Address']] = None,
+                                 prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None,
                                  block_height: int = None) -> List['TransactionResult']:
 
         prev_block, hash_list = self.make_and_req_block(tx_list,
                                                         block_height,
                                                         prev_block_generator,
-                                                        prev_block_validators)
+                                                        prev_block_validators,
+                                                        prev_block_votes)
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         for tx_result in tx_results:

@@ -208,6 +208,16 @@ class Engine(EngineBase, IISSEngineListener):
         """
         self._put_last_term_info(context, self.term)
 
+        if self.term:
+            main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
+        else:
+            # first term
+            new_preps: List['PRep'] = context.preps.get_preps(start_index=0,
+                                                              size=context.main_prep_count)
+            main_preps: List['Address'] = [prep.address for prep in new_preps]
+
+        context.storage.meta.put_last_main_preps(context, main_preps)
+
         # All block validation penalties are released
         self._release_block_validation_penalty(context)
 
@@ -254,6 +264,10 @@ class Engine(EngineBase, IISSEngineListener):
         :param context:
         :return:
         """
+
+        main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
+        context.storage.meta.put_last_main_preps(context, main_preps)
+
         # No invalid elected P-Reps in this block
         if not context.is_term_updated():
             return None, None
