@@ -23,11 +23,10 @@ import hashlib
 import re
 from collections import namedtuple
 from enum import Flag
-from typing import Any, Union
+from typing import Any, Union, Optional
 
 from iconcommons import Logger
-
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG, ICX_IN_LOOP
 
 
 def int_to_bytes(n: int) -> bytes:
@@ -44,6 +43,17 @@ def byte_length_of_int(n: int):
         # adds 1 because `bit_length()` always returns a bit length of absolute-value of `n`
         n += 1
     return (n.bit_length() + 8) // 8
+
+
+def bytes_to_hex(data: Optional[bytes], prefix: str = "0x") -> str:
+    if data is None:
+        return "None"
+
+    return f"{prefix}{data.hex()}"
+
+
+def icx_to_loop(icx: int) -> int:
+    return icx * ICX_IN_LOOP
 
 
 def is_lowercase_hex_string(value: str) -> bool:
