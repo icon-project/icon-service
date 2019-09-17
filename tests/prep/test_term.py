@@ -36,6 +36,13 @@ context.storage = ContextStorage(deploy=None, fee=None, icx=Mock(spec=IcxStorage
 context.storage.prep.put_term = Mock()
 
 
+def _check_prep_snapshots_in_term(term: 'Term'):
+    assert len(term) == len(term.main_preps) + len(term.sub_preps)
+
+    for snapshot in term.preps:
+        assert snapshot.address in term
+
+
 class TestTerm(unittest.TestCase):
     def setUp(self) -> None:
         self.sequence = random.randint(0, 1000)
@@ -55,6 +62,7 @@ class TestTerm(unittest.TestCase):
         )
         assert not self.term.is_frozen()
         assert not self.term.is_dirty()
+        _check_prep_snapshots_in_term(self.term)
 
         keys = "sequence", "start_block_height", "period", "irep", "total_supply", "total_delegated"
 
@@ -78,6 +86,7 @@ class TestTerm(unittest.TestCase):
 
     def test_set_preps(self):
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        _check_prep_snapshots_in_term(self.term)
 
         assert not self.term.is_frozen()
         assert self.term.total_elected_prep_delegated == self.total_elected_prep_delegated
@@ -105,15 +114,18 @@ class TestTerm(unittest.TestCase):
 
         for penalty in penalties:
             self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+            _check_prep_snapshots_in_term(self.term)
             assert isinstance(self.term.root_hash, bytes)
             assert len(self.term.root_hash) == 32
 
             term = self.term.copy()
+            _check_prep_snapshots_in_term(term)
             invalid_main_prep = copy.deepcopy(self.preps[0])
             invalid_main_prep.penalty = penalty
             invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
             term.update_preps(invalid_elected_preps)
+            _check_prep_snapshots_in_term(term)
             assert len(term.main_preps) == PREP_MAIN_PREPS
             assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
             assert isinstance(term.root_hash, bytes)
@@ -123,15 +135,18 @@ class TestTerm(unittest.TestCase):
     def test_update_preps_with_block_validation_penalty(self):
         # Remove an invalid Main P-Rep which gets a block validation penalty
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        _check_prep_snapshots_in_term(self.term)
         assert isinstance(self.term.root_hash, bytes)
         assert len(self.term.root_hash) == 32
 
         term = self.term.copy()
+        _check_prep_snapshots_in_term(term)
         invalid_main_prep = copy.deepcopy(self.preps[0])
         invalid_main_prep.penalty = PenaltyReason.BLOCK_VALIDATION
         invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
         term.update_preps(invalid_elected_preps)
+        _check_prep_snapshots_in_term(term)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
         assert isinstance(term.root_hash, bytes)
@@ -140,15 +155,19 @@ class TestTerm(unittest.TestCase):
 
     def test_update_preps_with_unregistered_prep(self):
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        _check_prep_snapshots_in_term(self.term)
+
         assert isinstance(self.term.root_hash, bytes)
         assert len(self.term.root_hash) == 32
 
         term = self.term.copy()
+        _check_prep_snapshots_in_term(term)
         invalid_main_prep = copy.deepcopy(self.preps[0])
         invalid_main_prep.status = PRepStatus.UNREGISTERED
         invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
         term.update_preps(invalid_elected_preps)
+        _check_prep_snapshots_in_term(term)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
         assert isinstance(term.root_hash, bytes)
@@ -157,8 +176,8 @@ class TestTerm(unittest.TestCase):
 
     def test_update_preps_with_sub_preps_only(self):
         # Remove all sub P-Reps
-
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        _check_prep_snapshots_in_term(self.term)
 
         term = self.term.copy()
         invalid_elected_preps: List['PRep'] = []
@@ -177,6 +196,8 @@ class TestTerm(unittest.TestCase):
     def test_update_preps_2(self):
         # Remove all main P-Reps
         term = self.term.copy()
+        _check_prep_snapshots_in_term(term)
+
         invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[:PREP_MAIN_PREPS]]
         term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
@@ -186,6 +207,8 @@ class TestTerm(unittest.TestCase):
 
         # Remove all P-Reps except for a P-Rep
         term = self.term.copy()
+        _check_prep_snapshots_in_term(term)
+
         invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[1:PREP_MAIN_AND_SUB_PREPS]]
         term.update_preps(invalid_elected_preps)
         assert len(term.main_preps) == 1
@@ -195,7 +218,10 @@ class TestTerm(unittest.TestCase):
 
     def test_to_list_and_from_list(self):
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        _check_prep_snapshots_in_term(self.term)
+
         new_term = Term.from_list(self.term.to_list())
+        _check_prep_snapshots_in_term(new_term)
 
         assert id(new_term) != id(self.term)
         assert new_term.sequence == self.term.sequence
@@ -203,10 +229,17 @@ class TestTerm(unittest.TestCase):
 
         assert len(new_term.main_preps) == len(self.term.main_preps)
         assert len(new_term.sub_preps) == len(self.term.sub_preps)
-
-        for snapshot0, snapshot1 in zip(new_term.preps, self.term.preps):
-            assert snapshot0 == snapshot1
+        assert len(new_term) == len(self.term) == len(new_term.main_preps) + len(new_term.sub_preps)
 
         assert isinstance(new_term.root_hash, bytes)
         assert isinstance(self.term.root_hash, bytes)
         assert new_term.root_hash == self.term.root_hash
+
+    def test__contain__(self):
+        term = self.term
+        term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        _check_prep_snapshots_in_term(term)
+
+        assert len(term.main_preps) == PREP_MAIN_PREPS
+        assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS
+        assert len(term) == PREP_MAIN_AND_SUB_PREPS

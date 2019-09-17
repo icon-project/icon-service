@@ -117,6 +117,16 @@ class Term(object):
             f"total_elected_prep_delegated={self._total_elected_prep_delegated} " \
             f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
 
+    def __contains__(self, address: 'Address') -> bool:
+        return address in self._preps_dict
+
+    def __len__(self) -> int:
+        """Return the number of main P-Reps and sub P-Reps
+
+        :return:
+        """
+        return len(self._preps_dict)
+
     @property
     def sequence(self) -> int:
         return self._sequence
@@ -191,9 +201,6 @@ class Term(object):
     def root_hash(self) -> bytes:
         assert isinstance(self._merkle_root_hash, bytes)
         return self._merkle_root_hash
-
-    def __contains__(self, address: 'Address') -> bool:
-        return address in self._preps_dict
 
     def set_preps(self,
                   it: Iterable['PRep'],
@@ -356,10 +363,14 @@ class Term(object):
         term = Term(sequence, start_block_height, period, irep, total_supply, total_delegated)
 
         for address, delegated in main_preps:
-            term._main_preps.append(PRepSnapshot(address, delegated))
+            snapshot = PRepSnapshot(address, delegated)
+            term._main_preps.append(snapshot)
+            term._preps_dict[address] = snapshot
 
         for address, delegated in sub_preps:
-            term._sub_preps.append(PRepSnapshot(address, delegated))
+            snapshot = PRepSnapshot(address, delegated)
+            term._sub_preps.append(snapshot)
+            term._preps_dict[address] = snapshot
 
         term._generate_root_hash()
 
@@ -382,7 +393,8 @@ class Term(object):
         term = copy.copy(self)
         term._flag = _Flag.NONE
 
-        term._main_preps = [prep_snapshot for prep_snapshot in self._main_preps]
-        term._sub_preps = [prep_snapshot for prep_snapshot in self._sub_preps]
+        term._main_preps = list(self._main_preps)
+        term._sub_preps = list(self._sub_preps)
+        term._preps_dict = dict(self._preps_dict)
 
         return term
