@@ -65,6 +65,13 @@ class Block(object):
         # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
 
+    def __str__(self) -> str:
+        hash_hex: str = self._hash.hex() if isinstance(self._hash, bytes) else "None"
+        return f"Block(height={self._height}, hash={hash_hex})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     @property
     def height(self) -> int:
         return self._height
