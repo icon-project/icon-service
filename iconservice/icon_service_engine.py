@@ -162,7 +162,8 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.INITIAL_IREP],
-                                     conf[ConfigKey.PREP_REGISTRATION_FEE])
+                                     conf[ConfigKey.PREP_REGISTRATION_FEE],
+                                     conf[ConfigKey.IPC_TIMEOUT])
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -198,7 +199,8 @@ class IconServiceEngine(ContextContainer):
                                 calc_period: int,
                                 term_period: int,
                                 irep: int,
-                                prep_reg_fee: int):
+                                prep_reg_fee: int,
+                                ipc_timeout: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -206,7 +208,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.iiss.open(context,
                                           log_dir,
                                           rc_data_path,
-                                          rc_socket_path)
+                                          rc_socket_path,
+                                          ipc_timeout)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
                                           irep)
