@@ -15,17 +15,16 @@
 
 import os
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Set, Union
+from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException, InternalServiceErrorException
+    MethodNotFoundException
 )
 from .base.message import Message
 from .base.transaction import Transaction
@@ -437,9 +436,9 @@ class IconServiceEngine(ContextContainer):
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
         prev_block_votes: List[Tuple['Address', bool]] = self._get_prev_block_votes(context,
-                                                                                          prev_block_generator,
-                                                                                          prev_block_validators,
-                                                                                          prev_block_votes)
+                                                                                    prev_block_generator,
+                                                                                    prev_block_validators,
+                                                                                    prev_block_votes)
 
         self._set_revision_to_context(context)
         block_result = []

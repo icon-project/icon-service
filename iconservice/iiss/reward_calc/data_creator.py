@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List, Iterable, Union, Tuple
+from typing import TYPE_CHECKING, List, Iterable, Tuple
 
 from iconcommons import Logger
-
 from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 
