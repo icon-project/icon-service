@@ -408,7 +408,7 @@ class IconServiceEngine(ContextContainer):
                tx_requests: list,
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
-               prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None,
+               prev_block_votes: Optional[List[Tuple['Address', bool]]] = None,
                is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
 
         """Process transactions in a block sent by loopchain
@@ -436,7 +436,7 @@ class IconServiceEngine(ContextContainer):
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
-        prev_block_votes: List[List[Union['Address', bool]]] = self._get_prev_block_votes(context,
+        prev_block_votes: List[Tuple['Address', bool]] = self._get_prev_block_votes(context,
                                                                                           prev_block_generator,
                                                                                           prev_block_validators,
                                                                                           prev_block_votes)
@@ -521,8 +521,8 @@ class IconServiceEngine(ContextContainer):
                               context: 'IconScoreContext',
                               prev_block_generator: Optional['Address'] = None,
                               prev_block_validators: Optional[List['Address']] = None,
-                              prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
-            -> Optional[List[List[Union['Address', bool]]]]:
+                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None)\
+            -> Optional[List[Tuple['Address', bool]]]:
 
         """
         If prev_block_votes is valid field, you can just return origin data but if not,
@@ -540,7 +540,7 @@ class IconServiceEngine(ContextContainer):
         if prev_block_generator is None or prev_block_validators is None:
             return None
 
-        new_prev_block_votes: List[List[Union['Address', bool]]] = []
+        new_prev_block_votes: List[Tuple['Address', bool]] = []
         last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
 
         for address in last_main_preps:
@@ -568,7 +568,7 @@ class IconServiceEngine(ContextContainer):
     def _before_transaction_process(self,
                                     context: 'IconScoreContext',
                                     prev_block_generator: Optional['Address'] = None,
-                                    prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None):
+                                    prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
 
         if not context.is_decentralized():
             return
@@ -588,7 +588,7 @@ class IconServiceEngine(ContextContainer):
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
             prev_block_generator: Optional['Address'] = None,
-            prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+            prev_block_votes: Optional[List[Tuple['Address', bool]]] = None)\
             -> Tuple[Optional[dict], Optional['Term']]:
         """If the current term is ended, prepare the next term,
         - Prepare the list of main P-Reps for the next term which is passed to loopchain
@@ -623,7 +623,7 @@ class IconServiceEngine(ContextContainer):
     def _update_productivity(cls,
                              context: 'IconScoreContext',
                              prev_block_generator: Optional['Address'],
-                             prev_block_votes: Optional[List[List[Union['Address', bool]]]]):
+                             prev_block_votes: Optional[List[Tuple['Address', bool]]]):
 
         """Update block validation statistics of Main P-Reps
         This method should be called only after decentralization
@@ -638,7 +638,7 @@ class IconServiceEngine(ContextContainer):
             Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
             return
 
-        validators: List[List[Union['Address', bool]]] = [[prev_block_generator, True]]
+        validators: List[Tuple['Address', bool]] = [[prev_block_generator, True]]
         validators.extend(prev_block_votes)
 
         for address, is_validator in validators:

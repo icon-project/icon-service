@@ -51,7 +51,7 @@ class TestIISSBase(TestIntegrateBase):
                     to: int,
                     prev_block_generator: Optional['Address'] = None,
                     prev_block_validators: Optional[List['Address']] = None,
-                    prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+                    prev_block_votes: Optional[List[Tuple['Address', bool]]] = None)\
             -> List[List['TransactionResult']]:
         block_height = self._block_height
         tx_results: List[List['TransactionResult']] = []
@@ -70,7 +70,7 @@ class TestIISSBase(TestIntegrateBase):
     def make_blocks_to_end_calculation(self,
                                        prev_block_generator: Optional['Address'] = None,
                                        prev_block_validators: Optional[List['Address']] = None,
-                                       prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None) -> int:
+                                       prev_block_votes: Optional[List[Tuple['Address', bool]]] = None) -> int:
         iiss_info: dict = self.get_iiss_info()
         next_calculation: int = iiss_info.get('nextCalculation', 0)
 

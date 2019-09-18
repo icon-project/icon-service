@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List, Iterable, Union
+from typing import TYPE_CHECKING, List, Iterable, Union, Tuple
 
 from iconcommons import Logger
 
@@ -57,7 +57,7 @@ class DataCreator:
     @staticmethod
     def create_block_produce_info_data(block_height: int,
                                        block_generator: 'Address',
-                                       block_votes: List[List[Union['Address', bool]]]) -> 'BlockProduceInfoData':
+                                       block_votes: List[Tuple['Address', bool]]) -> 'BlockProduceInfoData':
 
         block_validators = [address for address, is_valid in block_votes if is_valid]
 

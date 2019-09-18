@@ -189,7 +189,7 @@ class TestIntegrateBase(TestCase):
                            block_height: int = None,
                            prev_block_generator: Optional['Address'] = None,
                            prev_block_validators: Optional[List['Address']] = None,
-                           prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None)\
+                           prev_block_votes: Optional[List[Tuple['Address', bool]]] = None)\
             -> Tuple['Block', List[bytes]]:
         if block_height is None:
             block_height: int = self._block_height + 1
@@ -220,7 +220,7 @@ class TestIntegrateBase(TestCase):
                                            block_height: int = None,
                                            prev_block_generator: Optional['Address'] = None,
                                            prev_block_validators: Optional[List['Address']] = None,
-                                           prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None,
+                                           prev_block_votes: Optional[List[Tuple['Address', bool]]] = None,
                                            is_block_editable=False,
                                            cumulative_fee: int = 0) -> Tuple['Block', List[bytes]]:
         if block_height is None:
@@ -287,7 +287,7 @@ class TestIntegrateBase(TestCase):
                                  expected_status: bool = True,
                                  prev_block_generator: Optional['Address'] = None,
                                  prev_block_validators: Optional[List['Address']] = None,
-                                 prev_block_votes: Optional[List[List[Union['Address', bool]]]] = None,
+                                 prev_block_votes: Optional[List[Tuple['Address', bool]]] = None,
                                  block_height: int = None) -> List['TransactionResult']:
 
         prev_block, hash_list = self.make_and_req_block(tx_list,
