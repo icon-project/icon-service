@@ -436,10 +436,10 @@ class IconServiceEngine(ContextContainer):
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
-        prev_block_votes: List[List['Address', bool]] = self._get_prev_block_votes(context,
-                                                                                   prev_block_generator,
-                                                                                   prev_block_validators,
-                                                                                   prev_block_votes)
+        prev_block_votes: List[List[Union['Address', bool]]] = self._get_prev_block_votes(context,
+                                                                                          prev_block_generator,
+                                                                                          prev_block_validators,
+                                                                                          prev_block_votes)
 
         self._set_revision_to_context(context)
         block_result = []
@@ -540,7 +540,7 @@ class IconServiceEngine(ContextContainer):
         if prev_block_generator is None or prev_block_validators is None:
             return None
 
-        new_prev_block_votes: List[List['Address', bool]] = []
+        new_prev_block_votes: List[List[Union['Address', bool]]] = []
         last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
 
         for address in last_main_preps:
@@ -638,7 +638,7 @@ class IconServiceEngine(ContextContainer):
             Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
             return
 
-        validators: List[List['Address', bool]] = [[prev_block_generator, True]]
+        validators: List[List[Union['Address', bool]]] = [[prev_block_generator, True]]
         validators.extend(prev_block_votes)
 
         for address, is_validator in validators:
