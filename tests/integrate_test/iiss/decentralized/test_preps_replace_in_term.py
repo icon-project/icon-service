@@ -1154,8 +1154,8 @@ class TestPreps(TestIISSBase):
 
         for i in range(1, half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count - 1, response["totalBlocks"])
-            self.assertEqual(block_count - 1, response["validatedBlocks"])
+            self.assertEqual(block_count, response["totalBlocks"])
+            self.assertEqual(block_count, response["validatedBlocks"])
             response: dict = self.get_prep(self._accounts[i])
             self.assertEqual(block_count, response["totalBlocks"])
             self.assertEqual(0, response["validatedBlocks"])
@@ -1262,7 +1262,7 @@ class TestPreps(TestIISSBase):
             prev_block_votes=
             [[account.address, True] for account in self._accounts[1: half_prep_count]]
             +
-            [[account.address, False] for account in accounts[0: half_prep_count]]
+            [[account.address, False] for account in self._accounts[half_prep_count: PREP_MAIN_PREPS]]
         )
 
         for i in range(PREP_MAIN_PREPS):
