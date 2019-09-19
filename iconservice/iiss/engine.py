@@ -808,7 +808,7 @@ class Engine(EngineBase):
             return
 
         Logger.debug(f"put_block_produce_info_for_rc", "iiss")
-        prev_block_height: int = context.block.height
+        prev_block_height: int = context.block.height - 1
         data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
                                                                                             prev_block_generator,
                                                                                             prev_block_votes)
