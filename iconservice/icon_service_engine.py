@@ -648,7 +648,7 @@ class IconServiceEngine(ContextContainer):
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             assert isinstance(dirty_prep, PRep)
 
-            is_validator: bool = vote_state > BlockVoteStatus.NONE.value
+            is_validator: bool = vote_state != BlockVoteStatus.NONE.value
 
             dirty_prep.update_block_statistics(is_validator)
             context.put_dirty_prep(dirty_prep)
