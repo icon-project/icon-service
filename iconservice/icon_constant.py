@@ -317,3 +317,9 @@ class PRepGrade(Enum):
 class PRepResultState(Enum):
     NORMAL = 0
     IN_TERM_UPDATED = 1
+
+
+class BlockVoteStatus(Enum):
+    NONE = 0
+    TRUE = 1
+    FALSE = 2

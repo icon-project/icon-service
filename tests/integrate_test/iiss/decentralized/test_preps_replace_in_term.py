@@ -16,7 +16,6 @@
 
 """IconScoreEngine testcase
 """
-from pprint import pprint
 from typing import TYPE_CHECKING, List
 
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, PREP_PENALTY_SIGNATURE
@@ -798,7 +797,7 @@ class TestPreps(TestIISSBase):
             tx_list=tx_list,
             prev_block_generator=self._accounts[0].address,
             prev_block_validators=[account.address for account in self._accounts[1:PREP_MAIN_PREPS]],
-            prev_block_votes=[[account.address, True] for account in self._accounts[1:PREP_MAIN_PREPS]]
+            prev_block_votes=[[account.address, i % 2 + 1] for i, account in enumerate(self._accounts[1:PREP_MAIN_PREPS])]
         )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
@@ -907,9 +906,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=self._accounts[0].address,
             prev_block_validators=[account.address for account in self._accounts[1:half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in self._accounts[1:half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(self._accounts[1:half_prep_count])]
             +
-            [[account.address, False] for account in self._accounts[half_prep_count:PREP_MAIN_PREPS]]
+            [[account.address, 0] for account in self._accounts[half_prep_count:PREP_MAIN_PREPS]]
         )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
@@ -927,7 +926,7 @@ class TestPreps(TestIISSBase):
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1:half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
             +
             [[account.address, False] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
         )
@@ -963,9 +962,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1:half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
             +
-            [[account.address, False] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
         )
 
         for event_log in tx_results[0][0].event_logs[3:]:
@@ -978,9 +977,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1:half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
             +
-            [[account.address, False] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
         )
 
         # check new PREPS to MAIN_PREPS
@@ -1032,9 +1031,9 @@ class TestPreps(TestIISSBase):
             +
             [account.address for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1: half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1: half_prep_count])]
             +
-            [[account.address, True] for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]],
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count])],
         )
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -1128,9 +1127,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1: half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1: half_prep_count])]
             +
-            [[account.address, False] for account in self._accounts[0: half_prep_count]]
+            [[account.address, 0] for account in self._accounts[0: half_prep_count]]
         )
 
         # check new PREPS to MAIN_PREPS
@@ -1260,9 +1259,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=self._accounts[0].address,
             prev_block_validators=[account.address for account in self._accounts[1: half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in self._accounts[1: half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(self._accounts[1: half_prep_count])]
             +
-            [[account.address, False] for account in self._accounts[half_prep_count: PREP_MAIN_PREPS]]
+            [[account.address, 0] for account in self._accounts[half_prep_count: PREP_MAIN_PREPS]]
         )
 
         for i in range(PREP_MAIN_PREPS):
@@ -1276,7 +1275,7 @@ class TestPreps(TestIISSBase):
             to=self._block_height + block_count1,
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1:PREP_MAIN_PREPS]],
-            prev_block_votes=[[account.address, True] for account in accounts[1:PREP_MAIN_PREPS]]
+            prev_block_votes=[[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:PREP_MAIN_PREPS])]
         )
 
         # check new PREPS to MAIN_PREPS
@@ -1304,9 +1303,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1:half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1:half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
             +
-            [[account.address, False] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
         )
 
         # check new PREPS to MAIN_PREPS
@@ -1351,9 +1350,9 @@ class TestPreps(TestIISSBase):
             prev_block_generator=accounts[0].address,
             prev_block_validators=[account.address for account in accounts[1:half_prep_count]],
             prev_block_votes=
-            [[account.address, True] for account in accounts[1:half_prep_count]]
+            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
             +
-            [[account.address, False] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
         )
 
         response: dict = self.get_main_prep_list()
@@ -1405,11 +1404,11 @@ class TestPreps(TestIISSBase):
             ],
             prev_block_votes=
             [
-                [account.address, True] for account in accounts[1: half_prep_count]
+                [account.address, i % 2 + 1] for i, account in enumerate(accounts[1: half_prep_count])
             ]
             +
             [
-                [account.address, True] for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]
+                [account.address, i % 2 + 1] for i, account in enumerate(accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count])
             ]
         )
 

@@ -660,7 +660,7 @@ class Engine(EngineBase):
                   context: 'IconScoreContext',
                   term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
-                  prev_block_votes: Optional[List[Tuple['Address', bool]]],
+                  prev_block_votes: Optional[List[Tuple['Address', int]]],
                   flag: 'PrecommitFlag'):
 
         # every block time
@@ -791,7 +791,7 @@ class Engine(EngineBase):
     def _put_block_produce_info_to_rc_db(cls,
                                          context: 'IconScoreContext',
                                          prev_block_generator: Optional['Address'] = None,
-                                         prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
+                                         prev_block_votes: Optional[List[Tuple['Address', int]]] = None):
         """Called on every block
 
         :param context:
