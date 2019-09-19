@@ -120,9 +120,33 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_rrep, gv.reward_rep)
 
         self.set_revision(REV_DECENTRALIZATION)
+        expected_gv_block_height = block_height + 1
+        expected_hd_block_height: int = self.make_blocks_to_end_calculation()
+        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+        for rc_data in rc_db.iterator():
+            if rc_data[0][:2] == Header._PREFIX:
+                hd: 'Header' = Header.from_bytes(rc_data[1])
+                expected_version = 0
+                expected_revisions = 0
+                self.assertEqual(expected_version, hd.version)
+                self.assertEqual(expected_hd_block_height, hd.block_height)
+                self.assertEqual(expected_revisions, hd.revision)
 
-        block_height: int = self.make_blocks_to_end_calculation()
-        expected_block_height = block_height + 1
+            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+                gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
+                # calculated irep (irep: 50000 ICX)
+                expected_irep = 0
+                expected_main_prep_count = 0
+                expected_sub_prep_count = 0
+                expected_rrep = 1078 * 3
+                self.assertEqual(expected_gv_block_height, gv.block_height)
+                self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
+                self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
+                self.assertEqual(expected_irep, gv.calculated_irep)
+                self.assertEqual(expected_rrep, gv.reward_rep)
+
+        expected_gv_block_height = expected_hd_block_height + 1
         expected_hd_block_height: int = self.make_blocks_to_end_calculation()
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
@@ -143,7 +167,7 @@ class TestRCDatabase(TestIISSBase):
                 expected_main_prep_count = 22
                 expected_sub_prep_count = 100 - expected_main_prep_count
                 expected_rrep = 1078 * 3
-                self.assertEqual(expected_block_height, gv.block_height)
+                self.assertEqual(expected_gv_block_height, gv.block_height)
                 self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
                 self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
                 self.assertEqual(expected_irep, gv.calculated_irep)
