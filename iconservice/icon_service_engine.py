@@ -539,6 +539,9 @@ class IconServiceEngine(ContextContainer):
         if prev_block_generator is None or prev_block_validators is None:
             return None
 
+        # we can't support denied vote in low version.
+        # so we can set only Approve.
+
         new_prev_block_votes: List[Tuple['Address', int]] = []
         last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
 
@@ -546,7 +549,7 @@ class IconServiceEngine(ContextContainer):
             if address == prev_block_generator:
                 continue
             else:
-                is_validator: int = address in prev_block_validators
+                is_validator: int = int(address in prev_block_validators)
                 new_prev_block_votes.append([address, is_validator])
         return new_prev_block_votes
 
@@ -637,12 +640,15 @@ class IconServiceEngine(ContextContainer):
             Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
             return
 
-        validators: List[Tuple['Address', int]] = [[prev_block_generator, True]]
+        approved_vote_state: int = 1
+        validators: List[Tuple['Address', int]] = [[prev_block_generator, approved_vote_state]]
         validators.extend(prev_block_votes)
 
-        for address, is_validator in validators:
+        for address, vote_state in validators:
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             assert isinstance(dirty_prep, PRep)
+
+            is_validator: bool = vote_state > 0
 
             dirty_prep.update_block_statistics(is_validator)
             context.put_dirty_prep(dirty_prep)
