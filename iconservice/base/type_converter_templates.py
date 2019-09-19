@@ -277,7 +277,7 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.PREV_BLOCK_VOTES: [
         [
             ValueType.ADDRESS,
-            ValueType.BOOL
+            ValueType.INT
         ]
     ]
 }

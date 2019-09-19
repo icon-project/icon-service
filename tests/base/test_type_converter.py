@@ -435,7 +435,7 @@ class TestTypeConverter(unittest.TestCase):
 
         prev_block_generator = create_address()
         prev_block_validators = [create_address() for _ in range(0, 10)]
-        prev_votes = [[create_address(), i % 2 == 0] for i in range(0, 10)]
+        prev_votes = [[create_address(), i % 3] for i in range(0, 10)]
 
         request = {
             ConstantKeys.BLOCK: {
