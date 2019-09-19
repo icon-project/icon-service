@@ -19,7 +19,7 @@ from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
     IISS_DB, REV_DECENTRALIZATION
 from iconservice.iiss.reward_calc import RewardCalcStorage
-from iconservice.iiss.reward_calc.msg_data import GovernanceVariable
+from iconservice.iiss.reward_calc.msg_data import GovernanceVariable, Header
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -52,18 +52,13 @@ class TestRCDatabase(TestIISSBase):
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         for rc_data in rc_db.iterator():
-            if rc_data[0][:2] == GovernanceVariable._PREFIX:
-                gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
+            # There is no GV at the first time
+            if rc_data[0][:2] == Header._PREFIX:
+                hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_block_height = self._block_height
-                expected_irep = 0
-                expected_main_prep_count = 0
-                expected_sub_prep_count = 0
-                expected_rrep = 1200 * 3
-                self.assertEqual(expected_block_height, gv.block_height)
-                self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
-                self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
-                self.assertEqual(expected_irep, gv.calculated_irep)
-                self.assertEqual(expected_rrep, gv.reward_rep)
+                expected_version = 0
+                self.assertEqual(expected_version, hd.version)
+                self.assertEqual(expected_block_height, hd.block_height)
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
@@ -107,18 +102,17 @@ class TestRCDatabase(TestIISSBase):
                                                      ])
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
-
+        expected_block_height += 1
         block_height: int = self.make_blocks_to_end_calculation()
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         for rc_data in rc_db.iterator():
             if rc_data[0][:2] == GovernanceVariable._PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
-                expected_block_height = block_height
                 expected_irep = 0
                 expected_main_prep_count = 0
                 expected_sub_prep_count = 0
-                expected_rrep = 1078 * 3
+                expected_rrep = 1200 * 3
                 self.assertEqual(expected_block_height, gv.block_height)
                 self.assertEqual(expected_main_prep_count, gv.config_main_prep_count)
                 self.assertEqual(expected_sub_prep_count, gv.config_sub_prep_count)
@@ -127,14 +121,23 @@ class TestRCDatabase(TestIISSBase):
 
         self.set_revision(REV_DECENTRALIZATION)
 
-        self.make_blocks_to_end_calculation()
         block_height: int = self.make_blocks_to_end_calculation()
+        expected_block_height = block_height + 1
+        expected_hd_block_height: int = self.make_blocks_to_end_calculation()
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         for rc_data in rc_db.iterator():
+            if rc_data[0][:2] == Header._PREFIX:
+                hd: 'Header' = Header.from_bytes(rc_data[1])
+                expected_block_height = self._block_height
+                expected_version = 2
+                expected_revisions = REV_DECENTRALIZATION
+                self.assertEqual(expected_version, hd.version)
+                self.assertEqual(expected_hd_block_height, hd.block_height)
+                self.assertEqual(expected_revisions, hd.revision)
+
             if rc_data[0][:2] == GovernanceVariable._PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
-                expected_block_height = block_height
                 # calculated irep (irep: 50000 ICX)
                 expected_irep = 19290123456790123
                 expected_main_prep_count = 22

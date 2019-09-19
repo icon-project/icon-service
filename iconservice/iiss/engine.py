@@ -664,6 +664,8 @@ class Engine(EngineBase):
                   flag: 'PrecommitFlag'):
         if self._is_iiss_calc(flag):
             self._update_state_db_on_end_calc(context)
+            if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
+                self._put_header_to_rc_db(context, is_genesis_iiss=True)
 
         start_calc_block: int = context.storage.iiss.get_start_block_of_calc(context)
         if start_calc_block == context.block.height:
@@ -747,11 +749,17 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_header_to_rc_db(cls,
-                             context: 'IconScoreContext'):
+                             context: 'IconScoreContext',
+                             is_genesis_iiss: bool = False):
         version: int = context.storage.rc.current_version
         revision: int = context.storage.rc.current_revision
+
+        if is_genesis_iiss:
+            block_height: int = context.block.height
+        else:
+            block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
         data: 'Header' = RewardCalcDataCreator.create_header(version,
-                                                             context.storage.iiss.get_end_block_height_of_calc(context),
+                                                             block_height,
                                                              revision)
         context.storage.rc.put(context.rc_block_batch, data)
 
