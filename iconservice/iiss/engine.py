@@ -667,7 +667,7 @@ class Engine(EngineBase):
             if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
                 self._put_header_to_rc_db(context, is_genesis_iiss=True)
 
-        start_calc_block: int = context.storage.iiss.get_start_block_of_calc(context)
+        start_calc_block, _ = context.storage.meta.get_last_calc_info(context)
         if start_calc_block == context.block.height:
             self._put_header_to_rc_db(context)
             self._put_gv_to_rc_db(context)
