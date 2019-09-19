@@ -36,7 +36,7 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
@@ -539,9 +539,6 @@ class IconServiceEngine(ContextContainer):
         if prev_block_generator is None or prev_block_validators is None:
             return None
 
-        # we can't support denied vote in low version.
-        # so we can set only Approve.
-
         new_prev_block_votes: List[Tuple['Address', int]] = []
         last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
 
@@ -549,8 +546,12 @@ class IconServiceEngine(ContextContainer):
             if address == prev_block_generator:
                 continue
             else:
-                is_validator: int = int(address in prev_block_validators)
-                new_prev_block_votes.append([address, is_validator])
+                # we can't support denied vote in low version.
+                # so we can set only Approve.
+                vote_status: 'BlockVoteStatus' = BlockVoteStatus.NONE
+                if address in prev_block_validators:
+                    vote_status: 'BlockVoteStatus' = BlockVoteStatus.TRUE
+                new_prev_block_votes.append([address, vote_status.value])
         return new_prev_block_votes
 
     @classmethod
@@ -640,15 +641,14 @@ class IconServiceEngine(ContextContainer):
             Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
             return
 
-        approved_vote_state: int = 1
-        validators: List[Tuple['Address', int]] = [[prev_block_generator, approved_vote_state]]
+        validators: List[Tuple['Address', int]] = [[prev_block_generator, BlockVoteStatus.TRUE.value]]
         validators.extend(prev_block_votes)
 
         for address, vote_state in validators:
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             assert isinstance(dirty_prep, PRep)
 
-            is_validator: bool = vote_state > 0
+            is_validator: bool = vote_state > BlockVoteStatus.NONE.value
 
             dirty_prep.update_block_statistics(is_validator)
             context.put_dirty_prep(dirty_prep)
