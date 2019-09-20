@@ -676,7 +676,6 @@ class Engine(EngineBase):
         if not context.is_decentralized():
             return
 
-        # todo: check this generator, validators
         self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_votes)
 
         start_term_block: int = context.term.start_block_height
@@ -786,8 +785,10 @@ class Engine(EngineBase):
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_rate.reward_prep)
 
+        # block height which GV variable has been calculated
+        block_height: int = context.block.height - 1
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(version,
-                                                                              context.block.height,
+                                                                              block_height,
                                                                               calculated_irep,
                                                                               reward_prep_for_rc,
                                                                               context.main_prep_count,
@@ -828,10 +829,10 @@ class Engine(EngineBase):
         assert context.is_decentralized()
 
         if term is None:
-            block_height: int = context.block.height
+            block_height: int = context.block.height - 1
             term: 'Term' = context.term
         else:
-            block_height: int = context.block.height + 1
+            block_height: int = context.block.height
 
         Logger.debug(
             tag=cls.TAG,
