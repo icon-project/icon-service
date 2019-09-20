@@ -36,8 +36,8 @@ class RewardCalcProxy(object):
     """Communicates with Reward Calculator through UNIX Domain Socket
 
     """
-    # Timeout: 1s
-    IPC_TIMEOUT_S = 1
+    # Timeout: 10s
+    IPC_TIMEOUT_S = 10
 
     def __init__(self,
                  ready_callback: Callable[['Response'], Any] = None,
