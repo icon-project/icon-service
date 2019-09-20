@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Iterable
+from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
-from .data import Term, PRepSnapshot
+from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
 from .penalty_imposer import PenaltyImposer
@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
     from ..icx import IcxStorage
     from ..precommit_data_manager import PrecommitData
-
 
 _TAG = "PREP"
 
@@ -193,7 +192,7 @@ class Engine(EngineBase, IISSEngineListener):
             main_prep_as_dict, new_term = None, None
 
         if new_term:
-            self._update_prep_grades(context.preps, self.term, new_term)
+            self._update_prep_grades(context, context.preps, self.term, new_term)
             context.storage.prep.put_term(context, new_term)
 
         return main_prep_as_dict, new_term
@@ -287,6 +286,7 @@ class Engine(EngineBase, IISSEngineListener):
 
     @classmethod
     def _update_prep_grades(cls,
+                            context: 'IconScoreContext',
                             new_preps: 'PRepContainer',
                             old_term: Optional['Term'],
                             new_term: 'Term'):
@@ -336,6 +336,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep = prep.copy()
             prep.grade = grades[_NEW]
             new_preps.replace(prep)
+            context.storage.prep.put_prep(context, prep)
 
             Logger.info(tag=_TAG,
                         msg=f"P-Rep grade changed: {address} {grades[_OLD]} -> {grades[_NEW]}")

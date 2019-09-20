@@ -98,12 +98,12 @@ def _check_prep_grades2(new_preps: 'PRepContainer', new_term: 'Term'):
             assert prep.grade == PRepGrade.CANDIDATE
 
 
-class TestPRepEngine(unittest.TestCase):
+class TestEngine(unittest.TestCase):
     def setUp(self) -> None:
-        total_delegated = 0
+        context = Mock()
 
         self.total_supply = icx_to_loop(800_460_000)
-        self.total_delegated = total_delegated
+        self.total_delegated = 0
 
         main_prep_count = PREP_MAIN_PREPS
         elected_prep_count = PREP_MAIN_AND_SUB_PREPS
@@ -123,10 +123,11 @@ class TestPRepEngine(unittest.TestCase):
 
         # Case 0: Network has just decentralized without any delegation
         PRepEngine._update_prep_grades(
-            new_preps=new_preps, old_term=None, new_term=term)
+            context, new_preps=new_preps, old_term=None, new_term=term)
         assert len(term.main_preps) == main_prep_count
         assert len(term.sub_preps) == sub_prep_count
         assert len(term) == elected_prep_count
+        assert len(term) == len(context.storage.prep.put_prep.mock_calls)
 
         _check_prep_grades(new_preps, main_prep_count, len(term))
 
@@ -140,6 +141,8 @@ class TestPRepEngine(unittest.TestCase):
         self.new_preps = None
 
     def test_update_prep_grades_on_main_prep_unregistration(self):
+        context = Mock()
+
         old_term = self.term
         old_preps = self.preps
         new_term = old_term.copy()
@@ -160,15 +163,18 @@ class TestPRepEngine(unittest.TestCase):
 
         # Replace main P-Rep0 with sub P-Rep0
         new_term.update_preps([dirty_prep])
-        PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+        PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
         assert len(new_term.main_preps) == self.main_prep_count
         assert len(new_term.sub_preps) == self.sub_prep_count - 1
+        assert len(context.storage.prep.put_prep.mock_calls) == 2
 
         _check_prep_grades(new_preps, self.main_prep_count, len(new_term))
         _check_prep_grades2(new_preps, new_term)
         assert old_term.sub_preps[0] == new_term.main_preps[0]
 
     def test_update_prep_grades_on_sub_prep_unregistration(self):
+        context = Mock()
+
         old_term = self.term
         old_preps = self.preps
         new_term = old_term.copy()
@@ -189,10 +195,11 @@ class TestPRepEngine(unittest.TestCase):
         assert new_preps.get_by_index(index) != prep
 
         new_term.update_preps([dirty_prep])
-        PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+        PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
         _check_prep_grades(new_preps, len(new_term.main_preps), len(new_term))
         assert len(new_term.main_preps) == self.main_prep_count
         assert len(new_term.sub_preps) == self.sub_prep_count - 1
+        assert len(context.storage.prep.put_prep.mock_calls) == 1
 
         for old_snapshot, new_snapshot in zip(old_term.main_preps, new_term.main_preps):
             assert old_snapshot == new_snapshot
@@ -200,6 +207,8 @@ class TestPRepEngine(unittest.TestCase):
             assert new_snapshot == old_term.sub_preps[i + 1]
 
     def test_update_prep_grades_on_disqualification(self):
+        context = Mock()
+
         states = [PRepStatus.DISQUALIFIED, PRepStatus.DISQUALIFIED, PRepStatus.ACTIVE]
         penalties = [
             PenaltyReason.PREP_DISQUALIFICATION,
@@ -229,7 +238,7 @@ class TestPRepEngine(unittest.TestCase):
             assert new_preps.get_by_index(index) != prep
 
             new_term.update_preps([dirty_prep])
-            PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+            PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
             if penalties[i] != PenaltyReason.BLOCK_VALIDATION:
                 _check_prep_grades(new_preps, len(new_term.main_preps), len(new_term))
             _check_prep_grades2(new_preps, new_term)
@@ -247,7 +256,11 @@ class TestPRepEngine(unittest.TestCase):
             for j, new_snapshot in enumerate(new_term.sub_preps):
                 assert new_snapshot == old_term.sub_preps[j + 1]
 
+        assert len(context.storage.prep.put_prep.mock_calls) == len(states) * 2
+
     def test_update_prep_grades_on_multiple_cases(self):
+        context = Mock()
+
         old_term = self.term
         old_preps = self.preps
         new_term = old_term.copy()
@@ -315,7 +328,7 @@ class TestPRepEngine(unittest.TestCase):
             assert new_preps.get_by_address(address) != prep
             assert new_preps.get_by_address(address) == dirty_prep
 
-        PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+        PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
         _check_prep_grades2(new_preps, new_term)
 
         assert len(new_term.main_preps) == self.main_prep_count
