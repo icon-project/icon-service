@@ -14,13 +14,14 @@
 # limitations under the License.
 
 import os
+import random
 import unittest
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-from iconservice.icon_constant import PRepGrade, IconScoreContextType
+from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatus, PenaltyReason
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.prep import PRepEngine
@@ -49,95 +50,275 @@ def _create_term(total_supply: int, total_delegated: int):
                 total_delegated=total_delegated)
 
 
-class TestEngine(unittest.TestCase):
+def _create_preps(size: int):
+    preps = PRepContainer()
+
+    # Create dummy preps
+    for i in range(size):
+        address = Address.from_prefix_and_int(AddressPrefix.EOA, i)
+        delegated = icx_to_loop(1000 - i)
+
+        prep = PRep(address, block_height=i, delegated=delegated)
+        prep.freeze()
+
+        assert prep.grade == PRepGrade.CANDIDATE
+        assert prep.delegated == delegated
+        assert prep.block_height == i
+        preps.add(prep)
+
+    return preps
+
+
+def _check_prep_grades(new_preps: 'PRepContainer', main_prep_count: int, elected_prep_count: int):
+    for i, prep in enumerate(new_preps):
+        if i < main_prep_count:
+            assert prep.grade == PRepGrade.MAIN
+        elif i < elected_prep_count:
+            assert prep.grade == PRepGrade.SUB
+        else:
+            assert prep.grade == PRepGrade.CANDIDATE
+
+
+def _check_prep_grades2(new_preps: 'PRepContainer', new_term: 'Term'):
+    main_prep_count = len(new_term.main_preps)
+    elected_prep_count = len(new_term)
+
+    for i, snapshot in enumerate(new_term.preps):
+        prep = new_preps.get_by_address(snapshot.address)
+
+        if i < main_prep_count:
+            assert prep.grade == PRepGrade.MAIN
+        elif i < elected_prep_count:
+            assert prep.grade == PRepGrade.SUB
+
+    for prep in new_preps:
+        if prep.address in new_term:
+            assert prep.grade in (PRepGrade.MAIN, PRepGrade.SUB)
+        else:
+            assert prep.grade == PRepGrade.CANDIDATE
+
+
+class TestPRepEngine(unittest.TestCase):
     def setUp(self) -> None:
-        size = 200
         total_delegated = 0
 
-        preps = PRepContainer()
-
-        # Create dummy preps
-        for i in range(size):
-            address = Address.from_prefix_and_int(AddressPrefix.EOA, i)
-            delegated = icx_to_loop(1000 - i)
-            total_delegated += delegated
-
-            prep = PRep(address,
-                        block_height=i,
-                        delegated=delegated)
-            prep.freeze()
-
-            assert prep.grade == PRepGrade.CANDIDATE
-            assert prep.delegated == delegated
-            assert prep.block_height == i
-            preps.add(prep)
-
-        preps.freeze()
-
-        prep_engine = PRepEngine()
-        prep_engine.preps = preps
-
-        IconScoreContext.engine = Mock()
-        IconScoreContext.engine.prep = prep_engine
-        IconScoreContext.storage = Mock()
-        IconScoreContext.storage.prep = Mock()
-
-        context = _create_context()
-        context.main_prep_count = PREP_MAIN_PREPS
-        context.main_and_sub_prep_count = PREP_MAIN_AND_SUB_PREPS
-
-        self.context = context
-        self.total_supply = icx_to_loop(8_046_000)
+        self.total_supply = icx_to_loop(800_460_000)
         self.total_delegated = total_delegated
+
+        main_prep_count = PREP_MAIN_PREPS
+        elected_prep_count = PREP_MAIN_AND_SUB_PREPS
+        sub_prep_count = elected_prep_count - main_prep_count
+
+        new_preps: 'PRepContainer' = _create_preps(size=elected_prep_count * 2)
+        term = Term(sequence=0,
+                    start_block_height=100,
+                    period=43120,
+                    irep=icx_to_loop(50000),
+                    total_supply=self.total_supply,
+                    total_delegated=self.total_delegated)
+        term.set_preps(new_preps, main_prep_count, elected_prep_count)
+        assert len(term.main_preps) == main_prep_count
+        assert len(term.sub_preps) == elected_prep_count - main_prep_count
+        assert len(term) == elected_prep_count
+
+        # Case 0: Network has just decentralized without any delegation
+        PRepEngine._update_prep_grades(
+            new_preps=new_preps, old_term=None, new_term=term)
+        assert len(term.main_preps) == main_prep_count
+        assert len(term.sub_preps) == sub_prep_count
+        assert len(term) == elected_prep_count
+
+        _check_prep_grades(new_preps, main_prep_count, len(term))
+
+        self.term = term
+        self.preps = new_preps
+        self.main_prep_count = PREP_MAIN_PREPS
+        self.elected_prep_count = PREP_MAIN_AND_SUB_PREPS
+        self.sub_prep_count = PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS
 
     def tearDown(self) -> None:
         self.new_preps = None
 
-    def test__update_prep_grades_1(self):
-        context = self.context
+    def test_update_prep_grades_on_main_prep_unregistration(self):
+        old_term = self.term
+        old_preps = self.preps
+        new_term = old_term.copy()
+        new_preps = old_preps.copy(mutable=True)
 
-        # Case0: Network has just decentralized without any delegation
-        context.engine.prep._update_prep_grades_on_term_ended(context)
+        # Unregister 0-index main P-Rep
+        prep = new_preps.get_by_index(0)
+        assert prep.grade == PRepGrade.MAIN
+        assert prep.address in old_term
 
-        for i, prep in enumerate(context.preps):
-            if i < PREP_MAIN_PREPS:
-                self.assertEqual(PRepGrade.MAIN, prep.grade)
-            elif i < PREP_MAIN_AND_SUB_PREPS:
-                self.assertEqual(PRepGrade.SUB, prep.grade)
-            else:
-                self.assertEqual(PRepGrade.CANDIDATE, prep.grade)
+        dirty_prep = prep.copy()
+        dirty_prep.status = PRepStatus.UNREGISTERED
+        new_preps.replace(dirty_prep)
+        assert new_preps.is_dirty()
 
-        term = _create_term(self.total_supply, self.total_delegated)
-        term.set_preps(context.preps, context.main_prep_count, context.main_and_sub_prep_count)
-        term.freeze()
+        assert old_preps.get_by_index(0) == prep
+        assert new_preps.get_by_index(0) != prep
 
-        context.engine.prep.term = term
-        context.engine.prep.preps = context.preps
-        context.engine.prep.preps.freeze()
+        # Replace main P-Rep0 with sub P-Rep0
+        new_term.update_preps([dirty_prep])
+        PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+        assert len(new_term.main_preps) == self.main_prep_count
+        assert len(new_term.sub_preps) == self.sub_prep_count - 1
 
-        context._preps = context.engine.prep.preps.copy(mutable=True)
+        _check_prep_grades(new_preps, self.main_prep_count, len(new_term))
+        _check_prep_grades2(new_preps, new_term)
+        assert old_term.sub_preps[0] == new_term.main_preps[0]
 
-        for i in range(100):
-            prep = context.preps.get_by_index(i + context.main_and_sub_prep_count)
+    def test_update_prep_grades_on_sub_prep_unregistration(self):
+        old_term = self.term
+        old_preps = self.preps
+        new_term = old_term.copy()
+        new_preps = old_preps.copy(mutable=True)
+
+        # Unregister a sub P-Rep
+        index = len(old_term.main_preps)
+        prep = new_preps.get_by_index(index)
+        assert prep.grade == PRepGrade.SUB
+        assert prep.address in old_term
+
+        dirty_prep = prep.copy()
+        dirty_prep.status = PRepStatus.UNREGISTERED
+        new_preps.replace(dirty_prep)
+        assert new_preps.is_dirty()
+
+        assert old_preps.get_by_index(index) == prep
+        assert new_preps.get_by_index(index) != prep
+
+        new_term.update_preps([dirty_prep])
+        PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+        _check_prep_grades(new_preps, len(new_term.main_preps), len(new_term))
+        assert len(new_term.main_preps) == self.main_prep_count
+        assert len(new_term.sub_preps) == self.sub_prep_count - 1
+
+        for old_snapshot, new_snapshot in zip(old_term.main_preps, new_term.main_preps):
+            assert old_snapshot == new_snapshot
+        for i, new_snapshot in enumerate(new_term.sub_preps):
+            assert new_snapshot == old_term.sub_preps[i + 1]
+
+    def test_update_prep_grades_on_disqualification(self):
+        states = [PRepStatus.DISQUALIFIED, PRepStatus.DISQUALIFIED, PRepStatus.ACTIVE]
+        penalties = [
+            PenaltyReason.PREP_DISQUALIFICATION,
+            PenaltyReason.LOW_PRODUCTIVITY,
+            PenaltyReason.BLOCK_VALIDATION
+        ]
+
+        for i in range(len(states)):
+            old_term = self.term
+            old_preps = self.preps
+            new_term = old_term.copy()
+            new_preps = old_preps.copy(mutable=True)
+
+            # Disqualify a main P-PRep
+            index = random.randint(0, len(old_term.main_preps) - 1)
+            prep = new_preps.get_by_index(index)
+            assert prep.grade == PRepGrade.MAIN
+            assert prep.address in old_term
+
             dirty_prep = prep.copy()
-            dirty_prep.delegated = icx_to_loop(5000) - i
-            context.put_dirty_prep(dirty_prep)
+            dirty_prep.status = states[i]
+            dirty_prep.penalty = penalties[i]
+            new_preps.replace(dirty_prep)
+            assert new_preps.is_dirty()
 
-        context.update_dirty_prep_batch()
+            assert old_preps.get_by_index(index) == prep
+            assert new_preps.get_by_index(index) != prep
 
-        context.engine.prep._update_prep_grades_on_term_ended(context)
+            new_term.update_preps([dirty_prep])
+            PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+            if penalties[i] != PenaltyReason.BLOCK_VALIDATION:
+                _check_prep_grades(new_preps, len(new_term.main_preps), len(new_term))
+            _check_prep_grades2(new_preps, new_term)
+            assert len(new_term.main_preps) == self.main_prep_count
+            assert len(new_term.sub_preps) == self.sub_prep_count - 1
 
-        for i, prep in enumerate(context.preps):
-            if i < PREP_MAIN_PREPS:
-                assert prep.grade == PRepGrade.MAIN
-                assert prep.delegated == icx_to_loop(5000) - i
-            elif i < PREP_MAIN_AND_SUB_PREPS:
-                self.assertEqual(PRepGrade.SUB, prep.grade)
-                assert prep.delegated == icx_to_loop(5000) - i
-            else:
-                self.assertEqual(PRepGrade.CANDIDATE, prep.grade)
-                assert prep.delegated == icx_to_loop(1000 - i + context.main_and_sub_prep_count)
+            j = 0
+            for old_snapshot, new_snapshot in zip(old_term.main_preps, new_term.main_preps):
+                if j == index:
+                    old_snapshot = old_term.sub_preps[0]
 
-        for i, prep_snapshot in enumerate(term.preps):
-            prep = context.preps.get_by_index(i + context.main_and_sub_prep_count)
-            assert prep_snapshot.address == prep.address
+                assert old_snapshot == new_snapshot
+                j += 1
+
+            for j, new_snapshot in enumerate(new_term.sub_preps):
+                assert new_snapshot == old_term.sub_preps[j + 1]
+
+    def test_update_prep_grades_on_multiple_cases(self):
+        old_term = self.term
+        old_preps = self.preps
+        new_term = old_term.copy()
+        new_preps = old_preps.copy(mutable=True)
+
+        # Main P-Reps
+        cases = [
+            (PRepStatus.UNREGISTERED, PenaltyReason.NONE),
+            (PRepStatus.DISQUALIFIED, PenaltyReason.PREP_DISQUALIFICATION),
+            (PRepStatus.DISQUALIFIED, PenaltyReason.LOW_PRODUCTIVITY),
+            (PRepStatus.ACTIVE, PenaltyReason.BLOCK_VALIDATION)
+        ]
+        for case in cases:
+            index = random.randint(0, len(new_term.main_preps) - 1)
+            prep = new_preps.get_by_index(index)
+
+            dirty_prep = prep.copy()
+            dirty_prep.status = case[0]
+            dirty_prep.penalty = case[1]
+            new_preps.replace(dirty_prep)
+
+            assert new_preps.is_dirty()
+            assert old_preps.get_by_address(prep.address) == prep
+            assert new_preps.get_by_address(prep.address) != prep
+            assert new_preps.get_by_address(prep.address) == dirty_prep
+
+            new_term.update_preps([dirty_prep])
+
+        # Sub P-Rep
+        main_prep_count = len(new_term.main_preps)
+        assert main_prep_count == len(old_term.main_preps)
+        assert len(new_term) == len(old_term) - len(cases)
+
+        for _ in range(3):
+            index = random.randint(0, len(new_term.sub_preps) - 1)
+            sub_snapshot = new_term.sub_preps[index]
+            address = sub_snapshot.address
+
+            prep = new_preps.get_by_address(address)
+            assert prep.grade == PRepGrade.SUB
+
+            dirty_prep = prep.copy()
+            dirty_prep.status = PRepStatus.UNREGISTERED
+            new_preps.replace(dirty_prep)
+            assert new_preps.is_dirty()
+            assert old_preps.get_by_address(address) == prep
+            assert new_preps.get_by_address(address) != prep
+            assert new_preps.get_by_address(address) == dirty_prep
+
+            new_term.update_preps([dirty_prep])
+
+        # Candidate P-Rep
+        for _ in range(3):
+            index = random.randint(1, new_preps.size(active_prep_only=True) - len(new_term) - 1)
+
+            prep = new_preps.get_by_index(len(new_term) + index)
+            address = prep.address
+            assert prep.grade == PRepGrade.CANDIDATE
+
+            dirty_prep = prep.copy()
+            dirty_prep.status = PRepStatus.UNREGISTERED
+            new_preps.replace(dirty_prep)
+            assert new_preps.is_dirty()
+            assert old_preps.get_by_address(address) == prep
+            assert new_preps.get_by_address(address) != prep
+            assert new_preps.get_by_address(address) == dirty_prep
+
+        PRepEngine._update_prep_grades(new_preps, old_term, new_term)
+        _check_prep_grades2(new_preps, new_term)
+
+        assert len(new_term.main_preps) == self.main_prep_count
+        assert len(new_term.sub_preps) == self.sub_prep_count - 7
+        assert new_preps.size(active_prep_only=True) == old_preps.size(active_prep_only=True) - 9
+        assert new_preps.size() == old_preps.size()

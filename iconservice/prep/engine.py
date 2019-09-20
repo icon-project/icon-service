@@ -41,6 +41,9 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
 
 
+_TAG = "PREP"
+
+
 class Engine(EngineBase, IISSEngineListener):
     """PRepEngine class
 
@@ -48,11 +51,10 @@ class Engine(EngineBase, IISSEngineListener):
     * Manages term and preps
     * Handles P-Rep related JSON-RPC API requests
     """
-    TAG = "PREP"
 
     def __init__(self):
         super().__init__()
-        Logger.debug(tag=self.TAG, msg="PRepEngine.__init__() start")
+        Logger.debug(tag=_TAG, msg="PRepEngine.__init__() start")
 
         self._invoke_handlers: dict = {
             "registerPRep": self.handle_register_prep,
@@ -75,7 +77,7 @@ class Engine(EngineBase, IISSEngineListener):
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
-        Logger.debug(tag=self.TAG, msg="PRepEngine.__init__() end")
+        Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
     def open(self,
              context: 'IconScoreContext',
@@ -180,20 +182,21 @@ class Engine(EngineBase, IISSEngineListener):
             True: Decentralization will begin at the next block
         :return:
         """
+
         if is_decentralization_started or self._is_term_ended(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, term = self._on_term_ended(context)
+            main_prep_as_dict, new_term = self._on_term_ended(context)
         elif context.is_decentralized():
             # In-term P-Rep replacement
-            main_prep_as_dict, term = self._on_term_updated(context)
+            main_prep_as_dict, new_term = self._on_term_updated(context)
         else:
-            main_prep_as_dict = None
-            term = None
+            main_prep_as_dict, new_term = None, None
 
-        if term:
-            context.storage.prep.put_term(context, term)
+        if new_term:
+            self._update_prep_grades(context.preps, self.term, new_term)
+            context.storage.prep.put_term(context, new_term)
 
-        return main_prep_as_dict, term
+        return main_prep_as_dict, new_term
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
@@ -220,9 +223,6 @@ class Engine(EngineBase, IISSEngineListener):
 
         # All block validation penalties are released
         self._release_block_validation_penalty(context)
-
-        # Update the grades of the elected preps on the current and next term
-        self._update_prep_grades_on_term_ended(context)
 
         # Create a term with context.preps whose grades are up-to-date
         new_term: 'Term' = self._create_next_term(context, self.term)
@@ -268,8 +268,8 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         context.storage.meta.put_last_main_preps(context, main_preps)
 
-        # No invalid elected P-Reps in this block
         if not context.is_term_updated():
+            # No elected P-Rep is disqualified during this term
             return None, None
 
         new_term = context.term
@@ -285,40 +285,35 @@ class Engine(EngineBase, IISSEngineListener):
 
         return main_preps_as_dict, new_term
 
-    def _update_prep_grades_on_term_ended(self, context: 'IconScoreContext'):
-        """Update the grades of the existing elected P-Reps every time when the next term begins
+    @classmethod
+    def _update_prep_grades(cls,
+                            new_preps: 'PRepContainer',
+                            old_term: Optional['Term'],
+                            new_term: 'Term'):
+        """Update the grades of P-Reps every time when a block is invoked
 
-        Assume that block validation penalty has been already reset in preceding processes
+        Do NOT change any properties of P-Reps after this method is called in this block
 
         :param context:
         :return:
         """
-        # Constants
-        _OLD, _NEW = 0, 1
-
-        main_prep_count: int = context.main_prep_count
-        main_and_sub_prep_count: int = context.main_and_sub_prep_count
-        new_preps: 'PRepContainer' = context.preps
+        Logger.debug(tag=_TAG, msg="_update_prep_grades() start")
 
         # 0: old grade, 1: new grade
+        _OLD, _NEW = 0, 1
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
-        if self.term:
-            # Put the address and grade of a old P-Rep to prep_grades dict
-            old_preps: Iterable['PRepSnapshot'] = self.term.preps
-            for prep_snapshot in old_preps:
-                # grades[0] is an old grade and grades[1] is a new grade
-                prep = context.preps.get_by_address(prep_snapshot.address)
-                prep_grades[prep.address] = (prep.grade, PRepGrade.CANDIDATE)
+        if old_term:
+            for prep_snapshot in old_term.main_preps:
+                prep_grades[prep_snapshot.address] = (PRepGrade.MAIN, PRepGrade.CANDIDATE)
+
+            for prep_snapshot in old_term.sub_preps:
+                prep_grades[prep_snapshot.address] = (PRepGrade.SUB, PRepGrade.CANDIDATE)
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
-        for i in range(main_and_sub_prep_count):
-            prep: 'PRep' = new_preps.get_by_index(i)
-            if prep is None:
-                Logger.warning(tag=self.TAG, msg=f"Not enough P-Reps: {new_preps.size(active_prep_only=True)}")
-                break
-
-            prep_address: 'Address' = prep.address
+        main_prep_count: int = len(new_term.main_preps)
+        for i, prep_snapshot in enumerate(new_term.preps):
+            prep_address: 'Address' = prep_snapshot.address
             grades: tuple = prep_grades.get(prep_address, (PRepGrade.CANDIDATE, PRepGrade.CANDIDATE))
 
             old_grade: 'PRepGrade' = grades[_OLD]
@@ -330,14 +325,22 @@ class Engine(EngineBase, IISSEngineListener):
                 prep_grades[prep_address] = (old_grade, new_grade)
 
         # Update the grades of P-Reps for the next term
+        # CAUTION: DO NOT use context.put_dirty_prep() here
         for address, grades in prep_grades.items():
-            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
-            assert dirty_prep is not None
+            prep: 'PRep' = new_preps.get_by_address(address)
+            assert prep is not None
 
-            dirty_prep.grade = grades[_NEW]
-            context.put_dirty_prep(dirty_prep)
+            if prep.grade == grades[_NEW]:
+                continue
 
-        context.update_dirty_prep_batch()
+            prep = prep.copy()
+            prep.grade = grades[_NEW]
+            new_preps.replace(prep)
+
+            Logger.info(tag=_TAG,
+                        msg=f"P-Rep grade changed: {address} {grades[_OLD]} -> {grades[_NEW]}")
+
+        Logger.debug(tag=_TAG, msg="_update_prep_grades() end")
 
     def _release_block_validation_penalty(self, context: 'IconScoreContext'):
         """Release block validation penalty every term end
