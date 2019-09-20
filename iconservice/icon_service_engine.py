@@ -520,7 +520,7 @@ class IconServiceEngine(ContextContainer):
                               context: 'IconScoreContext',
                               prev_block_generator: Optional['Address'] = None,
                               prev_block_validators: Optional[List['Address']] = None,
-                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None)\
+                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None) \
             -> Optional[List[Tuple['Address', bool]]]:
 
         """
@@ -572,6 +572,8 @@ class IconServiceEngine(ContextContainer):
         if not context.is_decentralized():
             return
 
+        self._put_block_produce_info_on_start_calc(context, prev_block_generator, prev_block_votes)
+
         # Skip the first block after decentralization
         if context.is_the_first_block_on_decentralization():
             Logger.info(tag=self.TAG,
@@ -582,12 +584,30 @@ class IconServiceEngine(ContextContainer):
         self._update_last_generate_block_height(context, prev_block_generator)
 
     @classmethod
+    def _put_block_produce_info_on_start_calc(cls,
+                                              context: 'IconScoreContext',
+                                              prev_block_generator: Optional['Address'] = None,
+                                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
+
+        _, end_calc_block = context.storage.meta.get_last_calc_info(context)
+        if end_calc_block + 1 != context.block.height:
+            return
+
+        rc_block_batch: list = []
+        context.engine.iiss.put_block_produce_info_to_rc_db(context,
+                                                            rc_block_batch,
+                                                            prev_block_generator,
+                                                            prev_block_votes)
+        context.storage.rc.put_version_and_revision(context.revision)
+        context.storage.rc.commit(rc_block_batch)
+
+    @classmethod
     def _after_transaction_process(
             cls,
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
             prev_block_generator: Optional['Address'] = None,
-            prev_block_votes: Optional[List[Tuple['Address', bool]]] = None)\
+            prev_block_votes: Optional[List[Tuple['Address', bool]]] = None) \
             -> Tuple[Optional[dict], Optional['Term']]:
         """If the current term is ended, prepare the next term,
         - Prepare the list of main P-Reps for the next term which is passed to loopchain
@@ -1689,10 +1709,12 @@ class IconServiceEngine(ContextContainer):
             self._init_global_value_by_governance_score(context)
 
         if precommit_data.revision >= REV_IISS:
+            context.engine.iiss.send_calculate(context, precommit_data)
+
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
-            context.engine.iiss.send_ipc(context, precommit_data)
             # todo: consider case when error being raised in send ipc
+            context.engine.iiss.send_ipc(context)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state

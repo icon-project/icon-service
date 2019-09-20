@@ -129,6 +129,7 @@ class Storage(object):
                 self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
 
         self._db.write_batch(batch_dict)
+        rc_block_batch.clear()
 
     # todo: naming
     def put_version_and_revision(self, revision: int):
