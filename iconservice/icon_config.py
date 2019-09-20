@@ -25,6 +25,7 @@ default_icon_config = {
     ConfigKey.AMQP_KEY: "7100",
     ConfigKey.AMQP_TARGET: "127.0.0.1",
     ConfigKey.BUILTIN_SCORE_OWNER: "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
+    ConfigKey.IPC_TIMEOUT: 10,
     ConfigKey.SERVICE: {
         ConfigKey.SERVICE_FEE: False,
         ConfigKey.SERVICE_AUDIT: False,

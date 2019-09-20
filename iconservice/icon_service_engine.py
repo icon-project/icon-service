@@ -170,7 +170,8 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.PREP_REGISTRATION_FEE],
                                      conf[ConfigKey.PENALTY_GRACE_PERIOD],
                                      conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
-                                     conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD])
+                                     conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
+                                     conf[ConfigKey.IPC_TIMEOUT])
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -209,7 +210,8 @@ class IconServiceEngine(ContextContainer):
                                 prep_reg_fee: int,
                                 penalty_grace_period: int,
                                 low_productivity_penalty_threshold: int,
-                                block_validation_penalty_threshold: int):
+                                block_validation_penalty_threshold: int,
+                                ipc_timeout: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -217,7 +219,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.iiss.open(context,
                                           log_dir,
                                           rc_data_path,
-                                          rc_socket_path)
+                                          rc_socket_path,
+                                          ipc_timeout)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
                                           irep,

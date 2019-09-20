@@ -36,23 +36,23 @@ class RewardCalcProxy(object):
     """Communicates with Reward Calculator through UNIX Domain Socket
 
     """
-    # Timeout: 1s
-    IPC_TIMEOUT_S = 1
-
     def __init__(self,
+                 ipc_timeout: int,
                  ready_callback: Callable[['Response'], Any] = None,
-                 calc_done_callback: Callable[['Response'], Any] = None
-                 ):
+                 calc_done_callback: Callable[['Response'], Any] = None):
         Logger.debug(tag=_TAG, msg="__init__() start")
+        Logger.info(tag=_TAG, msg=f"ipc_timeout: {ipc_timeout}")
 
         self._loop = None
         self._ipc_server = IPCServer()
         self._message_queue: Optional['MessageQueue'] = None
         self._reward_calc: Optional[Popen] = None
+
         self._ready_future: Optional[asyncio.Future] = None
 
         self._ready_callback: Optional[Callable] = ready_callback
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
+        self._ipc_timeout = ipc_timeout
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
@@ -102,7 +102,7 @@ class RewardCalcProxy(object):
             asyncio.run_coroutine_threadsafe(self._get_version(), self._loop)
 
         try:
-            response: 'VersionResponse' = future.result(self.IPC_TIMEOUT_S)
+            response: 'VersionResponse' = future.result(self._ipc_timeout)
         except asyncio.TimeoutError:
             future.cancel()
             raise TimeoutException("get_version message to RewardCalculator has timed-out")
@@ -178,7 +178,7 @@ class RewardCalcProxy(object):
             self._claim_iscore(address, block_height, block_hash), self._loop)
 
         try:
-            response: 'ClaimResponse' = future.result(self.IPC_TIMEOUT_S)
+            response: 'ClaimResponse' = future.result(self._ipc_timeout)
         except asyncio.TimeoutError:
             future.cancel()
             raise TimeoutException("claim_iscore message to RewardCalculator has timed-out")
@@ -252,7 +252,7 @@ class RewardCalcProxy(object):
             self._query_iscore(address), self._loop)
 
         try:
-            response: 'QueryResponse' = future.result(self.IPC_TIMEOUT_S)
+            response: 'QueryResponse' = future.result(self._ipc_timeout)
         except asyncio.TimeoutError:
             future.cancel()
             raise TimeoutException("query_iscore message to RewardCalculator has timed-out")
@@ -354,7 +354,7 @@ class RewardCalcProxy(object):
             self._commit_block(success, block_height, block_hash), self._loop)
 
         try:
-            response: 'CommitBlockResponse' = future.result(self.IPC_TIMEOUT_S)
+            response: 'CommitBlockResponse' = future.result(self._ipc_timeout)
         except asyncio.TimeoutError:
             future.cancel()
             raise TimeoutException("commit_block message to RewardCalculator has timed-out")

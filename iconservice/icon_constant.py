@@ -148,6 +148,7 @@ class ConfigKey:
     INITIAL_IREP = 'initialIRep'
     PREP_MAIN_PREPS = 'mainPRepCount'
     PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
+    IPC_TIMEOUT = 'ipcTimeout'
 
     # log
     LOG = 'log'
