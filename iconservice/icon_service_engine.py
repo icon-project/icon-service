@@ -508,6 +508,7 @@ class IconServiceEngine(ContextContainer):
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(context.revision,
+                                       last_revision,
                                        context.block_batch,
                                        block_result,
                                        context.rc_block_batch,
@@ -595,7 +596,7 @@ class IconServiceEngine(ContextContainer):
                                     prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
 
         # if you want to use rc_version here, you must use it.
-        last_revision: int = self._get_revision_from_rc(context)
+        # last_revision: int = self._get_revision_from_rc(context)
 
         if not context.is_decentralized():
             return

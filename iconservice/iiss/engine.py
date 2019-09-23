@@ -716,7 +716,7 @@ class Engine(EngineBase):
 
         block_height: int = precommit_data.block.height - 1
         path: str = context.storage.rc.create_db_for_calc(block_height)
-        context.storage.rc.put_version_and_revision(precommit_data.revision)
+        context.storage.rc.put_version_and_revision(precommit_data.last_revision)
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
