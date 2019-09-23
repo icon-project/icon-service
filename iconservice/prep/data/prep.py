@@ -22,7 +22,8 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS, \
+    REV_IISS
 from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason
 from ...utils.msgpack_for_db import MsgPackForDB
 
@@ -415,9 +416,10 @@ class PRep(Sortable):
         """
         return -self._delegated, self._block_height, self._tx_index
 
-    def to_bytes(self) -> bytes:
-        return MsgPackForDB.dumps([
-            self._VERSION,
+    def to_bytes(self, revision: int) -> bytes:
+        version: int = 1 if revision > REV_IISS else 0
+        data = [
+            version,
             self.address,
             self.status.value,
             self.grade.value,
@@ -439,9 +441,10 @@ class PRep(Sortable):
 
             self._total_blocks,
             self._validated_blocks,
-            self.penalty.value,
-            self._unvalidated_sequence_blocks
-        ])
+        ]
+        if version >= 1:
+            data.extend((self.penalty.value, self._unvalidated_sequence_blocks))
+        return MsgPackForDB.dumps(data)
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'PRep':
