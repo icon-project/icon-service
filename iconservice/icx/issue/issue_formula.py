@@ -62,7 +62,7 @@ class IssueFormula(object):
         beta_2: int = 0
         if context.is_decentralized():
             beta_1: int = calculated_irep * self._main_prep_count
-            beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2 if context.term.total_delegated > 0 else beta_2
+            beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2 if context.term.total_delegated > 0 else 0
 
         temp_rrep = IssueFormula.calculate_temporary_reward_prep(rrep)
         beta_3: int = temp_rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
