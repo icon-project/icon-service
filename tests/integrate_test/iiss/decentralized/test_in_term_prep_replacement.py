@@ -18,9 +18,9 @@
 """
 from typing import TYPE_CHECKING, List
 
-from iconservice.icon_constant import ConfigKey
-from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, PREP_PENALTY_SIGNATURE
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import ConfigKey, PRepGrade
+from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from iconservice.utils import icx_to_loop
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 class TestPreps(TestIISSBase):
     def _make_init_config(self) -> dict:
-        calculate_period: int = PREP_MAIN_PREPS
+        calculate_period: int = PREP_MAIN_PREPS * 10
         term_period: int = calculate_period
 
         return {
@@ -76,55 +76,56 @@ class TestPreps(TestIISSBase):
         """
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+                            init_balance=icx_to_loop(1))
 
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        # Distribute 3000 icx to new 100 accounts
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS * 2)
+        self.distribute_icx(accounts=accounts, init_balance=icx_to_loop(3000))
 
-        # replace new PREPS
-        tx_list = []
-        for i in range(PREP_MAIN_PREPS):
-            tx = self.create_register_prep_tx(from_=accounts[i])
-            tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + PREP_MAIN_PREPS],
-                                          value=1)
-            tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + PREP_MAIN_PREPS],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
-            tx_list.append(tx)
-        self.process_confirm_block_tx(tx_list)
+        # Replace new P-REPS
+        transactions = []
+        for i, account in enumerate(accounts):
+            # Register a P-Rep
+            tx = self.create_register_prep_tx(from_=account)
+            transactions.append(tx)
+
+            # Stake 100 icx
+            tx = self.create_set_stake_tx(from_=account, value=icx_to_loop(100))
+            transactions.append(tx)
+
+            # Delegate 1 loop to itself
+            tx = self.create_set_delegation_tx(
+                from_=account,
+                origin_delegations=[
+                    (account, icx_to_loop(1))
+                ]
+            )
+            transactions.append(tx)
+        self.process_confirm_block_tx(transactions)
         self.make_blocks_to_end_calculation()
 
         # check whether new PREPS become MAIN_PREPS
-        response: dict = self.get_main_prep_list()
-        expected_preps: list = []
-        expected_total_delegated: int = 0
-        for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-            expected_total_delegated += 1
-        expected_response: dict = {
-            "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
-        }
-        self.assertEqual(expected_response, response)
+        response: dict = self.get_prep_term()
+        preps = response["preps"]
+        for i, prep in enumerate(preps):
+            account = accounts[i]
 
-        tx_list: list = []
+            assert prep["address"] == account.address
+            if i < PREP_MAIN_PREPS:
+                assert prep["grade"] == PRepGrade.MAIN.value
+            else:
+                assert prep["grade"] == PRepGrade.SUB.value
+
+        assert response["totalDelegated"] == icx_to_loop(1) * PREP_MAIN_AND_SUB_PREPS * 2
+
+        transactions: list = []
         # unregister prev_main_preps
         for account in self._accounts[:PREP_MAIN_PREPS]:
             tx: dict = self.create_unregister_prep_tx(from_=account)
-            tx_list.append(tx)
+            transactions.append(tx)
 
         tx_results: ['TransactionResult'] = self.process_confirm_block_tx(
-            tx_list=tx_list,
+            tx_list=transactions,
             prev_block_generator=self._accounts[0].address,
             prev_block_validators=[account.address for account in self._accounts[1:PREP_MAIN_PREPS]]
         )

@@ -205,6 +205,18 @@ class TestIISSBase(TestIntegrateBase):
                                          func_name="claimIScore",
                                          params={})
 
+    def get_prep_term(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepTerm"
+            }
+        }
+        return self._query(query_request)
+
     def get_main_prep_list(self) -> dict:
         query_request = {
             "version": self._version,
