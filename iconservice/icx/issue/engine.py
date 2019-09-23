@@ -52,7 +52,7 @@ class Engine(EngineBase):
         }
         total_issue_amount = 0
         for group in iiss_data_for_issue:
-            issue_amount_per_group = self._formula.calculate(group, iiss_data_for_issue[group])
+            issue_amount_per_group = self._formula.calculate(context, group, iiss_data_for_issue[group])
             iiss_data_for_issue[group][IssueDataKey.VALUE] = issue_amount_per_group
             total_issue_amount += issue_amount_per_group
 

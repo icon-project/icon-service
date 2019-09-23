@@ -15,6 +15,7 @@
 # limitations under the License.
 from iconcommons import Logger
 
+from ...iconscore.icon_score_context import IconScoreContext
 from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, IISS_LOG_TAG
 
 
@@ -28,10 +29,11 @@ class IssueFormula(object):
         # todo: in case of issuing from IISS_REV, get from the storage (not constant value)
         self._main_prep_count: int = main_prep_count
 
-    def calculate(self, group: str, data: dict) -> int:
+    def calculate(self, context: 'IconScoreContext', group: str, data: dict) -> int:
         handler = self._handler[group]
         # todo: as field name changed, this handler pattern not efficient. change the logic
-        value = handler(irep=data["irep"],
+        value = handler(context=context,
+                        irep=data["irep"],
                         rrep=data["rrep"],
                         total_delegation=data["totalDelegation"])
         return value
@@ -50,10 +52,17 @@ class IssueFormula(object):
     def calculate_irep_per_block_contributor(irep: int) -> int:
         return int(irep * IISS_MONTH // (IISS_ANNUAL_BLOCK * 2))
 
-    def _handle_icx_issue_formula_for_prep(self, irep: int, rrep: int, total_delegation: int) -> int:
+    def _handle_icx_issue_formula_for_prep(self,
+                                           context: 'IconScoreContext',
+                                           irep: int,
+                                           rrep: int,
+                                           total_delegation: int) -> int:
         calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
-        beta_1: int = calculated_irep * self._main_prep_count
-        beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2
+        beta_1: int = 0
+        beta_2: int = 0
+        if context.is_decentralized():
+            beta_1: int = calculated_irep * self._main_prep_count
+            beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2 if context.term.total_delegated > 0 else beta_2
 
         temp_rrep = IssueFormula.calculate_temporary_reward_prep(rrep)
         beta_3: int = temp_rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
