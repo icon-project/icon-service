@@ -188,6 +188,9 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_rrep, gv.reward_rep)
                 self.assertEqual(expected_version, gv.version)
 
+            if rc_data[0][:2] == BlockProduceInfoData._PREFIX:
+                raise AssertionError
+
             if rc_data[0][:2] == PRepsData._PREFIX:
                 raise AssertionError
 
