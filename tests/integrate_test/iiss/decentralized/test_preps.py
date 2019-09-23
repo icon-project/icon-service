@@ -88,7 +88,7 @@ class TestPreps(TestIISSBase):
         self.assertEqual(1, len(preps))
         self.assertIsInstance(preps, list)
         self.assertEqual(self._accounts[index].address, prep["address"])
-        self.assertEqual(f"node{self._accounts[index].address}", prep["name"])
+        self.assertEqual(str(self._accounts[index]), prep["name"])
         self.assertEqual(delegation_amount, prep["delegated"])
         self.assertIsInstance(PRepGrade(prep["grade"]), PRepGrade)
         for key in ("name", "country", "city", "delegated", "grade", "totalBlocks", "validatedBlocks"):

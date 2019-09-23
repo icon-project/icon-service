@@ -28,10 +28,11 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRES
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, ICX_IN_LOOP
+from iconservice.icon_constant import ConfigKey, IconScoreContextType
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
+from iconservice.utils import icx_to_loop
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
@@ -96,6 +97,9 @@ class TestIntegrateBase(TestCase):
 
         self._genesis_invoke()
 
+    def get_block_height(self) -> int:
+        return self._block_height
+
     def mock_calculate(self, path, block_height):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
@@ -103,7 +107,8 @@ class TestIntegrateBase(TestCase):
         response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
         self._calculate_done_callback(response)
 
-    def _mock_ipc(self, mock_calculate: callable = mock_calculate):
+    @classmethod
+    def _mock_ipc(cls, mock_calculate: callable = mock_calculate):
         RewardCalcProxy.open = Mock()
         RewardCalcProxy.start = Mock()
         RewardCalcProxy.stop = Mock()
@@ -149,7 +154,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "_admin",
                         "address": self._admin.address,
-                        "balance": TOTAL_SUPPLY * ICX_IN_LOOP
+                        "balance": icx_to_loop(TOTAL_SUPPLY)
                     }
                 ]
             },
@@ -245,6 +250,7 @@ class TestIntegrateBase(TestCase):
     def _write_precommit_state(self, block: 'Block') -> None:
         self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
+        assert block.height == self._block_height
         self._prev_block_hash = block.hash
 
     def _remove_precommit_state(self, block: 'Block') -> None:
@@ -778,3 +784,9 @@ class EOAAccount:
     @property
     def address(self) -> 'Address':
         return self._address
+
+    def __str__(self):
+        return f"name.{self._address}"
+
+    def __repr__(self):
+        return self.__str__()
