@@ -663,9 +663,9 @@ class Engine(EngineBase):
                   prev_block_generator: Optional['Address'],
                   prev_block_votes: Optional[List[Tuple['Address', bool]]],
                   flag: 'PrecommitFlag',
-                  last_revision: int):
+                  rc_db_revision: int):
 
-        version: int = get_rc_version(last_revision)
+        version: int = get_rc_version(rc_db_revision)
 
         if self._is_iiss_calc(flag):
             self._update_state_db_on_end_calc(context)
@@ -674,7 +674,7 @@ class Engine(EngineBase):
 
         start: int = self.get_start_block_of_calc(context)
         if start == context.block.height:
-            self._put_header_to_rc_db(context, last_revision, version)
+            self._put_header_to_rc_db(context, rc_db_revision, version)
             self._put_gv_to_rc_db(context, version)
 
         if not context.is_decentralized():
@@ -716,7 +716,7 @@ class Engine(EngineBase):
 
         block_height: int = precommit_data.block.height - 1
         path: str = context.storage.rc.create_db_for_calc(block_height)
-        context.storage.rc.put_version_and_revision(precommit_data.last_revision)
+        context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod

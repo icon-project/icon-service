@@ -441,7 +441,8 @@ class IconServiceEngine(ContextContainer):
                                                                                     prev_block_votes)
 
         self._set_revision_to_context(context)
-        last_revision: int = self._get_last_revision(context)
+        # For RC DB
+        rc_db_revision: int = self._get_rc_db_revision(context)
 
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -501,14 +502,14 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict, term = self._after_transaction_process(context,
                                                                   precommit_flag,
-                                                                  last_revision,
+                                                                  rc_db_revision,
                                                                   prev_block_generator,
                                                                   prev_block_votes)
 
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(context.revision,
-                                       last_revision,
+                                       rc_db_revision,
                                        context.block_batch,
                                        block_result,
                                        context.rc_block_batch,
@@ -523,8 +524,8 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
     @classmethod
-    def _get_last_revision(cls,
-                           context: 'IconScoreContext') -> int:
+    def _get_rc_db_revision(cls,
+                            context: 'IconScoreContext') -> int:
 
         if context.revision < REV_IISS:
             return 0
@@ -596,7 +597,7 @@ class IconServiceEngine(ContextContainer):
                                     prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
 
         # if you want to use rc_version here, you must use it.
-        # last_revision: int = self._get_revision_from_rc(context)
+        # rc_db_revision: int = self._get_revision_from_rc(context)
 
         if not context.is_decentralized():
             return
@@ -635,7 +636,7 @@ class IconServiceEngine(ContextContainer):
             cls,
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
-            last_revision: int,
+            rc_db_revision: int,
             prev_block_generator: Optional['Address'] = None,
             prev_block_votes: Optional[List[Tuple['Address', bool]]] = None) \
             -> Tuple[Optional[dict], Optional['Term']]:
@@ -647,7 +648,7 @@ class IconServiceEngine(ContextContainer):
 
         :param context:
         :param flag:
-        :param last_revision
+        :param rc_db_revision
         :param prev_block_generator:
         :param prev_block_votes:
         :return:
@@ -662,7 +663,7 @@ class IconServiceEngine(ContextContainer):
                                           prev_block_generator,
                                           prev_block_votes,
                                           flag,
-                                          last_revision)
+                                          rc_db_revision)
 
         context.update_batch()
 
