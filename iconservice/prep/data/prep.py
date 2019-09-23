@@ -298,6 +298,11 @@ class PRep(Sortable):
 
     @stake.setter
     def stake(self, value: int):
+        """stake is set to account.stake
+
+        :param value:
+        :return:
+        """
         assert value >= 0
         self._check_access_permission()
         self._stake = value
@@ -308,6 +313,11 @@ class PRep(Sortable):
 
     @delegated.setter
     def delegated(self, value: int):
+        """delegated is set to account.delegated_amount
+
+        :param value:
+        :return:
+        """
         assert value >= 0
         self._check_access_permission()
         self._delegated = value
@@ -564,10 +574,11 @@ class PRep(Sortable):
     def to_dict(self, dict_type: 'PRepDictType') -> dict:
         """Returns the P-Rep information in dict format
 
-        :param dict_type: FULL(getPRep), ABRIDGED(getPRepList)
+        :param dict_type: FULL(getPRep), ABRIDGED(getPReps)
         :return:
         """
         data = {
+            "address": self._address,
             "status": self._status.value,
             "penalty": self._penalty.value,
             "grade": self.grade.value,
@@ -582,6 +593,8 @@ class PRep(Sortable):
             "irep": self._irep,
             "irepUpdateBlockHeight": self._irep_block_height,
             "lastGenerateBlockHeight": self._last_generate_block_height,
+            "blockHeight": self._block_height,
+            "txIndex": self._tx_index
         }
 
         if dict_type == PRepDictType.FULL:
@@ -589,10 +602,6 @@ class PRep(Sortable):
             data[ConstantKeys.WEBSITE] = self.website
             data[ConstantKeys.DETAILS] = self.details
             data[ConstantKeys.P2P_ENDPOINT] = self.p2p_endpoint
-            data[ConstantKeys.IREP] = self._irep
-            data[ConstantKeys.IREP_BLOCK_HEIGHT] = self._irep_block_height
-        else:
-            data[ConstantKeys.ADDRESS] = self.address
 
         return data
 
