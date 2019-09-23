@@ -154,12 +154,6 @@ class Storage(StorageBase):
             return calc_period
         return None
 
-    def get_start_block_of_calc(self, context: 'IconScoreContext') -> int:
-        end_block_height: int = self.get_end_block_height_of_calc(context)
-        period: int = self.get_calc_period(context)
-        start_calc_block: int = end_block_height - period + 1
-        return start_calc_block
-
 
 class RewardRate:
     _VERSION = 0

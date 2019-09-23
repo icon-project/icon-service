@@ -117,10 +117,12 @@ class TestIISSDecentralized2(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         block_height: int = self.make_blocks_to_end_calculation()
+        self.make_blocks(self._block_height + 1)
+
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height,
-            'nextCalculation': block_height + 1,
+            'blockHeight': block_height + 1,
+            'nextCalculation': block_height + calc_period + 1,
             'nextPRepTerm': 0,
             'variable': {
                 "irep": 0,
@@ -138,14 +140,15 @@ class TestIISSDecentralized2(TestIISSBase):
         self._decentralized()
 
         block_height: int = self.make_blocks_to_end_calculation()
+        self.make_blocks(self._block_height + 1)
 
         prev_calc_period: int = calc_period
 
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height,
-            'nextCalculation': block_height + 1,
-            'nextPRepTerm': block_height + 1,
+            'blockHeight': block_height + 1,
+            'nextCalculation': block_height + calc_period - 1,
+            'nextPRepTerm': block_height + calc_period - 1,
             'variable': {
                 'irep': 50000000000000000000000,
                 'rrep': 1078
@@ -154,26 +157,6 @@ class TestIISSDecentralized2(TestIISSBase):
                 "iscore": 0,
                 "estimatedICX": 0,
                 "startBlockHeight": block_height - prev_calc_period + 1,
-                "endBlockHeight": block_height
-            }
-        }
-        self.assertEqual(expected_response, response)
-
-        block_height: int = self.make_blocks_to_end_calculation()
-        calc_period: int = self._config[ConfigKey.TERM_PERIOD]
-        response: dict = self.get_iiss_info()
-        expected_response = {
-            'blockHeight': block_height,
-            'nextCalculation': block_height + 1,
-            'nextPRepTerm': block_height + 1,
-            'variable': {
-                "irep": 50000000000000000000000,
-                "rrep": 1078
-            },
-            'rcResult': {
-                "iscore": 0,
-                "estimatedICX": 0,
-                "startBlockHeight": block_height - calc_period + 1,
                 "endBlockHeight": block_height
             }
         }

@@ -444,6 +444,9 @@ class IconServiceEngine(ContextContainer):
                                                                                    prev_block_votes)
 
         self._set_revision_to_context(context)
+        # For RC DB
+        rc_db_revision: int = self._get_rc_db_revision(context)
+
         block_result = []
         precommit_flag = PrecommitFlag.NONE
         added_transactions = {}
@@ -458,7 +461,9 @@ class IconServiceEngine(ContextContainer):
             added_transactions[tx_hash.hex()] = tx_params_to_added
             tx_requests.insert(0, base_transaction)
 
-        self._before_transaction_process(context, prev_block_generator, prev_block_votes)
+        self._before_transaction_process(context,
+                                         prev_block_generator,
+                                         prev_block_votes)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -498,25 +503,47 @@ class IconServiceEngine(ContextContainer):
                 # change the reward calculation period from 43200 to 43120 which is the same as term_period
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
-        main_prep_as_dict, term = self._after_transaction_process(
-            context, precommit_flag, prev_block_generator, prev_block_votes)
+        main_prep_as_dict, term = self._after_transaction_process(context,
+                                                                  precommit_flag,
+                                                                  rc_db_revision,
+                                                                  prev_block_generator,
+                                                                  prev_block_votes)
 
         # Save precommit data
         # It will be written to levelDB on commit
-        precommit_data = PrecommitData(
-            context.revision,
-            context.block_batch,
-            block_result,
-            context.rc_block_batch,
-            context.preps,
-            term,
-            prev_block_generator,
-            prev_block_validators,
-            context.new_icon_score_mapper,
-            precommit_flag)
+        precommit_data = PrecommitData(context.revision,
+                                       rc_db_revision,
+                                       context.block_batch,
+                                       block_result,
+                                       context.rc_block_batch,
+                                       context.preps,
+                                       term,
+                                       prev_block_generator,
+                                       prev_block_validators,
+                                       context.new_icon_score_mapper,
+                                       precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    @classmethod
+    def _get_rc_db_revision(cls,
+                            context: 'IconScoreContext') -> int:
+
+        if context.revision < REV_IISS:
+            return 0
+
+        start: int = context.engine.iiss.get_start_block_of_calc(context)
+        if start == context.block.height:
+            return context.revision
+        else:
+            return cls._get_revision_from_rc(context)
+
+    @classmethod
+    def _get_revision_from_rc(cls,
+                              context: 'IconScoreContext') -> int:
+        version, revision = context.storage.rc.get_version_and_revision()
+        return revision
 
     @classmethod
     def _get_prev_block_votes(cls,
@@ -576,6 +603,9 @@ class IconServiceEngine(ContextContainer):
                                     prev_block_generator: Optional['Address'] = None,
                                     prev_block_votes: Optional[List[Tuple['Address', int]]] = None):
 
+        # if you want to use rc_version here, you must use it.
+        # rc_db_revision: int = self._get_revision_from_rc(context)
+
         if not context.is_decentralized():
             return
 
@@ -585,14 +615,35 @@ class IconServiceEngine(ContextContainer):
                         msg=f"The first block of decentralization: {context.block}")
             return
 
+        self._put_block_produce_info_on_start_calc(context,
+                                                   prev_block_generator,
+                                                   prev_block_votes)
+
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
+
+    @classmethod
+    def _put_block_produce_info_on_start_calc(cls,
+                                              context: 'IconScoreContext',
+                                              prev_block_generator: Optional['Address'] = None,
+                                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
+        start = context.engine.iiss.get_start_block_of_calc(context)
+        if start != context.block.height:
+            return
+
+        rc_block_batch: list = []
+        context.engine.iiss.put_block_produce_info_to_rc_db(context,
+                                                            rc_block_batch,
+                                                            prev_block_generator,
+                                                            prev_block_votes)
+        context.storage.rc.commit(rc_block_batch)
 
     @classmethod
     def _after_transaction_process(
             cls,
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
+            rc_db_revision: int,
             prev_block_generator: Optional['Address'] = None,
             prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
             -> Tuple[Optional[dict], Optional['Term']]:
@@ -604,6 +655,7 @@ class IconServiceEngine(ContextContainer):
 
         :param context:
         :param flag:
+        :param rc_db_revision
         :param prev_block_generator:
         :param prev_block_votes:
         :return:
@@ -613,7 +665,12 @@ class IconServiceEngine(ContextContainer):
             context, bool(flag & PrecommitFlag.DECENTRALIZATION))
 
         if context.revision >= REV_IISS:
-            context.engine.iiss.update_db(context, term, prev_block_generator, prev_block_votes, flag)
+            context.engine.iiss.update_db(context,
+                                          term,
+                                          prev_block_generator,
+                                          prev_block_votes,
+                                          flag,
+                                          rc_db_revision)
 
         context.update_batch()
 
@@ -969,7 +1026,6 @@ class IconServiceEngine(ContextContainer):
         :return: The amount of step
         """
         context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
-
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.
         step_limit: int = context.step_counter.max_step_limit
@@ -1504,10 +1560,9 @@ class IconServiceEngine(ContextContainer):
                     path: str = data.get('content')
                     score_address = generate_score_address_for_tbears(path)
                 else:
-                    score_address = generate_score_address(
-                        context.tx.origin,
-                        context.tx.timestamp,
-                        context.tx.nonce)
+                    score_address = generate_score_address(context.tx.origin,
+                                                           context.tx.timestamp,
+                                                           context.tx.nonce)
                     deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
                     if deploy_info is not None:
                         raise AccessDeniedException(f'SCORE address already in use: {score_address}')
@@ -1520,11 +1575,10 @@ class IconServiceEngine(ContextContainer):
             content_size = get_deploy_content_size(context.revision, data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
 
-            context.engine.deploy.invoke(
-                context=context,
-                to=to,
-                icon_score_address=score_address,
-                data=data)
+            context.engine.deploy.invoke(context=context,
+                                         to=to,
+                                         icon_score_address=score_address,
+                                         data=data)
             return score_address
         elif data_type == 'deposit':
             self._deposit_handler.handle_deposit_request(context, data)
@@ -1693,15 +1747,17 @@ class IconServiceEngine(ContextContainer):
         context.storage.icx.put_block_info(context, block_batch.block, precommit_data.revision)
         self._precommit_data_manager.commit(block_batch.block)
 
+        # after status DB commit
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             context.block = block_batch.block
             self._init_global_value_by_governance_score(context)
 
         if precommit_data.revision >= REV_IISS:
+            context.engine.iiss.send_calculate(context, precommit_data)
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
-            context.engine.iiss.send_ipc(context, precommit_data)
             # todo: consider case when error being raised in send ipc
+            context.engine.iiss.send_ipc(context)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
