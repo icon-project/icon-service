@@ -368,6 +368,7 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_bp_block_height, bp.block_height)
                 self.assertTrue(expected_gv_block_height < bp.block_height <= expected_hd_block_height)
                 expected_bp_block_height += 1
-
-        self.assertEqual(expected_bp_block_height, expected_hd_block_height + 1)
+        actual_last_bp_block_height: int = expected_bp_block_height - 1
+        expected_last_bp_block_height: int = self._block_height - 1
+        self.assertEqual(expected_last_bp_block_height, actual_last_bp_block_height)
 
