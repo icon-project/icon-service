@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import time
 from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
-
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -36,6 +36,7 @@ from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
+from ..iiss.reward_calc.storage import get_rc_version
 from ..precommit_data_manager import PrecommitFlag
 
 if TYPE_CHECKING:
@@ -150,11 +151,11 @@ class Engine(EngineBase):
 
         if calc_result_bh != calc_bh:
             raise FatalException(f'Unexpected calculate result response '
-                           f'(reward calc: {calc_result_bh} icon service: {calc_bh}')
+                                 f'(reward calc: {calc_result_bh} icon service: {calc_bh}')
 
         if iscore < 0:
             raise FatalException(f'Invalid I-SCORE value: {iscore}')
-        Logger.debug(tag=_TAG, msg=f"_query_calculate_result end with "
+        Logger.debug(tag=_TAG, msg=f"query_calculate_result end with "
                                    f"status:{calc_result_status} calc_result_bh: {calc_result_bh} iscore: {iscore}")
 
         return iscore
@@ -661,27 +662,34 @@ class Engine(EngineBase):
                   term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
                   prev_block_votes: Optional[List[Tuple['Address', bool]]],
-                  flag: 'PrecommitFlag'):
+                  flag: 'PrecommitFlag',
+                  rc_db_revision: int):
+
+        version: int = get_rc_version(rc_db_revision)
+
         if self._is_iiss_calc(flag):
             self._update_state_db_on_end_calc(context)
             if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
-                self._put_header_to_rc_db(context, is_genesis_iiss=True)
+                self._put_header_to_rc_db(context, context.revision, 0, is_genesis_iiss=True)
 
-        start_calc_block: int = context.storage.iiss.get_start_block_of_calc(context)
-        if start_calc_block == context.block.height:
-            self._put_header_to_rc_db(context)
-            self._put_gv_to_rc_db(context)
+        start: int = self.get_start_block_of_calc(context)
+        if start == context.block.height:
+            self._put_header_to_rc_db(context, rc_db_revision, version)
+            self._put_gv_to_rc_db(context, version)
 
         if not context.is_decentralized():
             return
 
-        self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_votes)
+        if start != context.block.height:
+            self.put_block_produce_info_to_rc_db(context,
+                                                 context.rc_block_batch,
+                                                 prev_block_generator,
+                                                 prev_block_votes)
 
         start_term_block: int = context.term.start_block_height
         if start_term_block == context.block.height:
             self._put_preps_to_rc_db(context)
-            if start_calc_block != start_term_block:
-                self._put_gv_to_rc_db(context)
+            self._put_gv_to_rc_db(context, version)
 
         if term is not None and term.is_in_term(context.block.height):
             self._put_preps_to_rc_db(context, term)
@@ -693,18 +701,22 @@ class Engine(EngineBase):
         self._put_rrep(context)
 
     def send_ipc(self,
-                 context: 'IconScoreContext',
                  precommit_data: 'PrecommitData'):
-        block_height: int = precommit_data.block.height
+        self._reward_calc_proxy.commit_block(True,
+                                             precommit_data.block.height,
+                                             precommit_data.block.hash)
 
-        # every block time
-        self._reward_calc_proxy.commit_block(True, block_height, precommit_data.block.hash)
+    def send_calculate(self,
+                       context: 'IconScoreContext',
+                       precommit_data: 'PrecommitData'):
 
-        if not self._is_iiss_calc(precommit_data.precommit_flag):
+        start: int = self.get_start_block_of_calc(context)
+        if start != context.block.height:
             return
 
+        block_height: int = precommit_data.block.height - 1
         path: str = context.storage.rc.create_db_for_calc(block_height)
-        context.storage.rc.put_version_and_revision(precommit_data.revision)
+        context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
@@ -749,9 +761,9 @@ class Engine(EngineBase):
     @classmethod
     def _put_header_to_rc_db(cls,
                              context: 'IconScoreContext',
+                             last_revision: int,
+                             version: int,
                              is_genesis_iiss: bool = False):
-        version: int = context.storage.rc.current_version
-        revision: int = context.storage.rc.current_revision
 
         if is_genesis_iiss:
             block_height: int = context.block.height
@@ -759,9 +771,8 @@ class Engine(EngineBase):
             block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
         data: 'Header' = RewardCalcDataCreator.create_header(version,
                                                              block_height,
-                                                             revision)
+                                                             last_revision)
         context.storage.rc.put(context.rc_block_batch, data)
-
 
     @staticmethod
     def _put_rrep(context: 'IconScoreContext'):
@@ -775,8 +786,10 @@ class Engine(EngineBase):
         context.storage.iiss.put_reward_rate(context, reward_rate)
 
     @classmethod
-    def _put_gv_to_rc_db(cls, context: 'IconScoreContext'):
-        version: int = context.storage.rc.current_version
+    def _put_gv_to_rc_db(cls,
+                         context: 'IconScoreContext',
+                         version: int):
+
         calculated_irep: int = 0
         if context.is_decentralized():
             irep: int = context.term.irep
@@ -795,13 +808,15 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_block_produce_info_to_rc_db(cls,
-                                         context: 'IconScoreContext',
-                                         prev_block_generator: Optional['Address'] = None,
-                                         prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
+    def put_block_produce_info_to_rc_db(cls,
+                                        context: 'IconScoreContext',
+                                        rc_block_batch: list,
+                                        prev_block_generator: Optional['Address'] = None,
+                                        prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
         """Called on every block
 
         :param context:
+        :param rc_block_batch:
         :param prev_block_generator:
         :param prev_block_votes:
         :return:
@@ -810,17 +825,12 @@ class Engine(EngineBase):
         if prev_block_generator is None or prev_block_votes is None:
             return
 
-        # Check if the start block of the first sequence (in this point of BP info is prevote period)
-        # Actually do not need to check this point as Irep is 0 in prevote period
-        if context.term.sequence == 0 and context.term.start_block_height == context.block.height:
-            return
-
         Logger.debug(f"put_block_produce_info_for_rc", "iiss")
         prev_block_height: int = context.block.height - 1
         data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
                                                                                             prev_block_generator,
                                                                                             prev_block_votes)
-        context.storage.rc.put(context.rc_block_batch, data)
+        context.storage.rc.put(rc_block_batch, data)
 
     @classmethod
     def _put_preps_to_rc_db(cls, context: 'IconScoreContext', term: Optional['Term'] = None):
@@ -836,8 +846,16 @@ class Engine(EngineBase):
         Logger.debug(
             tag=cls.TAG,
             msg="_put_preps_for_rc_db() start: "
-                f"total_elected_prep_delegated={term.total_elected_prep_delegated}")
+            f"total_elected_prep_delegated={term.total_elected_prep_delegated}")
 
-        data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(
-            block_height, term.total_elected_prep_delegated, term.preps)
+        data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
+                                                                   term.total_elected_prep_delegated,
+                                                                   term.preps)
         context.storage.rc.put(context.rc_block_batch, data)
+
+    @classmethod
+    def get_start_block_of_calc(cls, context: 'IconScoreContext') -> int:
+        end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        period: int = context.storage.iiss.get_calc_period(context)
+        start_calc_block: int = end_block_height - period + 1
+        return start_calc_block

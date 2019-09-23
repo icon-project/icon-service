@@ -23,7 +23,6 @@ from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..prep.data import PRepSnapshot
 
 
 class Storage(StorageBase):
