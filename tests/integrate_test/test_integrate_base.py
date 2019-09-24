@@ -32,6 +32,7 @@ from iconservice.icon_constant import ConfigKey, IconScoreContextType
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
+from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
@@ -100,7 +101,7 @@ class TestIntegrateBase(TestCase):
     def get_block_height(self) -> int:
         return self._block_height
 
-    def mock_calculate(self, path, block_height):
+    def mock_calculate(self, _path, _block_height):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
         calc_period: int = context.storage.iiss.get_calc_period(context)
@@ -305,6 +306,22 @@ class TestIntegrateBase(TestCase):
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         for tx_result in tx_results:
             self.assertEqual(int(expected_status), tx_result.status)
+        return tx_results
+
+    def process_confirm_block(self,
+                              tx_list: list,
+                              prev_block_generator: Optional['Address'] = None,
+                              prev_block_validators: Optional[List['Address']] = None,
+                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
+                              block_height: int = None) -> List['TransactionResult']:
+
+        prev_block, hash_list = self.make_and_req_block(tx_list,
+                                                        block_height,
+                                                        prev_block_generator,
+                                                        prev_block_validators,
+                                                        prev_block_votes)
+        self._write_precommit_state(prev_block)
+        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         return tx_results
 
     def create_deploy_score_tx(self,
@@ -535,6 +552,47 @@ class TestIntegrateBase(TestCase):
 
         return tx
 
+    def create_register_proposal_tx(self,
+                                    from_: 'Address',
+                                    title: str,
+                                    description: str,
+                                    type_: int,
+                                    value: Union[str, int, 'Address'],
+                                    step_limit: int = DEFAULT_BIG_STEP_LIMIT) -> dict:
+        text = '{"address":"%s"}' % value
+        json_data: bytes = text.encode("utf-8")
+
+        method = "registerProposal"
+        score_params = {
+            "title": title,
+            "description": description,
+            "type": hex(type_),
+            "value": bytes_to_hex(json_data)
+        }
+
+        return self.create_score_call_tx(from_=from_,
+                                         to_=GOVERNANCE_SCORE_ADDRESS,
+                                         func_name=method,
+                                         params=score_params,
+                                         step_limit=step_limit)
+
+    def create_vote_proposal_tx(self,
+                                from_: 'Address',
+                                id_: bytes,
+                                vote: bool,
+                                step_limit=DEFAULT_BIG_STEP_LIMIT) -> dict:
+        method = "voteProposal"
+        score_params = {
+            "id": bytes_to_hex(id_, "0x"),
+            "vote": hex(vote)
+        }
+
+        return self.create_score_call_tx(from_=from_,
+                                         to_=GOVERNANCE_SCORE_ADDRESS,
+                                         func_name=method,
+                                         params=score_params,
+                                         step_limit=step_limit)
+
     @staticmethod
     def _convert_tx_for_estimating_step_from_origin_tx(tx: dict):
         tx = deepcopy(tx)
@@ -693,6 +751,28 @@ class TestIntegrateBase(TestCase):
                                           to_=score_address,
                                           action="withdraw",
                                           params={"id": f"0x{bytes.hex(deposit_id)}"})
+        return self.process_confirm_block_tx([tx], expected_status)
+
+    def register_proposal(self,
+                          from_: 'Address',
+                          title: str,
+                          description: str,
+                          type_: int,
+                          value: Union[str, int, 'Address'],
+                          expected_status: bool = True) -> 'TransactionResult':
+        tx: dict = self.create_register_proposal_tx(from_, title, description, type_, value)
+
+        # 0: base transaction, 1: register proposal
+        tx_results = self.process_confirm_block_tx([tx], expected_status)
+
+        return tx_results[1]
+
+    def vote_proposal(self,
+                      from_: 'Address',
+                      id_: bytes,
+                      vote: bool,
+                      expected_status: bool = True) -> List['TransactionResult']:
+        tx: dict = self.create_vote_proposal_tx(from_, id_, vote)
         return self.process_confirm_block_tx([tx], expected_status)
 
     def get_balance(self,

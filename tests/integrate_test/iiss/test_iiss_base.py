@@ -67,20 +67,23 @@ class TestIISSBase(TestIntegrateBase):
 
         return tx_results
 
-    def make_blocks_with_count(self,
-                               count: int,
-                               prev_block_generator: Optional['Address'] = None,
-                               prev_block_validators: Optional[List['Address']] = None,
-                               prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
+    def make_empty_blocks(self,
+                          count: int,
+                          prev_block_generator: Optional['Address'] = None,
+                          prev_block_validators: Optional[List['Address']] = None,
+                          prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
             -> List[List['TransactionResult']]:
         tx_results: List[List['TransactionResult']] = []
 
         for _ in range(count):
-            tx_results.append(self.process_confirm_block_tx(
-                [],
-                prev_block_generator=prev_block_generator,
-                prev_block_validators=prev_block_validators,
-                prev_block_votes=prev_block_votes))
+            tx_results.append(
+                self.process_confirm_block_tx(
+                    [],
+                    prev_block_generator=prev_block_generator,
+                    prev_block_validators=prev_block_validators,
+                    prev_block_votes=prev_block_votes
+                )
+            )
 
         return tx_results
 
