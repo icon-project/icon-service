@@ -167,7 +167,9 @@ class Storage(object):
 
     def create_db_for_calc(self, block_height: int) -> Optional[str]:
         assert block_height > 0
-        if self._db.get(Header.PREFIX) is None:
+
+        header: 'Header' = Header.from_bytes(self._db.get(Header.PREFIX))
+        if header.block_height > block_height:
             return None
 
         self._db.close()
