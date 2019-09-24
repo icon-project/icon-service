@@ -65,6 +65,7 @@ class TestRCDatabase(TestIISSBase):
         expected_rc_db_data_count: int = 1
         expected_block_height_at_the_start_of_iiss = self._block_height - 1
         rc_data_count: int = 0
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             # There is no GV at the first time
             if rc_data[0][:2] == Header.PREFIX:
@@ -131,6 +132,7 @@ class TestRCDatabase(TestIISSBase):
 
         expected_gv_block_height: int = expected_block_height_at_the_start_of_iiss
         expected_hd_block_height: int = block_height
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             print(rc_data)
             if rc_data[0][:2] == Header.PREFIX:
@@ -164,7 +166,7 @@ class TestRCDatabase(TestIISSBase):
         expected_version: int = 0
         self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
-
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             print(rc_data)
             if rc_data[0][:2] == Header.PREFIX:
@@ -210,6 +212,7 @@ class TestRCDatabase(TestIISSBase):
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         expected_bp_block_height: int = expected_gv_block_height + 1
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             print(rc_data)
             if rc_data[0][:2] == Header.PREFIX:
