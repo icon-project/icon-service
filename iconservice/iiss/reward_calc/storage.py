@@ -177,9 +177,15 @@ class Storage(object):
     def create_db_for_calc(self, block_height: int) -> str:
         assert block_height > 0
 
+        rc_version, _ = self.get_version_and_revision()
+
         self._db.close()
         current_db_path = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
-        iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height)
+
+        if rc_version < 0:
+            rc_version: int = 0
+        iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height) + '_' + str(rc_version)
+
         iiss_rc_db_path = os.path.join(self._path, iiss_rc_db_name)
 
         if os.path.exists(current_db_path) and not os.path.exists(iiss_rc_db_path):
