@@ -236,7 +236,7 @@ class IconServiceEngine(ContextContainer):
                                            prep_reg_fee)
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.meta.open(context)
-        IconScoreContext.storage.rc.open(context.revision, rc_data_path)
+        IconScoreContext.storage.rc.open(context, rc_data_path)
 
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
