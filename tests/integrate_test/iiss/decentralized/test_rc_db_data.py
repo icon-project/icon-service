@@ -50,7 +50,6 @@ class TestRCDatabase(TestIISSBase):
         main_preps_address = [main_prep_account.address for main_prep_account in self._accounts[:PREP_MAIN_PREPS]]
         rc_data_path: str = os.path.join(self._state_db_root_path, IISS_DB)
 
-        # decentralized
         self.update_governance()
 
         # set Revision REV_IISS
@@ -246,3 +245,122 @@ class TestRCDatabase(TestIISSBase):
         expected_last_bp_block_height: int = self._block_height - 1
         self.assertEqual(expected_last_bp_block_height, actual_last_bp_block_height)
 
+    def test_change_revision(self):
+        main_preps_address = [main_prep_account.address for main_prep_account in self._accounts[:PREP_MAIN_PREPS]]
+        rc_data_path: str = os.path.join(self._state_db_root_path, IISS_DB)
+
+        self.update_governance()
+
+        # set Revision REV_IISS
+        # ################## term 0 start #####################
+        self.set_revision(REV_IISS)
+        self.make_blocks(self._block_height + 1)
+        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
+        self._check_the_name_of_rc_db(get_last_rc_db)
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+
+        expected_rc_db_data_count: int = 1
+        expected_block_height_at_the_start_of_iiss = self._block_height - 1
+        rc_data_count: int = 0
+        for rc_data in rc_db.iterator():
+            # There is no GV at the first time
+            if rc_data[0][:2] == Header._PREFIX:
+                hd: 'Header' = Header.from_bytes(rc_data[1])
+                expected_version = 0
+                self.assertEqual(expected_version, hd.version)
+                self.assertEqual(expected_block_height_at_the_start_of_iiss, hd.block_height)
+            rc_data_count += 1
+        expected_rc_db_data_count: int = 1
+        self.assertEqual(expected_rc_db_data_count, rc_data_count)
+
+        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        # Minimum_delegate_amount is 0.02 * total_supply
+        minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
+        init_balance: int = minimum_delegate_amount_for_decentralization * 2
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=init_balance)
+
+        # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        stake_amount: int = minimum_delegate_amount_for_decentralization
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_stake_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                value=stake_amount)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=10 * ICX_IN_LOOP)
+
+        # register PRep
+        tx_list: list = []
+        for account in self._accounts[:PREP_MAIN_PREPS]:
+            tx: dict = self.create_register_prep_tx(from_=account, value=0)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                     origin_delegations=[
+                                                         (
+                                                             self._accounts[i],
+                                                             minimum_delegate_amount_for_decentralization
+                                                         )
+                                                     ])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # set revision on calc first block height(REV_DECENTRALIZATION)
+        expected_gv_block: int = self.make_blocks_to_end_calculation()
+        self.set_revision(REV_DECENTRALIZATION)
+
+        # after next calc.
+        expected_hd_block: int = self.make_blocks_to_end_calculation()
+        self.make_blocks(self._block_height + 1)
+
+        # expected Revision (REV_IISS)
+        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+
+        for rc_data in rc_db.iterator():
+            if rc_data[0][:2] == Header._PREFIX:
+                hd: 'Header' = Header.from_bytes(rc_data[1])
+                expected_version = 0
+                self.assertEqual(expected_hd_block, hd.block_height)
+                self.assertEqual(expected_version, hd.version)
+                # not support on VERSION 0
+                # self.assertEqual(expected_revision, hd.revision)
+
+            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+                gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
+                expected_version = 0
+                self.assertEqual(expected_gv_block, gv.block_height)
+                self.assertEqual(expected_version, gv.version)
+
+        expected_gv_block: int = expected_hd_block
+        expected_hd_block: int = self.make_blocks_to_end_calculation()
+        self.make_blocks(self._block_height + 1)
+
+        # expected Revision (REV_DECENTRALIZATION)
+        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+
+        for rc_data in rc_db.iterator():
+            if rc_data[0][:2] == Header._PREFIX:
+                hd: 'Header' = Header.from_bytes(rc_data[1])
+                expected_version = 2
+                expected_revision = 6
+                self.assertEqual(expected_hd_block, hd.block_height)
+                self.assertEqual(expected_version, hd.version)
+                self.assertEqual(expected_revision, hd.revision)
+
+            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+                gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
+                expected_version = 2
+                self.assertEqual(expected_gv_block, gv.block_height)
+                self.assertEqual(expected_version, gv.version)
