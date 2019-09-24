@@ -29,34 +29,73 @@ IMPORT_STAR = 84
 IMPORT_NAME = 108
 IMPORT_FROM = 109
 
+BASE_PACKAGE = 'iconservice'
+
 
 class ScorePackageValidator(object):
     WHITELIST_IMPORT = {}
     CUSTOM_IMPORT_LIST = []
+    ICONSERVICE_WHITELIST = []
 
-    @staticmethod
-    def execute(whitelist_table: dict,
+    @classmethod
+    def _init_iconservice_whitelist(cls):
+        if cls.ICONSERVICE_WHITELIST:
+            return
+        else:
+            cls._load_iconservice_whitelist()
+
+    @classmethod
+    def _load_iconservice_whitelist(cls):
+        spec = importlib.util.find_spec(BASE_PACKAGE)
+        code = spec.loader.get_code(BASE_PACKAGE)
+
+        if not hasattr(code, CODE_ATTR):
+            return
+
+        byte_code_list = [x for x in code.co_code]
+
+        length_byte_code_list = len(byte_code_list)
+        for code_index in range(0, length_byte_code_list, 2):
+            key = byte_code_list[code_index]
+            if IMPORT_NAME == key:
+                # import_name_index = byte_code_list[code_index + 1]
+                from_list_index = byte_code_list[code_index - 1]
+                level_index = byte_code_list[code_index - 3]
+
+                level = code.co_consts[level_index]
+                if level == 0:
+                    continue
+
+                from_list = code.co_consts[from_list_index]
+                cls.ICONSERVICE_WHITELIST.extend(from_list)
+        return cls.ICONSERVICE_WHITELIST
+
+    @classmethod
+    def execute(cls,
+                whitelist_table: dict,
                 pkg_root_path: str,
                 pkg_root_package: str) -> callable:
 
-        ScorePackageValidator.WHITELIST_IMPORT = whitelist_table
-        ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(pkg_root_path)
+        cls.WHITELIST_IMPORT = whitelist_table
+        cls.CUSTOM_IMPORT_LIST = cls._make_custom_import_list(pkg_root_path)
+        cls._init_iconservice_whitelist()
 
         # in order for the new module to be noticed by the import system
         importlib.invalidate_caches()
 
-        for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
+        for imp in cls.CUSTOM_IMPORT_LIST:
             full_name = f'{pkg_root_package}.{imp}'
 
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
 
-            ScorePackageValidator._validate_import_from_code(code)
-            ScorePackageValidator._validate_import_from_const(code.co_consts)
-            ScorePackageValidator._validate_blacklist_keyword_from_names(code.co_names)
+            cls._validate_import_from_code(code)
+            cls._validate_import_from_const(code.co_consts)
+            cls._validate_blacklist_keyword_from_names(code.co_names)
 
-    @staticmethod
-    def _make_custom_import_list(pkg_root_path: str) -> list:
+    @classmethod
+    def _make_custom_import_list(cls,
+                                 pkg_root_path: str) -> list:
         tmp_list = []
         for dirpath, _, filenames in os.walk(pkg_root_path):
             for file in filenames:
@@ -73,14 +112,16 @@ class ScorePackageValidator(object):
                 tmp_list.append(pkg_path)
         return tmp_list
 
-    @staticmethod
-    def _validate_blacklist_keyword_from_names(co_names: tuple):
+    @classmethod
+    def _validate_blacklist_keyword_from_names(cls,
+                                               co_names: tuple):
         for co_name in co_names:
             if co_name in BLACKLIST_RESERVED_KEYWORD:
                 raise IllegalFormatException(f'Blacklist keyword found: {co_name}')
 
-    @staticmethod
-    def _validate_import_from_code(code):
+    @classmethod
+    def _validate_import_from_code(cls,
+                                   code):
         if not hasattr(code, CODE_ATTR):
             return
 
@@ -90,20 +131,25 @@ class ScorePackageValidator(object):
         for code_index in range(0, length_byte_code_list, 2):
             key = byte_code_list[code_index]
             if IMPORT_NAME == key:
-                ScorePackageValidator._validate_import(code_index, byte_code_list, code.co_names, code.co_consts)
+                cls._validate_import(code_index, byte_code_list, code.co_names, code.co_consts)
 
-    @staticmethod
-    def _validate_import_from_const(co_consts: tuple):
+    @classmethod
+    def _validate_import_from_const(cls,
+                                    co_consts: tuple):
         for co_const in co_consts:
             if not hasattr(co_const, CODE_ATTR):
                 continue
-            ScorePackageValidator._validate_import_from_code(co_const)
-            ScorePackageValidator._validate_import_from_const(co_const.co_consts)
+            cls._validate_import_from_code(co_const)
+            cls._validate_import_from_const(co_const.co_consts)
             if hasattr(co_const, CODE_NAMES_ATTR):
-                ScorePackageValidator._validate_blacklist_keyword_from_names(co_const.co_names)
+                cls._validate_blacklist_keyword_from_names(co_const.co_names)
 
-    @staticmethod
-    def _validate_import(current_index: int, byte_code_list: list, co_names: tuple, co_consts: tuple):
+    @classmethod
+    def _validate_import(cls,
+                         current_index: int,
+                         byte_code_list: list,
+                         co_names: tuple,
+                         co_consts: tuple):
         """ example
         20 LOAD_CONST               0 (0)
         22 LOAD_CONST               3 (('pack', 'unpack', 'iter_unpack'))
@@ -141,7 +187,7 @@ class ScorePackageValidator(object):
         if level > 0:
             return
 
-        if import_name not in ScorePackageValidator.WHITELIST_IMPORT:
+        if import_name not in cls.WHITELIST_IMPORT:
             raise IllegalFormatException(f'Invalid import name: {import_name}')
 
         if from_list is None:
@@ -156,8 +202,12 @@ class ScorePackageValidator(object):
             elif IMPORT_FROM == next_op_code_key:
                 # import from
                 for import_from in from_list:
-                    if '*' not in ScorePackageValidator.WHITELIST_IMPORT[import_name] and \
-                            import_from not in ScorePackageValidator.WHITELIST_IMPORT[import_name]:
+                    if '*' not in cls.WHITELIST_IMPORT[import_name] and \
+                            import_from not in cls.WHITELIST_IMPORT[import_name]:
                         raise IllegalFormatException(f'Invalid import name: {import_name}')
+                    elif import_name in BASE_PACKAGE and \
+                            import_from not in cls.ICONSERVICE_WHITELIST:
+                        raise IllegalFormatException(f'Invalid permission import: {import_from}')
+
             else:
                 raise IllegalFormatException('Invalid import opcode')
