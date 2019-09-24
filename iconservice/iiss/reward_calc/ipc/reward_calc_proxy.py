@@ -155,7 +155,7 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg=f"_calculate() end")
 
-        return future.result
+        return future.result()
 
     def claim_iscore(self, address: 'Address',
                      block_height: int, block_hash: bytes) -> Tuple[int, int]:

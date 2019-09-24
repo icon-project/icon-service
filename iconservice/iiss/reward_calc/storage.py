@@ -182,7 +182,7 @@ class Storage(object):
         iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height)
         iiss_rc_db_path = os.path.join(self._path, iiss_rc_db_name)
 
-        if os.path.exists(current_db_path):
+        if os.path.exists(current_db_path) and not os.path.exists(iiss_rc_db_path):
             os.rename(current_db_path, iiss_rc_db_path)
         else:
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
