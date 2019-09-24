@@ -81,6 +81,11 @@ class Storage(object):
             if self._db.get(Header.PREFIX) is None:
                 rc_version, rc_revision = self.get_version_and_revision()
                 end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+                calc_period: int = context.storage.iiss.get_calc_period(context)
+                prev_end_calc_block_height: int = end_block_height - calc_period
+
+                if prev_end_calc_block_height == context.block.height:
+                    end_block_height: int = context.block.height
                 header: 'Header' = DataCreator.create_header(rc_version, end_block_height, rc_revision)
                 self.put_data_directly(header)
 
@@ -167,10 +172,6 @@ class Storage(object):
 
     def create_db_for_calc(self, block_height: int) -> Optional[str]:
         assert block_height > 0
-
-        header: 'Header' = Header.from_bytes(self._db.get(Header.PREFIX))
-        if header.block_height > block_height:
-            return None
 
         self._db.close()
         current_db_path = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
