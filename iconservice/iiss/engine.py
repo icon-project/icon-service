@@ -714,10 +714,9 @@ class Engine(EngineBase):
             return
 
         block_height: int = precommit_data.block.height - 1
-        path: Optional[str] = context.storage.rc.create_db_for_calc(block_height)
+        path: str = context.storage.rc.create_db_for_calc(block_height)
         context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
-        if path is not None:
-            self._reward_calc_proxy.calculate(path, block_height)
+        self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
     def _is_iiss_calc(cls,

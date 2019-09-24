@@ -196,9 +196,9 @@ class TestRcDataStorage(unittest.TestCase):
         valid_block_height = 1
         expected_iiss_db_path = os.path.join(self.path,
                                              RewardCalcStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
-        # failure case: When input valid block height and HD is not exists, should return None
-        actual_ret_path = self.rc_data_storage.create_db_for_calc(valid_block_height)
-        self.assertEqual(None, actual_ret_path)
+        # # failure case: When input valid block height and HD is not exists, should return None
+        # actual_ret_path = self.rc_data_storage.create_db_for_calc(valid_block_height)
+        # self.assertEqual(None, actual_ret_path)
 
         # success case: When input valid block height and HD is exists, should create iiss_db and return path
         self.rc_data_storage._db.put(self.dummy_header.make_key(), self.dummy_header.make_value())

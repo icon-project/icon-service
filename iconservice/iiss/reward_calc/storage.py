@@ -78,12 +78,16 @@ class Storage(object):
             if rc_version == -1:
                 self.put_version_and_revision(revision)
 
+            # on first change point.
+            # we have to put init Header for RC
             if self._db.get(Header.PREFIX) is None:
                 rc_version, rc_revision = self.get_version_and_revision()
                 end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
                 calc_period: int = context.storage.iiss.get_calc_period(context)
                 prev_end_calc_block_height: int = end_block_height - calc_period
 
+                # if this point is new calc start point ...
+                # we have to set block height in header data.
                 if prev_end_calc_block_height == context.block.height:
                     end_block_height: int = context.block.height
                 header: 'Header' = DataCreator.create_header(rc_version, end_block_height, rc_revision)
@@ -170,7 +174,7 @@ class Storage(object):
         else:
             return int.from_bytes(encoded_last_index, DATA_BYTE_ORDER)
 
-    def create_db_for_calc(self, block_height: int) -> Optional[str]:
+    def create_db_for_calc(self, block_height: int) -> str:
         assert block_height > 0
 
         self._db.close()
@@ -179,13 +183,10 @@ class Storage(object):
         iiss_rc_db_path = os.path.join(self._path, iiss_rc_db_name)
 
         if os.path.exists(current_db_path):
-            if not os.path.exists(iiss_rc_db_path):
-                os.rename(current_db_path, iiss_rc_db_path)
-            else:
-                Logger.debug(tag=IISS_LOG_TAG, msg=f"iiss data is already exists: {iiss_rc_db_path}")
-                return None
+            os.rename(current_db_path, iiss_rc_db_path)
         else:
-            raise DatabaseException("Current rc db is not exists")
+            raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
+                                    "current DB path and IISS DB path")
 
         self._db = KeyValueDatabase.from_path(current_db_path)
         self._db_iiss_tx_index = -1

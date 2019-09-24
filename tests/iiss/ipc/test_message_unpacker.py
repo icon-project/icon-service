@@ -36,6 +36,8 @@ class TestMessageUnpacker(unittest.TestCase):
         iscore: int = 5000
         success: bool = True
 
+        status: int = 1
+
         messages = [
             (
                 MessageType.VERSION,
@@ -47,7 +49,11 @@ class TestMessageUnpacker(unittest.TestCase):
             ),
             (
                 MessageType.CALCULATE,
-                msg_id
+                msg_id,
+                (
+                    status,
+                    block_height
+                )
             ),
             (
                 MessageType.QUERY,
