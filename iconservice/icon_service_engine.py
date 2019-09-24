@@ -442,7 +442,7 @@ class IconServiceEngine(ContextContainer):
 
         self._set_revision_to_context(context)
         # For RC DB
-        rc_db_revision: int = self._get_rc_db_revision(context)
+        rc_db_revision: int = self._get_rc_db_revision_before_process_transactions(context)
 
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -524,8 +524,8 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
     @classmethod
-    def _get_rc_db_revision(cls,
-                            context: 'IconScoreContext') -> int:
+    def _get_rc_db_revision_before_process_transactions(cls,
+                                                        context: 'IconScoreContext') -> int:
 
         if context.revision < REV_IISS:
             return 0

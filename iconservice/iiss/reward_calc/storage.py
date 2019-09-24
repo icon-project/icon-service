@@ -72,28 +72,30 @@ class Storage(object):
         self._supplement_db(context, revision)
 
     def _supplement_db(self, context: 'IconScoreContext', revision: int):
-        # Method that supplement db which is made by previous icon service version
+        # Supplement db which is made by previous icon service version (as there is no version, revision and header)
+        if revision < REV_IISS:
+            return
+
         rc_version, _ = self.get_version_and_revision()
-        if revision >= REV_IISS:
-            if rc_version == -1:
-                self.put_version_and_revision(revision)
+        if rc_version == -1:
+            self.put_version_and_revision(revision)
 
-            # on first change point.
-            # we have to put init Header for RC
-            if self._db.get(Header.PREFIX) is None:
-                rc_version, rc_revision = self.get_version_and_revision()
-                end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
-                calc_period: int = context.storage.iiss.get_calc_period(context)
-                prev_end_calc_block_height: int = end_block_height - calc_period
+        # On the first change point.
+        # We have to put Header for RC
+        if self._db.get(Header.PREFIX) is None:
+            rc_version, rc_revision = self.get_version_and_revision()
+            end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+            calc_period: int = context.storage.iiss.get_calc_period(context)
+            prev_end_calc_block_height: int = end_block_height - calc_period
 
-                # if this point is new calc start point ...
-                # we have to set block height in header data.
-                if prev_end_calc_block_height == context.block.height:
-                    end_block_height: int = context.block.height
-                header: 'Header' = DataCreator.create_header(rc_version, end_block_height, rc_revision)
-                self.put_data_directly(header)
+            # if this point is new calc start point ...
+            # we have to set block height in header data.
+            if prev_end_calc_block_height == context.block.height:
+                end_block_height: int = context.block.height
+            header: 'Header' = DataCreator.create_header(rc_version, end_block_height, rc_revision)
+            self.put_data_directly(header)
 
-                Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
+            Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
 
     def put_data_directly(self, iiss_data: 'Data'):
         temp_rc_batch: list = []
