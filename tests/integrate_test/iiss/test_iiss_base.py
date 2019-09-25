@@ -21,8 +21,9 @@ from typing import TYPE_CHECKING, List, Tuple, Dict, Union, Optional
 from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import ConfigKey, REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, \
-    REV_DECENTRALIZATION, PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import ConfigKey, REV_IISS, PREP_MAIN_PREPS, REV_DECENTRALIZATION, \
+    PREP_MAIN_AND_SUB_PREPS
+from iconservice.utils import icx_to_loop
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
 
 if TYPE_CHECKING:
@@ -50,23 +51,46 @@ class TestIISSBase(TestIntegrateBase):
     def make_blocks(self,
                     to: int,
                     prev_block_generator: Optional['Address'] = None,
-                    prev_block_validators: Optional[List['Address']] = None) -> List[List['TransactionResult']]:
+                    prev_block_validators: Optional[List['Address']] = None,
+                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None)\
+            -> List[List['TransactionResult']]:
         block_height = self._block_height
         tx_results: List[List['TransactionResult']] = []
 
         while to > block_height:
-            tx = self.create_transfer_icx_tx(self._admin,
-                                             self._genesis,
-                                             0)
+            tx = self.create_transfer_icx_tx(self._admin, self._genesis, 0)
             tx_results.append(self.process_confirm_block_tx([tx],
                                                             prev_block_generator=prev_block_generator,
-                                                            prev_block_validators=prev_block_validators))
+                                                            prev_block_validators=prev_block_validators,
+                                                            prev_block_votes=prev_block_votes))
             block_height = self._block_height
+
+        return tx_results
+
+    def make_empty_blocks(self,
+                          count: int,
+                          prev_block_generator: Optional['Address'] = None,
+                          prev_block_validators: Optional[List['Address']] = None,
+                          prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
+            -> List[List['TransactionResult']]:
+        tx_results: List[List['TransactionResult']] = []
+
+        for _ in range(count):
+            tx_results.append(
+                self.process_confirm_block_tx(
+                    [],
+                    prev_block_generator=prev_block_generator,
+                    prev_block_validators=prev_block_validators,
+                    prev_block_votes=prev_block_votes
+                )
+            )
+
         return tx_results
 
     def make_blocks_to_end_calculation(self,
                                        prev_block_generator: Optional['Address'] = None,
-                                       prev_block_validators: Optional[List['Address']] = None) -> int:
+                                       prev_block_validators: Optional[List['Address']] = None,
+                                       prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> int:
         iiss_info: dict = self.get_iiss_info()
         next_calculation: int = iiss_info.get('nextCalculation', 0)
 
@@ -75,13 +99,15 @@ class TestIISSBase(TestIntegrateBase):
             # last calculate block
             self.make_blocks(to=next_calculation,
                              prev_block_generator=prev_block_generator,
-                             prev_block_validators=prev_block_validators)
+                             prev_block_validators=prev_block_validators,
+                             prev_block_votes=prev_block_votes)
             iiss_info: dict = self.get_iiss_info()
             next_calculation: int = iiss_info.get('nextCalculation', 0)
 
         self.make_blocks(to=next_calculation - 1,
                          prev_block_generator=prev_block_generator,
-                         prev_block_validators=prev_block_validators)
+                         prev_block_validators=prev_block_validators,
+                         prev_block_votes=prev_block_votes)
 
         self.assertEqual(self._block_height, next_calculation - 1)
 
@@ -130,7 +156,7 @@ class TestIISSBase(TestIntegrateBase):
     def create_register_prep_params(cls,
                                     from_: 'EOAAccount') -> Dict[str, str]:
 
-        name = f"node{from_.address}"
+        name = str(from_)
 
         return {
             ConstantKeys.NAME: name,
@@ -181,6 +207,18 @@ class TestIISSBase(TestIntegrateBase):
                                          to_=ZERO_SCORE_ADDRESS,
                                          func_name="claimIScore",
                                          params={})
+
+    def get_prep_term(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepTerm"
+            }
+        }
+        return self._query(query_request)
 
     def get_main_prep_list(self) -> dict:
         query_request = {
@@ -446,7 +484,7 @@ class TestIISSBase(TestIntegrateBase):
         # set Revision REV_IISS
         self.set_revision(REV_IISS)
 
-        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        total_supply = icx_to_loop(TOTAL_SUPPLY)
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
         minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
@@ -465,9 +503,10 @@ class TestIISSBase(TestIntegrateBase):
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
-        # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        # distribute 3000 icx to the self._accounts
+        # which range from 0 to PREP_MAIN_PREPS, exclusive
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=3000 * ICX_IN_LOOP)
+                            init_balance=icx_to_loop(3000))
 
         # register PRep
         tx_list: list = []
@@ -500,6 +539,10 @@ class TestIISSBase(TestIntegrateBase):
         # set Revision REV_IISS (decentralization)
         self.set_revision(REV_DECENTRALIZATION)
 
+        # Update governance SCORE-1.0.0 to support network proposal
+        self.update_governance("1_0_0", True)
+
+        # make blocks to start decentralization
         self.make_blocks_to_end_calculation()
 
         # get main prep
@@ -547,8 +590,7 @@ class TestIISSBase(TestIntegrateBase):
 
         tx_list: list = []
         for account in self._accounts:
-            tx: dict = self.create_set_stake_tx(from_=account,
-                                                value=0)
+            tx: dict = self.create_set_stake_tx(from_=account, value=0)
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 

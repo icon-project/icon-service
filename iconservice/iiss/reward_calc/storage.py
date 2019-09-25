@@ -20,10 +20,11 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from iconcommons import Logger
 
 from ...iconscore.icon_score_context import IconScoreContext
-from ..reward_calc.msg_data import TxData
+from ...iiss.reward_calc.data_creator import DataCreator
+from ..reward_calc.msg_data import TxData, Header
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
-from ...icon_constant import DATA_BYTE_ORDER, REV_IISS, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0
+from ...icon_constant import DATA_BYTE_ORDER, REV_IISS, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -41,6 +42,10 @@ def get_rc_version(revision: int) -> int:
 
 
 class Storage(object):
+    """Manages RC DB which Reward Calculator will use to calculate a reward for each address
+
+    """
+
     _CURRENT_IISS_DB_NAME = "current_db"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
@@ -54,10 +59,9 @@ class Storage(object):
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
-        self._current_version: Optional[int] = None
-        self._current_revision: Optional[int] = None
+    def open(self, context: IconScoreContext, path: str):
+        revision: int = context.revision
 
-    def open(self, revision: int, path: str):
         if not os.path.exists(path):
             raise DatabaseException(f"Invalid IISS DB path: {path}")
         self._path = path
@@ -65,18 +69,38 @@ class Storage(object):
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
         self._db = KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
+        self._supplement_db(context, revision)
 
-        self._current_version, self._current_revision = self._load_version_and_revision()
-        if revision >= REV_IISS and self._current_version == -1:
+    def _supplement_db(self, context: 'IconScoreContext', revision: int):
+        # Supplement db which is made by previous icon service version (as there is no version, revision and header)
+        if revision < REV_IISS:
+            return
+
+        rc_version, _ = self.get_version_and_revision()
+        if rc_version == -1:
             self.put_version_and_revision(revision)
 
-    @property
-    def current_version(self) -> int:
-        return self._current_version if self._current_version != -1 else 0
+        # On the first change point.
+        # We have to put Header for RC
+        if self._db.get(Header.PREFIX) is None:
+            rc_version, rc_revision = self.get_version_and_revision()
+            end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+            calc_period: int = context.storage.iiss.get_calc_period(context)
+            prev_end_calc_block_height: int = end_block_height - calc_period
 
-    @property
-    def current_revision(self) -> int:
-        return self._current_revision if self._current_version != -1 else 0
+            # if this point is new calc start point ...
+            # we have to set block height in header data.
+            if prev_end_calc_block_height == context.block.height:
+                end_block_height: int = context.block.height
+            header: 'Header' = DataCreator.create_header(rc_version, end_block_height, rc_revision)
+            self.put_data_directly(header)
+
+            Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
+
+    def put_data_directly(self, iiss_data: 'Data'):
+        temp_rc_batch: list = []
+        self.put(temp_rc_batch, iiss_data)
+        self.commit(temp_rc_batch)
 
     def close(self):
         """Close the embedded database.
@@ -103,7 +127,7 @@ class Storage(object):
 
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):
-        Logger.debug(f"put data: {str(iiss_data)}", "iiss")
+        Logger.debug(tag=IISS_LOG_TAG, msg=f"put data: {str(iiss_data)}")
         batch.append(iiss_data)
 
     def commit(self, rc_block_batch: list):
@@ -125,6 +149,7 @@ class Storage(object):
                 self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
 
         self._db.write_batch(batch_dict)
+        rc_block_batch.clear()
 
     # todo: naming
     def put_version_and_revision(self, revision: int):
@@ -132,10 +157,7 @@ class Storage(object):
         version_and_revision: bytes = MsgPackForDB.dumps([version, revision])
         self._db.put(self._KEY_FOR_VERSION_AND_REVISION, version_and_revision)
 
-        self._current_version = version
-        self._current_revision = revision
-
-    def _load_version_and_revision(self) -> Tuple[int, int]:
+    def get_version_and_revision(self) -> Tuple[int, int]:
         version_and_revision: Optional[bytes] = self._db.get(self._KEY_FOR_VERSION_AND_REVISION)
         version: int = -1
         revision: int = -1
@@ -157,9 +179,15 @@ class Storage(object):
     def create_db_for_calc(self, block_height: int) -> str:
         assert block_height > 0
 
+        rc_version, _ = self.get_version_and_revision()
+
         self._db.close()
         current_db_path = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
-        iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height)
+
+        if rc_version < 0:
+            rc_version: int = 0
+        iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height) + '_' + str(rc_version)
+
         iiss_rc_db_path = os.path.join(self._path, iiss_rc_db_name)
 
         if os.path.exists(current_db_path) and not os.path.exists(iiss_rc_db_path):

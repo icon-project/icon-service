@@ -151,6 +151,7 @@ class ConstantKeys:
     IS_BLOCK_EDITABLE = 'isBlockEditable'
     PREV_BLOCK_GENERATOR = "prevBlockGenerator"
     PREV_BLOCK_VALIDATORS = "prevBlockValidators"
+    PREV_BLOCK_VOTES = "prevBlockVotes"
 
     FILTER = "filter"
 
@@ -272,7 +273,13 @@ type_convert_templates[ParamType.INVOKE] = {
     ],
     ConstantKeys.IS_BLOCK_EDITABLE: ValueType.BOOL,
     ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
-    ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
+    ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS],
+    ConstantKeys.PREV_BLOCK_VOTES: [
+        [
+            ValueType.ADDRESS,
+            ValueType.INT
+        ]
+    ]
 }
 
 type_convert_templates[ParamType.ICX_CALL] = {

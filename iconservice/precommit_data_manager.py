@@ -26,8 +26,7 @@ from .iconscore.icon_score_mapper import IconScoreMapper
 
 if TYPE_CHECKING:
     from .base.address import Address
-    from .prep.data.prep_container import PRepContainer
-    from .prep.term import Term
+    from .prep.data import PRepContainer, Term
 
 
 def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
@@ -86,6 +85,7 @@ class PrecommitFlag(IntFlag):
 class PrecommitData(object):
     def __init__(self,
                  revision: int,
+                 rc_db_revision: int,
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
@@ -104,6 +104,7 @@ class PrecommitData(object):
 
         """
         self.revision: int = revision
+        self.rc_db_revision: int = rc_db_revision
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch

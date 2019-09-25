@@ -115,6 +115,7 @@ class TestIconInnerService(unittest.TestCase):
                           tx_requests,
                           prev_block_generator,
                           prev_block_validators,
+                          prev_block_votes,
                           is_block_editable):
             raise FatalException(expected_error_msg)
 
@@ -134,6 +135,7 @@ class TestIconInnerService(unittest.TestCase):
                               tx_requests,
                               prev_block_generator,
                               prev_block_validators,
+                              prev_block_votes,
                               is_block_editable):
                 raise exception
 

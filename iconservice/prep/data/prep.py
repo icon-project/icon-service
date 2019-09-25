@@ -14,7 +14,7 @@
 
 import copy
 from enum import auto, Flag, IntEnum, Enum
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, Any
 
 import iso3166
 
@@ -22,8 +22,7 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, MAX_UNVALIDATED_SEQUENCE_BLOCKS
-from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason
+from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, REV_IISS, REV_DECENTRALIZATION
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -37,8 +36,8 @@ class PRepFlag(Flag):
 
 
 class PRepDictType(Enum):
-    FULL = auto()  # getPRep
-    ABRIDGED = auto()  # getXXXList
+    FULL = auto()       # getPRep
+    ABRIDGED = auto()   # getPReps
 
 
 class PRep(Sortable):
@@ -46,22 +45,10 @@ class PRep(Sortable):
     _VERSION: int = 1
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
-    _penalty_grace_period: int = PENALTY_GRACE_PERIOD
-    _min_productivity_percentage: int = MIN_PRODUCTIVITY_PERCENTAGE
-    _max_unvalidated_sequence_blocks: int = MAX_UNVALIDATED_SEQUENCE_BLOCKS
-
-    @classmethod
-    def init_prep_config(cls,
-                         penalty_grace_period: int,
-                         min_productivity_percentage: int,
-                         max_unvalidated_sequence_block: int):
-        cls._penalty_grace_period: int = penalty_grace_period
-        cls._min_productivity_percentage: int = min_productivity_percentage
-        cls._max_unvalidated_sequence_blocks: int = max_unvalidated_sequence_block
-
     class Index(IntEnum):
         VERSION = 0
 
+        # Version: 0
         ADDRESS = auto()
         STATUS = auto()
         GRADE = auto()
@@ -75,16 +62,16 @@ class PRep(Sortable):
         IREP = auto()
         IREP_BLOCK_HEIGHT = auto()
         LAST_GENERATE_BLOCK_HEIGHT = auto()
-
         BLOCK_HEIGHT = auto()
         TX_INDEX = auto()
-
         TOTAL_BLOCKS = auto()
         VALIDATED_BLOCKS = auto()
 
+        # Version: 1
         PENALTY = auto()
         UNVALIDATED_SEQUENCE_BLOCKS = auto()
 
+        # Unused
         SIZE = auto()
 
     def __init__(
@@ -177,6 +164,13 @@ class PRep(Sortable):
         self._validated_blocks: int = validated_blocks
         self._unvalidated_sequence_blocks: int = unvalidated_sequence_blocks
 
+        # This field is used to save delegated amount at the beginning of a term
+        # DO NOT STORE THIS TO DB
+        self._voting_power: int = -1
+
+        # DO NOT STORE IT TO DB (MEMORY ONLY)
+        self.extension: Any = None
+
     def is_dirty(self) -> bool:
         return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
 
@@ -195,6 +189,20 @@ class PRep(Sortable):
     @property
     def penalty(self) -> 'PenaltyReason':
         return self._penalty
+
+    def is_suspended(self) -> bool:
+        """The suspended P-Rep cannot serve as Main P-Rep during this term
+
+        :return:
+        """
+        return self._penalty == PenaltyReason.BLOCK_VALIDATION
+
+    def is_electable(self) -> bool:
+        """Returns whether this P-Rep can be elected as a Main P-Rep or Sub P-Rep
+
+        :return:
+        """
+        return self._status == PRepStatus.ACTIVE and self._penalty == PenaltyReason.NONE
 
     @penalty.setter
     def penalty(self, value: 'PenaltyReason'):
@@ -231,49 +239,31 @@ class PRep(Sortable):
         return iso3166.countries_by_alpha3.get(
             alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
 
-    def update_main_prep_validate(self, is_validate: bool):
+    def update_block_statistics(self, is_validator: bool):
         """Update the block validation statistics of P-Rep
 
-        :param is_validate:
-        :return:
+        :param is_validator: If this P-Rep validates a block, then it is True
         """
         self._check_access_permission()
 
-        if is_validate:
+        self._total_blocks += 1
+
+        if is_validator:
             self._validated_blocks += 1
             self._unvalidated_sequence_blocks = 0
         else:
             self._unvalidated_sequence_blocks += 1
-        self._total_blocks += 1
 
         self._set_dirty(True)
 
-    @property
-    def productivity(self) -> int:
+    def reset_block_validation_penalty(self):
+        """Reset block validation penalty and
+        unvalidated sequence blocks before the next term begins
+
+        :return:
         """
-
-        :return: unit: percent
-        """
-        return self._validated_blocks * 100 // self._total_blocks
-
-    def is_low_productivity(self) -> bool:
-        # A grace period without measuring productivity
-        if self._total_blocks < self._penalty_grace_period:
-            return False
-
-        return self.productivity < self._min_productivity_percentage
-
-    def release_suspend(self):
-        if self._status == PRepStatus.SUSPENDED:
-            self._status = PRepStatus.ACTIVE
-            self._unvalidated_sequence_blocks: int = 0
-
-    def is_over_unvalidated_sequence_blocks(self) -> bool:
-        # A grace period without measuring productivity
-        if self._total_blocks < self._penalty_grace_period:
-            return False
-
-        return self._unvalidated_sequence_blocks >= self._max_unvalidated_sequence_blocks
+        self._penalty = PenaltyReason.NONE
+        self._unvalidated_sequence_blocks = 0
 
     @property
     def total_blocks(self) -> int:
@@ -282,6 +272,17 @@ class PRep(Sortable):
     @property
     def validated_blocks(self) -> int:
         return self._validated_blocks
+
+    @property
+    def block_validation_proportion(self) -> int:
+        """Percent without fraction
+
+        :return:
+        """
+        if self._total_blocks == 0:
+            return 0
+
+        return self._validated_blocks * 100 // self._total_blocks
 
     @property
     def unvalidated_sequence_blocks(self) -> int:
@@ -297,6 +298,11 @@ class PRep(Sortable):
 
     @stake.setter
     def stake(self, value: int):
+        """stake is set to account.stake
+
+        :param value:
+        :return:
+        """
         assert value >= 0
         self._check_access_permission()
         self._stake = value
@@ -307,6 +313,11 @@ class PRep(Sortable):
 
     @delegated.setter
     def delegated(self, value: int):
+        """delegated is set to account.delegated_amount
+
+        :param value:
+        :return:
+        """
         assert value >= 0
         self._check_access_permission()
         self._delegated = value
@@ -415,7 +426,40 @@ class PRep(Sortable):
         """
         return -self._delegated, self._block_height, self._tx_index
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, revision: int) -> bytes:
+        if revision >= REV_DECENTRALIZATION:
+            return self._to_bytes_v1()
+        elif revision == REV_IISS:
+            return self._to_bytes_v0()
+
+    def _to_bytes_v0(self) -> bytes:
+        version: int = 0
+        return MsgPackForDB.dumps([
+            version,
+            self.address,
+            self.status.value,
+            self.grade.value,
+            self.name,
+            self.country,
+            self.city,
+            self.email,
+            self.website,
+            self.details,
+            self.p2p_endpoint,
+
+            self._irep,
+            self._irep_block_height,
+
+            self._last_generate_block_height,
+
+            self._block_height,
+            self._tx_index,
+
+            self._total_blocks,
+            self._validated_blocks
+        ])
+
+    def _to_bytes_v1(self) -> bytes:
         return MsgPackForDB.dumps([
             self._VERSION,
             self.address,
@@ -439,7 +483,7 @@ class PRep(Sortable):
 
             self._total_blocks,
             self._validated_blocks,
-            self.penalty.value,
+            self._penalty.value,
             self._unvalidated_sequence_blocks
         ])
 
@@ -530,11 +574,13 @@ class PRep(Sortable):
     def to_dict(self, dict_type: 'PRepDictType') -> dict:
         """Returns the P-Rep information in dict format
 
-        :param dict_type: FULL(getPRep), ABRIDGED(getPRepList)
+        :param dict_type: FULL(getPRep), ABRIDGED(getPReps)
         :return:
         """
         data = {
+            "address": self._address,
             "status": self._status.value,
+            "penalty": self._penalty.value,
             "grade": self.grade.value,
             "name": self.name,
             "country": self.country,
@@ -543,9 +589,12 @@ class PRep(Sortable):
             "delegated": self._delegated,
             "totalBlocks": self._total_blocks,
             "validatedBlocks": self._validated_blocks,
+            "unvalidatedSequenceBlocks": self._unvalidated_sequence_blocks,
             "irep": self._irep,
             "irepUpdateBlockHeight": self._irep_block_height,
             "lastGenerateBlockHeight": self._last_generate_block_height,
+            "blockHeight": self._block_height,
+            "txIndex": self._tx_index
         }
 
         if dict_type == PRepDictType.FULL:
@@ -553,15 +602,14 @@ class PRep(Sortable):
             data[ConstantKeys.WEBSITE] = self.website
             data[ConstantKeys.DETAILS] = self.details
             data[ConstantKeys.P2P_ENDPOINT] = self.p2p_endpoint
-            data[ConstantKeys.IREP] = self._irep
-            data[ConstantKeys.IREP_BLOCK_HEIGHT] = self._irep_block_height
-        else:
-            data[ConstantKeys.ADDRESS] = self.address
 
         return data
 
     def __str__(self) -> str:
-        return str(self.to_dict(PRepDictType.FULL))
+        info: dict = self.to_dict(PRepDictType.FULL)
+        info["votingPower"] = self._voting_power
+
+        return str(info)
 
     def copy(self, flags: 'PRepFlag' = PRepFlag.NONE) -> 'PRep':
         prep = copy.copy(self)
@@ -572,3 +620,16 @@ class PRep(Sortable):
     def _check_access_permission(self):
         if self.is_frozen():
             raise AccessDeniedException("P-Rep access denied")
+
+    @property
+    def voting_power(self):
+        return self._voting_power
+
+    @voting_power.setter
+    def voting_power(self, value: int):
+        """This field is used for saving voting power which is fixed at the beginning of a term
+        USE IT ONLY IN Term class
+
+        :return:
+        """
+        self._voting_power = value

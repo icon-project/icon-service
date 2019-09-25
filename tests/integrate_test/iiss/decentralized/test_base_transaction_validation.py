@@ -47,6 +47,15 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         config[ConfigKey.TERM_PERIOD] = self.CALC_PERIOD
         return config
 
+    def _make_delegated_to_zero(self):
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                     origin_delegations=[])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
     def _init_decentralized(self):
         # decentralized
         self.update_governance()
@@ -136,7 +145,8 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _make_issue_info(self) -> tuple:
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
+        context._term = context.engine.prep.term.copy()
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
@@ -152,7 +162,8 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
+        context._term = context.engine.prep.term.copy()
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
@@ -278,7 +289,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list, None, None, None, True, 0)
+                          tx_list, None, None, None, None, True, 0)
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is True
@@ -460,6 +471,18 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                     self.assertEqual(expected_diff_in_calc_period, actual_covered_by_remain)
                     self.assertEqual(prev_cumulative_fee + actual_issue_amount + expected_diff_in_calc_period,
                                      issue_amount)
+
+    def test_total_delegated_amount_is_zero(self):
+        self._init_decentralized()
+        self._make_delegated_to_zero()
+        self.make_blocks_to_end_calculation()
+        # This is beta1 value when Irep is 10,000
+        expected_issued_amount: int = 84876543209876528
+
+        tx_results = self.make_blocks(self._block_height + 1)
+        # This event logs represent calculated total ICX amount.
+        actual_issued_amount: int = tx_results[0][0].event_logs[0].data[3]
+        self.assertEqual(expected_issued_amount, actual_issued_amount)
 
     def test_calculate_response_invalid_block_height(self):
         def mock_calculated(_self, _path, _block_height):

@@ -435,6 +435,7 @@ class TestTypeConverter(unittest.TestCase):
 
         prev_block_generator = create_address()
         prev_block_validators = [create_address() for _ in range(0, 10)]
+        prev_votes = [[create_address(), i % 3] for i in range(0, 10)]
 
         request = {
             ConstantKeys.BLOCK: {
@@ -482,7 +483,8 @@ class TestTypeConverter(unittest.TestCase):
                 }
             ],
             ConstantKeys.PREV_BLOCK_GENERATOR: str(prev_block_generator),
-            ConstantKeys.PREV_BLOCK_VALIDATORS: [str(addr) for addr in prev_block_validators]
+            ConstantKeys.PREV_BLOCK_VALIDATORS: [str(addr) for addr in prev_block_validators],
+            ConstantKeys.PREV_BLOCK_VOTES: [[str(addr), hex(v)] for addr, v in prev_votes]
         }
 
         ret_params = TypeConverter.convert(request, ParamType.INVOKE)
@@ -531,6 +533,7 @@ class TestTypeConverter(unittest.TestCase):
         # Check the previous block generator, validators
         self.assertEqual(prev_block_generator, ret_params[ConstantKeys.PREV_BLOCK_GENERATOR])
         self.assertEqual(prev_block_validators, ret_params[ConstantKeys.PREV_BLOCK_VALIDATORS])
+        self.assertEqual(prev_votes, ret_params[ConstantKeys.PREV_BLOCK_VOTES])
 
     def test_genesis_invoke_convert(self):
         block_height = 1001
