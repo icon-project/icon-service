@@ -15,9 +15,10 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
-from .term import Term
+from .penalty_imposer import PenaltyImposer
 from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
@@ -33,12 +34,13 @@ from ..icx.icx_account import Account
 from ..icx.storage import Intent
 from ..iiss import IISSEngineListener
 from ..iiss.reward_calc import RewardCalcDataCreator
-from ..utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
     from ..icx import IcxStorage
     from ..precommit_data_manager import PrecommitData
+
+_TAG = "PREP"
 
 
 class Engine(EngineBase, IISSEngineListener):
@@ -48,9 +50,10 @@ class Engine(EngineBase, IISSEngineListener):
     * Manages term and preps
     * Handles P-Rep related JSON-RPC API requests
     """
+
     def __init__(self):
         super().__init__()
-        Logger.debug("PRepEngine.__init__() start")
+        Logger.debug(tag=_TAG, msg="PRepEngine.__init__() start")
 
         self._invoke_handlers: dict = {
             "registerPRep": self.handle_register_prep,
@@ -61,36 +64,53 @@ class Engine(EngineBase, IISSEngineListener):
 
         self._query_handler: dict = {
             "getPRep": self.handle_get_prep,
-            "getMainPReps": self.handle_get_main_prep_list,
-            "getSubPReps": self.handle_get_sub_prep_list,
-            "getPReps": self.handle_get_prep_list,
+            "getMainPReps": self.handle_get_main_preps,
+            "getSubPReps": self.handle_get_sub_preps,
+            "getPReps": self.handle_get_preps,
             "getPRepTerm": self.handle_get_prep_term
         }
 
         self.preps = PRepContainer()
-        self.term = Term()
+        # self.term should be None before decentralization
+        self.term: Optional['Term'] = None
         self._initial_irep: Optional[int] = None
+        self._penalty_imposer: Optional['PenaltyImposer'] = None
 
-        Logger.debug("PRepEngine.__init__() end")
+        Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
     def open(self,
              context: 'IconScoreContext',
              term_period: int,
              irep: int,
              penalty_grace_period: int,
-             min_productivity_percentage: int,
-             max_unvalidated_sequence_block: int):
+             low_productivity_penalty_threshold: int,
+             block_validation_penalty_threshold: int):
 
-        # this logic doesn't need to save to DB yet
-        PRep.init_prep_config(penalty_grace_period,
-                              min_productivity_percentage,
-                              max_unvalidated_sequence_block)
+        # This logic doesn't need to save to DB yet
+        self._init_penalty_imposer(penalty_grace_period,
+                                   low_productivity_penalty_threshold,
+                                   block_validation_penalty_threshold)
 
         self._load_preps(context)
-        self.term.load(context, term_period)
+        self.term: Optional['Term'] = context.storage.prep.get_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
+
+    def _init_penalty_imposer(self,
+                              penalty_grace_period: int,
+                              low_productivity_penalty_threshold: int,
+                              block_validation_penalty_threshold: int):
+        """Initialize PenaltyImposer
+
+        :param penalty_grace_period:
+        :param low_productivity_penalty_threshold:
+        :param block_validation_penalty_threshold:
+        :return:
+        """
+        self._penalty_imposer = PenaltyImposer(penalty_grace_period,
+                                               low_productivity_penalty_threshold,
+                                               block_validation_penalty_threshold)
 
     def _load_preps(self, context: 'IconScoreContext'):
         """Load a prep from db
@@ -138,37 +158,80 @@ class Engine(EngineBase, IISSEngineListener):
         # Updated every block
         self.preps = precommit_data.preps
 
-        # Updated every term
+        # Exchange a term instance for some reasons:
+        # - penalty for elected P-Reps(main, sub)
+        # - A new term is started
         if precommit_data.term is not None:
             self.term: 'Term' = precommit_data.term
 
     def rollback(self):
         pass
 
-    def on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
+    def on_block_invoked(
+            self,
+            context: 'IconScoreContext',
+            is_decentralization_started: bool) -> Tuple[Optional[dict], Optional['Term']]:
+        """Called on IconServiceEngine._after_transaction_process()
+
+        1. Adjust the grade for invalid P-Reps
+        2. Update elected P-Reps in this term
+
+        :param context:
+        :param is_decentralization_started:
+            True: Decentralization will begin at the next block
+        :return:
+        """
+
+        if is_decentralization_started or self._is_term_ended(context):
+            # The current P-Rep term is over. Prepare the next P-Rep term
+            main_prep_as_dict, new_term = self._on_term_ended(context)
+        elif context.is_decentralized():
+            # In-term P-Rep replacement
+            main_prep_as_dict, new_term = self._on_term_updated(context)
+        else:
+            main_prep_as_dict, new_term = None, None
+
+        if new_term:
+            self._update_prep_grades(context, context.preps, self.term, new_term)
+            context.storage.prep.put_term(context, new_term)
+
+        return main_prep_as_dict, new_term
+
+    def _is_term_ended(self, context: 'IconScoreContext') -> bool:
+        if self.term is None:
+            return False
+
+        return context.block.height == self.term.end_block_height
+
+    def _on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
         """Called in IconServiceEngine.invoke() every time when a term is ended
 
         Update P-Rep grades according to PRep.delegated
         """
         self._put_last_term_info(context, self.term)
-        context.storage.meta.put_last_main_preps(context, self.term.main_preps)
 
-        self._update_prep_grades(context)
+        if self.term:
+            main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
+        else:
+            # first term
+            new_preps: List['PRep'] = context.preps.get_preps(start_index=0,
+                                                              size=context.main_prep_count)
+            main_preps: List['Address'] = [prep.address for prep in new_preps]
 
-        invalid_preps: List[int] = self.get_invalid_preps(self.term, context)
-        self.term.update_suspended_preps(invalid_preps)
+        context.storage.meta.put_last_main_preps(context, main_preps)
 
-        self._release_turn_over(context)
+        # All block validation penalties are released
+        self._release_block_validation_penalty(context)
 
-        term: 'Term' = self._create_next_term(self.term, context)
-        main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.NORMAL)
-        term.save(context)
-        return main_preps_as_dict, term
+        # Create a term with context.preps whose grades are up-to-date
+        new_term: 'Term' = self._create_next_term(context, self.term)
+        main_preps_as_dict: dict = \
+            self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
+
+        return main_preps_as_dict, new_term
 
     @classmethod
-    def _put_last_term_info(cls,
-                            context: 'IconScoreContext',
-                            term: 'Term'):
+    def _put_last_term_info(cls, context: 'IconScoreContext', term: 'Term'):
 
         _, last_calc_end = context.storage.meta.get_last_term_info(context)
         if last_calc_end > 0:
@@ -178,48 +241,82 @@ class Engine(EngineBase, IISSEngineListener):
             # first
             start: int = -1
             end: int = context.block.height
-        context.storage.meta.put_last_term_info(context,
-                                                start,
-                                                end)
 
-    def on_term_updated(self, context: 'IconScoreContext') -> Tuple[dict, Optional['Term']]:
-        context.storage.meta.put_last_main_preps(context, self.term.main_preps)
+        context.storage.meta.put_last_term_info(context, start, end)
 
-        invalid_preps: List[int] = self.get_invalid_preps(self.term, context)
-        self.term.update_suspended_preps(invalid_preps)
+    def _on_term_updated(self, context: 'IconScoreContext') -> Tuple[Optional[dict], Optional['Term']]:
+        """Update term with invalid elected P-Rep list during this term
+        (In-term P-Rep replacement)
 
-        term: Optional['Term'] = self._create_updated_term(self.term, invalid_preps)
-        if term:
-            main_preps_as_dict: dict = self.get_updated_main_preps(term, PRepResultState.IN_TERM_UPDATED)
-            term.save(context)
+        We have to consider 4 cases below:
+        1. No invalid elected P-Rep
+            - Nothing to do
+        2. Only main P-Reps are invalidated
+            - Send a new main P-Rep list to loopchain
+            - Save the new term to DB
+        3. Only sub P-Reps are invalidated
+            - Save the new term to DB
+        4. Both of them are invalidated
+            - Send new main P-Rep list to loopchain
+            - Save the new term to DB
+
+        :param context:
+        :return:
+        """
+
+        main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
+        context.storage.meta.put_last_main_preps(context, main_preps)
+
+        if not context.is_term_updated():
+            # No elected P-Rep is disqualified during this term
+            return None, None
+
+        new_term = context.term
+        assert new_term.is_dirty()
+
+        if self.term.root_hash != new_term.root_hash:
+            # Case 2 or 4: Some main P-Reps are replaced or removed
+            main_preps_as_dict: Optional[dict] = \
+                self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
-            main_preps_as_dict: dict = {}
-        return main_preps_as_dict, term
+            # Case 3: Only sub P-Reps are invalidated
+            main_preps_as_dict = None
 
-    def _update_prep_grades(self, context: 'IconScoreContext'):
-        main_prep_count: int = context.main_prep_count
-        main_and_sub_prep_count: int = context.main_and_sub_prep_count
-        old_preps: List['PRep'] = self.term.preps
-        new_preps: 'PRepContainer' = context.preps
+        return main_preps_as_dict, new_term
 
+    @classmethod
+    def _update_prep_grades(cls,
+                            context: 'IconScoreContext',
+                            new_preps: 'PRepContainer',
+                            old_term: Optional['Term'],
+                            new_term: 'Term'):
+        """Update the grades of P-Reps every time when a block is invoked
+
+        Do NOT change any properties of P-Reps after this method is called in this block
+
+        :param context:
+        :return:
+        """
+        Logger.debug(tag=_TAG, msg="_update_prep_grades() start")
+
+        # 0: old grade, 1: new grade
+        _OLD, _NEW = 0, 1
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
-        # Put the address and grade of a old P-Rep to prep_grades dict
-        for prep in old_preps:
-            # grades[0] is an old grade and grades[1] is a new grade
-            prep_grades[prep.address] = (prep.grade, PRepGrade.CANDIDATE)
+        if old_term:
+            for prep_snapshot in old_term.main_preps:
+                prep_grades[prep_snapshot.address] = (PRepGrade.MAIN, PRepGrade.CANDIDATE)
+
+            for prep_snapshot in old_term.sub_preps:
+                prep_grades[prep_snapshot.address] = (PRepGrade.SUB, PRepGrade.CANDIDATE)
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
-        for i in range(main_and_sub_prep_count):
-            prep: 'PRep' = new_preps.get_by_index(i)
-            if prep is None:
-                Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {new_preps.size(active_prep_only=True)}")
-                break
-
-            prep_address: 'Address' = prep.address
+        main_prep_count: int = len(new_term.main_preps)
+        for i, prep_snapshot in enumerate(new_term.preps):
+            prep_address: 'Address' = prep_snapshot.address
             grades: tuple = prep_grades.get(prep_address, (PRepGrade.CANDIDATE, PRepGrade.CANDIDATE))
 
-            old_grade: 'PRepGrade' = grades[0]
+            old_grade: 'PRepGrade' = grades[_OLD]
             new_grade: 'PRepGrade' = PRepGrade.MAIN if i < main_prep_count else PRepGrade.SUB
 
             if old_grade == new_grade:
@@ -228,23 +325,40 @@ class Engine(EngineBase, IISSEngineListener):
                 prep_grades[prep_address] = (old_grade, new_grade)
 
         # Update the grades of P-Reps for the next term
+        # CAUTION: DO NOT use context.put_dirty_prep() here
         for address, grades in prep_grades.items():
-            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
-            assert dirty_prep is not None
-
-            dirty_prep.grade = grades[1]
-            context.put_dirty_prep(dirty_prep)
-
-        context.update_dirty_prep_batch()
-
-    def _release_turn_over(self, context: 'IconScoreContext'):
-        for address in self.term.suspended_preps:
-            prep: 'PRep' = context.preps.remove(address)
+            prep: 'PRep' = new_preps.get_by_address(address)
             assert prep is not None
 
-            dirty_prep = prep.copy()
-            dirty_prep.release_suspend()
-            context.preps.add(dirty_prep)
+            if prep.grade == grades[_NEW]:
+                continue
+
+            prep = prep.copy()
+            prep.grade = grades[_NEW]
+            new_preps.replace(prep)
+            context.storage.prep.put_prep(context, prep)
+
+            Logger.info(tag=_TAG,
+                        msg=f"P-Rep grade changed: {address} {grades[_OLD]} -> {grades[_NEW]}")
+
+        Logger.debug(tag=_TAG, msg="_update_prep_grades() end")
+
+    def _release_block_validation_penalty(self, context: 'IconScoreContext'):
+        """Release block validation penalty every term end
+
+        :param context:
+        :return:
+        """
+
+        old_preps = self.preps
+
+        for prep in old_preps:
+            if prep.penalty == PenaltyReason.BLOCK_VALIDATION:
+                dirty_prep = context.get_prep(prep.address, mutable=True)
+                dirty_prep.reset_block_validation_penalty()
+                context.put_dirty_prep(dirty_prep)
+
+        context.update_dirty_prep_batch()
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
@@ -323,22 +437,17 @@ class Engine(EngineBase, IISSEngineListener):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
-    def check_end_block_height_of_term(self, context: 'IconScoreContext') -> bool:
-        """Is the last block of the current term
-
-        :param context:
-        :return:
-        """
-        return self.term.end_block_height == context.block.height
-
     @classmethod
-    def get_updated_main_preps(cls, term: 'Term', state: 'PRepResultState') -> Optional[dict]:
+    def _get_updated_main_preps(cls,
+                                context: 'IconScoreContext',
+                                term: 'Term',
+                                state: 'PRepResultState') -> Optional[dict]:
         """Returns preps which will run as main preps during the next term in dict format
 
         :return:
         """
         prep_as_dict: Optional[dict] = \
-            cls.get_main_preps_in_dict(term.main_preps)
+            cls.get_main_preps_in_dict(context, term)
 
         if prep_as_dict:
             prep_as_dict['irep'] = term.irep
@@ -347,74 +456,61 @@ class Engine(EngineBase, IISSEngineListener):
         return prep_as_dict
 
     @classmethod
-    def get_main_preps_in_dict(cls, preps: List['PRep']) -> Optional[dict]:
-        count: int = len(preps)
-        if count == 0:
+    def get_main_preps_in_dict(cls,
+                               context: 'IconScoreContext',
+                               term: 'Term') -> Optional[dict]:
+        if len(term.main_preps) == 0:
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
             return None
 
         prep_as_dict: dict = {}
         preps_as_list: list = []
-        prep_addresses: List[bytes] = []
 
-        for i in range(count):
-            prep: 'PRep' = preps[i]
+        for prep_snapshot in term.main_preps:
+            prep: 'PRep' = context.get_prep(prep_snapshot.address)
             preps_as_list.append({
                 ConstantKeys.PREP_ID: prep.address,
                 ConstantKeys.P2P_ENDPOINT: prep.p2p_endpoint
             })
-            prep_addresses.append(prep.address.to_bytes_including_prefix())
 
         prep_as_dict["preps"] = preps_as_list
-        prep_as_dict["rootHash"]: bytes = RootHashGenerator.generate_root_hash(values=prep_addresses, do_hash=True)
+        prep_as_dict["rootHash"]: bytes = term.root_hash
 
         return prep_as_dict
 
     @classmethod
     def _create_next_term(cls,
-                          src_term: 'Term',
-                          context: 'IconScoreContext') -> 'Term':
-        new_preps: List['PRep'] = context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count)
+                          context: 'IconScoreContext',
+                          prev_term: Optional['Term']) -> 'Term':
+        """Create the next term instance at the end of the current term
+
+        :param prev_term:
+        :param context:
+        :return:
+        """
+        new_preps: List['PRep'] = context.preps.get_preps(
+            start_index=0, size=context.main_and_sub_prep_count)
+
+        sequence = 0 if prev_term is None else prev_term.sequence + 1
+        start_block_height = context.block.height + 1
+        if prev_term:
+            assert start_block_height == prev_term.end_block_height + 1
 
         # The current P-Rep term is over. Prepare the next P-Rep term
         irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
 
-        term: 'Term' = Term.create_next_term(
-            src_term.sequence + 1,
-            context.main_prep_count,
-            context.main_and_sub_prep_count,
-            context.block.height,
-            new_preps,
+        term = Term(
+            sequence,
+            start_block_height,
+            context.term_period,
+            irep,
             context.total_supply,
-            context.preps.total_delegated,
-            src_term.period,
-            irep
+            context.preps.total_delegated
         )
 
+        term.set_preps(new_preps, context.main_prep_count, context.main_and_sub_prep_count)
+
         return term
-
-    @classmethod
-    def _create_updated_term(cls,
-                             src_term: 'Term',
-                             invalid_preps: List[int]) -> Optional['Term']:
-        if invalid_preps:
-            term: 'Term' = Term.create_update_term(src_term, invalid_preps)
-        else:
-            term = None
-        return term
-
-    @classmethod
-    def get_invalid_preps(cls,
-                          src_term: 'Term',
-                          context: 'IconScoreContext') -> List[int]:
-
-        # gather PReps who has gotten a penalty on this block
-        invalid_preps: List[int] = []
-        for i, main_prep in enumerate(src_term.main_preps):
-            prep: 'PRep' = context.get_prep(main_prep.address)
-            if prep.status != PRepStatus.ACTIVE:
-                invalid_preps.append(i)
-        return invalid_preps
 
     @classmethod
     def _calculate_weighted_average_of_irep(cls, new_main_preps: List['PRep']) -> int:
@@ -528,8 +624,19 @@ class Engine(EngineBase, IISSEngineListener):
         """
         address: 'Address' = context.tx.origin
 
-        if not self._unregister_prep(context, address, PRepStatus.UNREGISTERED):
-            return
+        dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
+        if dirty_prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {address}")
+
+        if dirty_prep.status != PRepStatus.ACTIVE:
+            raise InvalidParamsException(f"Inactive P-Rep: {address}")
+
+        dirty_prep.status = PRepStatus.UNREGISTERED
+        dirty_prep.grade = PRepGrade.CANDIDATE
+        context.put_dirty_prep(dirty_prep)
+
+        # Update rcDB
+        self._put_unreg_prep_for_iiss_db(context, address)
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -540,22 +647,47 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
+    def impose_penalty(self, context: 'IconScoreContext'):
+        """Impose penalties on main P-Reps every block
+        Called on IconServiceEngine._process_base_transaction()
+
+        :param context:
+        """
+        for snapshot in self.term.main_preps:
+            # Get a up-to-date main prep from context
+            prep: 'PRep' = context.get_prep(snapshot.address)
+            assert isinstance(prep, PRep)
+
+            self._penalty_imposer.run(context, prep, self._on_penalty_imposed)
+
     @classmethod
-    def impose_block_validation_penalty(
-            cls,
-            context: 'IconScoreContext',
-            address: 'Address'):
+    def _on_penalty_imposed(cls,
+                            context: 'IconScoreContext',
+                            address: 'Address',
+                            reason: 'PenaltyReason'):
+        """Called on PenaltyImposer.run()
 
+        Penalty: low productivity, block validation, disqualification
+
+        :param context:
+        :param address: The address of a Main P-PRep on this term
+        :param reason: penalty reason
+        :return:
+        """
         dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
+        assert isinstance(dirty_prep, PRep)
+        assert dirty_prep.status == PRepStatus.ACTIVE
 
-        if dirty_prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {address}")
+        if reason == PenaltyReason.BLOCK_VALIDATION:
+            status: 'PRepStatus' = PRepStatus.ACTIVE
+        else:
+            status: 'PRepStatus' = PRepStatus.DISQUALIFIED
+            # Update rcDB not to supply a reward for the inactive P-Rep
+            cls._put_unreg_prep_for_iiss_db(context, address)
 
-        if dirty_prep.status != PRepStatus.ACTIVE:
-            return
-
-        dirty_prep.status: 'PRepStatus' = PRepStatus.SUSPENDED
-        dirty_prep.penalty: 'PenaltyReason' = PenaltyReason.BLOCK_VALIDATION
+        dirty_prep.status = status
+        dirty_prep.penalty = reason
+        dirty_prep.grade = PRepGrade.CANDIDATE
         context.put_dirty_prep(dirty_prep)
 
         EventLogEmitter.emit_event_log(
@@ -564,86 +696,29 @@ class Engine(EngineBase, IISSEngineListener):
             event_signature=PREP_PENALTY_SIGNATURE,
             arguments=[
                 dirty_prep.address,
-                PRepStatus.SUSPENDED.value,
-                PenaltyReason.BLOCK_VALIDATION.value],
-            indexed_args_count=1)
-
-    @classmethod
-    def impose_low_productivity_penalty(
-            cls,
-            context: 'IconScoreContext',
-            address: 'Address'):
-
-        if not cls._unregister_prep(context,
-                                    address=address,
-                                    status=PRepStatus.DISQUALIFIED,
-                                    reason=PenaltyReason.LOW_PRODUCTIVITY):
-            return
-
-        # TODO slashing
-
-        EventLogEmitter.emit_event_log(
-            context,
-            score_address=ZERO_SCORE_ADDRESS,
-            event_signature=PREP_PENALTY_SIGNATURE,
-            arguments=[
-                address,
-                PRepStatus.DISQUALIFIED.value,
-                PenaltyReason.LOW_PRODUCTIVITY.value
-            ],
+                dirty_prep.status.value,
+                dirty_prep.penalty.value],
             indexed_args_count=1)
 
     @classmethod
     def impose_prep_disqualified_penalty(
-            cls,
-            context: 'IconScoreContext',
-            address: 'Address'):
+            cls, context: 'IconScoreContext', address: 'Address'):
+        """Called on disqualification network proposal
 
-        if not cls._unregister_prep(context,
-                                    address=address,
-                                    status=PRepStatus.DISQUALIFIED,
-                                    reason=PenaltyReason.PREP_DISQUALIFICATION):
-            return
+        :param context:
+        :param address:
+        :return:
+        """
+        # TODO: Check how to handle an exception in governance SCORE (goldworm)
 
-        # TODO slashing
-
-        EventLogEmitter.emit_event_log(
-            context,
-            score_address=ZERO_SCORE_ADDRESS,
-            event_signature=PREP_PENALTY_SIGNATURE,
-            arguments=[
-                address,
-                PRepStatus.DISQUALIFIED.value,
-                PenaltyReason.PREP_DISQUALIFICATION.value,
-            ],
-            indexed_args_count=1)
-
-    @classmethod
-    def _unregister_prep(
-            cls,
-            context: 'IconScoreContext',
-            address: 'Address',
-            status: 'PRepStatus',
-            reason: 'PenaltyReason' = PenaltyReason.NONE):
-
-        dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
-        if dirty_prep is None:
+        prep: 'PRep' = context.get_prep(address)
+        if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        if dirty_prep.status == status:
-            return False
-
-        if status == PRepStatus.UNREGISTERED and dirty_prep.status != PRepStatus.ACTIVE:
+        if prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        dirty_prep.status: 'PRepStatus' = status
-        dirty_prep.penalty: 'PenaltyReason' = reason
-        context.put_dirty_prep(dirty_prep)
-
-        # Update rcDB
-        cls._put_unreg_prep_for_iiss_db(context, address)
-
-        return True
+        cls._on_penalty_imposed(context, address, PenaltyReason.PREP_DISQUALIFICATION)
 
     @classmethod
     def _put_unreg_prep_for_iiss_db(cls, context: 'IconScoreContext', address: 'Address'):
@@ -654,55 +729,54 @@ class Engine(EngineBase, IISSEngineListener):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
-    def handle_get_main_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_main_preps(self, _context: 'IconScoreContext', _params: dict) -> dict:
         """Returns main P-Rep list in the current term
 
         :param _context:
         :param _params:
         :return:
         """
-        preps: List['PRep'] = self.term.main_preps
-        total_delegated: int = 0
+        total_delegated = 0 if self.term is None else self.term.total_delegated
         prep_list: list = []
 
-        for prep in preps:
-            item = {
-                "address": prep.address,
-                "delegated": prep.delegated
-            }
-            prep_list.append(item)
-            total_delegated += prep.delegated
+        if self.term:
+            for snapshot in self.term.main_preps:
+                item = {
+                    "address": snapshot.address,
+                    "delegated": snapshot.delegated
+                }
+                prep_list.append(item)
 
         return {
             "totalDelegated": total_delegated,
             "preps": prep_list
         }
 
-    def handle_get_sub_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_sub_preps(self, _context: 'IconScoreContext', _params: dict) -> dict:
         """Returns sub P-Rep list in the present term
 
         :param _context:
         :param _params:
         :return:
         """
-        preps: List['PRep'] = self.term.sub_preps
-        total_delegated: int = 0
+        total_delegated: int = 0 if self.term is None else self.term.total_delegated
         prep_list: list = []
 
-        for prep in preps:
-            item = {
-                "address": prep.address,
-                "delegated": prep.delegated
-            }
-            prep_list.append(item)
-            total_delegated += prep.delegated
+        if self.term:
+            for prep in self.term.sub_preps:
+                item = {
+                    "address": prep.address,
+                    "delegated": prep.delegated
+                }
+                prep_list.append(item)
+                total_delegated += prep.delegated
 
         return {
             "totalDelegated": total_delegated,
             "preps": prep_list
         }
 
-    def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_preps(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns P-Reps ranging in ranking from start_ranking to end_ranking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
@@ -739,29 +813,31 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_prep_term(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_prep_term(self, context: 'IconScoreContext', _params: dict) -> dict:
         """Provides the information on the current term
 
         :param context:
-        :param params:
+        :param _params:
         :return:
         """
-        if self.term.sequence < 0:
+        if self.term is None:
             raise ServiceNotReadyException("Term is not ready")
 
-        preps: List['PRep'] = self.term.preps
         preps_data = []
-        for prep in preps:
-            preps_data.append(
-                {
-                    "name": prep.name,
-                    "country": prep.country,
-                    "city": prep.city,
-                    "grade": prep.grade.value,
-                    "address": prep.address,
-                    "p2pEndpoint": prep.p2p_endpoint
-                }
-            )
+        for prep_snapshot in self.term.preps:
+            prep = self.preps.get_by_address(prep_snapshot.address)
+            preps_data.append(prep.to_dict(PRepDictType.FULL))
+
+            # preps_data.append(
+            #     {
+            #         "name": prep.name,
+            #         "country": prep.country,
+            #         "city": prep.city,
+            #         "grade": prep.grade.value,
+            #         "address": prep.address,
+            #         "p2pEndpoint": prep.p2p_endpoint
+            #     }
+            # )
 
         return {
             "blockHeight": context.block.height,

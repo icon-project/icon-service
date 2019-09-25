@@ -123,12 +123,14 @@ class IconScoreInnerTask(object):
             converted_is_block_editable = params.get('isBlockEditable', False)
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
+            converted_prev_votes = params.get('prevBlockVotes')
 
             tx_results, state_root_hash, added_transactions, main_prep_as_dict = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
                 prev_block_generator=converted_prev_block_generator,
                 prev_block_validators=converted_prev_block_validators,
+                prev_block_votes=converted_prev_votes,
                 is_block_editable=converted_is_block_editable)
 
             if convert_tx_result_to_dict:

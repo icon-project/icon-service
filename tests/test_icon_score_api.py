@@ -31,7 +31,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext, IconScore
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from iconservice.utils import ContextEngine
 from iconservice.prep import PRepEngine
-from iconservice.prep.data import PRep
+from iconservice.prep.data import PRep, Term
 from tests import create_address
 
 
@@ -313,12 +313,22 @@ class TestIconScoreApi(unittest.TestCase):
         for i in range(PREP_MAIN_AND_SUB_PREPS):
             test_data.append(PRepInfo(address=create_address(), delegated=i, name=f"prep{i}"))
             test_preps.append(PRep(address=test_data[i].address, delegated=test_data[i].delegated))
-        self.context.engine.prep.term._prep = test_preps
-        self.context.engine.prep.term._end_block_height = 100
+
+        term = Term(sequence=0,
+                    start_block_height=61,
+                    period=40,
+                    irep=50_000,
+                    total_supply=1_000_000_000,
+                    total_delegated=1_000_000_000)
+        term.set_preps(test_preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        term.freeze()
+
+        self.context.engine.prep.term = term
+        self.context._term = term.copy()
 
         # check main P-Rep info
         main_prep_list, end_block_height = get_main_prep_info()
-        for i, prep in main_prep_list:
+        for i, prep in enumerate(main_prep_list):
             self.assertEqual(test_data[i].address, test_preps[i].address)
             self.assertEqual(test_data[i].delegated, test_preps[i].delegated)
 
@@ -327,7 +337,7 @@ class TestIconScoreApi(unittest.TestCase):
         self.assertEqual(self.context.engine.prep.term.end_block_height, end_block_height)
 
         # check sub P-Rep info
-        for i, prep in sub_prep_list:
+        for i, prep in enumerate(sub_prep_list):
             j = i + PREP_MAIN_PREPS
             self.assertEqual(test_data[j].address, test_preps[j].address)
             self.assertEqual(test_data[j].delegated, test_preps[j].delegated)

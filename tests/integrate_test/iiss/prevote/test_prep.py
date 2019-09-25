@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, List
 from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus
+from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus, PenaltyReason
 from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
@@ -67,7 +67,7 @@ class TestIntegratePrep(TestIISSBase):
         self.process_confirm_block_tx(tx_list)
 
         # get prep 0 ~ PREP_MAIN_PREPS
-        register_block_height: int = self._block_height
+        register_block_height: int = self.get_block_height()
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._accounts[i])
             expected_params: dict = self.create_register_prep_params(self._accounts[i])
@@ -86,15 +86,18 @@ class TestIntegratePrep(TestIISSBase):
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
             tx: dict = self.create_set_prep_tx(from_=self._accounts[i],
-                                               set_data={"name": f"new{str(self._accounts[i])}"})
+                                               set_data={"name": f"{self._accounts[i]}"})
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         # get prep 0 ~ PREP_MAIN_PREPS
         for i in range(PREP_MAIN_PREPS):
-            response: dict = self.get_prep(self._accounts[i])
-            expected_params: dict = self.create_register_prep_params(self._accounts[i])
+            account = self._accounts[i]
+
+            response: dict = self.get_prep(account)
+            expected_params: dict = self.create_register_prep_params(account)
             expected_response: dict = {
+                "address": account.address,
                 "delegated": 0,
                 "stake": 0,
                 "details": expected_params["details"],
@@ -102,7 +105,7 @@ class TestIntegratePrep(TestIISSBase):
                 "irep": self._config[ConfigKey.INITIAL_IREP],
                 "irepUpdateBlockHeight": register_block_height,
                 "lastGenerateBlockHeight": -1,
-                "name": f"new{str(self._accounts[i])}",
+                "name": f"{account}",
                 "country": expected_params["country"],
                 "city": expected_params["city"],
                 "p2pEndpoint": expected_params['p2pEndpoint'],
@@ -110,7 +113,11 @@ class TestIntegratePrep(TestIISSBase):
                 "totalBlocks": 0,
                 "validatedBlocks": 0,
                 "status": PRepStatus.ACTIVE.value,
-                "grade": PRepGrade.CANDIDATE.value
+                "grade": PRepGrade.CANDIDATE.value,
+                "penalty": PenaltyReason.NONE.value,
+                "unvalidatedSequenceBlocks": 0,
+                "blockHeight": register_block_height,
+                "txIndex": i
             }
             self.assertEqual(expected_response, response)
 
@@ -175,6 +182,7 @@ class TestIntegratePrep(TestIISSBase):
         self.assertEqual(prep_count, len(actual_preps))
 
     def test_preps_and_delegated(self):
+        self.maxDiff = None
         self.update_governance()
 
         # set Revision REV_IISS
@@ -190,7 +198,8 @@ class TestIntegratePrep(TestIISSBase):
             tx: dict = self.create_register_prep_tx(self._accounts[i])
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
-        irep_update_block_height: int = self._block_height
+        register_block_height: int = self.get_block_height()
+        irep_update_block_height: int = register_block_height
 
         # gain 10 icx user0
         balance: int = 100 * ICX_IN_LOOP
@@ -230,14 +239,18 @@ class TestIntegratePrep(TestIISSBase):
                     "country": "KOR",
                     "city": "Unknown",
                     "address": address,
-                    "name": f"node{address}",
+                    "name": str(self._accounts[i]),
                     "lastGenerateBlockHeight": -1,
                     "stake": stake_amount if i == 0 else 0,
                     "delegated": delegation_amount,
                     "irep": IISS_INITIAL_IREP,
                     "irepUpdateBlockHeight": irep_update_block_height,
                     "totalBlocks": 0,
-                    "validatedBlocks": 0
+                    "validatedBlocks": 0,
+                    "penalty": PenaltyReason.NONE.value,
+                    "unvalidatedSequenceBlocks": 0,
+                    "blockHeight": register_block_height,
+                    "txIndex": i
                 }
             )
         expected_response: dict = \

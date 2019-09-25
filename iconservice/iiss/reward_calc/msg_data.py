@@ -48,7 +48,7 @@ class Data:
 
 
 class Header(Data):
-    _PREFIX = b'HD'
+    PREFIX = b'HD'
 
     def __init__(self):
         self.version: int = 0
@@ -56,7 +56,7 @@ class Header(Data):
         self.revision: int = 0
 
     def make_key(self) -> bytes:
-        return self._PREFIX
+        return self.PREFIX
 
     def make_value(self) -> bytes:
         data = [
@@ -94,7 +94,7 @@ class Header(Data):
         return obj
 
     def __str__(self):
-        info: str = f"[{self._PREFIX}] version: {self.version}, block_height: {self.block_height} "
+        info: str = f"[{self.PREFIX}] version: {self.version}, block_height: {self.block_height} "
 
         if self.version >= RC_DB_VERSION_2:
             info += f"revision: {self.revision} "
@@ -102,7 +102,7 @@ class Header(Data):
 
 
 class GovernanceVariable(Data):
-    _PREFIX = b'GV'
+    PREFIX = b'GV'
 
     def __init__(self):
         # key
@@ -117,7 +117,7 @@ class GovernanceVariable(Data):
 
     def make_key(self) -> bytes:
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return self._PREFIX + block_height
+        return self.PREFIX + block_height
 
     def make_value(self) -> bytes:
         data = [
@@ -163,7 +163,7 @@ class GovernanceVariable(Data):
         return obj
 
     def __str__(self):
-        info: str = f"[{self._PREFIX}] key: {self.block_height}," \
+        info: str = f"[{self.PREFIX}] key: {self.block_height}," \
                     f" calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
         if self.version >= RC_DB_VERSION_2:
             info += f"config_main_prep_count: {self.config_main_prep_count}, " \
@@ -172,7 +172,7 @@ class GovernanceVariable(Data):
 
 
 class BlockProduceInfoData(Data):
-    _PREFIX = b'BP'
+    PREFIX = b'BP'
 
     def __init__(self):
         # key
@@ -184,7 +184,7 @@ class BlockProduceInfoData(Data):
 
     def make_key(self) -> bytes:
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return self._PREFIX + block_height
+        return self.PREFIX + block_height
 
     def make_value(self) -> bytes:
         data = [
@@ -206,14 +206,14 @@ class BlockProduceInfoData(Data):
         return obj
 
     def __str__(self):
-        return f"[{self._PREFIX}] " \
+        return f"[{self.PREFIX}] " \
                f"key: {self.block_height}, " \
                f"block_generator: {str(self.block_generator)}, " \
                f"block_validators: {[str(addr) for addr in self.block_validator_list]}"
 
 
 class PRepsData(Data):
-    _PREFIX = b'PR'
+    PREFIX = b'PR'
 
     def __init__(self):
         # key
@@ -225,7 +225,7 @@ class PRepsData(Data):
 
     def make_key(self) -> bytes:
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return self._PREFIX + block_height
+        return self.PREFIX + block_height
 
     def make_value(self) -> bytes:
         encoded_prep_list = [[MsgPackForIpc.encode(delegation_info.address),
@@ -257,12 +257,12 @@ class PRepsData(Data):
         return obj
 
     def __str__(self):
-        return f"[{self._PREFIX}] " \
+        return f"[{self.PREFIX}] " \
                f"key: {self.block_height}, total_delegation: {str(self.total_delegation)}"
 
 
 class TxData(Data):
-    _PREFIX = b'TX'
+    PREFIX = b'TX'
 
     def __init__(self):
         self.address: 'Address' = None
@@ -272,7 +272,7 @@ class TxData(Data):
 
     def make_key(self, index: int) -> bytes:
         tx_index: bytes = index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return self._PREFIX + tx_index
+        return self.PREFIX + tx_index
 
     def make_value(self) -> bytes:
         tx_type: 'TxType' = self.type

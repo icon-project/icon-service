@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, Tuple, List
 from iconservice.database.db import MetaContextDatabase, ContextDatabase
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
-from ..prep.data import PRep
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -68,10 +67,9 @@ class Storage(StorageBase):
 
     def put_last_main_preps(self,
                             context: 'IconScoreContext',
-                            main_preps: List['PRep']):
+                            main_preps: List['Address']):
         version = 0
-        preps: List['Address'] = [prep.address for prep in main_preps]
-        value: bytes = MsgPackForDB.dumps([version, preps])
+        value: bytes = MsgPackForDB.dumps([version, main_preps])
         self._db.put(context, self._KEY_LAST_MAIN_PREPS, value)
 
     def get_last_main_preps(self, context: 'IconScoreContext') -> List['Address']:

@@ -28,7 +28,9 @@ if TYPE_CHECKING:
 
 
 def check_decentralization_condition(context: 'IconScoreContext') -> bool:
-    if context.revision < REV_DECENTRALIZATION:
+    if context.revision < REV_DECENTRALIZATION or context.is_decentralized():
+        # If revision is less than REV_DECENTRALIZATION or
+        # network has been already decentralized
         return False
 
     context.update_dirty_prep_batch()
@@ -38,8 +40,7 @@ def check_decentralization_condition(context: 'IconScoreContext') -> bool:
     if context.preps.size(active_prep_only=True) >= context.main_prep_count:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
         bottom_prep: 'PRep' = context.preps.get_by_index(context.main_prep_count - 1)
-        bottom_prep_delegated = bottom_prep.delegated
-        return bottom_prep_delegated >= minimum_delegate
+        return bottom_prep.delegated >= minimum_delegate
     return False
 
 

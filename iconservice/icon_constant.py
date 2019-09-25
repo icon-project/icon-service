@@ -148,6 +148,7 @@ class ConfigKey:
     INITIAL_IREP = 'initialIRep'
     PREP_MAIN_PREPS = 'mainPRepCount'
     PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
+    IPC_TIMEOUT = 'ipcTimeout'
 
     # log
     LOG = 'log'
@@ -166,8 +167,8 @@ class ConfigKey:
 
     DECENTRALIZE_TRIGGER = "decentralizeTrigger"
     PENALTY_GRACE_PERIOD = "penaltyGracePeriod"
-    MIN_PRODUCTIVITY_PERCENTAGE = "minProductivityPercentage"
-    MAX_UNVALIDATED_SEQUENCE_BLOCKS = "maxUnvalidatedSequenceBlocks"
+    LOW_PRODUCTIVITY_PENALTY_THRESHOLD = "lowProductivityPenaltyThreshold"
+    BLOCK_VALIDATION_PENALTY_THRESHOLD = "blockValidationPenaltyThreshold"
 
 
 class EnableThreadFlag(IntFlag):
@@ -273,8 +274,8 @@ ISCORE_EXCHANGE_RATE = 1_000
 
 PENALTY_GRACE_PERIOD = IISS_DAY_BLOCK * 2
 
-MIN_PRODUCTIVITY_PERCENTAGE = 85
-MAX_UNVALIDATED_SEQUENCE_BLOCKS = 660
+LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 85     # Unit: Percent
+BLOCK_VALIDATION_PENALTY_THRESHOLD = 660    # Unit: Blocks
 
 BASE_TRANSACTION_VERSION = 3
 
@@ -297,7 +298,6 @@ class PRepStatus(Enum):
     ACTIVE = 0
     UNREGISTERED = auto()
     DISQUALIFIED = auto()
-    SUSPENDED = auto()
 
 
 class PenaltyReason(Enum):
@@ -318,3 +318,9 @@ class PRepGrade(Enum):
 class PRepResultState(Enum):
     NORMAL = 0
     IN_TERM_UPDATED = 1
+
+
+class BlockVoteStatus(Enum):
+    NONE = 0
+    TRUE = 1
+    FALSE = 2

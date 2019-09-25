@@ -18,7 +18,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from iconservice.icon_constant import IconScoreContextType, REV_DECENTRALIZATION, RC_DB_VERSION_0
+from iconservice.icon_constant import REV_DECENTRALIZATION, RC_DB_VERSION_0, RC_DB_VERSION_2
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.data_creator import *
@@ -32,13 +32,16 @@ from tests.mock_generator import KEY_VALUE_DB_PATH
 
 
 class TestRcDataStorage(unittest.TestCase):
+    @patch('iconservice.iiss.reward_calc.storage.Storage._supplement_db')
     @patch(f'{KEY_VALUE_DB_PATH}.from_path')
     @patch('os.path.exists')
-    def setUp(self, _, mocked_rc_db_from_path) -> None:
+    def setUp(self, _, mocked_rc_db_from_path, mocked_supplement_db) -> None:
+        context: 'IconScoreContext' = IconScoreContext()
+        context.revision = REV_DECENTRALIZATION
         self.path = ""
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
         self.rc_data_storage = RewardCalcStorage()
-        self.rc_data_storage.open(REV_DECENTRALIZATION, self.path)
+        self.rc_data_storage.open(context, self.path)
 
         dummy_block_height = 1
 
@@ -67,14 +70,17 @@ class TestRcDataStorage(unittest.TestCase):
     def tearDown(self):
         pass
 
+    @patch('iconservice.iiss.reward_calc.storage.Storage._supplement_db')
     @patch(f'{KEY_VALUE_DB_PATH}.from_path')
     @patch('os.path.exists')
-    def test_rc_storage_check_data_format_by_revision(self, _, mocked_rc_db_from_path):
+    def test_rc_storage_check_data_format_by_revision(self, _, mocked_rc_db_from_path, mocked_supplement_db):
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
+        context: 'IconScoreContext' = IconScoreContext()
         for revision in range(REV_DECENTRALIZATION):
+            context.revision = revision
             current_version = get_rc_version(revision)
             rc_data_storage = RewardCalcStorage()
-            rc_data_storage.open(revision, self.path)
+            rc_data_storage.open(context, self.path)
             self.dummy_header.version = current_version
             self.dummy_header.revision = revision
             self.dummy_gv.version = current_version
@@ -96,7 +102,7 @@ class TestRcDataStorage(unittest.TestCase):
         revision = REV_DECENTRALIZATION
         current_version = get_rc_version(revision)
         rc_data_storage = RewardCalcStorage()
-        rc_data_storage.open(revision, self.path)
+        rc_data_storage.open(context, self.path)
         self.dummy_header.version = current_version
         self.dummy_header.revision = revision
         self.dummy_gv.version = current_version
@@ -115,11 +121,14 @@ class TestRcDataStorage(unittest.TestCase):
         self.assertEqual(self.dummy_gv.config_main_prep_count, gv.config_main_prep_count)
         self.assertEqual(self.dummy_gv.config_sub_prep_count, gv.config_sub_prep_count)
 
+    @patch('iconservice.iiss.reward_calc.storage.Storage._supplement_db')
     @patch(f'{KEY_VALUE_DB_PATH}.from_path')
     @patch('os.path.exists')
-    def test_open(self, mocked_path_exists, mocked_rc_db_from_path):
+    def test_open(self, mocked_path_exists, mocked_rc_db_from_path, mocked_supplement_db):
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
+        context: 'IconScoreContext' = IconScoreContext()
+        context.revision = REV_DECENTRALIZATION
         rc_data_storage = RewardCalcStorage()
         test_db_path: str = os.path.join(os.getcwd(), ".storage_test_db")
 
@@ -137,7 +146,7 @@ class TestRcDataStorage(unittest.TestCase):
             db = MockPlyvelDB(MockPlyvelDB.make_db())
             return MockIissDataBase(db)
         mocked_rc_db_from_path.side_effect = from_path
-        rc_data_storage.open(REV_DECENTRALIZATION, test_db_path)
+        rc_data_storage.open(context, test_db_path)
         mocked_path_exists.assert_called()
 
         expected_tx_index = -1
@@ -172,7 +181,7 @@ class TestRcDataStorage(unittest.TestCase):
     @patch('os.rename')
     @patch('os.path.exists')
     def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_rc_db_from_path):
-        # success case: when input valid block height, should create iiss_db and return path
+
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
         current_db_path = os.path.join(self.path, RewardCalcStorage._CURRENT_IISS_DB_NAME)
 
@@ -184,9 +193,13 @@ class TestRcDataStorage(unittest.TestCase):
                 return False
         mocked_path_exists.side_effect = path_exists
 
+        expected_version: int = 0
         valid_block_height = 1
         expected_iiss_db_path = os.path.join(self.path,
-                                             RewardCalcStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
+                                             RewardCalcStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}_{expected_version}")
+
+        # success case: When input valid block height and HD is exists, should create iiss_db and return path
+        self.rc_data_storage._db.put(self.dummy_header.make_key(), self.dummy_header.make_value())
         actual_ret_path = self.rc_data_storage.create_db_for_calc(valid_block_height)
         self.assertEqual(expected_iiss_db_path, actual_ret_path)
 

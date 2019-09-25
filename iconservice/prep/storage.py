@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Iterable
 
 from .data.prep import PRep
+from .data import Term
 from ..base.ComponentBase import StorageBase
 from ..base.exception import InvalidParamsException
 from ..utils.msgpack_for_db import MsgPackForDB
@@ -75,25 +76,25 @@ class Storage(StorageBase):
 
     def put_prep(self, context: 'IconScoreContext', prep: 'PRep'):
         key: bytes = PRep.make_key(prep.address)
-        value: bytes = prep.to_bytes()
+        value: bytes = prep.to_bytes(context.revision)
         self._db.put(context, key, value)
 
     def delete_prep(self, context: 'IconScoreContext', address: 'Address'):
         key: bytes = PRep.make_key(address)
         self._db.delete(context, key)
 
-    def get_prep_iterator(self) -> iter:
+    def get_prep_iterator(self) -> Iterable['PRep']:
         with self._db.key_value_db.get_sub_db(PRep.PREFIX).iterator() as it:
             for key, value in it:
                 if key[0] == 0x00 and len(key) == 21:
                     yield PRep.from_bytes(value)
 
-    def put_term(self, context: 'IconScoreContext', data: list):
-        value: bytes = MsgPackForDB.dumps(data)
+    def put_term(self, context: 'IconScoreContext', term: 'Term'):
+        value: bytes = MsgPackForDB.dumps(term.to_list())
         self._db.put(context, self.TERM_KEY, value)
 
-    def get_term(self, context: 'IconScoreContext') -> Optional[list]:
+    def get_term(self, context: 'IconScoreContext') -> Optional['Term']:
         value: bytes = self._db.get(context, self.TERM_KEY)
         if value:
-            return MsgPackForDB.loads(value)
-        return None
+            data: list = MsgPackForDB.loads(value)
+            return Term.from_list(data)
