@@ -270,7 +270,7 @@ class TestRCDatabase(TestIISSBase):
         rc_data_count: int = 0
         for rc_data in rc_db.iterator():
             # There is no GV at the first time
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_version = 0
                 self.assertEqual(expected_version, hd.version)
@@ -334,7 +334,7 @@ class TestRCDatabase(TestIISSBase):
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         for rc_data in rc_db.iterator():
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_version = 0
                 self.assertEqual(expected_hd_block, hd.block_height)
@@ -342,7 +342,7 @@ class TestRCDatabase(TestIISSBase):
                 # not support on VERSION 0
                 # self.assertEqual(expected_revision, hd.revision)
 
-            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+            if rc_data[0][:2] == GovernanceVariable.PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_version = 0
                 self.assertEqual(expected_gv_block, gv.block_height)
@@ -357,7 +357,7 @@ class TestRCDatabase(TestIISSBase):
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         for rc_data in rc_db.iterator():
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_version = 2
                 expected_revision = 6
@@ -365,7 +365,7 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_version, hd.version)
                 self.assertEqual(expected_revision, hd.revision)
 
-            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+            if rc_data[0][:2] == GovernanceVariable.PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_version = 2
                 self.assertEqual(expected_gv_block, gv.block_height)

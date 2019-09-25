@@ -762,7 +762,7 @@ class Engine(EngineBase):
     @classmethod
     def _put_header_to_rc_db(cls,
                              context: 'IconScoreContext',
-                             last_revision: int,
+                             rc_db_revision: int,
                              version: int,
                              is_genesis_iiss: bool = False):
 
@@ -772,7 +772,7 @@ class Engine(EngineBase):
             block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
         data: 'Header' = RewardCalcDataCreator.create_header(version,
                                                              block_height,
-                                                             last_revision)
+                                                             rc_db_revision)
         context.storage.rc.put(context.rc_block_batch, data)
 
     @staticmethod
