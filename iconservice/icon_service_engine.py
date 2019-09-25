@@ -239,7 +239,7 @@ class IconServiceEngine(ContextContainer):
                                            prep_reg_fee)
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.meta.open(context)
-        IconScoreContext.storage.rc.open(context.revision, rc_data_path)
+        IconScoreContext.storage.rc.open(context, rc_data_path)
 
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
@@ -445,7 +445,7 @@ class IconServiceEngine(ContextContainer):
 
         self._set_revision_to_context(context)
         # For RC DB
-        rc_db_revision: int = self._get_rc_db_revision(context)
+        rc_db_revision: int = self._get_rc_db_revision_before_process_transactions(context)
 
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -527,8 +527,8 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
     @classmethod
-    def _get_rc_db_revision(cls,
-                            context: 'IconScoreContext') -> int:
+    def _get_rc_db_revision_before_process_transactions(cls,
+                                                        context: 'IconScoreContext') -> int:
 
         if context.revision < REV_IISS:
             return 0

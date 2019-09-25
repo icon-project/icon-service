@@ -665,7 +665,6 @@ class Engine(EngineBase):
                   prev_block_votes: Optional[List[Tuple['Address', int]]],
                   flag: 'PrecommitFlag',
                   rc_db_revision: int):
-
         version: int = get_rc_version(rc_db_revision)
 
         if self._is_iiss_calc(flag):
@@ -718,6 +717,7 @@ class Engine(EngineBase):
         block_height: int = precommit_data.block.height - 1
         path: str = context.storage.rc.create_db_for_calc(block_height)
         context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
+        # todo: Implement  logic about checking calculate result
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod

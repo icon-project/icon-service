@@ -123,7 +123,7 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def calculate(self, db_path: str, block_height: int):
+    def calculate(self, db_path: str, block_height: int) -> int:
         """Request RewardCalculator to calculate IScore for every account
 
         It is called on invoke thread
@@ -143,6 +143,7 @@ class RewardCalcProxy(object):
             raise TimeoutException("calculate message to RewardCalculator has timed-out")
 
         Logger.debug(tag=_TAG, msg=f"calculate() end: {response}")
+        return response.status
 
     async def _calculate(self, db_path: str, block_height: int):
         Logger.debug(tag=_TAG, msg="_calculate() start")
@@ -154,7 +155,7 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg=f"_calculate() end")
 
-        return future.result
+        return future.result()
 
     def claim_iscore(self, address: 'Address',
                      block_height: int, block_hash: bytes) -> Tuple[int, int]:

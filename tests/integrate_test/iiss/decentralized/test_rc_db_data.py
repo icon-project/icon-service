@@ -42,8 +42,8 @@ class TestRCDatabase(TestIISSBase):
                       key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage._IISS_RC_DB_NAME_PREFIX):]),
                       reverse=True)[0]
 
-    def _check_the_name_of_rc_db(self, actual_rc_db_name):
-        expected_last_rc_db_name: str = Storage._IISS_RC_DB_NAME_PREFIX + str(self._block_height - 1)
+    def _check_the_name_of_rc_db(self, actual_rc_db_name: str, version: int = 0):
+        expected_last_rc_db_name: str = Storage._IISS_RC_DB_NAME_PREFIX + str(self._block_height - 1) + '_' + str(version)
         self.assertEqual(expected_last_rc_db_name, actual_rc_db_name)
 
     def test_all_rc_db_data_block_height(self):
@@ -57,15 +57,17 @@ class TestRCDatabase(TestIISSBase):
         self.set_revision(REV_IISS)
         self.make_blocks(self._block_height + 1)
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        self._check_the_name_of_rc_db(get_last_rc_db)
+        expected_version: int = 0
+        self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         expected_rc_db_data_count: int = 1
         expected_block_height_at_the_start_of_iiss = self._block_height - 1
         rc_data_count: int = 0
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             # There is no GV at the first time
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_version = 0
                 self.assertEqual(expected_version, hd.version)
@@ -129,15 +131,16 @@ class TestRCDatabase(TestIISSBase):
 
         expected_gv_block_height: int = expected_block_height_at_the_start_of_iiss
         expected_hd_block_height: int = block_height
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             print(rc_data)
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_version = 0
                 self.assertEqual(expected_version, hd.version)
                 self.assertEqual(expected_hd_block_height, hd.block_height)
 
-            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+            if rc_data[0][:2] == GovernanceVariable.PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 expected_irep = 0
                 expected_main_prep_count = 0
@@ -159,12 +162,13 @@ class TestRCDatabase(TestIISSBase):
                          prev_block_generator=main_preps_address[0],
                          prev_block_validators=main_preps_address[1:])
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        self._check_the_name_of_rc_db(get_last_rc_db)
+        expected_version: int = 0
+        self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
-
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             print(rc_data)
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_version = 0
                 expected_revisions = 0
@@ -172,7 +176,7 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_hd_block_height, hd.block_height)
                 self.assertEqual(expected_revisions, hd.revision)
 
-            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+            if rc_data[0][:2] == GovernanceVariable.PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 # calculated irep (irep: 50000 ICX)
                 expected_irep = 0
@@ -187,10 +191,10 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_rrep, gv.reward_rep)
                 self.assertEqual(expected_version, gv.version)
 
-            if rc_data[0][:2] == BlockProduceInfoData._PREFIX:
+            if rc_data[0][:2] == BlockProduceInfoData.PREFIX:
                 raise AssertionError
 
-            if rc_data[0][:2] == PRepsData._PREFIX:
+            if rc_data[0][:2] == PRepsData.PREFIX:
                 raise AssertionError
 
         expected_gv_block_height: int = expected_hd_block_height
@@ -202,13 +206,15 @@ class TestRCDatabase(TestIISSBase):
                          prev_block_validators=main_preps_address[1:])
         expected_pr_block_height: int = expected_gv_block_height
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        self._check_the_name_of_rc_db(get_last_rc_db)
+        expected_version: int = 2
+        self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         expected_bp_block_height: int = expected_gv_block_height + 1
+        self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
             print(rc_data)
-            if rc_data[0][:2] == Header._PREFIX:
+            if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_block_height = self._block_height
                 expected_version = 2
@@ -217,7 +223,7 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_hd_block_height, hd.block_height)
                 self.assertEqual(expected_revisions, hd.revision)
 
-            if rc_data[0][:2] == GovernanceVariable._PREFIX:
+            if rc_data[0][:2] == GovernanceVariable.PREFIX:
                 gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
                 # calculated irep (irep: 50000 ICX)
                 expected_irep = 19290123456790123
@@ -232,11 +238,11 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_rrep, gv.reward_rep)
                 self.assertEqual(expected_version, gv.version)
 
-            if rc_data[0][:2] == PRepsData._PREFIX:
+            if rc_data[0][:2] == PRepsData.PREFIX:
                 pr: 'PRepsData' = PRepsData.from_bytes(rc_data[0], rc_data[1])
                 self.assertEqual(expected_pr_block_height, pr.block_height)
 
-            if rc_data[0][:2] == BlockProduceInfoData._PREFIX:
+            if rc_data[0][:2] == BlockProduceInfoData.PREFIX:
                 bp: 'BlockProduceInfoData' = BlockProduceInfoData.from_bytes(rc_data[0], rc_data[1])
                 self.assertEqual(expected_bp_block_height, bp.block_height)
                 self.assertTrue(expected_gv_block_height < bp.block_height <= expected_hd_block_height)

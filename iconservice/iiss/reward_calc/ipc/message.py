@@ -330,19 +330,25 @@ class CalculateRequest(Request):
 class CalculateResponse(Response):
     MSG_TYPE = MessageType.CALCULATE
 
-    def __init__(self, msg_id: int):
+    def __init__(self, msg_id: int, status: int, block_height: int):
         super().__init__()
 
         self.msg_id: int = msg_id
+        self.status: int = status
+        self.block_height: int = block_height
 
     def __str__(self) -> str:
-        return f"CALCULATE({self.msg_id})"
+        return f"CALCULATE({self.msg_id}, {self.status}, {self.block_height})"
 
     @staticmethod
     def from_list(items: list) -> 'CalculateResponse':
         msg_id: int = items[1]
+        payload: list = items[2]
 
-        return CalculateResponse(msg_id)
+        status: int = payload[0]
+        block_height: int = payload[1]
+
+        return CalculateResponse(msg_id, status, block_height)
 
 
 class CommitBlockRequest(Request):
