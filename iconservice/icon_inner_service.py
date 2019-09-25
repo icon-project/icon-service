@@ -147,6 +147,8 @@ class IconScoreInnerTask(object):
 
             if main_prep_as_dict:
                 results["prep"] = main_prep_as_dict
+
+            Logger.info(f'invoke origin response with {results}', ICON_INNER_LOG_TAG)
             response = MakeResponse.make_response(results)
         except FatalException as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
@@ -162,14 +164,13 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
             if self._icon_service_engine:
                 self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
     async def query(self, request: dict):
-        Logger.info(f'query request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
 
         self._check_icon_service_ready()
 
@@ -206,7 +207,7 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
+            Logger.debug(f'query response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()
             return response
 
@@ -330,7 +331,7 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def validate_transaction(self, request: dict):
-        Logger.info(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
 
         self._check_icon_service_ready()
 
@@ -358,7 +359,7 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()
             return response
 
