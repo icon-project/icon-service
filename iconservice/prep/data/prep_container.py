@@ -20,9 +20,9 @@ from iconcommons import Logger
 
 from .prep import PRep, PRepFlag, PRepStatus
 from .sorted_list import SortedList
+from ... import utils
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
-from ... import utils
 
 
 class PRepContainer(object):
@@ -191,9 +191,18 @@ class PRepContainer(object):
     def get_preps(self, start_index: int, size: int) -> List['PRep']:
         """Returns active P-Reps ranging from start_index to start_index + size - 1
 
-        :return: P-Rep list
+        :return: Active P-Rep list
         """
         return self._active_prep_list[start_index:start_index + size]
+
+    def get_inactive_preps(self) -> List['PRep']:
+        """Returns inactive P-Reps
+
+        :return: Inactive P-Rep list
+        """
+        prep_list = [*self._prep_dict.values()]
+        inactive_prep_list = list(set(prep_list) - set(self._active_prep_list))
+        return inactive_prep_list
 
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list

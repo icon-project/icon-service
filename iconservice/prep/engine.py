@@ -15,6 +15,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -48,6 +49,7 @@ class Engine(EngineBase, IISSEngineListener):
     * Manages term and preps
     * Handles P-Rep related JSON-RPC API requests
     """
+
     def __init__(self):
         super().__init__()
         Logger.debug("PRepEngine.__init__() start")
@@ -64,7 +66,8 @@ class Engine(EngineBase, IISSEngineListener):
             "getMainPReps": self.handle_get_main_prep_list,
             "getSubPReps": self.handle_get_sub_prep_list,
             "getPReps": self.handle_get_prep_list,
-            "getPRepTerm": self.handle_get_prep_term
+            "getPRepTerm": self.handle_get_prep_term,
+            "getBlacklistPReps": self.handle_get_blacklist_prep_list
         }
 
         self.preps = PRepContainer()
@@ -736,6 +739,23 @@ class Engine(EngineBase, IISSEngineListener):
             "startRanking": start_ranking,
             "totalDelegated": preps.total_delegated,
             "totalStake": context.storage.iiss.get_total_stake(context),
+            "preps": prep_list
+        }
+
+    def handle_get_blacklist_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+        """
+        Returns unregistered PReps called blacklist preps
+        of which status is out of UNREGISTERED, DISQUALIFIED and SUSPENDED
+
+        :param context: IconScoreContext
+        :param params: parameters
+        :return: block height and blacklist preps in dict
+        """
+        preps: 'PRepContainer' = self.preps
+        prep_list: list = preps.get_inactive_preps()
+        prep_list = [prep.to_dict(PRepDictType.ABRIDGED) for prep in prep_list]
+        return {
+            "blockHeight": context.block.height,
             "preps": prep_list
         }
 

@@ -229,6 +229,18 @@ class TestIISSBase(TestIntegrateBase):
         }
         return self._query(query_request)
 
+    def get_blacklist_prep_list(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getBlacklistPReps"
+            }
+        }
+        return self._query(query_request)
+
     def get_prep_term(self):
         query_request = {
             "version": self._version,

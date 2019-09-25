@@ -174,6 +174,47 @@ class TestIntegratePrep(TestIISSBase):
         actual_preps: list = response['preps']
         self.assertEqual(prep_count, len(actual_preps))
 
+    def test_get_blacklist_prep_list(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(REV_IISS)
+
+        prep_count: int = 300
+        accounts: list = self.create_eoa_accounts(prep_count)
+
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
+
+        # register prep
+        tx_list: list = []
+        for i in range(prep_count):
+            tx: dict = self.create_register_prep_tx(from_=accounts[i])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # check blacklist is none
+        response: dict = self.get_blacklist_prep_list()
+        actual_preps: list = response['preps']
+        self.assertEqual(0, len(actual_preps))
+
+        cnt_unregister_prep = PREP_MAIN_PREPS
+        expected_preps = sorted(self.get_prep_list()['preps'][:cnt_unregister_prep], key=lambda k: k['name'])
+        for prep in expected_preps:
+            prep['status'] = 1
+
+        # unregister prep
+        tx_list: list = []
+        for i in range(cnt_unregister_prep):
+            tx: dict = self.create_unregister_prep_tx(accounts[i])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # check blacklist is same as unregistered prep list
+        response: dict = self.get_blacklist_prep_list()
+        actual_preps: list = sorted(response['preps'], key=lambda k: k['name'])
+        self.assertEqual(cnt_unregister_prep, len(actual_preps))
+        self.assertEqual(expected_preps, actual_preps)
+
     def test_preps_and_delegated(self):
         self.update_governance()
 
