@@ -826,17 +826,18 @@ class Engine(EngineBase, IISSEngineListener):
         preps_data = []
         for prep_snapshot in self.term.preps:
             prep = self.preps.get_by_address(prep_snapshot.address)
+            preps_data.append(prep.to_dict(PRepDictType.FULL))
 
-            preps_data.append(
-                {
-                    "name": prep.name,
-                    "country": prep.country,
-                    "city": prep.city,
-                    "grade": prep.grade.value,
-                    "address": prep.address,
-                    "p2pEndpoint": prep.p2p_endpoint
-                }
-            )
+            # preps_data.append(
+            #     {
+            #         "name": prep.name,
+            #         "country": prep.country,
+            #         "city": prep.city,
+            #         "grade": prep.grade.value,
+            #         "address": prep.address,
+            #         "p2pEndpoint": prep.p2p_endpoint
+            #     }
+            # )
 
         return {
             "blockHeight": context.block.height,

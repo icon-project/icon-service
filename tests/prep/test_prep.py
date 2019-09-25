@@ -225,7 +225,7 @@ def test_reset_block_validation_penalty(prep):
 def test_to_dict_with_full(prep):
     info: dict = prep.to_dict(PRepDictType.FULL)
 
-    assert "address" not in info
+    assert info["address"] == prep.address
     assert info["name"] == prep.name == NAME
     assert info["status"] == prep.status.value
     assert info["grade"] == prep.grade.value
@@ -243,9 +243,11 @@ def test_to_dict_with_full(prep):
     assert info["validatedBlocks"] == prep.validated_blocks == VALIDATED_BLOCKS
     assert info["penalty"] == prep.penalty.value == PENALTY.value
     assert info["unvalidatedSequenceBlocks"] == prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+    assert info["blockHeight"] == prep.block_height
+    assert info["txIndex"] == prep.tx_index
 
-    # version and address are not included
-    assert len(info) == PRep.Index.SIZE - 2
+    # SIZE(20) - 1(version) + 2(stake, delegated) = 21
+    assert len(info) == PRep.Index.SIZE + 1
 
 
 def test_to_dict_with_abridged(prep):
@@ -269,6 +271,9 @@ def test_to_dict_with_abridged(prep):
     assert info["validatedBlocks"] == prep.validated_blocks == VALIDATED_BLOCKS
     assert info["penalty"] == prep.penalty.value == PENALTY.value
     assert info["unvalidatedSequenceBlocks"] == prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+    assert info["blockHeight"] == prep.block_height
+    assert info["txIndex"] == prep.tx_index
 
     # version, email, website, details and p2pEndpoint are not included
-    assert len(info) == PRep.Index.SIZE - 5
+    # SIZE(20) - 5(version, email, website, details, p2pEndpoint) + 2(stake, delegated)
+    assert len(info) == PRep.Index.SIZE - 3
