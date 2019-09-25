@@ -85,6 +85,7 @@ class PrecommitFlag(IntFlag):
 class PrecommitData(object):
     def __init__(self,
                  revision: int,
+                 rc_db_revision: int,
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
@@ -103,6 +104,7 @@ class PrecommitData(object):
 
         """
         self.revision: int = revision
+        self.rc_db_revision: int = rc_db_revision
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch

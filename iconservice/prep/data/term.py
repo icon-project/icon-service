@@ -202,6 +202,9 @@ class Term(object):
         assert isinstance(self._merkle_root_hash, bytes)
         return self._merkle_root_hash
 
+    def is_in_term(self, block_height: int):
+        return self.start_block_height <= block_height <= self.end_block_height
+
     def set_preps(self,
                   it: Iterable['PRep'],
                   main_prep_count: int,
