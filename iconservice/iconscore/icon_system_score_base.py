@@ -72,9 +72,12 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
+        success: bool = True
+        reason: str = ""
         try:
             self._context.engine.prep.impose_prep_disqualified_penalty(self._context, address)
         except IconServiceBaseException as e:
-            return False, str(e)
-
-        return True, ""
+            success = False
+            reason = str(e)
+        finally:
+            return success, reason
