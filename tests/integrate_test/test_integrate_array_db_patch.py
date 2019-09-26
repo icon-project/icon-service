@@ -20,7 +20,7 @@
 from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import REVISION
+from iconservice.icon_constant import Revision
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         self.update_governance("0_0_4")
 
         expected_status = {
-            "code": REVISION.TWO.value,
+            "code": Revision.TWO.value,
             "name": "1.1.0"
         }
 
@@ -73,11 +73,11 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
 
     def test_array_db_patch(self):
         self.update_governance("0_0_4")
-        self.set_revision(REVISION.THREE.value)
+        self.set_revision(Revision.THREE.value)
 
         expected_status = {
-            "code": REVISION.THREE.value,
-            "name": f"1.1.{REVISION.THREE.value}"
+            "code": Revision.THREE.value,
+            "name": f"1.1.{Revision.THREE.value}"
         }
         query_request = {
             "version": self._version,

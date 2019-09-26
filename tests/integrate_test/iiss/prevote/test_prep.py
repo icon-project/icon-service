@@ -23,7 +23,7 @@ from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus, PenaltyReason
-from iconservice.icon_constant import REVISION, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
@@ -53,7 +53,7 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
@@ -142,7 +142,7 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         prep_count: int = 3000
         accounts: list = self.create_eoa_accounts(prep_count)
@@ -186,7 +186,7 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
@@ -277,7 +277,7 @@ class TestIntegratePrep(TestIISSBase):
         prep_address: 'Address' = self._accounts[0]
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         # distribute icx for prep
         self.transfer_icx(from_=self._admin,
@@ -302,7 +302,7 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         # gain 10 icx user0
         balance: int = 10 * ICX_IN_LOOP
@@ -411,7 +411,7 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         prep_count = 30
         user_account: 'EOAAccount' = self.create_eoa_accounts(1)[0]

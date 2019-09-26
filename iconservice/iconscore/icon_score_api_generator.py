@@ -22,7 +22,7 @@ from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARG
 from ..base.address import Address
 from ..base.exception import IllegalFormatException, InvalidParamsException
 from ..base.type_converter import TypeConverter
-from ..icon_constant import REVISION
+from ..icon_constant import Revision
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -71,7 +71,7 @@ class ScoreApiGenerator:
         for param_name, param in params.items():
             if param_name == 'self' or param_name == 'cls':
                 continue
-            if context.revision > REVISION.TWO.value or param.kind != Parameter.VAR_KEYWORD:
+            if context.revision > Revision.TWO.value or param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
 
     @staticmethod

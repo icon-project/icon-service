@@ -25,7 +25,7 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, MethodNotFoundException, ServiceNotReadyException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MAX_DELEGATIONS, REVISION, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
+from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
     PenaltyReason
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
@@ -586,7 +586,7 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         # This API is available after IISS decentralization is enabled.
-        if context.revision < REVISION.DECENTRALIZATION.value or self.term.sequence < 0:
+        if context.revision < Revision.DECENTRALIZATION.value or self.term.sequence < 0:
             raise MethodNotFoundException("setGovernanceVariables is disabled")
 
         address: 'Address' = context.tx.origin

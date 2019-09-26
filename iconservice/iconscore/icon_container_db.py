@@ -19,7 +19,7 @@ from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
-from ..icon_constant import REVISION, IconScoreContextType
+from ..icon_constant import Revision, IconScoreContextType
 from ..utils import int_to_bytes, bytes_to_int
 
 if TYPE_CHECKING:
@@ -321,7 +321,7 @@ class ArrayDB(object):
     def __is_defective_revision():
         context = ContextContainer._get_context()
         revision = context.revision
-        return context.type == IconScoreContextType.INVOKE and revision < REVISION.THREE.value
+        return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
 
     @staticmethod
     def _get(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:

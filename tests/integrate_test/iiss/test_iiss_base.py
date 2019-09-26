@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List, Tuple, Dict, Union, Optional
 from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import ConfigKey, REVISION, PREP_MAIN_PREPS, \
+from iconservice.icon_constant import ConfigKey, Revision, PREP_MAIN_PREPS, \
     PREP_MAIN_AND_SUB_PREPS
 from iconservice.utils import icx_to_loop
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
@@ -470,7 +470,7 @@ class TestIISSBase(TestIntegrateBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         total_supply = icx_to_loop(TOTAL_SUPPLY)
         # Minimum_delegate_amount is 0.02 * total_supply
@@ -525,7 +525,7 @@ class TestIISSBase(TestIntegrateBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REVISION.DECENTRALIZATION.value)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
         # Update governance SCORE-1.0.0 to support network proposal
         self.update_governance("1_0_0", True)

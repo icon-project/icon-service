@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
-from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION, DeployState
+from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
 from ..utils import is_lowercase_hex_string
 
 if TYPE_CHECKING:
@@ -136,7 +136,7 @@ class IconPreValidator:
         """
 
         if input_data is not None:
-            size = get_input_data_size(REVISION.LATEST.value, input_data)
+            size = get_input_data_size(Revision.LATEST.value, input_data)
 
             if size > MAX_DATA_SIZE:
                 raise InvalidRequestException('Invalid message length')

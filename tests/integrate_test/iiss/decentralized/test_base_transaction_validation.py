@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, List
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException, FatalException
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REVISION, \
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, Revision, \
     ISCORE_EXCHANGE_RATE, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
     PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -61,7 +61,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REVISION.IISS.value)
+        self.set_revision(Revision.IISS.value)
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
@@ -115,7 +115,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REVISION.DECENTRALIZATION.value)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
         self.make_blocks_to_end_calculation()
 
