@@ -102,7 +102,7 @@ ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP]
 BASE_TRANSACTION_INDEX = 0
 
 
-class REVISION(IntEnum):
+class Revision(Enum):
     def _generate_next_value_(self, start, count, last_values):
         if self != 'LATEST':
             return start + count + 1
@@ -126,8 +126,8 @@ RC_DB_VERSION_2 = 2
 # The case that both version and revision is updated, add revision field to the version table
 # The case that only revision is changed, do not update this table
 RC_DATA_VERSION_TABLE = {
-    REVISION.IISS.value: RC_DB_VERSION_0,
-    REVISION.DECENTRALIZATION.value: RC_DB_VERSION_2
+    Revision.IISS.value: RC_DB_VERSION_0,
+    Revision.DECENTRALIZATION.value: RC_DB_VERSION_2
 }
 
 IISS_DB = 'iiss'

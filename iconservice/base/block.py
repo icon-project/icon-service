@@ -18,7 +18,7 @@ from struct import Struct
 from typing import Optional
 
 from .exception import InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, REVISION
+from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, Revision
 from ..utils.msgpack_for_db import MsgPackForDB
 from ..utils import bytes_to_hex
 
@@ -162,7 +162,7 @@ class Block(object):
                      cumulative_fee=data[5])
 
     def to_bytes(self, revision: int) -> bytes:
-        if revision >= REVISION.IISS.value:
+        if revision >= Revision.IISS.value:
             return self._to_msg_packed_bytes()
         else:
             return self._to_struct_packed_bytes()

@@ -20,7 +20,7 @@ import decimal
 from .engine import Engine as IISSEngine
 from .engine import EngineListener as IISSEngineListener
 from .storage import Storage as IISSStorage
-from ..icon_constant import REVISION
+from ..icon_constant import Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 def check_decentralization_condition(context: 'IconScoreContext') -> bool:
-    if context.revision < REVISION.DECENTRALIZATION.value or context.is_decentralized():
+    if context.revision < Revision.DECENTRALIZATION.value or context.is_decentralized():
         # If revision is less than REV_DECENTRALIZATION or
         # network has been already decentralized
         return False

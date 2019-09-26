@@ -18,7 +18,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from iconservice.icon_constant import REVISION, RC_DB_VERSION_0, RC_DB_VERSION_2
+from iconservice.icon_constant import Revision, RC_DB_VERSION_0, RC_DB_VERSION_2
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.data_creator import *
@@ -37,7 +37,7 @@ class TestRcDataStorage(unittest.TestCase):
     @patch('os.path.exists')
     def setUp(self, _, mocked_rc_db_from_path, mocked_supplement_db) -> None:
         context: 'IconScoreContext' = IconScoreContext()
-        context.revision = REVISION.DECENTRALIZATION.value
+        context.revision = Revision.DECENTRALIZATION.value
         self.path = ""
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
         self.rc_data_storage = RewardCalcStorage()
@@ -76,7 +76,7 @@ class TestRcDataStorage(unittest.TestCase):
     def test_rc_storage_check_data_format_by_revision(self, _, mocked_rc_db_from_path, mocked_supplement_db):
         mocked_rc_db_from_path.side_effect = MockIissDataBase.from_path
         context: 'IconScoreContext' = IconScoreContext()
-        for revision in range(REVISION.DECENTRALIZATION.value):
+        for revision in range(Revision.DECENTRALIZATION.value):
             context.revision = revision
             current_version = get_rc_version(revision)
             rc_data_storage = RewardCalcStorage()
@@ -99,7 +99,7 @@ class TestRcDataStorage(unittest.TestCase):
             self.assertEqual(0, gv.config_main_prep_count)
             self.assertEqual(0, gv.config_sub_prep_count)
 
-        revision = REVISION.DECENTRALIZATION.value
+        revision = Revision.DECENTRALIZATION.value
         current_version = get_rc_version(revision)
         rc_data_storage = RewardCalcStorage()
         rc_data_storage.open(context, self.path)
@@ -112,7 +112,7 @@ class TestRcDataStorage(unittest.TestCase):
         header: bytes = rc_data_storage._db.get(self.dummy_header.make_key())
         header: 'Header' = Header.from_bytes(header)
         self.assertEqual(RC_DB_VERSION_2, header.version)
-        self.assertEqual(REVISION.DECENTRALIZATION.value, header.revision)
+        self.assertEqual(Revision.DECENTRALIZATION.value, header.revision)
 
         gv_key: bytes = self.dummy_gv.make_key()
         gv: bytes = rc_data_storage._db.get(self.dummy_gv.make_key())
@@ -128,7 +128,7 @@ class TestRcDataStorage(unittest.TestCase):
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
         context: 'IconScoreContext' = IconScoreContext()
-        context.revision = REVISION.DECENTRALIZATION.value
+        context.revision = Revision.DECENTRALIZATION.value
         rc_data_storage = RewardCalcStorage()
         test_db_path: str = os.path.join(os.getcwd(), ".storage_test_db")
 

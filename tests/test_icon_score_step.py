@@ -22,7 +22,7 @@ from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRE
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
 from iconservice.fee import FeeEngine
-from iconservice.icon_constant import REVISION
+from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
@@ -479,7 +479,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            args[0].revision = REVISION.THREE.value
+            args[0].revision = Revision.THREE.value
             ContextContainer._push_context(args[0])
 
             context_db = self._inner_task._icon_service_engine._icx_context_db

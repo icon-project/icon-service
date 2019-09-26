@@ -20,7 +20,7 @@ import unittest
 from typing import Optional
 
 from iconservice.base.block import Block
-from iconservice.icon_constant import DEFAULT_BYTE_SIZE, REVISION
+from iconservice.icon_constant import DEFAULT_BYTE_SIZE, Revision
 from tests import create_block_hash
 
 
@@ -61,7 +61,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(block2.cumulative_fee, 0)
 
     def _test_block_from_bytes_to_bytes_msg_pack(self, block_hash: bytes, prev_block_hash: Optional[bytes]):
-        revision = REVISION.IISS.value
+        revision = Revision.IISS.value
         cumulative_fee = 10
         block1 = Block(1, block_hash, 100, prev_block_hash, cumulative_fee)
         data = Block.to_bytes(block1, revision)
