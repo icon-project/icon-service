@@ -334,13 +334,13 @@ def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
 
     prep_info_list: List[PRepInfo] = []
     for prep_snapshot in term.main_preps:
-        # prep = context.get_prep(prep_snapshot.address)
+        prep = context.get_prep(prep_snapshot.address)
         prep_info_list.append(PRepInfo(
             prep_snapshot.address,
             prep_snapshot.delegated,
-            ""
+            prep.name
         ))
-    return prep_info_list, context.engine.prep.term.end_block_height
+    return prep_info_list, term.end_block_height
 
 
 def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
@@ -353,10 +353,10 @@ def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
 
     prep_info_list: List[PRepInfo] = []
     for prep_snapshot in term.sub_preps:
-        # prep = context.get_prep(prep_snapshot.address)
+        prep = context.get_prep(prep_snapshot.address)
         prep_info_list.append(PRepInfo(
             prep_snapshot.address,
             prep_snapshot.delegated,
-            ""
+            prep.name
         ))
-    return prep_info_list, context.engine.prep.term.end_block_height
+    return prep_info_list, term.end_block_height
