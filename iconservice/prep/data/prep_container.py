@@ -201,7 +201,7 @@ class PRepContainer(object):
         :return: generator of inactive P-Reps
         """
         for prep in self._prep_dict.values():
-            if prep not in self._active_prep_list:
+            if prep.status != PRepStatus.ACTIVE:
                 yield prep
 
     def index(self, address: 'Address') -> int:
