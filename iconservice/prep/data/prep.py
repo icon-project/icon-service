@@ -20,7 +20,7 @@ import iso3166
 
 from .sorted_list import Sortable
 from ... import utils
-from ...base.exception import AccessDeniedException, InvalidParamsException
+from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
 from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, Revision
 from ...utils.msgpack_for_db import MsgPackForDB
@@ -427,14 +427,9 @@ class PRep(Sortable):
         return -self._delegated, self._block_height, self._tx_index
 
     def to_bytes(self, revision: int) -> bytes:
-        if revision >= Revision.DECENTRALIZATION.value:
-            return self._to_bytes_v1()
-        elif revision == Revision.IISS.value:
-            return self._to_bytes_v0()
+        version: int = 1 if revision >= Revision.DECENTRALIZATION.value else 0
 
-    def _to_bytes_v0(self) -> bytes:
-        version: int = 0
-        return MsgPackForDB.dumps([
+        data = [
             version,
             self.address,
             self.status.value,
@@ -456,86 +451,46 @@ class PRep(Sortable):
             self._tx_index,
 
             self._total_blocks,
-            self._validated_blocks
-        ])
-
-    def _to_bytes_v1(self) -> bytes:
-        return MsgPackForDB.dumps([
-            self._VERSION,
-            self.address,
-            self.status.value,
-            self.grade.value,
-            self.name,
-            self.country,
-            self.city,
-            self.email,
-            self.website,
-            self.details,
-            self.p2p_endpoint,
-
-            self._irep,
-            self._irep_block_height,
-
-            self._last_generate_block_height,
-
-            self._block_height,
-            self._tx_index,
-
-            self._total_blocks,
             self._validated_blocks,
-            self._penalty.value,
-            self._unvalidated_sequence_blocks
-        ])
+        ]
+
+        if version >= 1:
+            data.extend((self.penalty.value, self._unvalidated_sequence_blocks))
+
+        return MsgPackForDB.dumps(data)
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'PRep':
         items: list = MsgPackForDB.loads(data)
-
         version: int = items[cls.Index.VERSION]
-        if version == 0:
-            return PRep(
-                address=items[cls.Index.ADDRESS],
-                status=PRepStatus(items[cls.Index.STATUS]),
-                grade=PRepGrade(items[cls.Index.GRADE]),
-                name=items[cls.Index.NAME],
-                country=items[cls.Index.COUNTRY],
-                city=items[cls.Index.CITY],
-                email=items[cls.Index.EMAIL],
-                website=items[cls.Index.WEBSITE],
-                details=items[cls.Index.DETAILS],
-                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
-                irep=items[cls.Index.IREP],
-                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
-                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
-                block_height=items[cls.Index.BLOCK_HEIGHT],
-                tx_index=items[cls.Index.TX_INDEX],
-                total_blocks=items[cls.Index.TOTAL_BLOCKS],
-                validated_blocks=items[cls.Index.VALIDATED_BLOCKS]
-            )
-        elif version == 1:
-            return PRep(
-                address=items[cls.Index.ADDRESS],
-                status=PRepStatus(items[cls.Index.STATUS]),
-                penalty=PenaltyReason(items[cls.Index.PENALTY]),
-                grade=PRepGrade(items[cls.Index.GRADE]),
-                name=items[cls.Index.NAME],
-                country=items[cls.Index.COUNTRY],
-                city=items[cls.Index.CITY],
-                email=items[cls.Index.EMAIL],
-                website=items[cls.Index.WEBSITE],
-                details=items[cls.Index.DETAILS],
-                p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
-                irep=items[cls.Index.IREP],
-                irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
-                last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
-                block_height=items[cls.Index.BLOCK_HEIGHT],
-                tx_index=items[cls.Index.TX_INDEX],
-                total_blocks=items[cls.Index.TOTAL_BLOCKS],
-                validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
-                unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS]
-            )
-        else:
-            raise InvalidParamsException("invalid version")
+
+        if version >= 1:
+            items.extend((PenaltyReason.NONE, 0))
+
+        return PRep(
+            # version 0
+            address=items[cls.Index.ADDRESS],
+            status=PRepStatus(items[cls.Index.STATUS]),
+            grade=PRepGrade(items[cls.Index.GRADE]),
+            name=items[cls.Index.NAME],
+            country=items[cls.Index.COUNTRY],
+            city=items[cls.Index.CITY],
+            email=items[cls.Index.EMAIL],
+            website=items[cls.Index.WEBSITE],
+            details=items[cls.Index.DETAILS],
+            p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
+            irep=items[cls.Index.IREP],
+            irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+            last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
+            block_height=items[cls.Index.BLOCK_HEIGHT],
+            tx_index=items[cls.Index.TX_INDEX],
+            total_blocks=items[cls.Index.TOTAL_BLOCKS],
+            validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
+
+            # version 1
+            penalty=PenaltyReason(items[cls.Index.PENALTY]),
+            unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS]
+        )
 
     @staticmethod
     def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':
