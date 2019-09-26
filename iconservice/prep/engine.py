@@ -64,11 +64,11 @@ class Engine(EngineBase, IISSEngineListener):
 
         self._query_handler: dict = {
             "getPRep": self.handle_get_prep,
-            "getMainPReps": self.handle_get_main_prep_list,
-            "getSubPReps": self.handle_get_sub_prep_list,
-            "getPReps": self.handle_get_prep_list,
+            "getMainPReps": self.handle_get_main_preps,
+            "getSubPReps": self.handle_get_sub_preps,
+            "getPReps": self.handle_get_preps,
             "getPRepTerm": self.handle_get_prep_term,
-            "getBlacklistPReps": self.handle_get_blacklist_prep_list
+            "getInactivePReps": self.handle_get_inactive_preps
         }
 
         self.preps = PRepContainer()
@@ -814,18 +814,16 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_blacklist_prep_list(self, context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_inactive_preps(self, context: 'IconScoreContext', _params: dict) -> dict:
         """
-        Returns unregistered PReps called blacklist preps
-        of which status is out of UNREGISTERED, DISQUALIFIED and SUSPENDED
+        Returns inactive PReps of which status is out of UNREGISTERED, DISQUALIFIED and SUSPENDED
 
         :param context: IconScoreContext
         :param _params: parameters
-        :return: block height and blacklist preps in dict
+        :return: block height and inactive preps in dict
         """
         preps: 'PRepContainer' = self.preps
-        prep_list: list = preps.get_inactive_preps()
-        prep_list = [prep.to_dict(PRepDictType.ABRIDGED) for prep in prep_list]
+        prep_list: list = [prep.to_dict(PRepDictType.ABRIDGED) for prep in preps.get_inactive_preps()]
         return {
             "blockHeight": context.block.height,
             "preps": prep_list

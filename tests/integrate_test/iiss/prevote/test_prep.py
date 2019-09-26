@@ -181,7 +181,7 @@ class TestIntegratePrep(TestIISSBase):
         actual_preps: list = response['preps']
         self.assertEqual(prep_count, len(actual_preps))
 
-    def test_get_blacklist_prep_list(self):
+    def test_get_inactive_prep_list(self):
         self.update_governance()
 
         # set Revision REV_IISS
@@ -199,8 +199,8 @@ class TestIntegratePrep(TestIISSBase):
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
-        # check blacklist is none
-        response: dict = self.get_blacklist_prep_list()
+        # check inactive preps is none
+        response: dict = self.get_inactive_prep_list()
         actual_preps: list = response['preps']
         self.assertEqual(0, len(actual_preps))
 
@@ -216,8 +216,8 @@ class TestIntegratePrep(TestIISSBase):
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
-        # check blacklist is same as unregistered prep list
-        response: dict = self.get_blacklist_prep_list()
+        # check inactive preps is same as unregistered preps
+        response: dict = self.get_inactive_prep_list()
         actual_preps: list = sorted(response['preps'], key=lambda k: k['name'])
         self.assertEqual(cnt_unregister_prep, len(actual_preps))
         self.assertEqual(expected_preps, actual_preps)

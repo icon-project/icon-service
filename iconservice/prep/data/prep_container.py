@@ -195,14 +195,14 @@ class PRepContainer(object):
         """
         return self._active_prep_list[start_index:start_index + size]
 
-    def get_inactive_preps(self) -> List['PRep']:
-        """Returns inactive P-Reps
+    def get_inactive_preps(self):
+        """Returns generator of inactive P-Reps
 
-        :return: Inactive P-Rep list
+        :return: generator of inactive P-Reps
         """
-        prep_list = [*self._prep_dict.values()]
-        inactive_prep_list = list(set(prep_list) - set(self._active_prep_list))
-        return inactive_prep_list
+        for prep in self._prep_dict.values():
+            if prep not in self._active_prep_list:
+                yield prep
 
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
