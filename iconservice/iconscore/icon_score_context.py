@@ -298,7 +298,7 @@ class IconScoreContext(object):
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() end")
 
 
-class IconScoreContextFactory:
+class IconScoreContextFactory(object):
     def __init__(self, step_counter_factory: 'IconScoreStepCounterFactory'):
         self.step_counter_factory = step_counter_factory
 
