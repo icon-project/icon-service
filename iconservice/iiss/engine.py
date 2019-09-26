@@ -878,7 +878,9 @@ class Engine(EngineBase):
 
     @classmethod
     def get_start_block_of_calc(cls, context: 'IconScoreContext') -> int:
-        end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
-        period: int = context.storage.iiss.get_calc_period(context)
-        start_calc_block: int = end_block_height - period + 1
+        start_calc_block: int = -1
+        end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        period: Optional[int] = context.storage.iiss.get_calc_period(context)
+        if end_block_height is not None and period is not None:
+            start_calc_block: int = end_block_height - period + 1
         return start_calc_block

@@ -1780,9 +1780,8 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT,
                                                block=precommit_data.block_batch.block)
-        # todo: commit 순서 바꾸면 문제 발생
-        self._process_state_commit(context, precommit_data)
         rc_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data)
+        self._process_state_commit(context, precommit_data)
 
         self._process_ipc_with_reward_calc(context, precommit_data.revision, rc_db_info)
 
