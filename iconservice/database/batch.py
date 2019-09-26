@@ -165,6 +165,13 @@ class BlockBatch(Batch):
         for key, value in tx_batch.items():
             super().__setitem__(key, value)
 
+    def update_block_hash(self, block_hash: bytes):
+        self.block = Block(block_height=self.block.height,
+                           block_hash=block_hash,
+                           timestamp=self.block.timestamp,
+                           prev_hash=self.block.prev_hash,
+                           cumulative_fee=self.block.cumulative_fee)
+
     def clear(self) -> None:
         self.block = None
         super().clear()

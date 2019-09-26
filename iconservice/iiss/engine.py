@@ -16,6 +16,7 @@
 
 import time
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
@@ -52,6 +53,8 @@ if TYPE_CHECKING:
 _TAG = IISS_LOG_TAG
 
 QUERY_CALCULATE_REPEAT_COUNT = 3
+
+RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
 
 
 class EngineListener(metaclass=ABCMeta):
@@ -720,19 +723,24 @@ class Engine(EngineBase):
                                              precommit_data.block.height,
                                              precommit_data.block.hash)
 
-    def send_calculate(self,
-                       context: 'IconScoreContext',
-                       precommit_data: 'PrecommitData'):
+    def send_calculate(self, rc_db_info: Optional['RewardCalcDBInfo']):
+        if rc_db_info is None:
+            return
+        # todo: Implement logic about checking calculate result
+        self._reward_calc_proxy.calculate(rc_db_info.path, rc_db_info.block_height)
 
+    def replace_rc_db_start_of_calc(self,
+                                    context: 'IconScoreContext',
+                                    precommit_data: 'PrecommitData') -> Optional['RewardCalcDBInfo']:
         start: int = self.get_start_block_of_calc(context)
         if start != context.block.height:
-            return
+            return None
 
         block_height: int = precommit_data.block.height - 1
         path: str = context.storage.rc.create_db_for_calc(block_height)
+        # Put version and revision for replaced RC DB
         context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
-        # todo: Implement  logic about checking calculate result
-        self._reward_calc_proxy.calculate(path, block_height)
+        return RewardCalcDBInfo(path, block_height)
 
     @classmethod
     def _is_iiss_calc(cls,
