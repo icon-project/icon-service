@@ -17,7 +17,7 @@
 """IconScoreEngine testcase
 """
 
-from iconservice.icon_constant import REV_IISS, ICX_IN_LOOP, ConfigKey, IISS_DAY_BLOCK
+from iconservice.icon_constant import REVISION, ICX_IN_LOOP, ConfigKey, IISS_DAY_BLOCK
 from tests.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
@@ -36,7 +36,7 @@ class TestIISSUnStakeLockPeriod(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         # get almost total supply (total supply - 3 ICX)
         genesis_balance: int = TOTAL_SUPPLY * ICX_IN_LOOP - 3 * ICX_IN_LOOP

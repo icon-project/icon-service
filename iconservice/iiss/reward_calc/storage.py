@@ -24,7 +24,7 @@ from ...iiss.reward_calc.data_creator import DataCreator
 from ..reward_calc.msg_data import TxData, Header
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
-from ...icon_constant import DATA_BYTE_ORDER, REV_IISS, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+from ...icon_constant import DATA_BYTE_ORDER, REVISION, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 def get_rc_version(revision: int) -> int:
-    if revision < REV_IISS:
+    if revision < REVISION.IISS.value:
         return RC_DB_VERSION_0
 
     version: Optional[int] = RC_DATA_VERSION_TABLE.get(revision)
@@ -73,7 +73,7 @@ class Storage(object):
 
     def _supplement_db(self, context: 'IconScoreContext', revision: int):
         # Supplement db which is made by previous icon service version (as there is no version, revision and header)
-        if revision < REV_IISS:
+        if revision < REVISION.IISS.value:
             return
 
         rc_version, _ = self.get_version_and_revision()

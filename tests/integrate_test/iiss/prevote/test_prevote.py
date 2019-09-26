@@ -18,7 +18,7 @@ from unittest.mock import Mock
 
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import MethodNotFoundException, ServiceNotReadyException
-from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP
+from iconservice.icon_constant import REVISION, ConfigKey, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -33,7 +33,7 @@ class TestIISS(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         block_height: int = self._block_height
         calc_period: int = self._config[ConfigKey.IISS_CALCULATE_PERIOD]
@@ -77,7 +77,7 @@ class TestIISS(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         balance: int = 3000 * ICX_IN_LOOP
         self.distribute_icx(accounts=self._accounts[:1],
@@ -123,7 +123,7 @@ class TestIISS(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         # get stake
         response: dict = self.get_stake(self._accounts[0])
@@ -159,7 +159,7 @@ class TestIISS(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         query_request = {
             "version": self._version,
@@ -177,7 +177,7 @@ class TestIISS(TestIISSBase):
 
     def test_prep_term(self):
         self.update_governance()
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         with self.assertRaises(ServiceNotReadyException) as e:
             self.get_prep_term()

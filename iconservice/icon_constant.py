@@ -101,15 +101,22 @@ ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP]
 
 BASE_TRANSACTION_INDEX = 0
 
-REVISION_2 = 2
-REVISION_3 = 3
-REVISION_4 = 4
-REVISION_5 = 5
 
-LATEST_REVISION = REVISION_4
+class REVISION(IntEnum):
+    def _generate_next_value_(self, start, count, last_values):
+        if self != 'LATEST':
+            return start + count + 1
 
-REV_IISS = REVISION_5
-REV_DECENTRALIZATION = REV_IISS + 1
+        return last_values[-1]
+
+    TWO = auto()
+    THREE = auto()
+    FOUR = auto()
+    IISS = auto()
+    DECENTRALIZATION = auto()
+
+    LATEST = auto()
+
 
 RC_DB_VERSION_0 = 0
 RC_DB_VERSION_2 = 2
@@ -119,8 +126,8 @@ RC_DB_VERSION_2 = 2
 # The case that both version and revision is updated, add revision field to the version table
 # The case that only revision is changed, do not update this table
 RC_DATA_VERSION_TABLE = {
-    REV_IISS: RC_DB_VERSION_0,
-    REV_DECENTRALIZATION: RC_DB_VERSION_2
+    REVISION.IISS.value: RC_DB_VERSION_0,
+    REVISION.DECENTRALIZATION.value: RC_DB_VERSION_2
 }
 
 IISS_DB = 'iiss'

@@ -17,8 +17,8 @@
 import os
 
 from iconservice.database.db import KeyValueDatabase
-from iconservice.icon_constant import REV_IISS, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
-    IISS_DB, REV_DECENTRALIZATION
+from iconservice.icon_constant import REVISION, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
+    IISS_DB
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.msg_data import GovernanceVariable, Header, PRepsData, BlockProduceInfoData
 from iconservice.iiss.reward_calc.storage import Storage
@@ -54,7 +54,7 @@ class TestRCDatabase(TestIISSBase):
 
         # set Revision REV_IISS
         # ################## term 0 start #####################
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
         self.make_blocks(self._block_height + 1)
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         expected_version: int = 0
@@ -152,7 +152,7 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_irep, gv.calculated_irep)
                 self.assertEqual(expected_rrep, gv.reward_rep)
 
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(REVISION.DECENTRALIZATION.value)
         expected_gv_block_height = expected_hd_block_height
         expected_hd_block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
                                                                             prev_block_validators=main_preps_address[1:])
@@ -218,7 +218,7 @@ class TestRCDatabase(TestIISSBase):
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_block_height = self._block_height
                 expected_version = 2
-                expected_revisions = REV_DECENTRALIZATION
+                expected_revisions = REVISION.DECENTRALIZATION.value
                 self.assertEqual(expected_version, hd.version)
                 self.assertEqual(expected_hd_block_height, hd.block_height)
                 self.assertEqual(expected_revisions, hd.revision)
@@ -259,7 +259,7 @@ class TestRCDatabase(TestIISSBase):
 
         # set Revision REV_IISS
         # ################## term 0 start #####################
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
         self.make_blocks(self._block_height + 1)
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         self._check_the_name_of_rc_db(get_last_rc_db)
@@ -323,7 +323,7 @@ class TestRCDatabase(TestIISSBase):
 
         # set revision on calc first block height(REV_DECENTRALIZATION)
         expected_gv_block: int = self.make_blocks_to_end_calculation()
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(REVISION.DECENTRALIZATION.value)
 
         # after next calc.
         expected_hd_block: int = self.make_blocks_to_end_calculation()

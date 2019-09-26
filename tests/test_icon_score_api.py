@@ -21,7 +21,8 @@ from typing import List
 
 from iconservice.base.address import Address
 from iconservice.base.block import Block
-from iconservice.icon_constant import REVISION_3, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import REVISION
 from iconservice.iconscore.icon_score_base2 import PRepInfo, get_main_prep_info, get_sub_prep_info
 from iconservice.iconscore.icon_score_base2 import ScoreApiStepRatio
 from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _recover_key
@@ -106,7 +107,7 @@ class TestIconScoreApi(unittest.TestCase):
         context_factory = IconScoreContextFactory(step_counter_factory)
 
         context = context_factory.create(IconScoreContextType.INVOKE, block)
-        context.revision = REVISION_3
+        context.revision = REVISION.THREE.value
         context.step_counter.reset(self.step_limit)
 
         return context
