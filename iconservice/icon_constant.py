@@ -103,15 +103,21 @@ BASE_TRANSACTION_INDEX = 0
 
 
 class REVISION(IntEnum):
-    TWO = 2
-    THREE = 3
-    FOUR = 4
-    FIVE = 5
+    def _generate_next_value_(self, start, count, last_values):
+        if self != 'LATEST':
+            return start + count + 1
+
+        return last_values[-1]
+
+    TWO = auto()
+    THREE = auto()
+    FOUR = auto()
+    FIVE = auto()
+
+    LATEST = auto()
 
 
-LATEST_REVISION = REVISION.FOUR
-
-REV_IISS = REVISION.FIVE
+REV_IISS = REVISION.FIVE.value
 REV_DECENTRALIZATION = REV_IISS + 1
 
 RC_DB_VERSION_0 = 0

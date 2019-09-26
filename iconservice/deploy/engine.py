@@ -89,7 +89,7 @@ class Engine(EngineBase):
         :param score_address:
         :return: True(needed) False(not needed)
         """
-        if context.revision >= REVISION.TWO:
+        if context.revision >= REVISION.TWO.value:
             is_system_score = is_builtin_score(str(score_address))
         else:
             is_system_score = False
@@ -259,14 +259,14 @@ class Engine(EngineBase):
         score_root_path: str = context.score_root_path
         score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
 
-        if revision >= REVISION.THREE:
+        if revision >= REVISION.THREE.value:
             # If the path to deploy a score has been present, remove it before deploying.
             score_root_path: str = context.score_root_path
             score_path: str =\
                 os.path.join(score_root_path, score_address.to_bytes().hex(), f'0x{tx_hash.hex()}')
             remove_path(score_path)
 
-        if revision >= REVISION.TWO:
+        if revision >= REVISION.TWO.value:
             IconScoreDeployer.deploy(score_deploy_path, content, revision)
         else:
             IconScoreDeployer.deploy_legacy(score_deploy_path, content)

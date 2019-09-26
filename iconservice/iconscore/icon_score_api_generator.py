@@ -71,7 +71,7 @@ class ScoreApiGenerator:
         for param_name, param in params.items():
             if param_name == 'self' or param_name == 'cls':
                 continue
-            if context.revision > REVISION.TWO or param.kind != Parameter.VAR_KEYWORD:
+            if context.revision > REVISION.TWO.value or param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
 
     @staticmethod

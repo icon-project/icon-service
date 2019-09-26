@@ -126,7 +126,7 @@ class EventLogEmitter(object):
         elif isinstance(data, int):
             return byte_length_of_int(data)
         elif isinstance(data, Address):
-            if context.revision < REVISION.THREE:
+            if context.revision < REVISION.THREE.value:
                 return ICON_ADDRESS_BODY_SIZE
             else:
                 return ICON_ADDRESS_BYTES_SIZE

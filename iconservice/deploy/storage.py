@@ -302,7 +302,7 @@ class Storage(StorageBase):
         :param tx_hash:
         :return:
         """
-        if context.revision >= REVISION.TWO:
+        if context.revision >= REVISION.TWO.value:
             key: bytes = self._create_db_key(
                 self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, tx_hash)
         else:

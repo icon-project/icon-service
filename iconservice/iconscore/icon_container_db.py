@@ -321,7 +321,7 @@ class ArrayDB(object):
     def __is_defective_revision():
         context = ContextContainer._get_context()
         revision = context.revision
-        return context.type == IconScoreContextType.INVOKE and revision < REVISION.THREE
+        return context.type == IconScoreContextType.INVOKE and revision < REVISION.THREE.value
 
     @staticmethod
     def _get(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:

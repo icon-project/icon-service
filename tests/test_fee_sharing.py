@@ -21,7 +21,7 @@ from unittest.mock import Mock, patch
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
 from iconservice.fee.engine import DepositInfo, BLOCKS_IN_ONE_MONTH
-from iconservice.icon_constant import LATEST_REVISION
+from iconservice.icon_constant import REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
 from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
@@ -38,7 +38,7 @@ def mock_score_invoke(context, to, data_type, data):
 class TestFeeSharing(unittest.TestCase):
 
     def setUp(self):
-        self._inner_task = generate_inner_task(LATEST_REVISION)
+        self._inner_task = generate_inner_task(REVISION.LATEST.value)
         self.from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         self.to = Address.from_string('cx' + '0' * 40)
         self.score = Address.from_string('cx' + '1' * 40)

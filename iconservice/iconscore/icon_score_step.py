@@ -35,10 +35,10 @@ def get_input_data_size(revision: int, input_data: Any) -> int:
     :param input_data: input data of transaction
     :return: size of input data
     """
-    if revision < REVISION.THREE:
+    if revision < REVISION.THREE.value:
         return get_data_size_recursively(input_data)
 
-    if revision >= REVISION.FOUR and input_data is None:
+    if revision >= REVISION.FOUR.value and input_data is None:
         return 0
 
     data = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
@@ -55,7 +55,7 @@ def get_deploy_content_size(revision: int, content: str) -> int:
     :param content: deploying content of transaction
     :return: size of input content
     """
-    if revision < REVISION.THREE:
+    if revision < REVISION.THREE.value:
         return get_data_size_recursively(content)
 
     if isinstance(content, str) \

@@ -1348,7 +1348,7 @@ class IconServiceEngine(ContextContainer):
             tmp_context.block = self._get_last_block()
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= REVISION.THREE else tmp_context,
+                context if context.revision >= REVISION.THREE.value else tmp_context,
                 params,
                 step_price=context.step_counter.step_price)
 

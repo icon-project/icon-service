@@ -33,7 +33,7 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         self.update_governance("0_0_4")
 
         expected_status = {
-            "code": REVISION.TWO,
+            "code": REVISION.TWO.value,
             "name": "1.1.0"
         }
 
@@ -73,11 +73,11 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
 
     def test_array_db_patch(self):
         self.update_governance("0_0_4")
-        self.set_revision(REVISION.THREE)
+        self.set_revision(REVISION.THREE.value)
 
         expected_status = {
-            "code": REVISION.THREE,
-            "name": f"1.1.{REVISION.THREE}"
+            "code": REVISION.THREE.value,
+            "name": f"1.1.{REVISION.THREE.value}"
         }
         query_request = {
             "version": self._version,

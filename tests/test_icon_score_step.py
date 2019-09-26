@@ -479,7 +479,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            args[0].revision = REVISION.THREE
+            args[0].revision = REVISION.THREE.value
             ContextContainer._push_context(args[0])
 
             context_db = self._inner_task._icon_service_engine._icx_context_db

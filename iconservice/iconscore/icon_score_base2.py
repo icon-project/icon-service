@@ -158,7 +158,7 @@ def sha3_256(data: bytes) -> bytes:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION.THREE:
+    if context and context.revision >= REVISION.THREE.value:
         size = len(data)
         chunks = size // 32
         if size % 32 > 0:
@@ -182,7 +182,7 @@ def json_dumps(obj: Any) -> str:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION.THREE:
+    if context and context.revision >= REVISION.THREE.value:
         ret: str = json.dumps(obj, separators=(',', ':'))
 
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_DUMPS)
@@ -208,7 +208,7 @@ def json_loads(src: str) -> Any:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION.THREE:
+    if context and context.revision >= REVISION.THREE.value:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_LOADS)
         step: int = step_cost + step_cost * len(src.encode(CHARSET_ENCODING)) // 100
 
@@ -235,7 +235,7 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION.THREE:
+    if context and context.revision >= REVISION.THREE.value:
         if key_size == 33:
             ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY
         else:
@@ -290,7 +290,7 @@ def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> O
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION.THREE:
+    if context and context.revision >= REVISION.THREE.value:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.RECOVER_KEY)
         context.step_counter.consume_step(StepType.API_CALL, step_cost)
 

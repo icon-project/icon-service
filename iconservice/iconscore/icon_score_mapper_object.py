@@ -67,7 +67,7 @@ class IconScoreInfo(object):
         :param revision:
         :return:
         """
-        if revision <= REVISION.TWO or self.address == GOVERNANCE_SCORE_ADDRESS:
+        if revision <= REVISION.TWO.value or self.address == GOVERNANCE_SCORE_ADDRESS:
             if self._score is None:
                 self._score = self.create_score()
 

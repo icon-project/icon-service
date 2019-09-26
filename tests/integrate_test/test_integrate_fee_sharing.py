@@ -123,7 +123,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         same_score_address = tx_results[0].score_address
 
         # set revision 4
-        self.set_revision(REVISION.FOUR)
+        self.set_revision(REVISION.FOUR.value)
 
         # success case: before IISS_REV revision, should charge fee about event log
         tx_results: List['TransactionResult'] = self.deposit_icx(score_address=self.score_address,

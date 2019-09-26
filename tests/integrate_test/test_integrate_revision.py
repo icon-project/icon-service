@@ -37,7 +37,7 @@ class TestIntegrateRevision(TestIntegrateBase):
 
     def test_governance_call_about_set_revision(self):
         expected_status = {
-            "code": REVISION.TWO,
+            "code": REVISION.TWO.value,
             "name": "1.1.0"
         }
 
@@ -54,7 +54,7 @@ class TestIntegrateRevision(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        next_revision = REVISION.TWO + 1
+        next_revision = REVISION.TWO.value + 1
 
         self.score_call(from_=self._admin,
                         to_=GOVERNANCE_SCORE_ADDRESS,
@@ -75,7 +75,7 @@ class TestIntegrateRevision(TestIntegrateBase):
             from_=self._accounts[0])
         score_address: 'Address' = tx_results[0].score_address
 
-        first_revision = REVISION.TWO
+        first_revision = REVISION.TWO.value
         next_revision = first_revision + 1
 
         # 1-revision check

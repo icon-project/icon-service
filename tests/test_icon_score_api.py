@@ -103,7 +103,7 @@ class TestIconScoreApi(unittest.TestCase):
         step_counter.reset(self.step_limit)
 
         context.step_counter = step_counter
-        context.revision = REVISION.THREE
+        context.revision = REVISION.THREE.value
 
         context.engine = ContextEngine(deploy=None, fee=None, icx=None, iiss=None, prep=self._prep_engine, issue=None)
 

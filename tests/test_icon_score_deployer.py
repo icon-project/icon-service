@@ -143,7 +143,7 @@ class TestIconScoreDeployer(unittest.TestCase):
 
     def test_deploy_bug_IS_355(self):
         zip_list = [
-            (REVISION.TWO, ['__init__.py',
+            (REVISION.TWO.value, ['__init__.py',
                           'interfaces/__init__.py',
                           'interfaces/abc_owned.py',
                           'interfaces/abc_score_registry.py',
@@ -152,7 +152,7 @@ class TestIconScoreDeployer(unittest.TestCase):
                           'utility/__init__.py',
                           'utility/owned.py',
                           'utility/utils.py']),
-            (REVISION.THREE, ['interfaces/__init__.py',
+            (REVISION.THREE.value, ['interfaces/__init__.py',
                           'interfaces/abc_owned.py',
                           'interfaces/abc_score_registry.py',
                           'package.json',
@@ -201,7 +201,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             tx_hash1 = create_tx_hash()
             score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
 
-            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION.THREE)
+            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION.THREE.value)
             self.assertEqual(True, os.path.exists(score_deploy_path))
 
             installed_files = self.get_installed_files(score_deploy_path)
@@ -224,7 +224,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
 
             with self.assertRaises(BaseException) as e:
-                IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION.THREE)
+                IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION.THREE.value)
             self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
             self.assertEqual(e.exception.message, "package.json not found")
             self.assertTrue(os.path.exists(score_deploy_path))
