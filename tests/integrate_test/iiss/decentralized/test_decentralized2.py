@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
+from iconservice.icon_constant import REVISION, \
     PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_MIN_IREP, IISS_INITIAL_IREP, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
@@ -90,13 +90,13 @@ class TestIISSDecentralized2(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(REVISION.DECENTRALIZATION.value)
 
     def test_get_IISS_info(self):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         block_height: int = self._block_height
         calc_period: int = self._config[ConfigKey.IISS_CALCULATE_PERIOD]

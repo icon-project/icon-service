@@ -34,7 +34,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION, REV_IISS, BASE_TRANSACTION_INDEX,
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus)
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -489,7 +489,7 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
 
-                if context.revision >= REV_IISS:
+                if context.revision >= REVISION.IISS.value:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
         if self._check_end_block_height_of_calc(context):
@@ -530,7 +530,7 @@ class IconServiceEngine(ContextContainer):
     def _get_rc_db_revision_before_process_transactions(cls,
                                                         context: 'IconScoreContext') -> int:
 
-        if context.revision < REV_IISS:
+        if context.revision < REVISION.IISS.value:
             return 0
 
         start: int = context.engine.iiss.get_start_block_of_calc(context)
@@ -664,7 +664,7 @@ class IconServiceEngine(ContextContainer):
         main_prep_as_dict, term = context.engine.prep.on_block_invoked(
             context, bool(flag & PrecommitFlag.DECENTRALIZATION))
 
-        if context.revision >= REV_IISS:
+        if context.revision >= REVISION.IISS.value:
             context.engine.iiss.update_db(context,
                                           term,
                                           prev_block_generator,
@@ -752,7 +752,7 @@ class IconServiceEngine(ContextContainer):
                 tx_result.status == TransactionResult.SUCCESS:
             # If the tx is heading for Governance, updates the revision
             if self._set_revision_to_context(context):
-                if context.revision == REV_IISS:
+                if context.revision == REVISION.IISS.value:
                     flags |= PrecommitFlag.GENESIS_IISS_CALC
         return flags
 
@@ -772,7 +772,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _check_end_block_height_of_calc(context: 'IconScoreContext') -> bool:
-        if context.revision < REV_IISS:
+        if context.revision < REVISION.IISS.value:
             return False
 
         check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
@@ -1193,7 +1193,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if self._check_new_process(params):
-            if context.revision < REV_IISS:
+            if context.revision < REVISION.IISS.value:
                 raise InvalidParamsException(f"Method Not Found")
 
             data: dict = params['data']
@@ -1360,7 +1360,7 @@ class IconServiceEngine(ContextContainer):
         # TODO Branch IISS Engine
         if self._check_new_process(params):
 
-            if context.revision < REV_IISS:
+            if context.revision < REVISION.IISS.value:
                 """
                 raise InvalidParamsException(f"Method Not Found")
                 above code is what I want to raise
@@ -1752,7 +1752,7 @@ class IconServiceEngine(ContextContainer):
             context.block = block_batch.block
             self._init_global_value_by_governance_score(context)
 
-        if precommit_data.revision >= REV_IISS:
+        if precommit_data.revision >= REVISION.IISS.value:
             context.engine.iiss.send_calculate(context, precommit_data)
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)

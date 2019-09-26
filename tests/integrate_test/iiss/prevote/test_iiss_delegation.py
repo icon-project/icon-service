@@ -20,7 +20,7 @@ from typing import List, Dict
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS, ICX_IN_LOOP
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REVISION, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -31,7 +31,7 @@ class TestIISSDelegate(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         # gain 100 icx
         balance: int = 100 * ICX_IN_LOOP
@@ -71,7 +71,7 @@ class TestIISSDelegate(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         # gain 100 icx
         balance: int = 100 * ICX_IN_LOOP
@@ -135,7 +135,7 @@ class TestIISSDelegate(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         # gain 100 icx
         balance: int = 100 * ICX_IN_LOOP

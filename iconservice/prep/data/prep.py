@@ -22,7 +22,7 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, REV_IISS, REV_DECENTRALIZATION
+from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, REVISION
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -427,9 +427,9 @@ class PRep(Sortable):
         return -self._delegated, self._block_height, self._tx_index
 
     def to_bytes(self, revision: int) -> bytes:
-        if revision >= REV_DECENTRALIZATION:
+        if revision >= REVISION.DECENTRALIZATION.value:
             return self._to_bytes_v1()
-        elif revision == REV_IISS:
+        elif revision == REVISION.IISS.value:
             return self._to_bytes_v0()
 
     def _to_bytes_v0(self) -> bytes:

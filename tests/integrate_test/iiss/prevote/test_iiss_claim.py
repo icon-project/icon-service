@@ -19,7 +19,7 @@
 from typing import TYPE_CHECKING, List
 from unittest.mock import Mock
 
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS, ICX_IN_LOOP
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REVISION, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -32,7 +32,7 @@ class TestIISSClaim(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(REVISION.IISS.value)
 
         # gain 100 icx
         balance: int = 100 * ICX_IN_LOOP
