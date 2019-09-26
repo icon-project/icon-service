@@ -709,8 +709,6 @@ class Engine(EngineBase, IISSEngineListener):
         :param address:
         :return:
         """
-        # TODO: Check how to handle an exception in governance SCORE (goldworm)
-
         prep: 'PRep' = context.get_prep(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
