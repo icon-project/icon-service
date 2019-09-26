@@ -718,16 +718,12 @@ class Engine(EngineBase):
         self._put_rrep(context)
 
     def send_ipc(self,
-                 precommit_data: 'PrecommitData'):
+                 precommit_data: 'PrecommitData', rc_db_info: Optional['RewardCalcDBInfo']):
         self._reward_calc_proxy.commit_block(True,
                                              precommit_data.block.height,
                                              precommit_data.block.hash)
-
-    def send_calculate(self, rc_db_info: Optional['RewardCalcDBInfo']):
-        if rc_db_info is None:
-            return
-        # todo: Implement logic about checking calculate result
-        self._reward_calc_proxy.calculate(rc_db_info.path, rc_db_info.block_height)
+        if rc_db_info is not None:
+            self._reward_calc_proxy.calculate(rc_db_info.path, rc_db_info.block_height)
 
     def replace_rc_db_start_of_calc(self,
                                     context: 'IconScoreContext',

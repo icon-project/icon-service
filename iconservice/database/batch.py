@@ -17,13 +17,12 @@
 
 from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from ..base.exception import DatabaseException, AccessDeniedException
 from ..utils import sha3_256
 
-if TYPE_CHECKING:
-    from ..base.block import Block
+from ..base.block import Block
 
 
 TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])

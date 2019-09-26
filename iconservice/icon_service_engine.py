@@ -1780,9 +1780,9 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT,
                                                block=precommit_data.block_batch.block)
+
         rc_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data)
         self._process_state_commit(context, precommit_data)
-
         self._process_ipc(context, precommit_data.revision, rc_db_info)
 
     def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
@@ -1800,9 +1800,8 @@ class IconServiceEngine(ContextContainer):
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
         self._icx_context_db.write_batch(context=context, states=precommit_data.block_batch)
-        # db
+
         context.storage.icx.put_block_info(context, precommit_data.block_batch.block, precommit_data.revision)
-        # memory
         self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
         # after status DB commit
@@ -1818,8 +1817,7 @@ class IconServiceEngine(ContextContainer):
         # todo: revision이 현재 반영이 안되어 있는 상황인데 문제없는 지 궁금하다.
         if revision < Revision.IISS.value:
             return
-        context.engine.iiss.send_calculate(rc_db_info)
-        context.engine.iiss.send_ipc(context)
+        context.engine.iiss.send_ipc(context, rc_db_info)
 
     @staticmethod
     def _process_iiss_commit(context: 'IconScoreContext', precommit_data) -> Optional['RewardCalcDBInfo']:
