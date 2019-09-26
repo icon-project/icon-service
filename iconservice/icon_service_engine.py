@@ -1783,7 +1783,7 @@ class IconServiceEngine(ContextContainer):
         rc_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data)
         self._process_state_commit(context, precommit_data)
 
-        self._process_ipc_with_reward_calc(context, precommit_data.revision, rc_db_info)
+        self._process_ipc(context, precommit_data.revision, rc_db_info)
 
     def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
         precommit_data: 'PrecommitData' = \
@@ -1811,10 +1811,11 @@ class IconServiceEngine(ContextContainer):
             self._init_global_value_by_governance_score(context)
 
     @staticmethod
-    def _process_ipc_with_reward_calc(context: 'IconScoreContext',
-                                      revision: int,
-                                      rc_db_info: Optional['RewardCalcDBInfo']):
+    def _process_ipc(context: 'IconScoreContext',
+                     revision: int,
+                     rc_db_info: Optional['RewardCalcDBInfo']):
         # todo: RC가 calculate 요청을 받지는 않았으나 RC 용 DB가 만들어졌으면, 어떻게 처리하는 지 확인할 필요가 있음
+        # todo: revision이 현재 반영이 안되어 있는 상황인데 문제없는 지 궁금하다.
         if revision < Revision.IISS.value:
             return
         context.engine.iiss.send_calculate(rc_db_info)

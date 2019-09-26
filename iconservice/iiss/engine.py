@@ -732,6 +732,7 @@ class Engine(EngineBase):
     def replace_rc_db_start_of_calc(self,
                                     context: 'IconScoreContext',
                                     precommit_data: 'PrecommitData') -> Optional['RewardCalcDBInfo']:
+        # todo: flag에 대한 논의 필요 (commit 때 해당 값을 읽어오는 것이 맞는가)
         start: int = self.get_start_block_of_calc(context)
         if start != context.block.height:
             return None
