@@ -243,7 +243,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.process_confirm_block_tx(tx_list)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(REVISION.DECENTRALIZATION.value)
 
         self.make_blocks_to_end_calculation()
 
