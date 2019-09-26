@@ -20,7 +20,7 @@ import unittest
 from typing import List
 
 from iconservice.base.address import Address
-from iconservice.icon_constant import REVISION_3, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import REVISION, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_base2 import ScoreApiStepRatio
 from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _recover_key
 from iconservice.iconscore.icon_score_base2 import create_address_with_key, recover_key
@@ -103,7 +103,7 @@ class TestIconScoreApi(unittest.TestCase):
         step_counter.reset(self.step_limit)
 
         context.step_counter = step_counter
-        context.revision = REVISION_3
+        context.revision = REVISION.THREE
 
         context.engine = ContextEngine(deploy=None, fee=None, icx=None, iiss=None, prep=self._prep_engine, issue=None)
 

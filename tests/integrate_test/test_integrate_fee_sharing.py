@@ -21,7 +21,7 @@ from iconservice.base.address import Address, AddressPrefix, GOVERNANCE_SCORE_AD
 from iconservice.base.exception import InvalidRequestException
 from iconservice.fee import FeeEngine
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, REV_IISS, REVISION_4, ICX_IN_LOOP
+from iconservice.icon_constant import ConfigKey, REV_IISS, REVISION, ICX_IN_LOOP
 from iconservice.icon_service_engine import IconServiceEngine
 from tests.integrate_test import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -123,7 +123,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         same_score_address = tx_results[0].score_address
 
         # set revision 4
-        self.set_revision(REVISION_4)
+        self.set_revision(REVISION.FOUR)
 
         # success case: before IISS_REV revision, should charge fee about event log
         tx_results: List['TransactionResult'] = self.deposit_icx(score_address=self.score_address,

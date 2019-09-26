@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Optional, Any
 from .icon_score_step import StepType
 from ..base.address import Address, ICON_ADDRESS_BYTES_SIZE, ICON_ADDRESS_BODY_SIZE
 from ..base.exception import InvalidEventLogException
-from ..icon_constant import DATA_BYTE_ORDER, REVISION_3
+from ..icon_constant import DATA_BYTE_ORDER, REVISION
 from ..utils import int_to_bytes, byte_length_of_int
 
 if TYPE_CHECKING:
@@ -126,7 +126,7 @@ class EventLogEmitter(object):
         elif isinstance(data, int):
             return byte_length_of_int(data)
         elif isinstance(data, Address):
-            if context.revision < REVISION_3:
+            if context.revision < REVISION.THREE:
                 return ICON_ADDRESS_BODY_SIZE
             else:
                 return ICON_ADDRESS_BYTES_SIZE

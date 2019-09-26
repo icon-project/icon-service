@@ -34,7 +34,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION, REV_IISS, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus)
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -1348,7 +1348,7 @@ class IconServiceEngine(ContextContainer):
             tmp_context.block = self._get_last_block()
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= REVISION_3 else tmp_context,
+                context if context.revision >= REVISION.THREE else tmp_context,
                 params,
                 step_price=context.step_counter.step_price)
 

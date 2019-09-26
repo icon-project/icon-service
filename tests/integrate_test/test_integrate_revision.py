@@ -20,7 +20,7 @@
 from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import REVISION_2
+from iconservice.icon_constant import REVISION
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -37,7 +37,7 @@ class TestIntegrateRevision(TestIntegrateBase):
 
     def test_governance_call_about_set_revision(self):
         expected_status = {
-            "code": REVISION_2,
+            "code": REVISION.TWO,
             "name": "1.1.0"
         }
 
@@ -54,7 +54,7 @@ class TestIntegrateRevision(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        next_revision = REVISION_2 + 1
+        next_revision = REVISION.TWO + 1
 
         self.score_call(from_=self._admin,
                         to_=GOVERNANCE_SCORE_ADDRESS,
@@ -75,7 +75,7 @@ class TestIntegrateRevision(TestIntegrateBase):
             from_=self._accounts[0])
         score_address: 'Address' = tx_results[0].score_address
 
-        first_revision = REVISION_2
+        first_revision = REVISION.TWO
         next_revision = first_revision + 1
 
         # 1-revision check

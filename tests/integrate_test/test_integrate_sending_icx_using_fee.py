@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import Address
 from iconservice.icon_constant import ConfigKey, FIXED_FEE, ICX_IN_LOOP
-from iconservice.icon_constant import REVISION_2, REVISION_3, LATEST_REVISION
+from iconservice.icon_constant import REVISION, LATEST_REVISION
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -59,7 +59,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
 
     def test_fix_icx_validator(self):
         self.update_governance()
-        self.set_revision(REVISION_3)
+        self.set_revision(REVISION.THREE)
 
         icx = 3 * FIXED_FEE
         self.transfer_icx(from_=self._admin,
@@ -92,7 +92,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
 
         self.update_governance()
 
-        for revision in range(REVISION_2, LATEST_REVISION + 1):
+        for revision in range(REVISION.TWO, LATEST_REVISION + 1):
             self.set_revision(revision)
 
             # Create a new to address every block
@@ -104,7 +104,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
             to_balance: int = self.get_balance(to)
             self.assertEqual(0, to_balance)
 
-            if revision == REVISION_3:
+            if revision == REVISION.THREE:
                 # Check backward compatibility on TestNet Database
                 # step_used increases by input_step_cost * len(json.dumps(None))
                 # because of None parameter handling error on get_input_data_size()

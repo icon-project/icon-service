@@ -26,7 +26,7 @@ from ..base.exception import InvalidParamsException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
 from ..icon_constant import DeployType
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION
 from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
@@ -89,7 +89,7 @@ class Engine(EngineBase):
         :param score_address:
         :return: True(needed) False(not needed)
         """
-        if context.revision >= REVISION_2:
+        if context.revision >= REVISION.TWO:
             is_system_score = is_builtin_score(str(score_address))
         else:
             is_system_score = False
@@ -259,14 +259,14 @@ class Engine(EngineBase):
         score_root_path: str = context.score_root_path
         score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
 
-        if revision >= REVISION_3:
+        if revision >= REVISION.THREE:
             # If the path to deploy a score has been present, remove it before deploying.
             score_root_path: str = context.score_root_path
             score_path: str =\
                 os.path.join(score_root_path, score_address.to_bytes().hex(), f'0x{tx_hash.hex()}')
             remove_path(score_path)
 
-        if revision >= REVISION_2:
+        if revision >= REVISION.TWO:
             IconScoreDeployer.deploy(score_deploy_path, content, revision)
         else:
             IconScoreDeployer.deploy_legacy(score_deploy_path, content)

@@ -21,7 +21,7 @@ from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import ExceptionCode
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.utils import remove_path, get_score_path
-from iconservice.icon_constant import REVISION_2, REVISION_3
+from iconservice.icon_constant import REVISION
 from iconservice.iconscore.utils import get_score_deploy_path
 from tests import create_address, create_tx_hash
 
@@ -143,7 +143,7 @@ class TestIconScoreDeployer(unittest.TestCase):
 
     def test_deploy_bug_IS_355(self):
         zip_list = [
-            (REVISION_2, ['__init__.py',
+            (REVISION.TWO, ['__init__.py',
                           'interfaces/__init__.py',
                           'interfaces/abc_owned.py',
                           'interfaces/abc_score_registry.py',
@@ -152,7 +152,7 @@ class TestIconScoreDeployer(unittest.TestCase):
                           'utility/__init__.py',
                           'utility/owned.py',
                           'utility/utils.py']),
-            (REVISION_3, ['interfaces/__init__.py',
+            (REVISION.THREE, ['interfaces/__init__.py',
                           'interfaces/abc_owned.py',
                           'interfaces/abc_score_registry.py',
                           'package.json',
@@ -201,7 +201,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             tx_hash1 = create_tx_hash()
             score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
 
-            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION_3)
+            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION.THREE)
             self.assertEqual(True, os.path.exists(score_deploy_path))
 
             installed_files = self.get_installed_files(score_deploy_path)
@@ -224,7 +224,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
 
             with self.assertRaises(BaseException) as e:
-                IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION_3)
+                IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION.THREE)
             self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
             self.assertEqual(e.exception.message, "package.json not found")
             self.assertTrue(os.path.exists(score_deploy_path))
