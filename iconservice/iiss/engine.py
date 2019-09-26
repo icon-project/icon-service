@@ -113,7 +113,7 @@ class Engine(EngineBase):
                                context: 'IconScoreContext',
                                end_block_height_of_calc: Optional[int] = None) -> int:
         Logger.debug(tag=_TAG, msg=f"get_prev_period_iscore start")
-        iscore, rc_latest_calculate_bh = context.storage.rc.get_calc_response_from_rc()
+        iscore, rc_latest_calculate_bh, _ = context.storage.rc.get_calc_response_from_rc()
         if end_block_height_of_calc is None:
             end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
         calc_period: int = context.storage.iiss.get_calc_period(context)
@@ -121,17 +121,21 @@ class Engine(EngineBase):
 
         # Check if the response has been received
         if iscore == -1:
-            iscore: int = self._query_calculate_result(latest_calculate_bh)
+            iscore, calc_bh, state_hash = self._query_calculate_result(latest_calculate_bh)
+            context.storage.rc.put_calc_response_from_rc(iscore, calc_bh, state_hash)
         else:
             context.engine.iiss.check_calculate_request_block_height(rc_latest_calculate_bh,
                                                                      latest_calculate_bh)
         Logger.debug(tag=_TAG, msg=f"get_prev_period_iscore end with {iscore}")
         return iscore
 
-    def _query_calculate_result(self, calc_bh: int, repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> int:
+    def _query_calculate_result(self,
+                                calc_bh: int,
+                                repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> Tuple[int, int, bytes]:
         Logger.debug(tag=_TAG, msg=f"_query_calculate_result start")
         calc_result_status: int = -1
         calc_result_bh: int = -1
+        state_hash: bytes = None
         iscore: int = -1
 
         for cnt in range(repeat_cnt):
@@ -158,7 +162,7 @@ class Engine(EngineBase):
         Logger.debug(tag=_TAG, msg=f"query_calculate_result end with "
                                    f"status:{calc_result_status} calc_result_bh: {calc_result_bh} iscore: {iscore}")
 
-        return iscore
+        return iscore, calc_result_bh, state_hash
 
     @staticmethod
     def check_calculate_request_block_height(reward_calc_bh: int,
@@ -183,7 +187,7 @@ class Engine(EngineBase):
         latest_calculate_bh: int = end_block_height_of_calc - calc_period
         self.check_calculate_request_block_height(cb_data.block_height, latest_calculate_bh)
 
-        IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height)
+        IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height, cb_data.state_hash)
         Logger.debug(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
     def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int):
@@ -664,9 +668,10 @@ class Engine(EngineBase):
                   prev_block_generator: Optional['Address'],
                   prev_block_votes: Optional[List[Tuple['Address', int]]],
                   flag: 'PrecommitFlag',
-                  rc_db_revision: int):
+                  rc_db_revision: int) -> Optional[bytes]:
         version: int = get_rc_version(rc_db_revision)
 
+        rc_state_hash: Optional[bytes] = None
         if self._is_iiss_calc(flag):
             self._update_state_db_on_end_calc(context)
             if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
@@ -677,8 +682,11 @@ class Engine(EngineBase):
             self._put_header_to_rc_db(context, rc_db_revision, version)
             self._put_gv_to_rc_db(context, version)
 
+            # get rc_state_hash in calc done response.
+            _, _, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
+
         if not context.is_decentralized():
-            return
+            return rc_state_hash
 
         if start != context.block.height:
             self.put_block_produce_info_to_rc_db(context,
@@ -693,6 +701,8 @@ class Engine(EngineBase):
 
         if term is not None and term.is_in_term(context.block.height):
             self._put_preps_to_rc_db(context, term)
+
+        return rc_state_hash
 
     def _update_state_db_on_end_calc(self, context: 'IconScoreContext'):
         # Warning: do not change the order of putting data (for state sync)

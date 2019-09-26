@@ -109,21 +109,29 @@ class Storage(object):
             self._db.close()
             self._db = None
 
-    def put_calc_response_from_rc(self, iscore: int, block_height: int):
-        version = 0
-        response_from_rc: bytes = MsgPackForDB.dumps([version, iscore, block_height])
+    def put_calc_response_from_rc(self, iscore: int, block_height: int, state_hash: bytes):
+        version = 1
+        response_from_rc: bytes = MsgPackForDB.dumps([version, iscore, block_height, state_hash])
         self._db.put(self._KEY_FOR_CALC_RESPONSE_FROM_RC, response_from_rc)
 
-    def get_calc_response_from_rc(self) -> Tuple[int, int]:
+    def get_calc_response_from_rc(self) -> Tuple[int, int, Optional[bytes]]:
         response_from_rc: Optional[bytes] = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
         if response_from_rc is None:
-            return -1, -1
+            return -1, -1, None
         response_from_rc: list = MsgPackForDB.loads(response_from_rc)
         version = response_from_rc[0]
-        iscore = response_from_rc[1]
-        block_height = response_from_rc[2]
+        if version == 0:
+            iscore = response_from_rc[1]
+            block_height = response_from_rc[2]
+            state_hash = None
+        elif version == 1:
+            iscore = response_from_rc[1]
+            block_height = response_from_rc[2]
+            state_hash = response_from_rc[3]
+        else:
+            raise DatabaseException(f"get_calc_response_from_rc invalid version: {version}")
 
-        return iscore, block_height
+        return iscore, block_height, state_hash
 
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):
