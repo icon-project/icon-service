@@ -31,6 +31,13 @@ IMPORT_FROM = 109
 
 BASE_PACKAGE = 'iconservice'
 
+# == OPCODE ==
+# 20 LOAD_CONST(key1) value1
+# 22 LOAD_CONST(key2) value2
+# ============
+# ...
+OPCODE_HEADER_END_INDEX = 4
+
 
 class ScorePackageValidator(object):
     WHITELIST_IMPORT = {}
@@ -55,7 +62,7 @@ class ScorePackageValidator(object):
         byte_code_list = [x for x in code.co_code]
 
         length_byte_code_list = len(byte_code_list)
-        for code_index in range(0, length_byte_code_list, 2):
+        for code_index in range(OPCODE_HEADER_END_INDEX, length_byte_code_list, 2):
             key = byte_code_list[code_index]
             if IMPORT_NAME == key:
                 # import_name_index = byte_code_list[code_index + 1]
@@ -128,7 +135,7 @@ class ScorePackageValidator(object):
         byte_code_list = [x for x in code.co_code]
 
         length_byte_code_list = len(byte_code_list)
-        for code_index in range(0, length_byte_code_list, 2):
+        for code_index in range(OPCODE_HEADER_END_INDEX, length_byte_code_list, 2):
             key = byte_code_list[code_index]
             if IMPORT_NAME == key:
                 cls._validate_import(code_index, byte_code_list, code.co_names, code.co_consts)
