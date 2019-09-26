@@ -38,7 +38,7 @@ def mock_score_invoke(context, to, data_type, data):
 class TestFeeSharing(unittest.TestCase):
 
     def setUp(self):
-        self._inner_task = generate_inner_task(REVISION.LATEST.value)
+        self._inner_task = generate_inner_task(REVISION.FOUR.value)
         self.from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         self.to = Address.from_string('cx' + '0' * 40)
         self.score = Address.from_string('cx' + '1' * 40)
