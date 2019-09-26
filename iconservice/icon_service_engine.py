@@ -532,7 +532,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _make_state_root_hash(revision: int, block_state_root_hash: bytes, rc_state_hash: Optional[bytes]):
-        if revision < Revision.IISS.value or rc_state_hash is None:
+        if revision < Revision.DECENTRALIZATION.value or rc_state_hash is None:
             return block_state_root_hash
 
         data = [block_state_root_hash, rc_state_hash]

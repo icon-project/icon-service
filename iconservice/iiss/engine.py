@@ -677,13 +677,13 @@ class Engine(EngineBase):
             if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
                 self._put_header_to_rc_db(context, context.revision, 0, is_genesis_iiss=True)
 
+            # get rc_state_hash in calc done response.
+            _, _, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
+
         start: int = self.get_start_block_of_calc(context)
         if start == context.block.height:
             self._put_header_to_rc_db(context, rc_db_revision, version)
             self._put_gv_to_rc_db(context, version)
-
-            # get rc_state_hash in calc done response.
-            _, _, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
 
         if not context.is_decentralized():
             return rc_state_hash
