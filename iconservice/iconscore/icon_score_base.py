@@ -63,18 +63,19 @@ def interface(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: Any, *args, **kwargs):
+    def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
             raise InvalidInstanceException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
-        score = calling_obj.from_score
+        context = calling_obj.context
         addr_to = calling_obj.addr_to
+        addr_from: 'Address' = context.current_address
 
         if addr_to is None:
             raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')
 
-        return InternalCall.other_external_call(score._context, score.address, addr_to, 0, func_name, args, kwargs)
+        return InternalCall.other_external_call(context, addr_from, addr_to, 0, func_name, args, kwargs)
 
     return __wrapper
 
@@ -122,7 +123,7 @@ def eventlog(func=None, *, indexed=0):
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
-    def __wrapper(calling_obj: Any, *args, **kwargs):
+    def __wrapper(calling_obj: 'IconScoreBase', *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise InvalidInstanceException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
@@ -353,7 +354,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     @abstractmethod
     def on_install(self, **kwargs) -> None:
         """
-        Invoked when the contract is deployed for the first time, and will not be called again on contract update or deletion afterward.
+        Invoked when the contract is deployed for the first time,
+        and will not be called again on contract update or deletion afterward.
         This is the place where you initialize the state DB.
         """
         super().on_install(**kwargs)
@@ -385,9 +387,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def fallback(self) -> None:
         """
-        fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
+        fallback function can not be decorated with `@external`.
+        (i.e., fallback function is not allowed to be called by external contract or user.)
         This fallback function is executed whenever the contract receives plain icx coins without data.
-        If the fallback function is not decorated with `@payable`, it is not listed on the SCORE APIs also cannot be called.
+        If the fallback function is not decorated with `@payable`,
+        it is not listed on the SCORE APIs also cannot be called.
         """
         pass
 
@@ -665,9 +669,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         else:
             raise AccessDeniedException('No permission')
 
-    def create_interface_score(self,
-                               addr_to: 'Address',
-                               interface_cls: Callable[['Address', callable], T]) -> T:
+    @staticmethod
+    def create_interface_score(addr_to: 'Address',
+                               interface_cls: Callable[['Address'], T]) -> T:
         """
         Creates an object, through which you have an access to the designated SCORE’s external functions.
 
@@ -678,7 +682,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if interface_cls is InterfaceScore:
             raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
-        return interface_cls(addr_to, self)
+        return interface_cls(addr_to)
 
     def deploy(self, tx_hash: bytes):
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)

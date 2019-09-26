@@ -18,20 +18,21 @@ import hashlib
 import json
 from abc import ABC, ABCMeta
 from enum import IntEnum
-from typing import TYPE_CHECKING, Optional, Any, Tuple, List
+from typing import TYPE_CHECKING, Optional, Any, Callable
+from typing import Tuple, List
 
 from secp256k1 import PublicKey, ALL_FLAGS, NO_FLAGS
 
+from .icon_score_constant import FORMAT_IS_NOT_DERIVED_OF_OBJECT, T
 from ..base.address import Address, AddressPrefix
-from ..base.exception import InvalidParamsException, IconScoreException
-from ..icon_constant import Revision, CHARSET_ENCODING
+from ..base.exception import InvalidParamsException, IconScoreException, InvalidInstanceException
+from ..icon_constant import CHARSET_ENCODING
+from ..icon_constant import Revision
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
-    from .icon_score_base import IconScoreBase
     from .icon_score_context import IconScoreContext
-    from ..prep.data import PRep
 
 """
 The explanation below are extracted
@@ -66,17 +67,18 @@ class InterfaceScoreMeta(ABCMeta):
 
 
 class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
-    def __init__(self, addr_to: 'Address', from_score: 'IconScoreBase'):
+    def __init__(self, addr_to: 'Address'):
         self.__addr_to = addr_to
-        self.__from_score = from_score
 
     @property
     def addr_to(self) -> 'Address':
         return self.__addr_to
 
     @property
-    def from_score(self) -> 'IconScoreBase':
-        return self.__from_score
+    def context(self) -> 'IconScoreContext':
+        context = ContextContainer._get_context()
+        assert context
+        return context
 
 
 class Block(object):
@@ -360,3 +362,18 @@ def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
             prep.name
         ))
     return prep_info_list, term.end_block_height
+
+
+def create_interface_score(addr_to: 'Address',
+                           interface_cls: Callable[['Address'], T]) -> T:
+        """
+        Creates an object, through which you have an access to the designated SCORE’s external functions.
+
+        :param addr_to: SCORE address
+        :param interface_cls: interface class
+        :return: An instance of given class
+        """
+
+        if interface_cls is InterfaceScore:
+            raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
+        return interface_cls(addr_to)
