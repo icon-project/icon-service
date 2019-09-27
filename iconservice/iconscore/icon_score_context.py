@@ -20,6 +20,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
+from iconservice.icx.issue.regulator import Regulator
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -155,6 +156,8 @@ class IconScoreContext(object):
         # Collect Main and Sub P-Reps which have just been invalidated by penalty or unregister
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
+
+        self.regulator: Optional['Regulator'] = None
 
     @classmethod
     def set_decentralize_trigger(cls, decentralize_trigger: float):

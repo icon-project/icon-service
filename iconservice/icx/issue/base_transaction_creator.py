@@ -15,7 +15,6 @@
 
 from copy import deepcopy
 from typing import TYPE_CHECKING
-from typing import Tuple
 
 from ...base.type_converter import TypeConverter
 from ...icon_constant import BASE_TRANSACTION_VERSION
@@ -23,13 +22,12 @@ from ...utils.hashing.hash_generator import HashGenerator
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
-    from .regulator import Regulator
 
 
 class BaseTransactionCreator(object):
     @staticmethod
-    def create_base_transaction(context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
-        issue_data, regulator = context.engine.issue.create_icx_issue_info(context)
+    def create_base_transaction(context: 'IconScoreContext') -> dict:
+        issue_data: dict = context.engine.issue.create_icx_issue_info(context)
         params = {
             "version": BASE_TRANSACTION_VERSION,
             "timestamp": context.block.timestamp,
@@ -42,7 +40,7 @@ class BaseTransactionCreator(object):
             "method": "icx_sendTransaction",
             "params": params
         }
-        return transaction, regulator
+        return transaction
 
     @staticmethod
     def _generate_transaction_hash(transaction_params: dict) -> bytes:
