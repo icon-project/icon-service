@@ -19,8 +19,8 @@ from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Optional
 
-from ..utils import sha3_256
 from ..base.exception import DatabaseException, AccessDeniedException
+from ..utils import sha3_256
 
 if TYPE_CHECKING:
     from ..base.block import Block

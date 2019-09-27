@@ -93,6 +93,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         self._load_preps(context)
         self.term: Optional['Term'] = context.storage.prep.get_term(context)
+        self.term.total_delegated = self.preps.total_delegated
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)

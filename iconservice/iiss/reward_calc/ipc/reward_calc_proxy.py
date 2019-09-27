@@ -38,8 +38,8 @@ class RewardCalcProxy(object):
     """
     def __init__(self,
                  ipc_timeout: int,
-                 ready_callback: Callable[['Response'], Any] = None,
-                 calc_done_callback: Callable[['Response'], Any] = None):
+                 ready_callback: Callable[['ReadyNotification'], Any] = None,
+                 calc_done_callback: Callable[['CalculateDoneNotification'], Any] = None):
         Logger.debug(tag=_TAG, msg="__init__() start")
         Logger.info(tag=_TAG, msg=f"ipc_timeout: {ipc_timeout}")
 

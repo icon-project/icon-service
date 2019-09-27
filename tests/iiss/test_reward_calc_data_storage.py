@@ -24,6 +24,7 @@ from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.data_creator import *
 from iconservice.iiss.reward_calc.msg_data import TxType
 from iconservice.iiss.reward_calc.storage import get_rc_version
+from iconservice.utils import sha3_256
 from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
@@ -254,7 +255,10 @@ class TestRcDataStorage(unittest.TestCase):
         expected_i_score = 10_000
         expected_version = 1
         expected_block_height = 0
-        expected_state_hash: bytes = b'state_hash'
+        expected_state_hash: bytes = sha3_256(b"state_hash")
+        assert isinstance(expected_state_hash, bytes)
+        assert len(expected_state_hash) == 32
+
         self.rc_data_storage.put_calc_response_from_rc(expected_i_score, expected_block_height, expected_state_hash)
         i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_CALC_RESPONSE_FROM_RC))
         assert i_score_db_data[0] == expected_version

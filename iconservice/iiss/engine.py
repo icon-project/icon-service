@@ -38,6 +38,7 @@ from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
 from ..iiss.reward_calc.storage import get_rc_version
 from ..precommit_data_manager import PrecommitFlag
+from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
@@ -132,20 +133,27 @@ class Engine(EngineBase):
     def _query_calculate_result(self,
                                 calc_bh: int,
                                 repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> Tuple[int, int, bytes]:
-        Logger.debug(tag=_TAG, msg=f"_query_calculate_result start")
+        """Query the calculation result for the last term to reward calculator
+
+        :param calc_bh:
+        :param repeat_cnt: retry count
+        :return:
+        """
+        Logger.debug(tag=_TAG, msg=f"_query_calculate_result() start")
+
         calc_result_status: int = -1
         calc_result_bh: int = -1
-        state_hash: bytes = None
+        state_hash: Optional[bytes] = None
         iscore: int = -1
 
-        for cnt in range(repeat_cnt):
+        for i in range(repeat_cnt):
             calc_result_status, calc_result_bh, iscore, state_hash = \
                 self._reward_calc_proxy.query_calculate_result(calc_bh)
             if calc_result_status == RCCalculateResult.SUCCESS:
                 break
             elif calc_result_status == RCCalculateResult.IN_PROGRESS:
                 time.sleep(1)
-                Logger.debug(tag=_TAG, msg=f"Repeat query calculate result {repeat_cnt}")
+                Logger.debug(tag=_TAG, msg=f"Retry to query calculate result: {i + 1}/{repeat_cnt}")
                 continue
             else:
                 raise FatalException(f'RC has a problem about calculating: {calc_result_status}')
@@ -159,8 +167,12 @@ class Engine(EngineBase):
 
         if iscore < 0:
             raise FatalException(f'Invalid I-SCORE value: {iscore}')
-        Logger.debug(tag=_TAG, msg=f"query_calculate_result end with "
-                                   f"status:{calc_result_status} calc_result_bh: {calc_result_bh} iscore: {iscore}")
+
+        Logger.debug(tag=_TAG, msg=f"query_calculate_result() end: "
+                                   f"status={calc_result_status}, "
+                                   f"calc_result_bh={calc_result_bh}, "
+                                   f"iscore={iscore}, "
+                                   f"state_hash={bytes_to_hex(state_hash)}")
 
         return iscore, calc_result_bh, state_hash
 
@@ -669,6 +681,16 @@ class Engine(EngineBase):
                   prev_block_votes: Optional[List[Tuple['Address', int]]],
                   flag: 'PrecommitFlag',
                   rc_db_revision: int) -> Optional[bytes]:
+        """Called on IconServiceEngine._after_transaction_process()
+
+        :param context:
+        :param term:
+        :param prev_block_generator:
+        :param prev_block_votes:
+        :param flag:
+        :param rc_db_revision:
+        :return: rc_state_hash
+        """
         version: int = get_rc_version(rc_db_revision)
 
         rc_state_hash: Optional[bytes] = None
@@ -681,6 +703,7 @@ class Engine(EngineBase):
             _, _, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
 
         start: int = self.get_start_block_of_calc(context)
+        # New calculation period is started
         if start == context.block.height:
             self._put_header_to_rc_db(context, rc_db_revision, version)
             self._put_gv_to_rc_db(context, version)
@@ -695,6 +718,7 @@ class Engine(EngineBase):
                                                  prev_block_votes)
 
         start_term_block: int = context.term.start_block_height
+        # New P-Rep Term is started
         if start_term_block == context.block.height:
             self._put_preps_to_rc_db(context)
             self._put_gv_to_rc_db(context, version)

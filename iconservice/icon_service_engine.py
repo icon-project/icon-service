@@ -671,7 +671,7 @@ class IconServiceEngine(ContextContainer):
         :param rc_db_revision
         :param prev_block_generator:
         :param prev_block_votes:
-        :return:
+        :return: (main_preps_as_dict, term, rc_state_hash)
         """
 
         main_prep_as_dict, term = context.engine.prep.on_block_invoked(
@@ -1236,6 +1236,7 @@ class IconServiceEngine(ContextContainer):
         if start_block < 0 or end_block < 0:
             return rc_result
 
+        # (iscore, block_height, rc_state_hash)
         iscore, request_block_height, _ = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
             return rc_result
