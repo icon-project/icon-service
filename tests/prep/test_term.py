@@ -223,17 +223,7 @@ class TestTerm(unittest.TestCase):
         new_term = Term.from_list(self.term.to_list())
         _check_prep_snapshots_in_term(new_term)
 
-        assert id(new_term) != id(self.term)
-        assert new_term.sequence == self.term.sequence
-        assert new_term.start_block_height == self.term.start_block_height
-
-        assert len(new_term.main_preps) == len(self.term.main_preps)
-        assert len(new_term.sub_preps) == len(self.term.sub_preps)
-        assert len(new_term) == len(self.term) == len(new_term.main_preps) + len(new_term.sub_preps)
-
-        assert isinstance(new_term.root_hash, bytes)
-        assert isinstance(self.term.root_hash, bytes)
-        assert new_term.root_hash == self.term.root_hash
+        assert self.term == new_term
 
     def test__contain__(self):
         term = self.term

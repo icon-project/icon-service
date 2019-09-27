@@ -127,6 +127,20 @@ class Term(object):
         """
         return len(self._preps_dict)
 
+    def __eq__(self, other: 'Term') -> bool:
+        return isinstance(other, Term) \
+            and self._sequence == other._sequence \
+            and self._start_block_height == other._start_block_height \
+            and self._period == other._period \
+            and self._irep == other._irep \
+            and self._total_supply == other._total_supply \
+            and self._total_delegated == other._total_delegated \
+            and self._total_elected_prep_delegated == other._total_elected_prep_delegated \
+            and self._main_preps == other._main_preps \
+            and self._sub_preps == other._sub_preps \
+            and self._preps_dict == other._preps_dict \
+            and self._merkle_root_hash == other._merkle_root_hash
+
     @property
     def sequence(self) -> int:
         return self._sequence
@@ -161,7 +175,7 @@ class Term(object):
 
     @property
     def total_delegated(self) -> int:
-        """Total amount of delegation which all active P-Reps got when this term started
+        """Total amount of delegation which all active P-Reps got when this term is started
         """
         return self._total_delegated
 
@@ -362,6 +376,7 @@ class Term(object):
         total_delegated: int = data[6]
         main_preps = data[7]
         sub_preps = data[8]
+        total_elected_prep_delegated = 0
 
         term = Term(sequence, start_block_height, period, irep, total_supply, total_delegated)
 
@@ -369,12 +384,15 @@ class Term(object):
             snapshot = PRepSnapshot(address, delegated)
             term._main_preps.append(snapshot)
             term._preps_dict[address] = snapshot
+            total_elected_prep_delegated += delegated
 
         for address, delegated in sub_preps:
             snapshot = PRepSnapshot(address, delegated)
             term._sub_preps.append(snapshot)
             term._preps_dict[address] = snapshot
+            total_elected_prep_delegated += delegated
 
+        term._total_elected_prep_delegated = total_elected_prep_delegated
         term._generate_root_hash()
 
         return term
