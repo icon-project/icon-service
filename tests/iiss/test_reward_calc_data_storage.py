@@ -24,6 +24,7 @@ from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.data_creator import *
 from iconservice.iiss.reward_calc.msg_data import TxType
 from iconservice.iiss.reward_calc.storage import get_rc_version
+from iconservice.utils import sha3_256
 from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
@@ -247,19 +248,24 @@ class TestRcDataStorage(unittest.TestCase):
 
     def test_putting_i_score_data_on_current_db(self):
         # success case: If there is no prev_calc_period_issued_i_score, should return None
-        actual_i_score, _ = self.rc_data_storage.get_calc_response_from_rc()
+        actual_i_score, _, _ = self.rc_data_storage.get_calc_response_from_rc()
         assert actual_i_score == -1
 
         # success case: put i score and get i score from the db
         expected_i_score = 10_000
-        expected_version = 0
+        expected_version = 1
         expected_block_height = 0
-        self.rc_data_storage.put_calc_response_from_rc(expected_i_score, expected_block_height)
+        expected_state_hash: bytes = sha3_256(b"state_hash")
+        assert isinstance(expected_state_hash, bytes)
+        assert len(expected_state_hash) == 32
+
+        self.rc_data_storage.put_calc_response_from_rc(expected_i_score, expected_block_height, expected_state_hash)
         i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_CALC_RESPONSE_FROM_RC))
         assert i_score_db_data[0] == expected_version
         assert i_score_db_data[1] == expected_i_score
         assert i_score_db_data[2] == expected_block_height
+        assert i_score_db_data[3] == expected_state_hash
 
-        actual_i_score, _ = self.rc_data_storage.get_calc_response_from_rc()
+        actual_i_score, _, _ = self.rc_data_storage.get_calc_response_from_rc()
         assert actual_i_score == expected_i_score
 

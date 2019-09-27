@@ -15,12 +15,12 @@
 # limitations under the License.
 
 
-import hashlib
 from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Optional
 
 from ..base.exception import DatabaseException, AccessDeniedException
+from ..utils import sha3_256
 
 if TYPE_CHECKING:
     from ..base.block import Block
@@ -41,7 +41,8 @@ def digest(ordered_dict: OrderedDict):
         data.append(key)
         if value is not None:
             data.append(value)
-    return hashlib.sha3_256(b'|'.join(data)).digest()
+    value: bytes = b'|'.join(data)
+    return sha3_256(value)
 
 
 class Batch(OrderedDict):

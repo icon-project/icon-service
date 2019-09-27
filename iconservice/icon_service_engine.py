@@ -503,11 +503,11 @@ class IconServiceEngine(ContextContainer):
                 # change the reward calculation period from 43200 to 43120 which is the same as term_period
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
-        main_prep_as_dict, term = self._after_transaction_process(context,
-                                                                  precommit_flag,
-                                                                  rc_db_revision,
-                                                                  prev_block_generator,
-                                                                  prev_block_votes)
+        main_prep_as_dict, term, rc_state_hash = self._after_transaction_process(context,
+                                                                                 precommit_flag,
+                                                                                 rc_db_revision,
+                                                                                 prev_block_generator,
+                                                                                 prev_block_votes)
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -524,7 +524,20 @@ class IconServiceEngine(ContextContainer):
                                        precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
-        return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+        state_root_hash: bytes = self._make_state_root_hash(precommit_data.revision,
+                                                            precommit_data.state_root_hash,
+                                                            rc_state_hash)
+
+        return block_result, state_root_hash, added_transactions, main_prep_as_dict
+
+    @staticmethod
+    def _make_state_root_hash(revision: int, block_state_root_hash: bytes, rc_state_hash: Optional[bytes]):
+        if revision < Revision.DECENTRALIZATION.value or rc_state_hash is None:
+            return block_state_root_hash
+
+        data = [block_state_root_hash, rc_state_hash]
+        value: bytes = b'|'.join(data)
+        return sha3_256(value)
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls,
@@ -646,7 +659,7 @@ class IconServiceEngine(ContextContainer):
             rc_db_revision: int,
             prev_block_generator: Optional['Address'] = None,
             prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
-            -> Tuple[Optional[dict], Optional['Term']]:
+            -> Tuple[Optional[dict], Optional['Term'], bytes]:
         """If the current term is ended, prepare the next term,
         - Prepare the list of main P-Reps for the next term which is passed to loopchain
         - Calculate the weighted average of ireps
@@ -658,19 +671,20 @@ class IconServiceEngine(ContextContainer):
         :param rc_db_revision
         :param prev_block_generator:
         :param prev_block_votes:
-        :return:
+        :return: (main_preps_as_dict, term, rc_state_hash)
         """
 
         main_prep_as_dict, term = context.engine.prep.on_block_invoked(
             context, bool(flag & PrecommitFlag.DECENTRALIZATION))
 
+        rc_state_hash: Optional[bytes] = None
         if context.revision >= Revision.IISS.value:
-            context.engine.iiss.update_db(context,
-                                          term,
-                                          prev_block_generator,
-                                          prev_block_votes,
-                                          flag,
-                                          rc_db_revision)
+            rc_state_hash: Optional[bytes] = context.engine.iiss.update_db(context,
+                                                                           term,
+                                                                           prev_block_generator,
+                                                                           prev_block_votes,
+                                                                           flag,
+                                                                           rc_db_revision)
 
         context.update_batch()
 
@@ -680,7 +694,7 @@ class IconServiceEngine(ContextContainer):
         if context.term:
             context.term.freeze()
 
-        return main_prep_as_dict, term
+        return main_prep_as_dict, term, rc_state_hash
 
     @classmethod
     def _update_productivity(cls,
@@ -1222,7 +1236,8 @@ class IconServiceEngine(ContextContainer):
         if start_block < 0 or end_block < 0:
             return rc_result
 
-        iscore, request_block_height = context.storage.rc.get_calc_response_from_rc()
+        # (iscore, block_height, rc_state_hash)
+        iscore, request_block_height, _ = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
             return rc_result
 
