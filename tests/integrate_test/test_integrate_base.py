@@ -28,7 +28,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRES
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, RCCalculateResult
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
@@ -120,6 +120,7 @@ class TestIntegrateBase(TestCase):
         RewardCalcProxy.query_iscore = Mock()
         RewardCalcProxy.commit_block = Mock()
         RewardCalcProxy.commit_claim = Mock()
+        RewardCalcProxy.query_calculate_result = Mock(return_value=(RCCalculateResult.SUCCESS, 0, 0, bytes()))
 
     def tearDown(self):
         self.icon_service_engine.close()

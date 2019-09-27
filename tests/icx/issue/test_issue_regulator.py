@@ -394,7 +394,7 @@ class TestIssueRegulator:
         issue_amount = 10_000
         mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
         mocked_context_engine.prep.term.sequence = 0
-        mocked_context_engine.iiss.get_prev_period_iscore = Mock(return_value=0)
+        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(0, 0, None))
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
         regulator = Regulator(self.context, issue_amount)
@@ -430,7 +430,7 @@ class TestIssueRegulator:
 
         mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
         mocked_context_engine.prep.term.sequence = 0
-        mocked_context_engine.iiss.get_prev_period_iscore = Mock(return_value=prev_calc_period_issued_iscore)
+        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(prev_calc_period_issued_iscore, 0, None))
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
         regulator = Regulator(self.context, issue_amount)

@@ -59,8 +59,9 @@ class Regulator:
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if end_block_height_of_calc == context.block.height:
-            prev_calc_period_issued_iscore: int = \
-                context.engine.iiss.get_prev_period_iscore(context, end_block_height_of_calc)
+            prev_calc_period_issued_iscore, _, _ = context.storage.rc.get_calc_response_from_rc()
+
+            assert prev_calc_period_issued_iscore >= 0
 
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
