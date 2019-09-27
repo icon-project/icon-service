@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, Callable
+from typing import TYPE_CHECKING, Callable
 
+from iconcommons import Logger
 from .data.prep import PRep, PenaltyReason
 
 if TYPE_CHECKING:
@@ -40,6 +41,11 @@ class PenaltyImposer(object):
         # Unit: The number of blocks
         self._block_validation_penalty_threshold: int = block_validation_penalty_threshold
 
+        Logger.info(f"[PenaltyImposer Init] "
+                    f"penalty_grace_period: {self._penalty_grace_period} "
+                    f"low_productivity_penalty_threshold: {self._low_productivity_penalty_threshold} "
+                    f"block_validation_penalty_threshold: {self._block_validation_penalty_threshold}")
+
     def run(self,
             context: 'IconScoreContext',
             prep: 'PRep',
@@ -47,8 +53,14 @@ class PenaltyImposer(object):
         reason: 'PenaltyReason' = PenaltyReason.NONE
 
         if self._check_low_productivity_penalty(prep):
+            Logger.info(f"PenaltyImposer statistics({PenaltyReason.LOW_PRODUCTIVITY}): "
+                        f"prep_total_blocks: {prep.total_blocks} "
+                        f"prep_unvalidated_sequence_blocks: {prep.unvalidated_sequence_blocks}")
             reason = PenaltyReason.LOW_PRODUCTIVITY
         if self._check_block_validation_penalty(prep):
+            Logger.info(f"PenaltyImposer statistics({PenaltyReason.BLOCK_VALIDATION}): "
+                        f"prep_total_blocks: {prep.total_blocks} "
+                        f"prep_block_validation_proportion: {prep.block_validation_proportion}")
             reason = PenaltyReason.BLOCK_VALIDATION
 
         if on_penalty_imposed and reason != PenaltyReason.NONE:

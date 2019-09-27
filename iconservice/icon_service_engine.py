@@ -718,6 +718,8 @@ class IconServiceEngine(ContextContainer):
         validators: List[Tuple['Address', int]] = [[prev_block_generator, BlockVoteStatus.TRUE.value]]
         validators.extend(prev_block_votes)
 
+        Logger.info(f"update_productivity(validators): {validators}")
+
         for address, vote_state in validators:
             dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
             assert isinstance(dirty_prep, PRep)
