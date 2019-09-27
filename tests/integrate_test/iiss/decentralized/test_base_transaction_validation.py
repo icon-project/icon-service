@@ -152,7 +152,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         timestamp_us = create_timestamp()
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context.block = block
-        issue_data, _ = IconScoreContext.engine.issue.create_icx_issue_info(context)
+        issue_data = IconScoreContext.engine.issue.create_icx_issue_info(context)
         total_issue_amount = 0
         for group_dict in issue_data.values():
             if "value" in group_dict:
@@ -169,7 +169,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         timestamp_us = create_timestamp()
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context.block = block
-        transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
+        transaction = BaseTransactionCreator.create_base_transaction(context)
         return transaction
 
     def test_validate_base_transaction_position(self):

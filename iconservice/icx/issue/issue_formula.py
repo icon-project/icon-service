@@ -13,10 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from iconcommons import Logger
 
-from ...iconscore.icon_score_context import IconScoreContext
+from typing import TYPE_CHECKING
+
+from iconcommons import Logger
 from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, IISS_LOG_TAG
+
+if TYPE_CHECKING:
+    from ...iconscore.icon_score_context import IconScoreContext
 
 
 class IssueFormula(object):

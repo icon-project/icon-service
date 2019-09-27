@@ -52,7 +52,6 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
-from .icx.issue.regulator import Regulator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
 from .inner_call import inner_call
@@ -444,6 +443,7 @@ class IconServiceEngine(ContextContainer):
                                                                                    prev_block_votes)
 
         self._set_revision_to_context(context)
+
         # For RC DB
         rc_db_revision: int = self._get_rc_db_revision_before_process_transactions(context)
 
@@ -451,17 +451,10 @@ class IconServiceEngine(ContextContainer):
         precommit_flag = PrecommitFlag.NONE
         added_transactions = {}
 
-        regulator: Optional['Regulator'] = None
-        if is_block_editable and context.is_decentralized():
-            base_transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
-            # todo: if the txHash field is add to addedTransaction, should remove this logic
-            tx_params_to_added = deepcopy(base_transaction["params"])
-            del tx_params_to_added["txHash"]
-            tx_hash: bytes = base_transaction["params"]["txHash"]
-            added_transactions[tx_hash.hex()] = tx_params_to_added
-            tx_requests.insert(0, base_transaction)
-
         self._before_transaction_process(context,
+                                         is_block_editable,
+                                         tx_requests,
+                                         added_transactions,
                                          prev_block_generator,
                                          prev_block_votes)
 
@@ -477,7 +470,7 @@ class IconServiceEngine(ContextContainer):
                     if not tx_request['params'].get('dataType') == "base":
                         raise InvalidBaseTransactionException(
                             "Invalid block: first transaction must be an base transaction")
-                    tx_result = self._invoke_base_request(context, tx_request, is_block_editable, regulator)
+                    tx_result = self._invoke_base_request(context, tx_request, is_block_editable)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -613,14 +606,19 @@ class IconServiceEngine(ContextContainer):
 
     def _before_transaction_process(self,
                                     context: 'IconScoreContext',
-                                    prev_block_generator: Optional['Address'] = None,
-                                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None):
+                                    is_block_editable: bool,
+                                    tx_requests: list,
+                                    added_transactions: dict,
+                                    prev_block_generator: Optional['Address'],
+                                    prev_block_votes: Optional[List[Tuple['Address', int]]]):
 
         # if you want to use rc_version here, you must use it.
         # rc_db_revision: int = self._get_revision_from_rc(context)
 
         if not context.is_decentralized():
             return
+
+        self._make_transaction(context, is_block_editable, tx_requests, added_transactions)
 
         # Skip the first block after decentralization
         if context.is_the_first_block_on_decentralization():
@@ -634,6 +632,22 @@ class IconServiceEngine(ContextContainer):
 
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
+
+    @classmethod
+    def _make_transaction(cls,
+                          context: 'IconScoreContext',
+                          is_block_editable: bool,
+                          tx_requests: list,
+                          added_transactions: dict):
+
+        if is_block_editable:
+            base_transaction: dict = BaseTransactionCreator.create_base_transaction(context)
+            # todo: if the txHash field is add to addedTransaction, should remove this logic
+            tx_params_to_added = deepcopy(base_transaction["params"])
+            del tx_params_to_added["txHash"]
+            tx_hash: bytes = base_transaction["params"]["txHash"]
+            added_transactions[tx_hash.hex()] = tx_params_to_added
+            tx_requests.insert(0, base_transaction)
 
     @classmethod
     def _put_block_produce_info_on_start_calc(cls,
@@ -860,8 +874,7 @@ class IconServiceEngine(ContextContainer):
     @classmethod
     def _process_base_transaction(cls,
                                   context: 'IconScoreContext',
-                                  issue_data: dict,
-                                  regulator: 'Regulator'):
+                                  issue_data: dict):
 
         treasury_address: 'Address' = context.storage.icx.fee_treasury
         tx_result = TransactionResult(context.tx, context.block)
@@ -870,8 +883,7 @@ class IconServiceEngine(ContextContainer):
         # proceed issue
         context.engine.issue.issue(context,
                                    treasury_address,
-                                   issue_data,
-                                   regulator)
+                                   issue_data)
 
         if context.engine.prep.term.start_block_height == context.block.height:
             EventLogEmitter.emit_event_log(context,
@@ -894,14 +906,13 @@ class IconServiceEngine(ContextContainer):
     def _invoke_base_request(self,
                              context: 'IconScoreContext',
                              request: dict,
-                             is_block_editable: bool,
-                             regulator: Optional['Regulator']) -> 'TransactionResult':
+                             is_block_editable: bool) -> 'TransactionResult':
         assert 'params' in request
         assert 'data' in request['params']
 
         issue_data_in_tx: dict = request['params'].get('data')
         if not is_block_editable:
-            issue_data_in_db, regulator = context.engine.issue.create_icx_issue_info(context)
+            issue_data_in_db: dict = context.engine.issue.create_icx_issue_info(context)
             if issue_data_in_tx != issue_data_in_db:
                 raise InvalidBaseTransactionException("Have difference between "
                                                       "base transaction and actual db data. "
@@ -919,7 +930,7 @@ class IconServiceEngine(ContextContainer):
         context.msg_stack.clear()
         context.event_log_stack.clear()
 
-        tx_result = self._process_base_transaction(context, issue_data_in_tx, regulator)
+        tx_result = self._process_base_transaction(context, issue_data_in_tx)
         return tx_result
 
     def _invoke_request(self,
