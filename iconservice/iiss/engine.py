@@ -110,29 +110,9 @@ class Engine(EngineBase):
     def is_reward_calculator_ready(self):
         return self._reward_calc_proxy.is_reward_calculator_ready()
 
-    def get_prev_period_iscore(self,
-                               context: 'IconScoreContext',
-                               end_block_height_of_calc: Optional[int] = None) -> int:
-        Logger.debug(tag=_TAG, msg=f"get_prev_period_iscore start")
-        iscore, rc_latest_calculate_bh, _ = context.storage.rc.get_calc_response_from_rc()
-        if end_block_height_of_calc is None:
-            end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
-        calc_period: int = context.storage.iiss.get_calc_period(context)
-        latest_calculate_bh: int = end_block_height_of_calc - calc_period
-
-        # Check if the response has been received
-        if iscore == -1:
-            iscore, calc_bh, state_hash = self._query_calculate_result(latest_calculate_bh)
-            context.storage.rc.put_calc_response_from_rc(iscore, calc_bh, state_hash)
-        else:
-            context.engine.iiss.check_calculate_request_block_height(rc_latest_calculate_bh,
-                                                                     latest_calculate_bh)
-        Logger.debug(tag=_TAG, msg=f"get_prev_period_iscore end with {iscore}")
-        return iscore
-
-    def _query_calculate_result(self,
-                                calc_bh: int,
-                                repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> Tuple[int, int, bytes]:
+    def query_calculate_result(self,
+                               calc_bh: int,
+                               repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> Tuple[int, int, bytes]:
         """Query the calculation result for the last term to reward calculator
 
         :param calc_bh:

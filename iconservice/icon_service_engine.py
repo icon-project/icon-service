@@ -615,10 +615,12 @@ class IconServiceEngine(ContextContainer):
         # if you want to use rc_version here, you must use it.
         # rc_db_revision: int = self._get_revision_from_rc(context)
 
+        self._check_calculate_done(context)
+
         if not context.is_decentralized():
             return
 
-        self._make_transaction(context, is_block_editable, tx_requests, added_transactions)
+        self._make_base_transaction(context, is_block_editable, tx_requests, added_transactions)
 
         # Skip the first block after decentralization
         if context.is_the_first_block_on_decentralization():
@@ -634,11 +636,30 @@ class IconServiceEngine(ContextContainer):
         self._update_last_generate_block_height(context, prev_block_generator)
 
     @classmethod
-    def _make_transaction(cls,
-                          context: 'IconScoreContext',
-                          is_block_editable: bool,
-                          tx_requests: list,
-                          added_transactions: dict):
+    def _check_calculate_done(cls,
+                              context: 'IconScoreContext'):
+
+        end_block: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        if end_block == context.block.height:
+            iscore, rc_latest_calculate_bh, _ = context.storage.rc.get_calc_response_from_rc()
+            period: int = context.storage.iiss.get_calc_period(context)
+
+            latest_calculate_bh: int = end_block - period
+
+            # Check if the response has been received
+            if iscore == -1:
+                iscore, calc_bh, state_hash = context.engine.iiss.query_calculate_result(latest_calculate_bh)
+                context.storage.rc.put_calc_response_from_rc(iscore, calc_bh, state_hash)
+            else:
+                context.engine.iiss.check_calculate_request_block_height(rc_latest_calculate_bh,
+                                                                         latest_calculate_bh)
+
+    @classmethod
+    def _make_base_transaction(cls,
+                               context: 'IconScoreContext',
+                               is_block_editable: bool,
+                               tx_requests: list,
+                               added_transactions: dict):
 
         if is_block_editable:
             base_transaction: dict = BaseTransactionCreator.create_base_transaction(context)
