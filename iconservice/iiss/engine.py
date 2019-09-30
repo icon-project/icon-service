@@ -16,6 +16,7 @@
 
 import time
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
@@ -52,6 +53,8 @@ if TYPE_CHECKING:
 _TAG = IISS_LOG_TAG
 
 QUERY_CALCULATE_REPEAT_COUNT = 3
+
+RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
 
 
 class EngineListener(metaclass=ABCMeta):
@@ -715,24 +718,26 @@ class Engine(EngineBase):
         self._put_rrep(context)
 
     def send_ipc(self,
-                 precommit_data: 'PrecommitData'):
+                 precommit_data: 'PrecommitData', rc_db_info: Optional['RewardCalcDBInfo']):
         self._reward_calc_proxy.commit_block(True,
                                              precommit_data.block.height,
                                              precommit_data.block.hash)
+        if rc_db_info is not None:
+            self._reward_calc_proxy.calculate(rc_db_info.path, rc_db_info.block_height)
 
-    def send_calculate(self,
-                       context: 'IconScoreContext',
-                       precommit_data: 'PrecommitData'):
-
+    def replace_rc_db_start_of_calc(self,
+                                    context: 'IconScoreContext',
+                                    precommit_data: 'PrecommitData') -> Optional['RewardCalcDBInfo']:
+        # todo: flag에 대한 논의 필요 (commit 때 해당 값을 읽어오는 것이 맞는가)
         start: int = self.get_start_block_of_calc(context)
         if start != context.block.height:
-            return
+            return None
 
         block_height: int = precommit_data.block.height - 1
         path: str = context.storage.rc.create_db_for_calc(block_height)
+        # Put version and revision for replaced RC DB
         context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
-        # todo: Implement  logic about checking calculate result
-        self._reward_calc_proxy.calculate(path, block_height)
+        return RewardCalcDBInfo(path, block_height)
 
     @classmethod
     def _is_iiss_calc(cls,
@@ -870,7 +875,9 @@ class Engine(EngineBase):
 
     @classmethod
     def get_start_block_of_calc(cls, context: 'IconScoreContext') -> int:
-        end_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
-        period: int = context.storage.iiss.get_calc_period(context)
-        start_calc_block: int = end_block_height - period + 1
+        start_calc_block: int = -1
+        end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        period: Optional[int] = context.storage.iiss.get_calc_period(context)
+        if end_block_height is not None and period is not None:
+            start_calc_block: int = end_block_height - period + 1
         return start_calc_block

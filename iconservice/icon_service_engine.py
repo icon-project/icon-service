@@ -18,6 +18,8 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
+
+from .iiss.engine import RewardCalcDBInfo
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -1775,38 +1777,58 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before commit
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
 
+        precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
+        context = self._context_factory.create(IconScoreContextType.DIRECT,
+                                               block=precommit_data.block_batch.block)
+
+        rc_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data)
+        self._process_state_commit(context, precommit_data)
+        self._process_ipc(context, precommit_data.revision, rc_db_info)
+
+    def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
         precommit_data: 'PrecommitData' = \
             self._precommit_data_manager.get(instant_block_hash)
-        block_batch = precommit_data.block_batch
         if block_hash:
-            block_batch.block = Block(block_height=block_batch.block.height,
-                                      block_hash=block_hash,
-                                      timestamp=block_batch.block.timestamp,
-                                      prev_hash=block_batch.block.prev_hash,
-                                      cumulative_fee=block_batch.block.cumulative_fee)
+            precommit_data.block_batch.update_block_hash(block_hash)
+        return precommit_data
 
+    def _process_state_commit(self,
+                              context: 'IconScoreContext',
+                              precommit_data: 'PrecommitData'):
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
-        context = self._context_factory.create(IconScoreContextType.DIRECT, block=block_batch.block)
+        self._icx_context_db.write_batch(context=context, states=precommit_data.block_batch)
 
-        self._icx_context_db.write_batch(context=context, states=block_batch)
-
-        context.storage.icx.put_block_info(context, block_batch.block, precommit_data.revision)
-        self._precommit_data_manager.commit(block_batch.block)
+        context.storage.icx.put_block_info(context, precommit_data.block_batch.block, precommit_data.revision)
+        self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
         # after status DB commit
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
-            context.block = block_batch.block
+            context.block = precommit_data.block_batch.block
             self._init_global_value_by_governance_score(context)
 
-        if precommit_data.revision >= Revision.IISS.value:
-            context.engine.iiss.send_calculate(context, precommit_data)
-            context.engine.prep.commit(context, precommit_data)
-            context.storage.rc.commit(precommit_data.rc_block_batch)
-            # todo: consider case when error being raised in send ipc
-            context.engine.iiss.send_ipc(context)
+    @staticmethod
+    def _process_ipc(context: 'IconScoreContext',
+                     revision: int,
+                     rc_db_info: Optional['RewardCalcDBInfo']):
+        if revision < Revision.IISS.value:
+            return
+        context.engine.iiss.send_ipc(context, rc_db_info)
+
+    @staticmethod
+    def _process_iiss_commit(context: 'IconScoreContext', precommit_data) -> Optional['RewardCalcDBInfo']:
+        # todo: If iconservice is closed during commit rc, and retry putting TX rc data, could duplicated
+        # todo: not overwrite, cus key will be changed (TX key has a index)
+        # todo: check if no problem
+        if precommit_data.revision < Revision.IISS.value:
+            return None
+        rc_db_info: Optional['RewardCalcDBInfo'] = \
+            context.engine.iiss.replace_rc_db_start_of_calc(context, precommit_data)
+        context.engine.prep.commit(context, precommit_data)
+        context.storage.rc.commit(precommit_data.rc_block_batch)
+        return rc_db_info
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
