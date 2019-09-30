@@ -524,13 +524,15 @@ class IconServiceEngine(ContextContainer):
         return block_result, state_root_hash, added_transactions, main_prep_as_dict
 
     @staticmethod
-    def _make_state_root_hash(revision: int, block_state_root_hash: bytes, rc_state_hash: Optional[bytes]):
-        if revision < Revision.DECENTRALIZATION.value or rc_state_hash is None:
-            return block_state_root_hash
-
-        data = [block_state_root_hash, rc_state_hash]
-        value: bytes = b'|'.join(data)
-        return sha3_256(value)
+    def _make_state_root_hash(_revision: int, block_state_root_hash: bytes, _rc_state_hash: Optional[bytes]):
+        # TODO: P-Rep TestNet 1.5.8 only (goldworm)
+        return block_state_root_hash
+        # if revision < Revision.DECENTRALIZATION.value or rc_state_hash is None:
+        #     return block_state_root_hash
+        #
+        # data = [block_state_root_hash, rc_state_hash]
+        # value: bytes = b'|'.join(data)
+        # return sha3_256(value)
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls,
