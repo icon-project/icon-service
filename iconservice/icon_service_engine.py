@@ -1813,8 +1813,6 @@ class IconServiceEngine(ContextContainer):
     def _process_ipc(context: 'IconScoreContext',
                      revision: int,
                      rc_db_info: Optional['RewardCalcDBInfo']):
-        # todo: RC가 calculate 요청을 받지는 않았으나 RC 용 DB가 만들어졌으면, 어떻게 처리하는 지 확인할 필요가 있음
-        # todo: revision이 현재 반영이 안되어 있는 상황인데 문제없는 지 궁금하다.
         if revision < Revision.IISS.value:
             return
         context.engine.iiss.send_ipc(context, rc_db_info)
