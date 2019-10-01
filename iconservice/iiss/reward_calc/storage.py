@@ -47,6 +47,7 @@ class Storage(object):
     """
 
     _CURRENT_IISS_DB_NAME = "current_db"
+    _STANDBY_IISS_DB_NAME_PREFIX = "standby_db_"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
     _KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
@@ -184,6 +185,62 @@ class Storage(object):
         else:
             return int.from_bytes(encoded_last_index, DATA_BYTE_ORDER)
 
+    def _create_current_db(self, current_db_path: str):
+        self._db = KeyValueDatabase.from_path(current_db_path)
+        self._db_iiss_tx_index = -1
+
+    @staticmethod
+    def _rename_db(old_db_path: str, new_db_path: str):
+        if os.path.exists(old_db_path) and not os.path.exists(new_db_path):
+            os.rename(old_db_path, new_db_path)
+        else:
+            raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
+                                    "current DB path and IISS DB path")
+
+    def replace_db(self, block_height: int) -> str:
+        # rename current db -> standby db
+        assert block_height > 0
+        current_db_path: str = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
+        standby_db_path: str = self._rename_current_db_to_standby_db(current_db_path, block_height)
+
+        self._create_current_db(current_db_path)
+        return standby_db_path
+
+    def _rename_current_db_to_standby_db(self, current_db_path: str, block_height: int) -> str:
+        rc_version, _ = self.get_version_and_revision()
+        self._db.close()
+
+        if rc_version < 0:
+            rc_version: int = 0
+        standby_db_name: str = self._STANDBY_IISS_DB_NAME_PREFIX + str(block_height) + '_' + str(rc_version)
+        standby_db_path = os.path.join(self._path, standby_db_name)
+
+        self._rename_db(current_db_path, standby_db_path)
+
+        return standby_db_path
+
+    def rename_standby_db_to_iiss_db(self, standby_db_path: Optional[str] = None) -> str:
+        # After change the db name, reward calc menage this db (icon service does not have a authority)
+        if standby_db_path is None:
+            standby_db_path: str = self._get_standby_db_path()
+
+        iiss_db_path: str = self._IISS_RC_DB_NAME_PREFIX.\
+            join(standby_db_path.rsplit(self._STANDBY_IISS_DB_NAME_PREFIX, 1))
+        self._rename_db(standby_db_path, iiss_db_path)
+
+        return iiss_db_path
+
+    def _get_standby_db_path(self):
+        for db_name in os.listdir(self._path):
+            if db_name.startswith(self._STANDBY_IISS_DB_NAME_PREFIX):
+                standby_db_path: str = os.path.join(self._path, db_name)
+                break
+        else:
+            raise DatabaseException("Standby database not exists")
+
+        return standby_db_path
+
+    # todo: Will be removed
     def create_db_for_calc(self, block_height: int) -> str:
         assert block_height > 0
 
