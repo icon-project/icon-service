@@ -69,12 +69,13 @@ class WriteAheadLogWriter(object):
     """Write write-ahead-logging for block, state_db and rc_db on commit
 
     """
-    _FORMAT = ">4sIII"
+    _FORMAT = ">4sIIII"
 
-    def __init__(self, revision: int):
+    def __init__(self, revision: int, rc_db_revision):
         self._state: 'State' = State.NONE
 
         self._revision: int = revision
+        self._rc_db_revision: int = rc_db_revision
         self._fp = None
 
     def open(self, path: str):
@@ -90,7 +91,8 @@ class WriteAheadLogWriter(object):
 
     def _write_header(self) -> int:
         data: bytes = struct.pack(
-            self._FORMAT, _MAGIC_KEY, _FILE_VERSION, self._state.value, self._revision)
+            self._FORMAT, _MAGIC_KEY, _FILE_VERSION,
+            self._state.value, self._revision, self._rc_db_revision)
         return self._fp.write(data)
 
     def close(self):
@@ -110,7 +112,7 @@ class WriteAheadLogWriter(object):
         self._write_int32(size)
 
         for key, value in it:
-            size += self._write(key, value)
+            size += self._write_key_value(key, value)
 
         # Return to the begin of WALogable
         self._fp.seek(-size - 4, 1)
@@ -118,12 +120,10 @@ class WriteAheadLogWriter(object):
 
         return size
 
-    def _write(self, key: bytes, value: bytes) -> int:
+    def _write_key_value(self, key: bytes, value: bytes) -> int:
         assert isinstance(key, bytes)
 
-        item = KeyValueItem(key, value)
-        data: bytes = item.to_bytes()
-
+        data: bytes = msgpack.packb([key, value])
         size = self._fp.write(data)
         assert size == len(data)
 
@@ -143,6 +143,7 @@ class WriteAheadLogReader(object):
         self._version: int = 0
         self._state: 'State' = State.NONE
         self._revision: int = 0
+        self._rc_db_revision: int = 0
         self._block: Optional['Block'] = None
         self._fp = None
         self._start_wal_address: int = -1
@@ -163,7 +164,11 @@ class WriteAheadLogReader(object):
     def revision(self) -> int:
         return self._revision
 
-    def load(self, path: str):
+    @property
+    def rc_db_revision(self) -> int:
+        return self._rc_db_revision
+
+    def open(self, path: str):
         try:
             self._fp = open(path, "rb")
             self._read_header()
@@ -171,6 +176,11 @@ class WriteAheadLogReader(object):
             self._start_wal_address = self._fp.tell()
         except:
             raise InternalServiceErrorException(f"Failed to load {path}")
+
+    def close(self):
+        if self._fp:
+            self._fp.close()
+            self._fp = None
 
     def _read_header(self):
         data: bytes = self._fp.read(4)
@@ -199,11 +209,15 @@ class WriteAheadLogReader(object):
         return int.from_bytes(data, "big")
 
     def get_iterator(self, index: int) -> Iterable[Tuple[bytes, Optional[bytes]]]:
-        self._seek_to_db_data(index)
-        yield None, None
+        self._seek_to_wal_start_address(index)
+        size: int = self._read_int32()
 
-    def _seek_to_db_data(self, index: int):
-        self._fp.seek(self._start_wal_address)
+        unpacker = msgpack.Unpacker(self._fp, size, use_list=False, raw=True)
+        for key, value in unpacker:
+            yield key, value
+
+    def _seek_to_wal_start_address(self, index: int):
+        self._fp.seek(self._start_wal_address, 0)
 
         for i in range(index):
             size: int = self._read_int32()
