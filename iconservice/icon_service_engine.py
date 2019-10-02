@@ -31,6 +31,7 @@ from .base.exception import (
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.factory import ContextDatabaseFactory
+from .database.wal import WriteAheadLogReader
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
@@ -1909,3 +1910,48 @@ class IconServiceEngine(ContextContainer):
 
         self._set_revision_to_context(context)
         return inner_call(context, request)
+
+    def recover_db(self):
+        path = "./block-1234.wal"
+        if not os.path.isfile(path):
+            return
+
+        reader = WriteAheadLogReader()
+        try:
+            try:
+                reader.open(path)
+                self._recover_db(reader)
+            finally:
+                reader.close()
+                os.remove(path)
+        except:
+            pass
+
+    def _recover_db(self, reader: 'WriteAheadLogReader'):
+        Logger.info(tag="ISE", msg="_recover_wal() start")
+
+        """Recover database contents with write ahead log
+
+        Expected cases
+        * No wal file
+        * Incomplete wal file
+        * Complete wal file
+            * rc_db
+            * state_db            
+            * send CALCULATE message
+            * send COMMIT_BLOCK message
+
+        :param reader:
+        :return:
+        """
+
+        if reader.log_count != 2:
+            return
+
+        # Recover rc_db
+        for key, value in reader.get_iterator(0):
+            pass
+
+        self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
+
+        Logger.info(tag="ISE", msg="_recover_wal() end")
