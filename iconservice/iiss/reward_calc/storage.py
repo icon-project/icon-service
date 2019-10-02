@@ -50,9 +50,9 @@ class Storage(object):
     _STANDBY_IISS_DB_NAME_PREFIX = "standby_db_"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
-    _KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
-    _KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
-    _KEY_FOR_VERSION_AND_REVISION = b'version_and_revision'
+    KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
+    KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
+    KEY_FOR_VERSION_AND_REVISION = b'version_and_revision'
 
     def __init__(self):
         self._path: str = ""
@@ -113,10 +113,10 @@ class Storage(object):
     def put_calc_response_from_rc(self, iscore: int, block_height: int, state_hash: bytes):
         version = 1
         response_from_rc: bytes = MsgPackForDB.dumps([version, iscore, block_height, state_hash])
-        self._db.put(self._KEY_FOR_CALC_RESPONSE_FROM_RC, response_from_rc)
+        self._db.put(self.KEY_FOR_CALC_RESPONSE_FROM_RC, response_from_rc)
 
     def get_calc_response_from_rc(self) -> Tuple[int, int, Optional[bytes]]:
-        response_from_rc: Optional[bytes] = self._db.get(self._KEY_FOR_CALC_RESPONSE_FROM_RC)
+        response_from_rc: Optional[bytes] = self._db.get(self.KEY_FOR_CALC_RESPONSE_FROM_RC)
         if response_from_rc is None:
             return -1, -1, None
         response_from_rc: list = MsgPackForDB.loads(response_from_rc)
@@ -154,7 +154,7 @@ class Storage(object):
             batch_dict[key] = value
 
         if self._db_iiss_tx_index >= 0:
-            batch_dict[self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
+            batch_dict[self.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
                 self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
 
         self._db.write_batch(batch_dict)
@@ -164,10 +164,10 @@ class Storage(object):
     def put_version_and_revision(self, revision: int):
         version: int = get_rc_version(revision)
         version_and_revision: bytes = MsgPackForDB.dumps([version, revision])
-        self._db.put(self._KEY_FOR_VERSION_AND_REVISION, version_and_revision)
+        self._db.put(self.KEY_FOR_VERSION_AND_REVISION, version_and_revision)
 
     def get_version_and_revision(self) -> Tuple[int, int]:
-        version_and_revision: Optional[bytes] = self._db.get(self._KEY_FOR_VERSION_AND_REVISION)
+        version_and_revision: Optional[bytes] = self._db.get(self.KEY_FOR_VERSION_AND_REVISION)
         version: int = -1
         revision: int = -1
         if version_and_revision is None:
@@ -179,7 +179,7 @@ class Storage(object):
         return version, revision
 
     def _load_last_transaction_index(self) -> int:
-        encoded_last_index: Optional[bytes] = self._db.get(self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX)
+        encoded_last_index: Optional[bytes] = self._db.get(self.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX)
         if encoded_last_index is None:
             return -1
         else:

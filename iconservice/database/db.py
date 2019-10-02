@@ -106,10 +106,9 @@ class KeyValueDatabase(object):
     def iterator(self) -> iter:
         return self._db.iterator()
 
-    def write_batch(self, states: dict, converter: Optional[callable] = None) -> None:
+    def write_batch(self, states: dict) -> None:
         """Write a batch to the database for the specified states dict.
 
-        :param converter: function that converts the value of state dictionary to bytes
         :param states: key/value pairs
             key: bytes
             value:
@@ -119,8 +118,6 @@ class KeyValueDatabase(object):
 
         with self._db.write_batch() as wb:
             for key, value in states.items():
-                if converter:
-                    value = converter(value)
                 if value:
                     wb.put(key, value)
                 else:
@@ -326,7 +323,7 @@ class ContextDatabase(object):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(states, converter=tx_batch_value_to_bytes)
+        return self.key_value_db.write_batch(states)
 
     @staticmethod
     def from_path(path: str,

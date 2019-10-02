@@ -223,7 +223,7 @@ class TestRcDataStorage(unittest.TestCase):
         expected_index = -1
         self.assertEqual(expected_index, self.rc_data_storage._db_iiss_tx_index)
         self.assertEqual(None,
-                         self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX))
+                         self.rc_data_storage._db.get(self.rc_data_storage.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX))
 
     def test_commit_with_iiss_tx(self):
         # todo: should supplement this unit tests
@@ -235,7 +235,7 @@ class TestRcDataStorage(unittest.TestCase):
 
             recorded_index = \
                 int.from_bytes(
-                    self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX), 'big')
+                    self.rc_data_storage._db.get(self.rc_data_storage.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX), 'big')
             self.assertEqual(expected_index, recorded_index)
 
             last_tx_index = -1
@@ -260,7 +260,7 @@ class TestRcDataStorage(unittest.TestCase):
         assert len(expected_state_hash) == 32
 
         self.rc_data_storage.put_calc_response_from_rc(expected_i_score, expected_block_height, expected_state_hash)
-        i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_CALC_RESPONSE_FROM_RC))
+        i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage.KEY_FOR_CALC_RESPONSE_FROM_RC))
         assert i_score_db_data[0] == expected_version
         assert i_score_db_data[1] == expected_i_score
         assert i_score_db_data[2] == expected_block_height

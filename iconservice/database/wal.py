@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from ..database.batch import BlockBatch
+from ..database.db import tx_batch_value_to_bytes
+from ..icon_constant import DATA_BYTE_ORDER
+from ..iiss.reward_calc.msg_data import TxData
+from ..iiss.reward_calc.storage import Storage, get_rc_version
+from ..utils.msgpack_for_db import MsgPackForDB
 
 __all__ = ("WriteAheadLogWriter", "WriteAheadLogReader", "WALogable")
 
@@ -44,6 +50,60 @@ _OFFSET_LOG_START = _OFFSET_LOG_COUNT + 4
 class WALogable(metaclass=ABCMeta):
     def __iter__(self) -> Tuple[bytes, Optional[bytes]]:
         pass
+
+
+class StateWAL(WALogable):
+    def __init__(self, block_batch: 'BlockBatch', converter: Optional[callable] = tx_batch_value_to_bytes):
+        self.block_batch: 'BlockBatch' = block_batch
+        self.converter: callable = converter
+
+    def __iter__(self) -> Tuple[bytes, Optional[bytes]]:
+        for key, value in self.block_batch.items():
+            if self.converter:
+                value = self.converter(value)
+            yield key, value
+
+
+class IissWAL(WALogable):
+    def __init__(self, rc_batch: list, tx_index: int, revision: int = -1):
+        self._rc_batch: list = rc_batch
+        self._tx_index: int = tx_index
+        self._revision: int = revision
+        self._version: int = self._get_version()
+
+    def _get_version(self):
+        version: int = -1
+        if self._revision == -1:
+            return version
+        else:
+            version: int = get_rc_version(self._revision)
+            return version
+
+    def __iter__(self) -> Tuple[bytes, Optional[bytes]]:
+        tx_index = self._tx_index
+
+        # In case of the start block of calc period, put version, revision
+        if self._revision != -1:
+            key: bytes = Storage.KEY_FOR_VERSION_AND_REVISION
+            value: bytes = MsgPackForDB.dumps([self._version, self._revision])
+            yield key, value
+
+        if len(self._rc_batch) == 0:
+            return
+
+        for iiss_data in self._rc_batch:
+            if isinstance(iiss_data, TxData):
+                tx_index += 1
+                key: bytes = iiss_data.make_key(tx_index)
+            else:
+                key: bytes = iiss_data.make_key()
+            value: bytes = iiss_data.make_value()
+            yield key, value
+
+        if tx_index >= 0:
+            key: bytes = Storage.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX
+            value: bytes = tx_index.to_bytes(8, DATA_BYTE_ORDER)
+            yield key, value
 
 
 def _uint32_to_bytes(value: int):

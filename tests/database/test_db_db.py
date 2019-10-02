@@ -61,7 +61,7 @@ class TestKeyValueDatabase(unittest.TestCase):
         }
         db = self.db
 
-        db.write_batch(data, converter=tx_batch_value_to_bytes)
+        db.write_batch(data)
 
         self.assertEqual(b'value1', db.get(b'key1'))
         self.assertEqual(b'value0', db.get(b'key0'))
