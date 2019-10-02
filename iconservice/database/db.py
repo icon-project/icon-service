@@ -19,6 +19,7 @@ import plyvel
 from iconcommons.logger import Logger
 
 from iconservice.database.batch import TransactionBatchValue
+from iconservice.database.wal import StateWAL
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
@@ -317,13 +318,13 @@ class ContextDatabase(object):
 
     def write_batch(self,
                     context: 'IconScoreContext',
-                    it: Iterable[Tuple[bytes, Optional[bytes]]]):
+                    state_wal: 'StateWAL'):
 
         if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(it)
+        return self.key_value_db.write_batch(state_wal)
 
     @staticmethod
     def from_path(path: str,

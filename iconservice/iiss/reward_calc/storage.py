@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 from iconcommons import Logger
 
+from iconservice.database.wal import IissWAL
 from iconservice.iiss.engine import RewardCalcDBInfo
 from ..reward_calc.msg_data import Header
 from ...base.exception import DatabaseException
@@ -139,7 +140,7 @@ class Storage(object):
     def get_tx_index(self, context: 'IconScoreContext') -> int:
         tx_index: int = -1
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-        if start_calc_block_height != context.block.height:
+        if start_calc_block_height == context.block.height:
             return tx_index
         else:
             # todo: check if return db data.
@@ -150,8 +151,9 @@ class Storage(object):
         Logger.debug(tag=IISS_LOG_TAG, msg=f"put data: {str(iiss_data)}")
         batch.append(iiss_data)
 
-    def commit(self, it: Iterable[Tuple[bytes, Optional[bytes]]]):
-        self._db.write_batch(it)
+    def commit(self, iiss_wal: 'IissWAL'):
+        self._db.write_batch(iiss_wal)
+        self._db_iiss_tx_index = iiss_wal.final_tx_index
 
     # todo: naming
     def _put_version_and_revision(self, revision: int):
@@ -178,7 +180,7 @@ class Storage(object):
         else:
             return int.from_bytes(encoded_last_index, DATA_BYTE_ORDER)
 
-    def _create_current_db(self, current_db_path: str):
+    def create_current_db(self, current_db_path: str):
         self._db = KeyValueDatabase.from_path(current_db_path)
         self._db_iiss_tx_index = -1
 
@@ -196,7 +198,7 @@ class Storage(object):
         current_db_path: str = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
         standby_db_path: str = self._rename_current_db_to_standby_db(current_db_path, block_height)
 
-        self._create_current_db(current_db_path)
+        self.create_current_db(current_db_path)
         return RewardCalcDBInfo(standby_db_path, block_height)
 
     def _rename_current_db_to_standby_db(self, current_db_path: str, block_height: int) -> str:

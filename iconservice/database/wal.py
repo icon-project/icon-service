@@ -70,6 +70,14 @@ class IissWAL(WALogable):
         self._revision: int = revision
         self._version: int = self._get_version()
 
+        self._final_tx_index: Optional[int] = None
+
+    @property
+    def final_tx_index(self):
+        assert self._final_tx_index is not None
+
+        return self._final_tx_index
+
     def _get_version(self):
         version: int = -1
         if self._revision == -1:
@@ -104,6 +112,8 @@ class IissWAL(WALogable):
             key: bytes = Storage.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX
             value: bytes = tx_index.to_bytes(8, DATA_BYTE_ORDER)
             yield key, value
+
+        self._final_tx_index = tx_index
 
 
 def _uint32_to_bytes(value: int):

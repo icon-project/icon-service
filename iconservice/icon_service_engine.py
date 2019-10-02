@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
 
-from iconservice.database.wal import WriteAheadLogWriter, IissWAL
+from iconservice.database.wal import WriteAheadLogWriter, IissWAL, StateWAL
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -1781,47 +1781,52 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT,
                                                block=precommit_data.block_batch.block)
+
+        state_wal, iiss_wal = self._process_wal(context, precommit_data)
         # todo: temp path to real path
-        log_path: str = "temp"
-        wal_writer: 'WriteAheadLogWriter' = WriteAheadLogWriter(precommit_data.revision, 2, precommit_data.block)
-        wal_writer.open(log_path)
-        iiss_wal: 'IissWAL' = None
+
+
+        # commit to db
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
+
+        standby_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context,
+                                                                                  precommit_data,
+                                                                                  iiss_wal,
+                                                                                  start_calc_block_height)
+        self._process_state_commit(context, precommit_data, state_wal)
+
+        # send IPC
+        self._process_ipc(context, precommit_data, standby_db_info)
+
+        # remove WAL
+
+    def _process_wal(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        log_path: str = "temp"
+        max_log_count: int = 1
+        iiss_wal: 'IissWAL' = None
         if precommit_data.revision >= Revision.IISS.value:
+            max_log_count += 1
+            start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
             # write rc data to WAL
             tx_index: int = context.storage.reward_calc.get_tx_index(context)
             revision: int = -1
             if start_calc_block_height == context.block.height:
                 revision: int = precommit_data.rc_db_revision
             iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
-            wal_writer.write_walogable(iiss_wal)
 
         # write state data to WAL
-
-        # change the state (end of writing WAL)
-
+        state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
+        wal_writer: 'WriteAheadLogWriter' = WriteAheadLogWriter(precommit_data.revision,
+                                                                max_log_count,
+                                                                precommit_data.block)
+        wal_writer.open(log_path)
+        wal_writer.write_walogable(state_wal)
+        if iiss_wal is not None:
+            wal_writer.write_walogable(iiss_wal)
         # close
         wal_writer.close()
 
-        # replace db only when start calc
-        standby_db_info: Optional['RewardCalcDBInfo'] = None
-        if precommit_data.revision >= Revision.IISS.value:
-            if start_calc_block_height == context.block.height:
-                calculate_block_height: int = context.block.height - 1
-                standby_db_info: 'RewardCalcDBInfo' = context.storage.reward_calc.replace_db(calculate_block_height)
-
-        # commit to db
-        context.storage.reward_calc.commit(iiss_wal)
-
-        # change the WAL state
-
-        # send IPC
-        if precommit_data.revision >= Revision.IISS.value:
-            self._process_ipc(context, precommit_data, standby_db_info)
-
-        # remove WAL
-        rc_db_info = self._process_iiss_commit(context, precommit_data)
-        self._process_state_commit(context, precommit_data)
+        return state_wal, iiss_wal
 
     def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
         precommit_data: 'PrecommitData' = \
@@ -1834,14 +1839,15 @@ class IconServiceEngine(ContextContainer):
 
     def _process_state_commit(self,
                               context: 'IconScoreContext',
-                              precommit_data: 'PrecommitData'):
+                              precommit_data: 'PrecommitData',
+                              state_wal: 'StateWAL'):
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
-        self._icx_context_db.write_batch(context=context, it=precommit_data.block_batch)
+        self._icx_context_db.write_batch(state_wal)
 
-        context.storage.icx.put_block_info(context, precommit_data.block_batch.block, precommit_data.revision)
+        context.storage.icx.set_last_block(context, precommit_data.block_batch.block, precommit_data.revision)
         self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
         # after status DB commit
@@ -1850,26 +1856,32 @@ class IconServiceEngine(ContextContainer):
             self._init_global_value_by_governance_score(context)
 
     @staticmethod
+    def _process_iiss_commit(context: 'IconScoreContext',
+                             precommit_data: 'PrecommitData',
+                             iiss_wal: 'IissWAL',
+                             start_calc_block_height: int) -> Optional['RewardCalcDBInfo']:
+        if precommit_data.revision < Revision.IISS.value:
+            return None
+        standby_db_info: Optional['RewardCalcDBInfo'] = None
+        if start_calc_block_height == context.block.height:
+            calculate_block_height: int = context.block.height - 1
+            standby_db_info: 'RewardCalcDBInfo' = context.storage.reward_calc.replace_db(calculate_block_height)
+
+        context.engine.prep.commit(context, precommit_data)
+        context.storage.reward_calc.commit(iiss_wal)
+        return standby_db_info
+
+    @staticmethod
     def _process_ipc(context: 'IconScoreContext',
                      precommit_data: 'PrecommitData',
                      standby_db_info: Optional['RewardCalcDBInfo']):
         if precommit_data.revision < Revision.IISS.value:
             return
         context.engine.iiss.send_commit(precommit_data)
-        if standby_db_info is not None:
-            block_height: int = standby_db_info.block_height
-            iiss_db_path: str = context.storage.reward_calc.rename_standby_db_to_iiss_db(standby_db_info.path)
-            context.engine.iiss.send_calculate(iiss_db_path, block_height)
 
-    @staticmethod
-    def _process_iiss_commit(context: 'IconScoreContext', precommit_data):
-        # todo: If iconservice is closed during commit rc, and retry putting TX rc data, could duplicated
-        # todo: not overwrite, cus key will be changed (TX key has a index)
-        # todo: check if no problem
-        if precommit_data.revision < Revision.IISS.value:
-            return None
-        context.engine.prep.commit(context, precommit_data)
-        context.storage.rc.commit(precommit_data.rc_block_batch)
+        if standby_db_info is not None:
+            iiss_db_path: str = context.storage.reward_calc.rename_standby_db_to_iiss_db(standby_db_info.path)
+            context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
