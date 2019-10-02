@@ -17,11 +17,11 @@ import os
 import random
 import unittest
 
-from iconservice.icon_constant import Revision
 from iconservice.base.block import Block
 from iconservice.database.wal import (
-    _FILE_VERSION, WriteAheadLogReader, WriteAheadLogWriter, WALogable, State
+    _MAGIC_KEY, _FILE_VERSION, WriteAheadLogReader, WriteAheadLogWriter, WALogable
 )
+from iconservice.icon_constant import Revision
 
 
 class WALogableData(WALogable):
@@ -37,16 +37,19 @@ class TestWriteAheadLog(unittest.TestCase):
 
     def setUp(self) -> None:
         self.path = "./test.wal"
-        self.data_0 = {
-            b"a": b"apple",
-            b"b": b"banana",
-            b"c": None
-        }
-        self.data_1 = {
-            b"1": None,
-            b"2": b"2-hello",
-            b"3": b"3-world"
-        }
+
+        self.log_data = [
+            {
+                b"a": b"apple",
+                b"b": b"banana",
+                b"c": None
+            },
+            {
+                b"1": None,
+                b"2": b"2-hello",
+                b"3": b"3-world"
+            }
+        ]
 
         self.block = Block(
             block_height=random.randint(0, 1000),
@@ -62,35 +65,36 @@ class TestWriteAheadLog(unittest.TestCase):
         except:
             pass
 
-    def test_init(self):
+    def test_writer_and_reader(self):
         revision = Revision.IISS.value
+        log_count = 2
+        state = random.randint(0, 100)
 
-        writer = WriteAheadLogWriter(revision, rc_db_revision)
+        writer = WriteAheadLogWriter(revision, log_count, self.block)
         writer.open(self.path)
-        writer.write_block(self.block)
-        writer.write_walogable(WALogableData(self.data_0))
-        writer.write_walogable(WALogableData(self.data_1))
+
+        for i in range(log_count):
+            writer.write_walogable(WALogableData(self.log_data[i]))
+
+        writer.write_state(state)
         writer.close()
 
         reader = WriteAheadLogReader()
         reader.open(self.path)
+        assert reader.magic_key == _MAGIC_KEY
         assert reader.version == _FILE_VERSION
-        assert reader.state == State.NONE
+        assert reader.state == state
         assert reader.revision == revision
         assert reader.block == self.block
+        assert reader.log_count == log_count
 
-        data_0 = {}
-        it_data_0 = reader.get_iterator(0)
-        for key, value in it_data_0:
-            data_0[key] = value
-        assert data_0 == self.data_0
-        assert id(data_0) != id(self.data_0)
+        for i in range(len(self.log_data)):
+            data = {}
 
-        data_1 = {}
-        it_data_1 = reader.get_iterator(1)
-        for key, value in it_data_1:
-            data_1[key] = value
-        assert data_1 == self.data_1
-        assert id(data_1) != id(self.data_1)
+            for key, value in reader.get_iterator(i):
+                data[key] = value
+
+            assert data == self.log_data[i]
+            assert id(data) != id(self.log_data[i])
 
         reader.close()
