@@ -15,16 +15,17 @@
 # limitations under the License.
 
 import os
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 from iconcommons import Logger
 
-from ...iconscore.icon_score_context import IconScoreContext
-from ...iiss.reward_calc.data_creator import DataCreator
-from ..reward_calc.msg_data import TxData, Header
+from iconservice.iiss.engine import RewardCalcDBInfo
+from ..reward_calc.msg_data import Header
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+from ...iconscore.icon_score_context import IconScoreContext
+from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -46,8 +47,8 @@ class Storage(object):
 
     """
 
-    _CURRENT_IISS_DB_NAME = "current_db"
-    _STANDBY_IISS_DB_NAME_PREFIX = "standby_db_"
+    _CURRENT_IISS_DB_NAME = "current_rc_db"
+    _STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db_"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
     KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
@@ -70,6 +71,7 @@ class Storage(object):
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
         self._db = KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
+        # todo: check side effect of WAL
         self._supplement_db(context, revision)
 
     def _supplement_db(self, context: 'IconScoreContext', revision: int):
@@ -79,7 +81,7 @@ class Storage(object):
 
         rc_version, _ = self.get_version_and_revision()
         if rc_version == -1:
-            self.put_version_and_revision(revision)
+            self._put_version_and_revision(revision)
 
         # On the first change point.
         # We have to put Header for RC
@@ -134,34 +136,25 @@ class Storage(object):
 
         return iscore, block_height, state_hash
 
+    def get_tx_index(self, context: 'IconScoreContext') -> int:
+        tx_index: int = -1
+        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
+        if start_calc_block_height != context.block.height:
+            return tx_index
+        else:
+            # todo: check if return db data.
+            return self._db_iiss_tx_index
+
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):
         Logger.debug(tag=IISS_LOG_TAG, msg=f"put data: {str(iiss_data)}")
         batch.append(iiss_data)
 
-    def commit(self, rc_block_batch: list):
-        if len(rc_block_batch) == 0:
-            return
-
-        batch_dict = {}
-        for iiss_data in rc_block_batch:
-            if isinstance(iiss_data, TxData):
-                self._db_iiss_tx_index += 1
-                key: bytes = iiss_data.make_key(self._db_iiss_tx_index)
-            else:
-                key: bytes = iiss_data.make_key()
-            value: bytes = iiss_data.make_value()
-            batch_dict[key] = value
-
-        if self._db_iiss_tx_index >= 0:
-            batch_dict[self.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
-                self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
-
-        self._db.write_batch(batch_dict)
-        rc_block_batch.clear()
+    def commit(self, it: Iterable[Tuple[bytes, Optional[bytes]]]):
+        self._db.write_batch(it)
 
     # todo: naming
-    def put_version_and_revision(self, revision: int):
+    def _put_version_and_revision(self, revision: int):
         version: int = get_rc_version(revision)
         version_and_revision: bytes = MsgPackForDB.dumps([version, revision])
         self._db.put(self.KEY_FOR_VERSION_AND_REVISION, version_and_revision)
@@ -197,14 +190,14 @@ class Storage(object):
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
 
-    def replace_db(self, block_height: int) -> str:
+    def replace_db(self, block_height: int) -> 'RewardCalcDBInfo':
         # rename current db -> standby db
         assert block_height > 0
         current_db_path: str = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
         standby_db_path: str = self._rename_current_db_to_standby_db(current_db_path, block_height)
 
         self._create_current_db(current_db_path)
-        return standby_db_path
+        return RewardCalcDBInfo(standby_db_path, block_height)
 
     def _rename_current_db_to_standby_db(self, current_db_path: str, block_height: int) -> str:
         rc_version, _ = self.get_version_and_revision()

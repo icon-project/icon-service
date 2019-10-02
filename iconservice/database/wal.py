@@ -83,6 +83,7 @@ class IissWAL(WALogable):
 
         # In case of the start block of calc period, put version, revision
         if self._revision != -1:
+            # todo: refactoring (same logic exists in reward_calc storage
             key: bytes = Storage.KEY_FOR_VERSION_AND_REVISION
             value: bytes = MsgPackForDB.dumps([self._version, self._revision])
             yield key, value

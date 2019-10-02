@@ -724,27 +724,14 @@ class Engine(EngineBase):
         self._put_end_calc_block_height(context)
         self._put_rrep(context)
 
-    def send_ipc(self,
-                 precommit_data: 'PrecommitData', rc_db_info: Optional['RewardCalcDBInfo']):
+    def send_commit(self,
+                    precommit_data: 'PrecommitData'):
         self._reward_calc_proxy.commit_block(True,
                                              precommit_data.block.height,
                                              precommit_data.block.hash)
-        if rc_db_info is not None:
-            self._reward_calc_proxy.calculate(rc_db_info.path, rc_db_info.block_height)
 
-    def replace_rc_db_start_of_calc(self,
-                                    context: 'IconScoreContext',
-                                    precommit_data: 'PrecommitData') -> Optional['RewardCalcDBInfo']:
-        # todo: flag에 대한 논의 필요 (commit 때 해당 값을 읽어오는 것이 맞는가)
-        start: int = self.get_start_block_of_calc(context)
-        if start != context.block.height:
-            return None
-
-        block_height: int = precommit_data.block.height - 1
-        path: str = context.storage.rc.create_db_for_calc(block_height)
-        # Put version and revision for replaced RC DB
-        context.storage.rc.put_version_and_revision(precommit_data.rc_db_revision)
-        return RewardCalcDBInfo(path, block_height)
+    def send_calculate(self, iiss_db_path: str, block_height: int):
+        self._reward_calc_proxy.calculate(iiss_db_path, block_height)
 
     @classmethod
     def _is_iiss_calc(cls,

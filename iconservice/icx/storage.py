@@ -57,7 +57,7 @@ class Storage(StorageBase):
     _TREASURY_DB_KEY = 'fee_treasury'
 
     # Level db keys
-    _LAST_BLOCK_KEY = b'last_block'
+    LAST_BLOCK_KEY = b'last_block'
     _TOTAL_SUPPLY_KEY = b'total_supply'
 
     def __init__(self, db: 'ContextDatabase'):
@@ -88,7 +88,7 @@ class Storage(StorageBase):
         return self._fee_treasury
 
     def load_last_block_info(self, context: 'IconScoreContext'):
-        block_bytes = self._db.get(context, self._LAST_BLOCK_KEY)
+        block_bytes = self._db.get(context, self.LAST_BLOCK_KEY)
         if block_bytes is None:
             return
 
@@ -121,7 +121,7 @@ class Storage(StorageBase):
         Logger.debug(f'_load_address_from_storage() end(address type: {db_key})', ICX_LOG_TAG)
 
     def put_block_info(self, context: 'IconScoreContext', block: 'Block', revision: int):
-        self._db.put(context, self._LAST_BLOCK_KEY, block.to_bytes(revision))
+        self._db.put(context, self.LAST_BLOCK_KEY, block.to_bytes(revision))
         self._last_block = block
 
     def put_genesis_accounts(self, context: 'IconScoreContext', accounts: list):

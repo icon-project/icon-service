@@ -13,11 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, Optional, Dict
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 import plyvel
-
 from iconcommons.logger import Logger
+
 from iconservice.database.batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
@@ -106,18 +106,18 @@ class KeyValueDatabase(object):
     def iterator(self) -> iter:
         return self._db.iterator()
 
-    def write_batch(self, states: dict) -> None:
+    def write_batch(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> None:
         """Write a batch to the database for the specified states dict.
 
-        :param states: key/value pairs
+        :param it: iterable which return tuple(key, value)
             key: bytes
-            value:
+            value: optional bytes
         """
-        if states is None or len(states) == 0:
+        if it is None:
             return
 
         with self._db.write_batch() as wb:
-            for key, value in states.items():
+            for key, value in it:
                 if value:
                     wb.put(key, value)
                 else:
@@ -317,13 +317,13 @@ class ContextDatabase(object):
 
     def write_batch(self,
                     context: 'IconScoreContext',
-                    states: Dict[bytes, 'TransactionBatchValue']):
+                    it: Iterable[Tuple[bytes, Optional[bytes]]]):
 
         if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(states)
+        return self.key_value_db.write_batch(it)
 
     @staticmethod
     def from_path(path: str,
