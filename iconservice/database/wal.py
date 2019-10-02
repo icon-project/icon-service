@@ -23,7 +23,6 @@ __all__ = ("WriteAheadLogWriter", "WriteAheadLogReader", "WALogable")
 
 import struct
 from abc import ABCMeta
-from enum import Flag, auto
 from typing import Optional, Tuple, Iterable, List
 
 import msgpack
@@ -44,7 +43,7 @@ _OFFSET_VERSION = _OFFSET_MAGIC_KEY + 4
 _OFFSET_REVISION = _OFFSET_VERSION + 4
 _OFFSET_STATE = _OFFSET_REVISION + 4
 _OFFSET_LOG_COUNT = _OFFSET_STATE + 4
-_OFFSET_LOG_START = _OFFSET_LOG_COUNT + 4
+_OFFSET_LOG_START_OFFSETS = _OFFSET_LOG_COUNT + 4
 
 
 class WALogable(metaclass=ABCMeta):
@@ -132,7 +131,7 @@ class WriteAheadLogWriter(object):
         self._max_log_count: int = max_log_count
         self._log_count: int = 0
 
-        self._header_size: _OFFSET_LOG_START + max_log_count * 4
+        self._header_size: _OFFSET_LOG_START_OFFSETS + max_log_count * 4
 
         self._block = block
         self._fp = None
@@ -145,9 +144,9 @@ class WriteAheadLogWriter(object):
             self._fp = open(path, "wb")
             self._write_header()
             self._write_block()
-        except IOError:
+        except:
             self._fp = None
-            raise InternalServiceErrorException(f"Failed to open '{path}")
+            raise
 
     def _write_header(self) -> int:
         values = [
@@ -222,7 +221,7 @@ class WriteAheadLogWriter(object):
         return self._fp.write(data)
 
     def _write_log_start_offset(self, index: int, start_offset: int) -> int:
-        offset = _OFFSET_LOG_START + index * 4
+        offset = _OFFSET_LOG_START_OFFSETS + index * 4
         self._fp.seek(offset, 0)
 
         return self._write_uint32(start_offset)
@@ -236,6 +235,9 @@ class WriteAheadLogWriter(object):
 
 
 class WriteAheadLogReader(object):
+    """Read data from a write ahead log file
+
+    """
 
     def __init__(self):
         self._magic_key: Optional[bytes] = None
@@ -243,11 +245,10 @@ class WriteAheadLogReader(object):
         self._revision: int = 0
         self._state: int = 0
         self._log_count: int = 0
-        self._log_start_offsets = []
+        self._log_start_offsets: Optional[List[int]] = None
         self._block: Optional['Block'] = None
 
         self._fp = None
-        self._start_wal_address: int = -1
 
     @property
     def magic_key(self) -> Optional[bytes]:
@@ -274,13 +275,9 @@ class WriteAheadLogReader(object):
         return self._log_count
 
     def open(self, path: str):
-        try:
-            self._fp = open(path, "rb")
-            self._read_header()
-            self._read_block()
-            self._start_wal_address = self._fp.tell()
-        except:
-            raise InternalServiceErrorException(f"Failed to load {path}")
+        self._fp = open(path, "rb")
+        self._read_header()
+        self._read_block()
 
     def close(self):
         if self._fp:
@@ -289,8 +286,7 @@ class WriteAheadLogReader(object):
 
     def _read_header(self):
         data: bytes = self._fp.read(_HEADER_SIZE)
-        if len(data) < _HEADER_SIZE:
-            raise IllegalFormatException("WAL header size not enough")
+        self._check_bytes_data(data, _HEADER_SIZE)
 
         magic_key, version, revision, state, log_count = \
             struct.unpack_from(_HEADER_STRUCT_FORMAT, data)
@@ -306,6 +302,7 @@ class WriteAheadLogReader(object):
         self._revision = revision
         self._state = state
         self._log_count = log_count
+        self._log_start_offsets = []
 
         for _ in range(self._log_count):
             offset = self._read_uint32()
@@ -314,10 +311,15 @@ class WriteAheadLogReader(object):
     def _read_block(self):
         size: int = self._read_uint32()
         data: bytes = self._fp.read(size)
+        self._check_bytes_data(data, size)
+
         self._block = Block.from_bytes(data)
 
     def _read_uint32(self) -> int:
-        data: bytes = self._fp.read(4)
+        size = 4
+        data: bytes = self._fp.read(size)
+        self._check_bytes_data(data, size)
+
         return _bytes_to_uint32(data)
 
     def get_iterator(self, index: int) -> Iterable[Tuple[bytes, Optional[bytes]]]:
@@ -326,11 +328,11 @@ class WriteAheadLogReader(object):
 
         unpacker = msgpack.Unpacker(use_list=False, raw=True)
 
-        size_to_read = 16 * 1024
         while size > 0:
-            size_to_read = min(size, size_to_read)
+            size_to_read = min(size, 16384)
             data: bytes = self._fp.read(size_to_read)
-            assert len(data) == size_to_read
+            self._check_bytes_data(data, size_to_read)
+
             size -= size_to_read
 
             unpacker.feed(data)
@@ -340,3 +342,11 @@ class WriteAheadLogReader(object):
     def _seek_to_log_start_offset(self, index: int):
         offset = self._log_start_offsets[index]
         self._fp.seek(offset, 0)
+
+    @classmethod
+    def _check_bytes_data(cls, data: bytes, size: int):
+        if not isinstance(data, bytes):
+            raise IllegalFormatException("Data is not bytes")
+
+        if len(data) != size:
+            raise IllegalFormatException(f"Out of data: data_size({len(data)}) != size_to_read({size})")

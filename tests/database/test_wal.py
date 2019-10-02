@@ -42,11 +42,13 @@ class TestWriteAheadLog(unittest.TestCase):
             {
                 b"a": b"apple",
                 b"b": b"banana",
-                b"c": None
+                b"c": None,
+                b"d": b""
             },
             {
                 b"1": None,
                 b"2": b"2-hello",
+                b"4": b"",
                 b"3": b"3-world"
             }
         ]
