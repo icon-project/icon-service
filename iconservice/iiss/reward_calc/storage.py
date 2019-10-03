@@ -16,10 +16,9 @@
 
 import os
 from collections import namedtuple
-from typing import TYPE_CHECKING, Optional, Tuple, Iterable
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from iconcommons import Logger
-
 from ..reward_calc.msg_data import Header, TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
@@ -37,13 +36,14 @@ RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
 
 
 def get_rc_version(revision: int) -> int:
-    if revision < Revision.IISS.value:
-        return RC_DB_VERSION_0
+    while revision >= Revision.IISS.value:
+        version: int = RC_DATA_VERSION_TABLE.get(revision, -1)
+        if version > -1:
+            return version
 
-    version: Optional[int] = RC_DATA_VERSION_TABLE.get(revision)
-    if version is None:
-        return get_rc_version(revision - 1)
-    return version
+        revision -= 1
+
+    return RC_DB_VERSION_0
 
 
 class Storage(object):

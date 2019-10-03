@@ -53,7 +53,7 @@ class WALState(IntEnum):
     END_IPC = 2
 
 
-def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> bytes:
+def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> Optional[bytes]:
     if not isinstance(tx_batch_value, TransactionBatchValue):
         raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
     return tx_batch_value.value
