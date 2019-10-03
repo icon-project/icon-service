@@ -54,7 +54,6 @@ _TAG = IISS_LOG_TAG
 
 QUERY_CALCULATE_REPEAT_COUNT = 3
 
-RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
 
 
 class EngineListener(metaclass=ABCMeta):

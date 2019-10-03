@@ -15,13 +15,12 @@
 # limitations under the License.
 
 import os
+from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 from iconcommons import Logger
 
-from iconservice.database.wal import IissWAL
-from iconservice.iiss.engine import RewardCalcDBInfo
-from ..reward_calc.msg_data import Header
+from ..reward_calc.msg_data import Header, TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
@@ -30,7 +29,11 @@ from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
+    from ...database.wal import IissWAL
     from ..reward_calc.msg_data import Data
+
+
+RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
 
 
 def get_rc_version(revision: int) -> int:
@@ -101,10 +104,14 @@ class Storage(object):
 
             Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
 
-    def put_data_directly(self, iiss_data: 'Data'):
-        temp_rc_batch: list = []
-        self.put(temp_rc_batch, iiss_data)
-        self.commit(temp_rc_batch)
+    def put_data_directly(self, iiss_data: 'Data', tx_index: Optional[int] = None):
+        if isinstance(iiss_data, TxData):
+            key: bytes = iiss_data.make_key(tx_index)
+            value: bytes = iiss_data.make_value()
+        else:
+            key: bytes = iiss_data.make_key()
+            value: bytes = iiss_data.make_value()
+        self._db.put(key, value)
 
     def close(self):
         """Close the embedded database.
@@ -137,13 +144,11 @@ class Storage(object):
 
         return iscore, block_height, state_hash
 
-    def get_tx_index(self, context: 'IconScoreContext') -> int:
+    def get_tx_index(self, start_calc: bool) -> int:
         tx_index: int = -1
-        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-        if start_calc_block_height == context.block.height:
+        if start_calc:
             return tx_index
         else:
-            # todo: check if return db data.
             return self._db_iiss_tx_index
 
     @staticmethod
@@ -153,7 +158,8 @@ class Storage(object):
 
     def commit(self, iiss_wal: 'IissWAL'):
         self._db.write_batch(iiss_wal)
-        self._db_iiss_tx_index = iiss_wal.final_tx_index
+        if iiss_wal.final_tx_index is not None:
+            self._db_iiss_tx_index = iiss_wal.final_tx_index
 
     # todo: naming
     def _put_version_and_revision(self, revision: int):
@@ -234,29 +240,3 @@ class Storage(object):
             raise DatabaseException("Standby database not exists")
 
         return standby_db_path
-
-    # todo: Will be removed
-    def create_db_for_calc(self, block_height: int) -> str:
-        assert block_height > 0
-
-        rc_version, _ = self.get_version_and_revision()
-
-        self._db.close()
-        current_db_path = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
-
-        if rc_version < 0:
-            rc_version: int = 0
-        iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height) + '_' + str(rc_version)
-
-        iiss_rc_db_path = os.path.join(self._path, iiss_rc_db_name)
-
-        if os.path.exists(current_db_path) and not os.path.exists(iiss_rc_db_path):
-            os.rename(current_db_path, iiss_rc_db_path)
-        else:
-            raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
-                                    "current DB path and IISS DB path")
-
-        self._db = KeyValueDatabase.from_path(current_db_path)
-        self._db_iiss_tx_index = -1
-
-        return iiss_rc_db_path

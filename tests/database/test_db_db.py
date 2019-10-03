@@ -22,7 +22,7 @@ from unittest.mock import patch
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
-from iconservice.database.db import ContextDatabase, MetaContextDatabase, tx_batch_value_to_bytes
+from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER

@@ -18,13 +18,13 @@ from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 import plyvel
 from iconcommons.logger import Logger
 
-from iconservice.database.batch import TransactionBatchValue
-from iconservice.database.wal import StateWAL
+from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
 
 if TYPE_CHECKING:
+    from .wal import StateWAL
     from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
 
@@ -39,12 +39,6 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
         return True
     else:
         return not context.readonly
-
-
-def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> bytes:
-    if not isinstance(tx_batch_value, TransactionBatchValue):
-        raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
-    return tx_batch_value.value
 
 
 class KeyValueDatabase(object):

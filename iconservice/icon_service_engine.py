@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
 
-from iconservice.database.wal import WriteAheadLogWriter, IissWAL, StateWAL
+from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -56,8 +56,8 @@ from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
-from .iiss.engine import RewardCalcDBInfo
-from .iiss.reward_calc import RewardCalcStorage
+from .iiss.reward_calc.storage import RewardCalcDBInfo
+from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
 from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -678,16 +678,17 @@ class IconServiceEngine(ContextContainer):
                                               context: 'IconScoreContext',
                                               prev_block_generator: Optional['Address'] = None,
                                               prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
+        if prev_block_generator is None or prev_block_votes is None:
+            return
+
         start = context.engine.iiss.get_start_block_of_calc(context)
         if start != context.block.height:
             return
-
-        rc_block_batch: list = []
-        context.engine.iiss.put_block_produce_info_to_rc_db(context,
-                                                            rc_block_batch,
-                                                            prev_block_generator,
-                                                            prev_block_votes)
-        context.storage.rc.commit(rc_block_batch)
+        prev_block_height: int = context.block.height - 1
+        bp_data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
+                                                                                               prev_block_generator,
+                                                                                               prev_block_votes)
+        context.storage.rc.put_data_directly(bp_data)
 
     @classmethod
     def _after_transaction_process(
@@ -1781,41 +1782,39 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT,
                                                block=precommit_data.block_batch.block)
-
-        state_wal, iiss_wal = self._process_wal(context, precommit_data)
+        # todo: should i define start calc block height here and put as a parameter?
+        wal_writer, state_wal, iiss_wal = self._process_wal(context, precommit_data)
         # todo: temp path to real path
-
-
-        # commit to db
-        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-
-        standby_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context,
-                                                                                  precommit_data,
-                                                                                  iiss_wal,
-                                                                                  start_calc_block_height)
+        standby_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data, iiss_wal)
         self._process_state_commit(context, precommit_data, state_wal)
+        wal_writer.write_state(WALState.END_COMMIT)
 
         # send IPC
         self._process_ipc(context, precommit_data, standby_db_info)
+        wal_writer.write_state(WALState.END_IPC)
 
+        wal_writer.close()
         # remove WAL
 
-    def _process_wal(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+    def _process_wal(self, context: 'IconScoreContext', precommit_data: 'PrecommitData') \
+            -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
         log_path: str = "temp"
         max_log_count: int = 1
+        state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
+
         iiss_wal: 'IissWAL' = None
         if precommit_data.revision >= Revision.IISS.value:
-            max_log_count += 1
             start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-            # write rc data to WAL
-            tx_index: int = context.storage.reward_calc.get_tx_index(context)
+            start_calc: bool = start_calc_block_height == context.block.height
+            max_log_count += 1
+            tx_index: int = context.storage.rc.get_tx_index(start_calc)
             revision: int = -1
-            if start_calc_block_height == context.block.height:
+
+            # At the start of calc period, put revision and version to newly created current_rc_db
+            if start_calc:
                 revision: int = precommit_data.rc_db_revision
             iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
-        # write state data to WAL
-        state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
         wal_writer: 'WriteAheadLogWriter' = WriteAheadLogWriter(precommit_data.revision,
                                                                 max_log_count,
                                                                 precommit_data.block)
@@ -1823,10 +1822,8 @@ class IconServiceEngine(ContextContainer):
         wal_writer.write_walogable(state_wal)
         if iiss_wal is not None:
             wal_writer.write_walogable(iiss_wal)
-        # close
-        wal_writer.close()
 
-        return state_wal, iiss_wal
+        return wal_writer, state_wal, iiss_wal
 
     def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
         precommit_data: 'PrecommitData' = \
@@ -1845,9 +1842,9 @@ class IconServiceEngine(ContextContainer):
         if new_icon_score_mapper:
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
-        self._icx_context_db.write_batch(state_wal)
+        self._icx_context_db.write_batch(context, state_wal)
 
-        context.storage.icx.set_last_block(context, precommit_data.block_batch.block, precommit_data.revision)
+        context.storage.icx.set_last_block(precommit_data.block_batch.block)
         self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
         # after status DB commit
@@ -1858,17 +1855,19 @@ class IconServiceEngine(ContextContainer):
     @staticmethod
     def _process_iiss_commit(context: 'IconScoreContext',
                              precommit_data: 'PrecommitData',
-                             iiss_wal: 'IissWAL',
-                             start_calc_block_height: int) -> Optional['RewardCalcDBInfo']:
+                             iiss_wal: Optional['IissWAL']) -> Optional['RewardCalcDBInfo']:
         if precommit_data.revision < Revision.IISS.value:
             return None
+        assert iiss_wal is not None
+
         standby_db_info: Optional['RewardCalcDBInfo'] = None
+        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
         if start_calc_block_height == context.block.height:
             calculate_block_height: int = context.block.height - 1
-            standby_db_info: 'RewardCalcDBInfo' = context.storage.reward_calc.replace_db(calculate_block_height)
+            standby_db_info: 'RewardCalcDBInfo' = context.storage.rc.replace_db(calculate_block_height)
 
         context.engine.prep.commit(context, precommit_data)
-        context.storage.reward_calc.commit(iiss_wal)
+        context.storage.rc.commit(iiss_wal)
         return standby_db_info
 
     @staticmethod
@@ -1880,7 +1879,7 @@ class IconServiceEngine(ContextContainer):
         context.engine.iiss.send_commit(precommit_data)
 
         if standby_db_info is not None:
-            iiss_db_path: str = context.storage.reward_calc.rename_standby_db_to_iiss_db(standby_db_info.path)
+            iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:

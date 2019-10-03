@@ -12,14 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from ..database.batch import BlockBatch
-from ..database.db import tx_batch_value_to_bytes
+from enum import IntEnum
+
 from ..icon_constant import DATA_BYTE_ORDER
 from ..iiss.reward_calc.msg_data import TxData
 from ..iiss.reward_calc.storage import Storage, get_rc_version
 from ..utils.msgpack_for_db import MsgPackForDB
 
-__all__ = ("WriteAheadLogWriter", "WriteAheadLogReader", "WALogable")
+__all__ = ("WriteAheadLogWriter", "WriteAheadLogReader", "WALogable", "StateWAL", "IissWAL", "WALState")
 
 import struct
 from abc import ABCMeta
@@ -28,9 +28,11 @@ from typing import Optional, Tuple, Iterable, List
 import msgpack
 
 from ..base.block import Block
-from ..base.exception import AccessDeniedException
+from ..base.exception import AccessDeniedException, InvalidParamsException
 from ..base.exception import InternalServiceErrorException, IllegalFormatException
 from ..utils import bytes_to_hex
+from ..database.batch import BlockBatch, TransactionBatchValue
+
 
 _MAGIC_KEY = b"IWAL"
 _FILE_VERSION = 0
@@ -44,6 +46,17 @@ _OFFSET_REVISION = _OFFSET_VERSION + 4
 _OFFSET_STATE = _OFFSET_REVISION + 4
 _OFFSET_LOG_COUNT = _OFFSET_STATE + 4
 _OFFSET_LOG_START_OFFSETS = _OFFSET_LOG_COUNT + 4
+
+
+class WALState(IntEnum):
+    END_COMMIT = 1
+    END_IPC = 2
+
+
+def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> bytes:
+    if not isinstance(tx_batch_value, TransactionBatchValue):
+        raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
+    return tx_batch_value.value
 
 
 class WALogable(metaclass=ABCMeta):
@@ -67,15 +80,15 @@ class IissWAL(WALogable):
     def __init__(self, rc_batch: list, tx_index: int, revision: int = -1):
         self._rc_batch: list = rc_batch
         self._tx_index: int = tx_index
+        # If revision is not -1, should put revision and version to rc db
         self._revision: int = revision
         self._version: int = self._get_version()
 
         self._final_tx_index: Optional[int] = None
 
     @property
-    def final_tx_index(self):
-        assert self._final_tx_index is not None
-
+    def final_tx_index(self) -> Optional[int]:
+        # If None, means there were any data to put
         return self._final_tx_index
 
     def _get_version(self):
