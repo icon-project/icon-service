@@ -93,6 +93,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = None
         self._deposit_handler = None
         self._context_factory = None
+        self._state_db_root_path: Optional[str] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -128,6 +129,7 @@ class IconServiceEngine(ContextContainer):
 
         # Share one context db with all SCORE
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+        self._state_db_root_path = state_db_root_path
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
@@ -1761,14 +1763,6 @@ class IconServiceEngine(ContextContainer):
             'prevBlockHash': prev_block_hash
         }
 
-    @staticmethod
-    def _create_invalid_block():
-        block_height = -1
-        block_hash = b'\x00' * 32
-        timestamp = 0
-        prev_block_hash = block_hash
-        return Block(block_height, block_hash, timestamp, prev_block_hash, 0)
-
     def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
@@ -1780,11 +1774,10 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
 
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
-        context = self._context_factory.create(IconScoreContextType.DIRECT,
-                                               block=precommit_data.block_batch.block)
+        context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
+
         # todo: should i define start calc block height here and put as a parameter?
         wal_writer, state_wal, iiss_wal = self._process_wal(context, precommit_data)
-        # todo: temp path to real path
         standby_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data, iiss_wal)
         self._process_state_commit(context, precommit_data, state_wal)
         wal_writer.write_state(WALState.END_COMMIT)
@@ -1794,31 +1787,30 @@ class IconServiceEngine(ContextContainer):
         wal_writer.write_state(WALState.END_IPC)
 
         wal_writer.close()
-        # remove WAL
 
     def _process_wal(self, context: 'IconScoreContext', precommit_data: 'PrecommitData') \
             -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
-        log_path: str = "temp"
-        max_log_count: int = 1
+        block: 'Block' = precommit_data.block
+        wal_path: str = os.path.join(self._state_db_root_path, f"block-{block.height}.wal")
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
+        max_log_count = 1
 
-        iiss_wal: 'IissWAL' = None
+        iiss_wal: Optional['IissWAL'] = None
         if precommit_data.revision >= Revision.IISS.value:
-            start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-            start_calc: bool = start_calc_block_height == context.block.height
             max_log_count += 1
-            tx_index: int = context.storage.rc.get_tx_index(start_calc)
-            revision: int = -1
+
+            start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
+            is_calc_period_start_block: bool = start_calc_block_height == context.block.height
+            tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
 
             # At the start of calc period, put revision and version to newly created current_rc_db
-            if start_calc:
-                revision: int = precommit_data.rc_db_revision
+            revision: int = precommit_data.rc_db_revision if is_calc_period_start_block else -1
+
             iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
-        wal_writer: 'WriteAheadLogWriter' = WriteAheadLogWriter(precommit_data.revision,
-                                                                max_log_count,
-                                                                precommit_data.block)
-        wal_writer.open(log_path)
+        wal_writer: 'WriteAheadLogWriter' = \
+            WriteAheadLogWriter(precommit_data.revision, max_log_count=max_log_count, block=block)
+        wal_writer.open(wal_path)
         wal_writer.write_walogable(state_wal)
         if iiss_wal is not None:
             wal_writer.write_walogable(iiss_wal)
@@ -1858,7 +1850,7 @@ class IconServiceEngine(ContextContainer):
                              iiss_wal: Optional['IissWAL']) -> Optional['RewardCalcDBInfo']:
         if precommit_data.revision < Revision.IISS.value:
             return None
-        assert iiss_wal is not None
+        assert isinstance(iiss_wal, IissWAL)
 
         standby_db_info: Optional['RewardCalcDBInfo'] = None
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
@@ -1876,7 +1868,7 @@ class IconServiceEngine(ContextContainer):
                      standby_db_info: Optional['RewardCalcDBInfo']):
         if precommit_data.revision < Revision.IISS.value:
             return
-        context.engine.iiss.send_commit(precommit_data)
+        context.engine.iiss.send_commit(precommit_data.block)
 
         if standby_db_info is not None:
             iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)

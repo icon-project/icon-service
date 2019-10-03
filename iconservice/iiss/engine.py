@@ -16,7 +16,6 @@
 
 import time
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
@@ -42,7 +41,6 @@ from ..precommit_data_manager import PrecommitFlag
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
-    from ..precommit_data_manager import PrecommitData
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
     from ..iiss.storage import RewardRate
@@ -53,7 +51,6 @@ if TYPE_CHECKING:
 _TAG = IISS_LOG_TAG
 
 QUERY_CALCULATE_REPEAT_COUNT = 3
-
 
 
 class EngineListener(metaclass=ABCMeta):
@@ -723,11 +720,8 @@ class Engine(EngineBase):
         self._put_end_calc_block_height(context)
         self._put_rrep(context)
 
-    def send_commit(self,
-                    precommit_data: 'PrecommitData'):
-        self._reward_calc_proxy.commit_block(True,
-                                             precommit_data.block.height,
-                                             precommit_data.block.hash)
+    def send_commit(self, block: 'Block'):
+        self._reward_calc_proxy.commit_block(True, block.height, block.hash)
 
     def send_calculate(self, iiss_db_path: str, block_height: int):
         self._reward_calc_proxy.calculate(iiss_db_path, block_height)
