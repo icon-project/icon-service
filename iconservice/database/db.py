@@ -16,15 +16,14 @@
 from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 import plyvel
-from iconcommons.logger import Logger
 
+from iconcommons.logger import Logger
 from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
 
 if TYPE_CHECKING:
-    from .wal import StateWAL
     from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
 
@@ -312,13 +311,13 @@ class ContextDatabase(object):
 
     def write_batch(self,
                     context: 'IconScoreContext',
-                    state_wal: 'StateWAL'):
+                    it: Iterable[Tuple[bytes, Optional[bytes]]]):
 
         if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(state_wal)
+        return self.key_value_db.write_batch(it)
 
     @staticmethod
     def from_path(path: str,
