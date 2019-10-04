@@ -464,7 +464,7 @@ class PRep(Sortable):
         items: list = MsgPackForDB.loads(data)
         version: int = items[cls.Index.VERSION]
 
-        if version >= 1:
+        if version == 0:
             items.extend((PenaltyReason.NONE, 0))
 
         return PRep(
