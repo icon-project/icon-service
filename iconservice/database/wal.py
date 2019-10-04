@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import IntEnum
+from enum import Flag, auto
 
 from ..icon_constant import DATA_BYTE_ORDER
 from ..iiss.reward_calc.msg_data import TxData
@@ -48,9 +48,16 @@ _OFFSET_LOG_COUNT = _OFFSET_STATE + 4
 _OFFSET_LOG_START_OFFSETS = _OFFSET_LOG_COUNT + 4
 
 
-class WALState(IntEnum):
-    END_COMMIT = 1
-    END_IPC = 2
+class WALState(Flag):
+    CALC_PERIOD_START_BLOCK = auto()
+    # Write WAL to rc_db
+    WRITE_RC_DB = auto()
+    # Write WAL to state_db
+    WRITE_STATE_DB = auto()
+    # Send COMMIT_BLOCK message to rc
+    SEND_COMMIT_BLOCK = auto()
+    # Send CALCULATE message to rc
+    SEND_CALCULATE = auto()
 
 
 def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> Optional[bytes]:
@@ -230,11 +237,15 @@ class WriteAheadLogWriter(object):
 
         return size
 
-    def write_state(self, state: int):
+    def write_state(self, state: int, add: bool = False):
         offset = _OFFSET_STATE
+
+        if add:
+            state |= self._state
 
         self._fp.seek(offset, 0)
         self._write_uint32(state)
+        self._state = state
 
     def _write_log_count(self) -> int:
         offset = _OFFSET_LOG_COUNT

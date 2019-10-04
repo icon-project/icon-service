@@ -19,7 +19,8 @@ import unittest
 
 from iconservice.base.block import Block
 from iconservice.database.wal import (
-    _MAGIC_KEY, _FILE_VERSION, WriteAheadLogReader, WriteAheadLogWriter, WALogable
+    _MAGIC_KEY, _FILE_VERSION,
+    WriteAheadLogReader, WriteAheadLogWriter, WALogable, WALState
 )
 from iconservice.icon_constant import Revision
 
@@ -63,29 +64,44 @@ class TestWriteAheadLog(unittest.TestCase):
 
     def tearDown(self) -> None:
         try:
-            os.unlink(self.path)
+            os.remove(self.path)
         except:
             pass
 
     def test_writer_and_reader(self):
         revision = Revision.IISS.value
         log_count = 2
-        state = random.randint(0, 100)
 
         writer = WriteAheadLogWriter(revision, log_count, self.block)
         writer.open(self.path)
 
-        for i in range(log_count):
-            writer.write_walogable(WALogableData(self.log_data[i]))
+        assert writer.state == 0
+        writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=True)
+        assert writer.state == WALState.CALC_PERIOD_START_BLOCK.value
 
-        writer.write_state(state)
+        writer.write_walogable(WALogableData(self.log_data[0]))
+        writer.write_state(WALState.WRITE_RC_DB.value, add=True)
+        assert writer.state == (WALState.CALC_PERIOD_START_BLOCK | WALState.WRITE_RC_DB).value
+
+        writer.write_walogable(WALogableData(self.log_data[1]))
+        writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
+        assert writer.state == \
+            (WALState.CALC_PERIOD_START_BLOCK | WALState.WRITE_RC_DB | WALState.WRITE_STATE_DB).value
+
+        writer.write_state(
+            (WALState.WRITE_RC_DB | WALState.WRITE_STATE_DB).value,
+            add=False
+        )
+        assert writer.state == \
+            (WALState.WRITE_RC_DB | WALState.WRITE_STATE_DB).value
+
         writer.close()
 
         reader = WriteAheadLogReader()
         reader.open(self.path)
         assert reader.magic_key == _MAGIC_KEY
         assert reader.version == _FILE_VERSION
-        assert reader.state == state
+        assert reader.state == writer.state
         assert reader.revision == revision
         assert reader.block == self.block
         assert reader.log_count == log_count
