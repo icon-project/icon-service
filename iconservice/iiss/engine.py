@@ -596,11 +596,21 @@ class Engine(EngineBase):
 
         Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
+    def _check_claim_tx(self, context: 'IconScoreContext') -> bool:
+        skip_tx = [
+            bytes.fromhex('b9eeb235f715b166cf4b91ffcf8cc48a81913896086d30104ffc0cf47eed1cbd')
+        ]
+        if context.tx.hash in skip_tx:
+            Logger.error(tag=_TAG, msg=f"skip claim tx: {context.tx.hash.hex()}")
+            return False
+        else:
+            return True
+
     def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
 
-        if context.type == IconScoreContextType.INVOKE:
+        if context.type == IconScoreContextType.INVOKE and self._check_claim_tx(context):
             iscore, block_height = self._reward_calc_proxy.claim_iscore(
                 address, block.height, block.hash)
         else:
