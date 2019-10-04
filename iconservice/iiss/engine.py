@@ -31,7 +31,7 @@ from ..base.exception import \
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult
+    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -597,10 +597,7 @@ class Engine(EngineBase):
         Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
     def _check_claim_tx(self, context: 'IconScoreContext') -> bool:
-        skip_tx = [
-            bytes.fromhex('b9eeb235f715b166cf4b91ffcf8cc48a81913896086d30104ffc0cf47eed1cbd')
-        ]
-        if context.tx.hash in skip_tx:
+        if context.tx.hash in INVALID_CLAIM_TX:
             Logger.error(tag=_TAG, msg=f"skip claim tx: {context.tx.hash.hex()}")
             return False
         else:
