@@ -38,12 +38,12 @@ class TestRCDatabase(TestIISSBase):
     @staticmethod
     def get_last_rc_db_data(rc_data_path):
         return sorted([dir_name for dir_name in os.listdir(rc_data_path)
-                       if dir_name.startswith(RewardCalcStorage._IISS_RC_DB_NAME_PREFIX)],
-                      key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage._IISS_RC_DB_NAME_PREFIX):]),
+                       if dir_name.startswith(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX)],
+                      key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX):]),
                       reverse=True)[0]
 
     def _check_the_name_of_rc_db(self, actual_rc_db_name: str, version: int = 0):
-        expected_last_rc_db_name: str = Storage._IISS_RC_DB_NAME_PREFIX + str(self._block_height - 1) + '_' + str(version)
+        expected_last_rc_db_name: str = Storage.IISS_RC_DB_NAME_PREFIX + str(self._block_height - 1) + '_' + str(version)
         self.assertEqual(expected_last_rc_db_name, actual_rc_db_name)
 
     def test_all_rc_db_data_block_height(self):

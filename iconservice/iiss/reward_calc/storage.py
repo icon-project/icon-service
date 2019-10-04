@@ -46,14 +46,23 @@ def get_rc_version(revision: int) -> int:
     return RC_DB_VERSION_0
 
 
+def get_version_and_revision(db: 'KeyValueDatabase') -> Tuple[int, int]:
+    version_and_revision: Optional[bytes] = db.get(Storage.KEY_FOR_VERSION_AND_REVISION)
+    if version_and_revision is None:
+        return -1, -1
+
+    version, revision = MsgPackForDB.loads(version_and_revision)
+    return version, revision
+
+
 class Storage(object):
     """Manages RC DB which Reward Calculator will use to calculate a reward for each address
 
     """
 
-    _CURRENT_IISS_DB_NAME = "current_rc_db"
-    _STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db_"
-    _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
+    CURRENT_IISS_DB_NAME = "current_rc_db"
+    STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db_"
+    IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
     KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
     KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
@@ -63,7 +72,7 @@ class Storage(object):
         self._path: str = ""
         self._db: Optional['KeyValueDatabase'] = None
         # 'None' if open() is not called else 'int'
-        self._db_iiss_tx_index: Optional[int] = None
+        self._db_iiss_tx_index: int = -1
 
     def open(self, context: IconScoreContext, path: str):
         revision: int = context.revision
@@ -72,9 +81,9 @@ class Storage(object):
             raise DatabaseException(f"Invalid IISS DB path: {path}")
         self._path = path
 
-        current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
-        self._db = KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
+        self._db = self.create_current_db(path)
         self._db_iiss_tx_index = self._load_last_transaction_index()
+
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
 
@@ -103,6 +112,10 @@ class Storage(object):
             self.put_data_directly(header)
 
             Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
+
+    @classmethod
+    def get_standby_rc_db_name(cls, block_height: int, rc_version: int) -> str:
+        return f"{cls.STANDBY_IISS_DB_NAME_PREFIX}{block_height}_{rc_version}"
 
     def put_data_directly(self, iiss_data: 'Data', tx_index: Optional[int] = None):
         if isinstance(iiss_data, TxData):
@@ -168,16 +181,7 @@ class Storage(object):
         self._db.put(self.KEY_FOR_VERSION_AND_REVISION, version_and_revision)
 
     def get_version_and_revision(self) -> Tuple[int, int]:
-        version_and_revision: Optional[bytes] = self._db.get(self.KEY_FOR_VERSION_AND_REVISION)
-        version: int = -1
-        revision: int = -1
-        if version_and_revision is None:
-            return version, revision
-        else:
-            version_and_revision: list = MsgPackForDB.loads(version_and_revision)
-        version: int = version_and_revision[0]
-        revision: int = version_and_revision[1]
-        return version, revision
+        return get_version_and_revision(self._db)
 
     def _load_last_transaction_index(self) -> int:
         encoded_last_index: Optional[bytes] = self._db.get(self.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX)
@@ -186,9 +190,10 @@ class Storage(object):
         else:
             return int.from_bytes(encoded_last_index, DATA_BYTE_ORDER)
 
-    def create_current_db(self, current_db_path: str):
-        self._db = KeyValueDatabase.from_path(current_db_path)
-        self._db_iiss_tx_index = -1
+    @classmethod
+    def create_current_db(cls, rc_data_path: str) -> 'KeyValueDatabase':
+        current_db_path = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
+        return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
 
     @staticmethod
     def _rename_db(old_db_path: str, new_db_path: str):
@@ -199,12 +204,22 @@ class Storage(object):
                                     "current DB path and IISS DB path")
 
     def replace_db(self, block_height: int) -> 'RewardCalcDBInfo':
+        """
+        1. Rename current_db to standby_db_{block_height}_{rc_version}
+        2. Create a new current_db for the next calculation period
+
+        :param block_height: End block height of the current calc period
+        :return:
+        """
+
         # rename current db -> standby db
         assert block_height > 0
-        current_db_path: str = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
+        current_db_path: str = os.path.join(self._path, self.CURRENT_IISS_DB_NAME)
         standby_db_path: str = self._rename_current_db_to_standby_db(current_db_path, block_height)
 
-        self.create_current_db(current_db_path)
+        self._db = self.create_current_db(self._path)
+        self._db_iiss_tx_index = -1
+
         return RewardCalcDBInfo(standby_db_path, block_height)
 
     def _rename_current_db_to_standby_db(self, current_db_path: str, block_height: int) -> str:
@@ -213,7 +228,8 @@ class Storage(object):
 
         if rc_version < 0:
             rc_version: int = 0
-        standby_db_name: str = self._STANDBY_IISS_DB_NAME_PREFIX + str(block_height) + '_' + str(rc_version)
+
+        standby_db_name: str = self.get_standby_rc_db_name(block_height, rc_version)
         standby_db_path = os.path.join(self._path, standby_db_name)
 
         self._rename_db(current_db_path, standby_db_path)
@@ -225,18 +241,16 @@ class Storage(object):
         if standby_db_path is None:
             standby_db_path: str = self._get_standby_db_path()
 
-        iiss_db_path: str = self._IISS_RC_DB_NAME_PREFIX.\
-            join(standby_db_path.rsplit(self._STANDBY_IISS_DB_NAME_PREFIX, 1))
+        iiss_db_path: str = self.IISS_RC_DB_NAME_PREFIX.\
+            join(standby_db_path.rsplit(self.STANDBY_IISS_DB_NAME_PREFIX, 1))
+
         self._rename_db(standby_db_path, iiss_db_path)
 
         return iiss_db_path
 
-    def _get_standby_db_path(self):
+    def _get_standby_db_path(self) -> str:
         for db_name in os.listdir(self._path):
-            if db_name.startswith(self._STANDBY_IISS_DB_NAME_PREFIX):
-                standby_db_path: str = os.path.join(self._path, db_name)
-                break
-        else:
-            raise DatabaseException("Standby database not exists")
+            if db_name.startswith(self.STANDBY_IISS_DB_NAME_PREFIX):
+                return os.path.join(self._path, db_name)
 
-        return standby_db_path
+        raise DatabaseException("Standby database not exists")

@@ -134,7 +134,7 @@ class TestRcDataStorage(unittest.TestCase):
         rc_data_storage = RewardCalcStorage()
         test_db_path: str = os.path.join(os.getcwd(), ".storage_test_db")
 
-        expected_current_db_path = os.path.join(test_db_path, RewardCalcStorage._CURRENT_IISS_DB_NAME)
+        expected_current_db_path = os.path.join(test_db_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
 
         def from_path(path: str,
                       create_if_missing: bool = True) -> 'MockIissDataBase':

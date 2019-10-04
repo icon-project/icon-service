@@ -18,8 +18,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
-
-from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -32,6 +30,7 @@ from .base.message import Message
 from .base.transaction import Transaction
 from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader
+from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
@@ -56,8 +55,8 @@ from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
-from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
+from .iiss.reward_calc.storage import RewardCalcDBInfo, get_version_and_revision
 from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -94,6 +93,7 @@ class IconServiceEngine(ContextContainer):
         self._deposit_handler = None
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
+        self._wal_reader: Optional['WriteAheadLogReader'] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -118,8 +118,8 @@ class IconServiceEngine(ContextContainer):
         score_root_path: str = conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         score_root_path: str = os.path.abspath(score_root_path)
         state_db_root_path: str = conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
+        state_db_root_path: str = os.path.abspath(state_db_root_path)
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
-        rc_data_path: str = os.path.abspath(rc_data_path)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
 
@@ -152,11 +152,12 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
         self._init_component_context()
 
-        # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.storage.icx.load_last_block_info(context)
-        self._precommit_data_manager.last_block = IconScoreContext.storage.icx.last_block
-        context.block = self._get_last_block()
+
+        self._recover_dbs(rc_data_path)
+
+        # load last_block_info
+        self._init_last_block_info(context)
 
         # set revision (if governance SCORE does not exist, remain revision to default).
         try:
@@ -201,6 +202,11 @@ class IconServiceEngine(ContextContainer):
 
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage
+
+    def _init_last_block_info(self, context: 'IconScoreContext'):
+        context.storage.icx.load_last_block_info(context)
+        self._precommit_data_manager.last_block = IconScoreContext.storage.icx.last_block
+        context.block = self._get_last_block()
 
     @classmethod
     def _open_component_context(cls,
@@ -1776,31 +1782,43 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
 
-        # todo: should i define start calc block height here and put as a parameter?
-        wal_writer, state_wal, iiss_wal = self._process_wal(context, precommit_data)
-        standby_db_info: Optional['RewardCalcDBInfo'] = self._process_iiss_commit(context, precommit_data, iiss_wal)
+        # Check if this block is the start block of a calculation period
+        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
+        is_calc_period_start_block: bool = context.block.height == start_calc_block_height
+
+        wal_writer, state_wal, iiss_wal = \
+            self._process_wal(context, precommit_data, is_calc_period_start_block)
+
+        # Write iiss_wal to rc_db
+        standby_db_info: Optional['RewardCalcDBInfo'] = \
+            self._process_iiss_commit(context, precommit_data, iiss_wal, is_calc_period_start_block)
+        wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
+
+        # Write state_wal to state_db
         self._process_state_commit(context, precommit_data, state_wal)
-        wal_writer.write_state(WALState.END_COMMIT)
+        wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
 
         # send IPC
-        self._process_ipc(context, precommit_data, standby_db_info)
-        wal_writer.write_state(WALState.END_IPC)
-
+        self._process_ipc(context, wal_writer, precommit_data, standby_db_info)
         wal_writer.close()
 
-    def _process_wal(self, context: 'IconScoreContext', precommit_data: 'PrecommitData') \
+        try:
+            os.remove(self._get_write_ahead_log_path())
+        except:
+            pass
+
+    def _process_wal(self, context: 'IconScoreContext',
+                     precommit_data: 'PrecommitData',
+                     is_calc_period_start_block: bool) \
             -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
         block: 'Block' = precommit_data.block
-        wal_path: str = os.path.join(self._state_db_root_path, f"block-{block.height}.wal")
+        wal_path: str = self._get_write_ahead_log_path()
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
         max_log_count = 1
 
         iiss_wal: Optional['IissWAL'] = None
         if precommit_data.revision >= Revision.IISS.value:
             max_log_count += 1
-
-            start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-            is_calc_period_start_block: bool = start_calc_block_height == context.block.height
             tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
 
             # At the start of calc period, put revision and version to newly created current_rc_db
@@ -1811,9 +1829,16 @@ class IconServiceEngine(ContextContainer):
         wal_writer: 'WriteAheadLogWriter' = \
             WriteAheadLogWriter(precommit_data.revision, max_log_count=max_log_count, block=block)
         wal_writer.open(wal_path)
+
+        if is_calc_period_start_block:
+            wal_writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=False)
+
         wal_writer.write_walogable(state_wal)
+        wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
+
         if iiss_wal is not None:
             wal_writer.write_walogable(iiss_wal)
+            wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
 
         return wal_writer, state_wal, iiss_wal
 
@@ -1847,14 +1872,14 @@ class IconServiceEngine(ContextContainer):
     @staticmethod
     def _process_iiss_commit(context: 'IconScoreContext',
                              precommit_data: 'PrecommitData',
-                             iiss_wal: Optional['IissWAL']) -> Optional['RewardCalcDBInfo']:
+                             iiss_wal: Optional['IissWAL'],
+                             is_calc_period_start_block: bool) -> Optional['RewardCalcDBInfo']:
         if precommit_data.revision < Revision.IISS.value:
             return None
         assert isinstance(iiss_wal, IissWAL)
 
         standby_db_info: Optional['RewardCalcDBInfo'] = None
-        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
-        if start_calc_block_height == context.block.height:
+        if is_calc_period_start_block:
             calculate_block_height: int = context.block.height - 1
             standby_db_info: 'RewardCalcDBInfo' = context.storage.rc.replace_db(calculate_block_height)
 
@@ -1864,15 +1889,19 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _process_ipc(context: 'IconScoreContext',
+                     wal_writer: 'WriteAheadLogWriter',
                      precommit_data: 'PrecommitData',
                      standby_db_info: Optional['RewardCalcDBInfo']):
         if precommit_data.revision < Revision.IISS.value:
             return
+
         context.engine.iiss.send_commit(precommit_data.block)
+        wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
 
         if standby_db_info is not None:
             iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
+            wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
@@ -1914,47 +1943,143 @@ class IconServiceEngine(ContextContainer):
         self._set_revision_to_context(context)
         return inner_call(context, request)
 
-    def recover_db(self):
-        path = "./block-1234.wal"
+    def _recover_dbs(self, rc_data_path: str):
+        """Recover iiss_db and state_db with a wal file
+
+        :param rc_data_path: The directory where iiss_dbs are contained
+        """
+
+        Logger.debug(tag="ISE", msg="_recover_dbs() start")
+
+        path: str = self._get_write_ahead_log_path()
         if not os.path.isfile(path):
+            Logger.debug(tag="ISE", msg="No WAL file")
             return
 
         reader = WriteAheadLogReader()
         try:
             try:
                 reader.open(path)
-                self._recover_db(reader)
+                if reader.log_count == 2:
+                    self._recover_rc_db(reader, rc_data_path)
+                    self._recover_state_db(reader)
+                    self._wal_reader = reader
+                else:
+                    Logger.debug(tag="ISE", msg=f"Incomplete WAL file: {path}")
+
+                self._wal_reader = reader
+            except IconServiceBaseException as e:
+                Logger.info(tag="ISE", msg=e.message)
             finally:
                 reader.close()
                 os.remove(path)
         except:
             pass
 
-    def _recover_db(self, reader: 'WriteAheadLogReader'):
-        Logger.info(tag="ISE", msg="_recover_wal() start")
+        Logger.debug(tag="ISE", msg="_recover_dbs() end")
 
-        """Recover database contents with write ahead log
+    @classmethod
+    def _recover_rc_db(cls, reader: 'WriteAheadLogReader', rc_data_path: str):
+        wal_state = WALState(reader.state)
 
-        Expected cases
-        * No wal file
-        * Incomplete wal file
-        * Complete wal file
-            * rc_db
-            * state_db            
-            * send CALCULATE message
-            * send COMMIT_BLOCK message
-
-        :param reader:
-        :return:
-        """
-
-        if reader.log_count != 2:
+        if wal_state & WALState.WRITE_RC_DB:
             return
 
-        # Recover rc_db
-        for key, value in reader.get_iterator(0):
-            pass
+        block: 'Block' = reader.block
+        is_calc_period_start_block = bool(wal_state & WALState.CALC_PERIOD_START_BLOCK)
+        is_rename_db_needed: bool = False
+        standby_rc_db_path: str = ""
+
+        # If WAL file is made at the start block of calc period
+        if is_calc_period_start_block:
+            current_rc_db_exists, standby_rc_db_path = cls._scan_rc_db(rc_data_path)
+            is_rename_db_needed = len(standby_rc_db_path) == 0 and current_rc_db_exists
+
+        db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+
+        # Rename current_db_name to standby_db_name
+        if is_rename_db_needed:
+            rc_version, revision = get_version_and_revision(db)
+            db.close()
+
+            current_rc_db_path: str = \
+                os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
+            standby_rc_db_name: str = \
+                f"{RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX}{block.height}_{rc_version}"
+            standby_rc_db_path: str = os.path.join(rc_data_path, standby_rc_db_name)
+
+            try:
+                os.rename(current_rc_db_path, standby_rc_db_path)
+            except BaseException as e:
+                Logger.error(tag="ISE", msg=str(e))
+
+            # Create a new current_rc_db for the next calc period
+            db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+
+        # Rename standby_db_name to iiss_db_name
+        # If standby_db_name is renamed to iiss_db_name, no need to send CALCULATE message to rc
+        if len(standby_rc_db_path) > 0:
+            standby_rc_db_name = os.path.basename(standby_rc_db_path)
+            iiss_rc_db_name = \
+                f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}" \
+                f"{standby_rc_db_name[len(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):]}"
+            iiss_rc_db_path = os.path.join(rc_data_path, iiss_rc_db_name)
+
+            try:
+                os.rename(standby_rc_db_path, iiss_rc_db_path)
+            except BaseException as e:
+                Logger.error(tag="ISE", msg=str(e))
+
+        db.write_batch(reader.get_iterator(0))
+        db.close()
+
+    @classmethod
+    def _scan_rc_db(cls, rc_data_path: str) -> Tuple[bool, str]:
+        """Scan directories that are managed by RewardCalcStorage
+
+        :param rc_data_path: the parent directory of rc_dbs
+        :return: current_rc_db_exists(bool), standby_rc_db_path
+        """
+        current_rc_db_exists = False
+        standby_rc_db_path: str = ""
+
+        with os.scandir(rc_data_path) as it:
+            for entry in it:
+                if entry.is_dir():
+                    if entry.name == RewardCalcStorage.CURRENT_IISS_DB_NAME:
+                        current_rc_db_exists = True
+                    elif entry.name.startswith(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):
+                        standby_rc_db_path = os.path.join(rc_data_path, entry.name)
+
+        return current_rc_db_exists, standby_rc_db_path
+
+    def _recover_state_db(self, reader: 'WriteAheadLogReader'):
+        wal_state = WALState(reader.state)
+
+        if wal_state & WALState.WRITE_STATE_DB:
+            return
 
         self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
 
-        Logger.info(tag="ISE", msg="_recover_wal() end")
+    def _get_write_ahead_log_path(self) -> str:
+        return os.path.join(self._state_db_root_path, f"block.wal")
+
+    def hello(self):
+        """If state_db and rc_db are recovered, send some messages to reward calculator
+        It is called on INVOKE thread
+        Assume that the connection between iconservice and rc is ready
+
+        :return:
+        """
+        Logger.debug(tag="ISE", msg="hello() start")
+
+        if isinstance(self._wal_reader, WriteAheadLogReader):
+            wal_state = WALState(self._wal_reader.state)
+
+            if wal_state & WALState.WRITE_RC_DB \
+                    and not (wal_state & WALState.SEND_COMMIT_BLOCK):
+                block: 'Block' = self._wal_reader.block
+                context = self._context_factory.create(IconScoreContextType.DIRECT, block)
+                context.engine.iiss.send_commit(block)
+
+        Logger.debug(tag="ISE", msg="hello() end")
