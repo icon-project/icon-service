@@ -31,7 +31,7 @@ from ..base.exception import \
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult
+    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -596,11 +596,18 @@ class Engine(EngineBase):
 
         Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
+    def _check_claim_tx(self, context: 'IconScoreContext') -> bool:
+        if context.tx.hash in INVALID_CLAIM_TX:
+            Logger.error(tag=_TAG, msg=f"skip claim tx: {context.tx.hash.hex()}")
+            return False
+        else:
+            return True
+
     def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
 
-        if context.type == IconScoreContextType.INVOKE:
+        if context.type == IconScoreContextType.INVOKE and self._check_claim_tx(context):
             iscore, block_height = self._reward_calc_proxy.claim_iscore(
                 address, block.height, block.hash)
         else:

@@ -224,6 +224,11 @@ class DeployState(IntEnum):
     ACTIVE = 1
 
 
+# 0xb9eeb235f715b166cf4b91ffcf8cc48a81913896086d30104ffc0cf47eed1cbd
+INVALID_CLAIM_TX = [
+    b'\xb9\xee\xb25\xf7\x15\xb1f\xcfK\x91\xff\xcf\x8c\xc4\x8a\x81\x918\x96\x08m0\x10O\xfc\x0c\xf4~\xed\x1c\xbd'
+]
+
 IISS_METHOD_TABLE = [
     "setStake",
     "getStake",
