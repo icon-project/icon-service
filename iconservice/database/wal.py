@@ -26,6 +26,7 @@ from abc import ABCMeta
 from typing import Optional, Tuple, Iterable, List
 
 import msgpack
+from iconcommons.logger import Logger
 
 from ..base.block import Block
 from ..base.exception import AccessDeniedException, InvalidParamsException
@@ -34,6 +35,7 @@ from ..utils import bytes_to_hex
 from ..database.batch import BlockBatch, TransactionBatchValue
 
 
+TAG = "WAL"
 _MAGIC_KEY = b"IWAL"
 _FILE_VERSION = 0
 _HEADER_SIZE = 20
@@ -155,6 +157,8 @@ class WriteAheadLogWriter(object):
     """
 
     def __init__(self, revision: int, max_log_count: int, block: 'Block'):
+        Logger.debug(tag=TAG, msg=f"__init__(revision={revision}, max_log_out={max_log_count}, block={block} start")
+
         self._magic_key = _MAGIC_KEY
         self._version = _FILE_VERSION
         self._revision: int = revision
@@ -166,6 +170,8 @@ class WriteAheadLogWriter(object):
 
         self._block = block
         self._fp = None
+
+        Logger.debug(tag=TAG, msg="__init__() end")
 
     def open(self, path: str):
         if self._fp is not None:

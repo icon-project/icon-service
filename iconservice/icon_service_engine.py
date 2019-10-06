@@ -1847,8 +1847,9 @@ class IconServiceEngine(ContextContainer):
             self._precommit_data_manager.get(instant_block_hash)
         if block_hash:
             precommit_data.block_batch.update_block_hash(block_hash)
-            precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
             precommit_data.block = precommit_data.block_batch.block
+
+        precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
         return precommit_data
 
     def _process_state_commit(self,
@@ -1953,26 +1954,27 @@ class IconServiceEngine(ContextContainer):
 
         path: str = self._get_write_ahead_log_path()
         if not os.path.isfile(path):
-            Logger.debug(tag="ISE", msg="No WAL file")
+            Logger.debug(tag="ISE", msg="_recover_dbs() end: No WAL file")
             return
 
         reader = WriteAheadLogReader()
         try:
-            try:
-                reader.open(path)
-                if reader.log_count == 2:
-                    self._recover_rc_db(reader, rc_data_path)
-                    self._recover_state_db(reader)
-                    self._wal_reader = reader
-                else:
-                    Logger.debug(tag="ISE", msg=f"Incomplete WAL file: {path}")
-
+            reader.open(path)
+            if reader.log_count == 2:
+                self._recover_rc_db(reader, rc_data_path)
+                self._recover_state_db(reader)
                 self._wal_reader = reader
-            except IconServiceBaseException as e:
-                Logger.info(tag="ISE", msg=e.message)
-            finally:
-                reader.close()
-                os.remove(path)
+            else:
+                Logger.debug(tag="ISE", msg=f"Incomplete WAL file: {path}")
+
+            self._wal_reader = reader
+        except IconServiceBaseException as e:
+            Logger.info(tag="ISE", msg=e.message)
+        finally:
+            reader.close()
+
+        try:
+            os.remove(path)
         except:
             pass
 
