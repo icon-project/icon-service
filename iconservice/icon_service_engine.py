@@ -2066,7 +2066,7 @@ class IconServiceEngine(ContextContainer):
     def _get_write_ahead_log_path(self) -> str:
         return os.path.join(self._state_db_root_path, f"block.wal")
 
-    def hello(self):
+    def hello(self) -> dict:
         """If state_db and rc_db are recovered, send some messages to reward calculator
         It is called on INVOKE thread
         Assume that the connection between iconservice and rc is ready
@@ -2085,3 +2085,5 @@ class IconServiceEngine(ContextContainer):
                 context.engine.iiss.send_commit(block)
 
         Logger.debug(tag="ISE", msg="hello() end")
+
+        return {}

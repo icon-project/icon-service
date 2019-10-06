@@ -74,9 +74,18 @@ class IconScoreInnerTask(object):
         ready_future = self._icon_service_engine.get_ready_future()
         await ready_future
 
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
+            loop = get_event_loop()
+            ret = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE], self._hello)
+        else:
+            ret = self._hello()
+
         Logger.info('hello() end', ICON_INNER_LOG_TAG)
 
-        return {}
+        return ret
+
+    def _hello(self):
+        return self._icon_service_engine.hello()
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
