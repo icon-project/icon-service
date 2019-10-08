@@ -83,6 +83,7 @@ class Storage(object):
 
         self._db = self.create_current_db(path)
         self._db_iiss_tx_index = self._load_last_transaction_index()
+        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index={self._db_iiss_tx_index}")
 
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
@@ -172,6 +173,7 @@ class Storage(object):
     def commit(self, iiss_wal: 'IissWAL'):
         self._db.write_batch(iiss_wal)
         self._db_iiss_tx_index = iiss_wal.final_tx_index
+        Logger.info(tag=IISS_LOG_TAG, msg=f"final_tx_index={iiss_wal.final_tx_index}")
 
     # todo: naming
     def _put_version_and_revision(self, revision: int):

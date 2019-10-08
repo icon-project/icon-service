@@ -1834,12 +1834,11 @@ class IconServiceEngine(ContextContainer):
         wal_path: str = self._get_write_ahead_log_path()
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
 
-        iiss_wal: Optional['IissWAL'] = None
-        tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
-
         # At the start of calc period, put revision and version to newly created current_rc_db
         revision: int = precommit_data.rc_db_revision if is_calc_period_start_block else -1
 
+        tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
+        Logger.info(tag=self.TAG, msg=f"tx_index={tx_index}")
         iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
         wal_writer: 'WriteAheadLogWriter' = \
@@ -1852,9 +1851,8 @@ class IconServiceEngine(ContextContainer):
         wal_writer.write_walogable(state_wal)
         wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
 
-        if iiss_wal is not None:
-            wal_writer.write_walogable(iiss_wal)
-            wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
+        wal_writer.write_walogable(iiss_wal)
+        wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
 
         return wal_writer, state_wal, iiss_wal
 
