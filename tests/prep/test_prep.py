@@ -38,8 +38,8 @@ TX_INDEX = 0
 TOTAL_BLOCKS = 0
 VALIDATED_BLOCKS = 0
 IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
-PENALTY = PenaltyReason.NONE
-UNVALIDATED_SEQUENCE_BLOCKS = 0
+PENALTY = PenaltyReason.BLOCK_VALIDATION
+UNVALIDATED_SEQUENCE_BLOCKS = 10
 
 
 @pytest.fixture
@@ -140,7 +140,33 @@ def test_set_error(prep):
         prep.set(**kwargs)
 
 
-def test_from_bytes_and_to_bytes(prep):
+def test_from_bytes_and_to_bytes_with_revision_iiss(prep):
+    data = prep.to_bytes(Revision.IISS.value)
+    prep2 = PRep.from_bytes(data)
+
+    assert prep.address == prep2.address
+    assert prep.name == prep2.name == NAME
+    assert prep.country == prep2.country == COUNTRY
+    assert prep.city == prep2.city == CITY
+    assert prep.email == prep2.email == EMAIL
+    assert prep.website == prep2.website == WEBSITE
+    assert prep.details == prep2.details == DETAILS
+    assert prep.p2p_endpoint == prep2.p2p_endpoint == P2P_END_POINT
+    assert prep.irep == prep2.irep == IREP
+    assert prep.irep_block_height == prep2.irep_block_height == IREP_BLOCK_HEIGHT
+    assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT
+    assert prep.total_blocks == prep2.total_blocks == TOTAL_BLOCKS
+    assert prep.validated_blocks == prep2.validated_blocks == VALIDATED_BLOCKS
+    assert prep.penalty == PENALTY
+    assert prep2.penalty == PenaltyReason.NONE
+    assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+
+    # Properties which is not serialized in PRep.to_bytes()
+    assert prep2.stake == 0
+    assert prep2.delegated == 0
+
+
+def test_from_bytes_and_to_bytes_with_revision_decentralization(prep):
     data = prep.to_bytes(Revision.DECENTRALIZATION.value)
     prep2 = PRep.from_bytes(data)
 
@@ -191,12 +217,12 @@ def test_is_suspended(prep):
 def test_update_block_statistics(prep):
     assert prep.total_blocks == 0
     assert prep.validated_blocks == 0
-    assert prep.unvalidated_sequence_blocks == 0
+    assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
 
     prep.update_block_statistics(is_validator=False)
     assert prep.total_blocks == 1
     assert prep.validated_blocks == 0
-    assert prep.unvalidated_sequence_blocks == 1
+    assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS + 1
 
     prep.update_block_statistics(is_validator=True)
     assert prep.total_blocks == 2
@@ -212,7 +238,7 @@ def test_reset_block_validation_penalty(prep):
 
     assert prep.total_blocks == size
     assert prep.validated_blocks == 0
-    assert prep.unvalidated_sequence_blocks == size
+    assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS + size
 
     prep.penalty = PenaltyReason.BLOCK_VALIDATION
     assert prep.penalty == PenaltyReason.BLOCK_VALIDATION
