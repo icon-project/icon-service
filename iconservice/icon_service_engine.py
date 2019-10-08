@@ -1782,6 +1782,16 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
 
+        if precommit_data.revision < Revision.IISS.value:
+            self._commit_before_iiss(context, precommit_data)
+        else:
+            self._commit_after_iiss(context, precommit_data)
+
+    def _commit_before_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
+        self._process_state_commit(context, precommit_data, state_wal)
+
+    def _commit_after_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         # Check if this block is the start block of a calculation period
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
         is_calc_period_start_block: bool = context.block.height == start_calc_block_height
@@ -1811,23 +1821,29 @@ class IconServiceEngine(ContextContainer):
                      precommit_data: 'PrecommitData',
                      is_calc_period_start_block: bool) \
             -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
+        """Assume that this method is called after Revision.IISS is on
+
+        :param context:
+        :param precommit_data:
+        :param is_calc_period_start_block:
+        :return:
+        """
+        assert precommit_data.revision >= Revision.IISS.value
+
         block: 'Block' = precommit_data.block
         wal_path: str = self._get_write_ahead_log_path()
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
-        max_log_count = 1
 
         iiss_wal: Optional['IissWAL'] = None
-        if precommit_data.revision >= Revision.IISS.value:
-            max_log_count += 1
-            tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
+        tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
 
-            # At the start of calc period, put revision and version to newly created current_rc_db
-            revision: int = precommit_data.rc_db_revision if is_calc_period_start_block else -1
+        # At the start of calc period, put revision and version to newly created current_rc_db
+        revision: int = precommit_data.rc_db_revision if is_calc_period_start_block else -1
 
-            iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
+        iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
         wal_writer: 'WriteAheadLogWriter' = \
-            WriteAheadLogWriter(precommit_data.revision, max_log_count=max_log_count, block=block)
+            WriteAheadLogWriter(precommit_data.revision, max_log_count=2, block=block)
         wal_writer.open(wal_path)
 
         if is_calc_period_start_block:
@@ -1874,8 +1890,15 @@ class IconServiceEngine(ContextContainer):
                              precommit_data: 'PrecommitData',
                              iiss_wal: Optional['IissWAL'],
                              is_calc_period_start_block: bool) -> Optional['RewardCalcDBInfo']:
-        if precommit_data.revision < Revision.IISS.value:
-            return None
+        """Assume that this method is called after Revision.IISS is on
+
+        :param context:
+        :param precommit_data:
+        :param iiss_wal:
+        :param is_calc_period_start_block:
+        :return:
+        """
+        assert precommit_data.revision >= Revision.IISS.value
         assert isinstance(iiss_wal, IissWAL)
 
         standby_db_info: Optional['RewardCalcDBInfo'] = None
@@ -1892,8 +1915,7 @@ class IconServiceEngine(ContextContainer):
                      wal_writer: 'WriteAheadLogWriter',
                      precommit_data: 'PrecommitData',
                      standby_db_info: Optional['RewardCalcDBInfo']):
-        if precommit_data.revision < Revision.IISS.value:
-            return
+        assert precommit_data.revision >= Revision.IISS.value
 
         context.engine.iiss.send_commit(precommit_data.block)
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
