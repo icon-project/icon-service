@@ -171,8 +171,7 @@ class Storage(object):
 
     def commit(self, iiss_wal: 'IissWAL'):
         self._db.write_batch(iiss_wal)
-        if iiss_wal.final_tx_index is not None:
-            self._db_iiss_tx_index = iiss_wal.final_tx_index
+        self._db_iiss_tx_index = iiss_wal.final_tx_index
 
     # todo: naming
     def _put_version_and_revision(self, revision: int):
@@ -237,7 +236,7 @@ class Storage(object):
         return standby_db_path
 
     def rename_standby_db_to_iiss_db(self, standby_db_path: Optional[str] = None) -> str:
-        # After change the db name, reward calc menage this db (icon service does not have a authority)
+        # After change the db name, reward calc manage this db (icon service does not have a authority)
         if standby_db_path is None:
             standby_db_path: str = self._get_standby_db_path()
 

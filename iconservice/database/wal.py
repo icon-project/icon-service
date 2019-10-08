@@ -118,9 +118,6 @@ class IissWAL(WALogable):
             value: bytes = MsgPackForDB.dumps([self._version, self._revision])
             yield key, value
 
-        if len(self._rc_batch) == 0:
-            return
-
         for iiss_data in self._rc_batch:
             if isinstance(iiss_data, TxData):
                 tx_index += 1
@@ -130,7 +127,7 @@ class IissWAL(WALogable):
             value: bytes = iiss_data.make_value()
             yield key, value
 
-        if tx_index >= 0:
+        if tx_index > self._tx_index:
             key: bytes = Storage.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX
             value: bytes = tx_index.to_bytes(8, DATA_BYTE_ORDER)
             yield key, value
