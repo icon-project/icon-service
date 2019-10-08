@@ -118,7 +118,6 @@ class PrecommitData(object):
         self.precommit_flag = precommit_flag
 
         self.state_root_hash: bytes = self.block_batch.digest()
-        self.block = block_batch.block
 
     def __str__(self):
         lines = [
@@ -138,6 +137,10 @@ class PrecommitData(object):
         lines.extend(_print_rc_block_batch(self.rc_block_batch))
 
         return "\n".join(lines)
+
+    @property
+    def block(self) -> Optional['Block']:
+        return None if self.block_batch is None else self.block_batch.block
 
 
 class PrecommitDataManager(object):

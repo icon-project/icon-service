@@ -1847,7 +1847,6 @@ class IconServiceEngine(ContextContainer):
             self._precommit_data_manager.get(instant_block_hash)
         if block_hash:
             precommit_data.block_batch.update_block_hash(block_hash)
-            precommit_data.block = precommit_data.block_batch.block
 
         precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
         return precommit_data
