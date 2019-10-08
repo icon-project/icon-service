@@ -60,7 +60,7 @@ class Storage(object):
 
     """
 
-    CURRENT_IISS_DB_NAME = "current_rc_db"
+    CURRENT_IISS_DB_NAME = "current_db"
     STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db_"
     IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
