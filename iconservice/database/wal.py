@@ -222,7 +222,7 @@ class WriteAheadLogWriter(object):
         for key, value in it:
             size += self._write_key_value(key, value)
 
-        # Return to the begin of WALogable
+        # Return to the WALogable start offset, writing its data size
         self._fp.seek(-size - 4, 1)
         self._write_uint32(size)
 
@@ -297,6 +297,10 @@ class WriteAheadLogReader(object):
         return self._version
 
     @property
+    def revision(self) -> int:
+        return self._revision
+
+    @property
     def state(self) -> int:
         return self._state
 
@@ -305,12 +309,11 @@ class WriteAheadLogReader(object):
         return self._block
 
     @property
-    def revision(self) -> int:
-        return self._revision
-
-    @property
     def log_count(self) -> int:
         return self._log_count
+
+    def __str__(self):
+        return f"version={self._version}, state={self._state}, block={self._block}, log_count={self._log_count}"
 
     def open(self, path: str):
         self._fp = open(path, "rb")
@@ -330,10 +333,11 @@ class WriteAheadLogReader(object):
             struct.unpack_from(_HEADER_STRUCT_FORMAT, data)
 
         if magic_key != _MAGIC_KEY:
-            raise InternalServiceErrorException(f"Invalid magic key: {bytes_to_hex(data)}")
+            raise IllegalFormatException(f"Invalid magic key: {bytes_to_hex(data)}")
 
         if version != _FILE_VERSION:
-            raise InternalServiceErrorException(f"Invalid version: {version} != {_FILE_VERSION}")
+            raise IllegalFormatException(
+                f"Invalid version: Actual({version}) != Expected({_FILE_VERSION})")
 
         self._magic_key = magic_key
         self._version = version

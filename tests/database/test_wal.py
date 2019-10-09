@@ -17,9 +17,12 @@ import os
 import random
 import unittest
 
+import pytest
+
 from iconservice.base.block import Block
+from iconservice.base.exception import IllegalFormatException
 from iconservice.database.wal import (
-    _MAGIC_KEY, _FILE_VERSION,
+    _MAGIC_KEY, _FILE_VERSION, _OFFSET_VERSION, _HEADER_SIZE,
     WriteAheadLogReader, WriteAheadLogWriter, WALogable, WALState
 )
 from iconservice.icon_constant import Revision
@@ -75,7 +78,7 @@ class TestWriteAheadLog(unittest.TestCase):
         writer = WriteAheadLogWriter(revision, log_count, self.block)
         writer.open(self.path)
 
-        writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=True)
+        writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=False)
 
         writer.write_walogable(WALogableData(self.log_data[0]))
         writer.write_state(WALState.WRITE_RC_DB.value, add=True)
@@ -91,10 +94,10 @@ class TestWriteAheadLog(unittest.TestCase):
         reader.open(self.path)
         assert reader.magic_key == _MAGIC_KEY
         assert reader.version == _FILE_VERSION
-        assert reader.state == state
         assert reader.revision == revision
-        assert reader.block == self.block
+        assert reader.state == state
         assert reader.log_count == log_count
+        assert reader.block == self.block
 
         for i in range(len(self.log_data)):
             data = {}
@@ -106,3 +109,53 @@ class TestWriteAheadLog(unittest.TestCase):
             assert id(data) != id(self.log_data[i])
 
         reader.close()
+
+    def test_invalid_magic_key(self):
+        revision = Revision.IISS.value
+        log_count = 2
+
+        writer = WriteAheadLogWriter(revision, log_count, self.block)
+        writer.open(self.path)
+        writer.close()
+
+        # Make the magic key invalid
+        with open(self.path, "rb+") as f:
+            ret = f.write(b"iwal")
+            assert ret == 4
+
+        reader = WriteAheadLogReader()
+        with pytest.raises(IllegalFormatException):
+            reader.open(self.path)
+
+    def test_invalid_version(self):
+        revision = Revision.IISS.value
+        log_count = 2
+
+        writer = WriteAheadLogWriter(revision, log_count, self.block)
+        writer.open(self.path)
+        writer.close()
+
+        # Make the version invalid
+        with open(self.path, "rb+") as f:
+            f.seek(_OFFSET_VERSION)
+            version = 0xFFFFFFFF
+            ret = f.write(version.to_bytes(4, "big"))
+            assert ret == 4
+
+        reader = WriteAheadLogReader()
+        with pytest.raises(IllegalFormatException):
+            reader.open(self.path)
+
+    def test_out_of_header_size(self):
+        writer = WriteAheadLogWriter(
+            revision=Revision.IISS.value, max_log_count=2, block=self.block)
+        writer.open(self.path)
+        writer.close()
+
+        f = open(self.path, "rb+")
+        f.truncate(_HEADER_SIZE - 4)
+        f.close()
+
+        reader = WriteAheadLogReader()
+        with pytest.raises(IllegalFormatException):
+            reader.open(self.path)

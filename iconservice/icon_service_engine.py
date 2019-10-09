@@ -38,7 +38,7 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
@@ -82,6 +82,7 @@ class IconServiceEngine(ContextContainer):
     It is contained in IconInnerService.
     """
     TAG = "ISE"
+    WAL_FILE = "block.wal"
 
     def __init__(self):
         """Constructor
@@ -152,11 +153,10 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
         self._init_component_context()
 
-        context = IconScoreContext(IconScoreContextType.DIRECT)
-
         self._recover_dbs(rc_data_path)
 
         # load last_block_info
+        context = IconScoreContext(IconScoreContextType.DIRECT)
         self._init_last_block_info(context)
 
         # set revision (if governance SCORE does not exist, remain revision to default).
@@ -1814,8 +1814,8 @@ class IconServiceEngine(ContextContainer):
 
         try:
             os.remove(self._get_write_ahead_log_path())
-        except:
-            pass
+        except BaseException as e:
+            Logger.error(tag=self.TAG, msg=str(e))
 
     def _process_wal(self, context: 'IconScoreContext',
                      precommit_data: 'PrecommitData',
@@ -1969,41 +1969,47 @@ class IconServiceEngine(ContextContainer):
         :param rc_data_path: The directory where iiss_dbs are contained
         """
 
-        Logger.debug(tag="ISE", msg="_recover_dbs() start")
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() start")
 
         path: str = self._get_write_ahead_log_path()
         if not os.path.isfile(path):
-            Logger.debug(tag="ISE", msg="_recover_dbs() end: No WAL file")
+            Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() end: No WAL file {path}")
             return
 
         reader = WriteAheadLogReader()
         try:
             reader.open(path)
+            Logger.info(tag=WAL_LOG_TAG, msg=f"reader=({reader})")
+
             if reader.log_count == 2:
                 self._recover_rc_db(reader, rc_data_path)
                 self._recover_state_db(reader)
                 self._wal_reader = reader
             else:
-                Logger.debug(tag="ISE", msg=f"Incomplete WAL file: {path}")
-
-            self._wal_reader = reader
+                Logger.debug(tag=WAL_LOG_TAG, msg=f"Incomplete WAL file: {path}")
         except IconServiceBaseException as e:
-            Logger.info(tag="ISE", msg=e.message)
+            Logger.info(tag=WAL_LOG_TAG, msg=e.message)
+        except BaseException as e:
+            Logger.warning(tag=WAL_LOG_TAG, msg=str(e))
         finally:
             reader.close()
 
         try:
             os.remove(path)
-        except:
-            pass
+        except BaseException as e:
+            Logger.error(tag=WAL_LOG_TAG, msg=str(e))
 
-        Logger.debug(tag="ISE", msg="_recover_dbs() end")
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() end")
 
     @classmethod
     def _recover_rc_db(cls, reader: 'WriteAheadLogReader', rc_data_path: str):
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rc_db() start: rc_data_path={rc_data_path}")
+
         wal_state = WALState(reader.state)
+        Logger.info(tag=WAL_LOG_TAG, msg=f"reader state={wal_state}")
 
         if wal_state & WALState.WRITE_RC_DB:
+            Logger.info(tag=WAL_LOG_TAG, msg="rc_db has already been up-to-date")
             return
 
         block: 'Block' = reader.block
@@ -2032,7 +2038,7 @@ class IconServiceEngine(ContextContainer):
             try:
                 os.rename(current_rc_db_path, standby_rc_db_path)
             except BaseException as e:
-                Logger.error(tag="ISE", msg=str(e))
+                Logger.error(tag=WAL_LOG_TAG, msg=str(e))
 
             # Create a new current_rc_db for the next calc period
             db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
@@ -2049,13 +2055,18 @@ class IconServiceEngine(ContextContainer):
             try:
                 os.rename(standby_rc_db_path, iiss_rc_db_path)
             except BaseException as e:
-                Logger.error(tag="ISE", msg=str(e))
+                Logger.error(tag=WAL_LOG_TAG, msg=str(e))
 
+        # Write data to "current_db"
         db.write_batch(reader.get_iterator(0))
         db.close()
 
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
+
     @classmethod
     def _scan_rc_db(cls, rc_data_path: str) -> Tuple[bool, str]:
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_scan_rc_db() start: {rc_data_path}")
+
         """Scan directories that are managed by RewardCalcStorage
 
         :param rc_data_path: the parent directory of rc_dbs
@@ -2072,37 +2083,50 @@ class IconServiceEngine(ContextContainer):
                     elif entry.name.startswith(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):
                         standby_rc_db_path = os.path.join(rc_data_path, entry.name)
 
+        Logger.debug(tag=WAL_LOG_TAG,
+                     msg="_scan_rc_db() end: "
+                         f"current_rc_db_exists={current_rc_db_exists} "
+                         f"standby_rc_db_path={standby_rc_db_path}")
         return current_rc_db_exists, standby_rc_db_path
 
     def _recover_state_db(self, reader: 'WriteAheadLogReader'):
-        wal_state = WALState(reader.state)
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_state_db() start: reader={reader}")
 
+        wal_state = WALState(reader.state)
         if wal_state & WALState.WRITE_STATE_DB:
+            Logger.info(tag=WAL_LOG_TAG, msg="state_db has already been up-to-date")
             return
 
-        self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
+        ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
+        Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: size={ret}")
+
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_state_db() end")
 
     def _get_write_ahead_log_path(self) -> str:
-        return os.path.join(self._state_db_root_path, f"block.wal")
+        return os.path.join(self._state_db_root_path, self.WAL_FILE)
 
     def hello(self) -> dict:
-        """If state_db and rc_db are recovered, send some messages to reward calculator
+        """If state_db and rc_db are recovered, send COMMIT_BLOCK message to reward calculator
         It is called on INVOKE thread
         Assume that the connection between iconservice and rc is ready
 
         :return:
         """
-        Logger.debug(tag="ISE", msg="hello() start")
+        Logger.debug(tag=self.TAG, msg="hello() start")
 
         if isinstance(self._wal_reader, WriteAheadLogReader):
             wal_state = WALState(self._wal_reader.state)
 
-            if wal_state & WALState.WRITE_RC_DB \
-                    and not (wal_state & WALState.SEND_COMMIT_BLOCK):
+            # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
+            # send COMMIT_BLOCK to rc before invoking a block
+            if wal_state & (WALState.WRITE_RC_DB | WALState.SEND_COMMIT_BLOCK) == WALState.WRITE_RC_DB:
                 block: 'Block' = self._wal_reader.block
                 context = self._context_factory.create(IconScoreContextType.DIRECT, block)
                 context.engine.iiss.send_commit(block)
 
-        Logger.debug(tag="ISE", msg="hello() end")
+            # No need to use
+            self._wal_reader = None
+
+        Logger.debug(tag=self.TAG, msg="hello() end")
 
         return {}

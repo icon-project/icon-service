@@ -100,15 +100,17 @@ class KeyValueDatabase(object):
     def iterator(self) -> iter:
         return self._db.iterator()
 
-    def write_batch(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> None:
+    def write_batch(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> int:
         """Write a batch to the database for the specified states dict.
 
         :param it: iterable which return tuple(key, value)
             key: bytes
             value: optional bytes
         """
+        size = 0
+
         if it is None:
-            return
+            return size
 
         with self._db.write_batch() as wb:
             for key, value in it:
@@ -116,6 +118,10 @@ class KeyValueDatabase(object):
                     wb.put(key, value)
                 else:
                     wb.delete(key)
+
+                size += 1
+
+        return size
 
 
 class DatabaseObserver(object):
