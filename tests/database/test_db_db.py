@@ -22,12 +22,13 @@ from unittest.mock import patch
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
-from iconservice.database.db import ContextDatabase, MetaContextDatabase, tx_batch_value_to_bytes
+from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreFuncType
+from iconservice.database.wal import StateWAL
 from tests import rmtree
 
 
@@ -61,7 +62,7 @@ class TestKeyValueDatabase(unittest.TestCase):
         }
         db = self.db
 
-        db.write_batch(data, converter=tx_batch_value_to_bytes)
+        db.write_batch(StateWAL(data))
 
         self.assertEqual(b'value1', db.get(b'key1'))
         self.assertEqual(b'value0', db.get(b'key0'))
@@ -153,7 +154,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
             b'key1': TransactionBatchValue(b'value1', True)
         }
         db = self.context_db
-        db.write_batch(context, data)
+        db.write_batch(context, StateWAL(data))
 
         self.assertEqual(b'value1', db.get(context, b'key1'))
         self.assertEqual(b'value0', db.get(context, b'key0'))
@@ -165,21 +166,21 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         }
         db = self.context_db
         with self.assertRaises(InvalidParamsException):
-            db.write_batch(context, data)
+            db.write_batch(context, StateWAL(data))
 
         data = {
             b'key0': None,
         }
         db = self.context_db
         with self.assertRaises(InvalidParamsException):
-            db.write_batch(context, data)
+            db.write_batch(context, StateWAL(data))
 
         data = {
             b'key0': "",
         }
         db = self.context_db
         with self.assertRaises(InvalidParamsException):
-            db.write_batch(context, data)
+            db.write_batch(context, StateWAL(data))
 
     def test_write_batch_on_readonly_exception(self):
         db = self.context_db
@@ -191,7 +192,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
                 b'key0': b'value0',
                 b'key1': b'value1'
             }
-            db.write_batch(context, data)
+            db.write_batch(context, data.items())
 
     @unittest.skip('context is never none')
     def test_none_context(self):
@@ -211,13 +212,14 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         context = self.context
         db = self.context_db
         tx_batch = context.tx_batch
+        state_wal = StateWAL(tx_batch)
 
         db._put(context, b'key0', b'value0', True)
         db._put(context, b'key1', b'value1', True)
         self.assertEqual(b'value0', db.get(context, b'key0'))
         self.assertEqual((b'value0', True), tx_batch[b'key0'])
 
-        db.write_batch(context, tx_batch)
+        db.write_batch(context, state_wal)
         tx_batch.clear()
         self.assertEqual(0, len(tx_batch))
         self.assertEqual(b'value0', db.get(context, b'key0'))
@@ -228,7 +230,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(None, db.get(context, b'key1'))
         self.assertEqual((None, True), tx_batch[b'key0'])
         self.assertEqual((None, False), tx_batch[b'key1'])
-        db.write_batch(context, tx_batch)
+        db.write_batch(context, state_wal)
         tx_batch.clear()
         self.assertEqual(0, len(tx_batch))
         self.assertIsNone(db.get(context, b'key0'))

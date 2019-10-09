@@ -19,10 +19,13 @@ from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
 from typing import Optional
 
+from iconcommons.logger import Logger
+
 from ..base.exception import DatabaseException, AccessDeniedException
 from ..utils import sha3_256
 
 from ..base.block import Block
+from ..icx import IcxStorage
 
 
 TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
@@ -170,6 +173,13 @@ class BlockBatch(Batch):
                            timestamp=self.block.timestamp,
                            prev_hash=self.block.prev_hash,
                            cumulative_fee=self.block.cumulative_fee)
+
+    def set_block_to_batch(self, revision: int):
+        Logger.debug(tag="DB", msg=f"set_block_to_batch() block={self.block}")
+        block_key: bytes = IcxStorage.LAST_BLOCK_KEY
+        block_value: tuple = TransactionBatchValue(self.block.to_bytes(revision), False)
+
+        super().__setitem__(block_key, block_value)
 
     def clear(self) -> None:
         self.block = None

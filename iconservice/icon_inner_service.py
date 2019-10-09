@@ -69,14 +69,23 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def hello(self):
-        Logger.info('icon_score_hello_start', ICON_INNER_LOG_TAG)
+        Logger.info('hello() start', ICON_INNER_LOG_TAG)
 
         ready_future = self._icon_service_engine.get_ready_future()
         await ready_future
 
-        Logger.info('icon_score_hello_end', ICON_INNER_LOG_TAG)
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
+            loop = get_event_loop()
+            ret = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE], self._hello)
+        else:
+            ret = self._hello()
 
-        return {}
+        Logger.info('hello() end', ICON_INNER_LOG_TAG)
+
+        return ret
+
+    def _hello(self):
+        return self._icon_service_engine.hello()
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)

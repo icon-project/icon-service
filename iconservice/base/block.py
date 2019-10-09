@@ -76,6 +76,13 @@ class Block(object):
     def __repr__(self) -> str:
         return self.__str__()
 
+    def __eq__(self, other):
+        return isinstance(other, Block) \
+            and self._height == other._height \
+            and self._timestamp == other._timestamp \
+            and self._prev_hash == other._prev_hash \
+            and self.cumulative_fee == other.cumulative_fee
+
     @property
     def height(self) -> int:
         return self._height
@@ -169,7 +176,7 @@ class Block(object):
 
     def _to_msg_packed_bytes(self) -> bytes:
         data = [
-            BlockVersion.MSG_PACK,
+            BlockVersion.MSG_PACK.value,
             self._height,
             self._hash,
             self._timestamp,

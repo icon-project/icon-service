@@ -19,10 +19,11 @@ from threading import Lock
 from typing import TYPE_CHECKING, Optional, List
 
 from .base.block import Block, EMPTY_BLOCK
-from .database.batch import TransactionBatchValue
 from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
+from .database.batch import TransactionBatchValue
 from .iconscore.icon_score_mapper import IconScoreMapper
+from .utils import bytes_to_hex
 
 if TYPE_CHECKING:
     from .base.address import Address
@@ -117,7 +118,6 @@ class PrecommitData(object):
         self.precommit_flag = precommit_flag
 
         self.state_root_hash: bytes = self.block_batch.digest()
-        self.block = block_batch.block
 
     def __str__(self):
         lines = [
@@ -137,6 +137,10 @@ class PrecommitData(object):
         lines.extend(_print_rc_block_batch(self.rc_block_batch))
 
         return "\n".join(lines)
+
+    @property
+    def block(self) -> Optional['Block']:
+        return None if self.block_batch is None else self.block_batch.block
 
 
 class PrecommitDataManager(object):
@@ -221,7 +225,7 @@ class PrecommitDataManager(object):
         precommit_data = self._precommit_data_mapper.get(instant_block_hash)
         if precommit_data is None:
             raise InvalidParamsException(
-                f'No precommit data: block hash: ({instant_block_hash})')
+                f'No precommit data: block_hash({bytes_to_hex(instant_block_hash)})')
 
         if not self._is_last_block_valid():
             return

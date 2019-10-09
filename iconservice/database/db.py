@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, Optional, Dict
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 import plyvel
 
 from iconcommons.logger import Logger
-from iconservice.database.batch import TransactionBatchValue
+from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
@@ -38,12 +38,6 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
         return True
     else:
         return not context.readonly
-
-
-def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> bytes:
-    if not isinstance(tx_batch_value, TransactionBatchValue):
-        raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
-    return tx_batch_value.value
 
 
 class KeyValueDatabase(object):
@@ -106,25 +100,28 @@ class KeyValueDatabase(object):
     def iterator(self) -> iter:
         return self._db.iterator()
 
-    def write_batch(self, states: dict, converter: Optional[callable] = None) -> None:
+    def write_batch(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> int:
         """Write a batch to the database for the specified states dict.
 
-        :param converter: function that converts the value of state dictionary to bytes
-        :param states: key/value pairs
+        :param it: iterable which return tuple(key, value)
             key: bytes
-            value:
+            value: optional bytes
         """
-        if states is None or len(states) == 0:
-            return
+        size = 0
+
+        if it is None:
+            return size
 
         with self._db.write_batch() as wb:
-            for key, value in states.items():
-                if converter:
-                    value = converter(value)
+            for key, value in it:
                 if value:
                     wb.put(key, value)
                 else:
                     wb.delete(key)
+
+                size += 1
+
+        return size
 
 
 class DatabaseObserver(object):
@@ -320,13 +317,13 @@ class ContextDatabase(object):
 
     def write_batch(self,
                     context: 'IconScoreContext',
-                    states: Dict[bytes, 'TransactionBatchValue']):
+                    it: Iterable[Tuple[bytes, Optional[bytes]]]):
 
         if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(states, converter=tx_batch_value_to_bytes)
+        return self.key_value_db.write_batch(it)
 
     @staticmethod
     def from_path(path: str,
