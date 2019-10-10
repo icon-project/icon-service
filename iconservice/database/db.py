@@ -106,6 +106,7 @@ class KeyValueDatabase(object):
         :param it: iterable which return tuple(key, value)
             key: bytes
             value: optional bytes
+        :return: the number of key-value pairs written
         """
         size = 0
 

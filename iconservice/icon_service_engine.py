@@ -24,10 +24,11 @@ from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException
-)
+    MethodNotFoundException,
+    DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
+from .database.db import KeyValueDatabase
 from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
@@ -1971,13 +1972,14 @@ class IconServiceEngine(ContextContainer):
         :param rc_data_path: The directory where iiss_dbs are contained
         """
 
-        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() start")
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() start: rc_data_path={rc_data_path}")
 
         path: str = self._get_write_ahead_log_path()
         if not os.path.isfile(path):
             Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() end: No WAL file {path}")
             return
 
+        self._wal_reader = None
         reader = WriteAheadLogReader()
         try:
             reader.open(path)
@@ -2003,93 +2005,65 @@ class IconServiceEngine(ContextContainer):
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() end")
 
+    @staticmethod
+    def _is_need_to_recover_rc_db(wal_state: 'WALState', is_calc_period_start_block: bool) -> bool:
+        if wal_state & WALState.WRITE_RC_DB:
+            if not is_calc_period_start_block or \
+                    (is_calc_period_start_block and wal_state & WALState.SEND_CALCULATE):
+                return False
+
+        return True
+
     @classmethod
     def _recover_rc_db(cls, reader: 'WriteAheadLogReader', rc_data_path: str):
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rc_db() start: rc_data_path={rc_data_path}")
 
         wal_state = WALState(reader.state)
+        is_calc_period_start_block = bool(wal_state & WALState.CALC_PERIOD_START_BLOCK)
         Logger.info(tag=WAL_LOG_TAG, msg=f"reader state={wal_state}")
 
-        if wal_state & WALState.WRITE_RC_DB:
+        if not cls._is_need_to_recover_rc_db(wal_state, is_calc_period_start_block):
             Logger.info(tag=WAL_LOG_TAG, msg="rc_db has already been up-to-date")
             return
 
-        block: 'Block' = reader.block
-        is_calc_period_start_block = bool(wal_state & WALState.CALC_PERIOD_START_BLOCK)
-        is_rename_db_needed: bool = False
-        standby_rc_db_path: str = ""
-
         # If WAL file is made at the start block of calc period
         if is_calc_period_start_block:
-            current_rc_db_exists, standby_rc_db_path = cls._scan_rc_db(rc_data_path)
-            is_rename_db_needed = len(standby_rc_db_path) == 0 and current_rc_db_exists
+            current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
+            is_current_exists: bool = len(current_rc_db_path) == 0
+            is_standby_exists: bool = len(standby_rc_db_path) == 0
+            is_iiss_exists: bool = len(iiss_rc_db_path) == 0
+            Logger.info(tag=WAL_LOG_TAG,
+                        msg=f"current_exists={is_current_exists}, "
+                            f"is_standby_exists={is_standby_exists}, "
+                            f"is_iiss_exists={is_iiss_exists}")
 
-        db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            # If only current_db exists, replace current_db to standby_rc_db
+            if is_current_exists and not is_standby_exists and not is_iiss_exists:
+                # Get revision from the RC DB
+                prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+                rc_version, revision = get_version_and_revision(prev_calc_db)
+                rc_version: int = max(rc_version, 0)
+                prev_calc_db.close()
 
-        # Rename current_db_name to standby_db_name
-        if is_rename_db_needed:
-            rc_version, revision = get_version_and_revision(db)
-            db.close()
+                standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
+                                                                                            reader.block.height,
+                                                                                            rc_version)
+                is_standby_exists: bool = True
+            elif not is_current_exists and not is_standby_exists:
+                # No matter iiss_db exists or not, If both current_db and standby_db do not exist, raise error
+                raise DatabaseException(f"RC related DB not exists")
 
-            current_rc_db_path: str = \
-                os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
-            standby_rc_db_name: str = \
-                f"{RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX}{block.height}_{rc_version}"
-            standby_rc_db_path: str = os.path.join(rc_data_path, standby_rc_db_name)
-
-            try:
-                os.rename(current_rc_db_path, standby_rc_db_path)
-            except BaseException as e:
-                Logger.error(tag=WAL_LOG_TAG, msg=str(e))
-
-            # Create a new current_rc_db for the next calc period
-            db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-
-        # Rename standby_db_name to iiss_db_name
-        # If standby_db_name is renamed to iiss_db_name, no need to send CALCULATE message to rc
-        if len(standby_rc_db_path) > 0:
-            standby_rc_db_name = os.path.basename(standby_rc_db_path)
-            iiss_rc_db_name = \
-                f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}" \
-                f"{standby_rc_db_name[len(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):]}"
-            iiss_rc_db_path = os.path.join(rc_data_path, iiss_rc_db_name)
-
-            try:
-                os.rename(standby_rc_db_path, iiss_rc_db_path)
-            except BaseException as e:
-                Logger.error(tag=WAL_LOG_TAG, msg=str(e))
+            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            if is_standby_exists:
+                RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
+        else:
+            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
 
         # Write data to "current_db"
-        db.write_batch(reader.get_iterator(0))
-        db.close()
+        current_db.write_batch(reader.get_iterator(0))
+        current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
-
-    @classmethod
-    def _scan_rc_db(cls, rc_data_path: str) -> Tuple[bool, str]:
-        Logger.debug(tag=WAL_LOG_TAG, msg=f"_scan_rc_db() start: {rc_data_path}")
-
-        """Scan directories that are managed by RewardCalcStorage
-
-        :param rc_data_path: the parent directory of rc_dbs
-        :return: current_rc_db_exists(bool), standby_rc_db_path
-        """
-        current_rc_db_exists = False
-        standby_rc_db_path: str = ""
-
-        with os.scandir(rc_data_path) as it:
-            for entry in it:
-                if entry.is_dir():
-                    if entry.name == RewardCalcStorage.CURRENT_IISS_DB_NAME:
-                        current_rc_db_exists = True
-                    elif entry.name.startswith(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):
-                        standby_rc_db_path = os.path.join(rc_data_path, entry.name)
-
-        Logger.debug(tag=WAL_LOG_TAG,
-                     msg="_scan_rc_db() end: "
-                         f"current_rc_db_exists={current_rc_db_exists} "
-                         f"standby_rc_db_path={standby_rc_db_path}")
-        return current_rc_db_exists, standby_rc_db_path
 
     def _recover_state_db(self, reader: 'WriteAheadLogReader'):
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_state_db() start: reader={reader}")
@@ -2100,7 +2074,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
-        Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: size={ret}")
+        Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: count={ret}")
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_state_db() end")
 
@@ -2120,11 +2094,9 @@ class IconServiceEngine(ContextContainer):
             wal_state = WALState(self._wal_reader.state)
 
             # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
-            # send COMMIT_BLOCK to rc before invoking a block
-            if wal_state & (WALState.WRITE_RC_DB | WALState.SEND_COMMIT_BLOCK) == WALState.WRITE_RC_DB:
-                block: 'Block' = self._wal_reader.block
-                context = self._context_factory.create(IconScoreContextType.DIRECT, block)
-                context.engine.iiss.send_commit(block)
+            # send COMMIT_BLOCK to rc prior to invoking a block
+            if not (wal_state & WALState.SEND_COMMIT_BLOCK):
+                IconScoreContext.engine.iiss.send_commit(self._wal_reader.block)
 
             # No need to use
             self._wal_reader = None

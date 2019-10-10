@@ -21,13 +21,14 @@ import os
 from subprocess import Popen
 from typing import Optional, Callable, Any, Tuple
 
-from iconservice.icon_constant import RCStatus
 from iconcommons.logger import Logger
+from iconservice.icon_constant import RCStatus
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
 from ....base.address import Address
 from ....base.exception import TimeoutException
+from ....utils import bytes_to_hex
 
 _TAG = "RCP"
 
@@ -348,7 +349,9 @@ class RewardCalcProxy(object):
         """
         Logger.debug(
             tag=_TAG,
-            msg=f"commit_block() start: success({success}) block_height({block_height}) block_hash({block_hash})"
+            msg=f"commit_block() start: success={success}, "
+                f"block_height={block_height}, "
+                f"block_hash={bytes_to_hex(block_hash)}"
         )
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(

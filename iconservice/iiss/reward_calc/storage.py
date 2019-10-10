@@ -22,7 +22,9 @@ from iconcommons import Logger
 from ..reward_calc.msg_data import Header, TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
-from ...icon_constant import DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+from ...icon_constant import (
+    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+)
 from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils.msgpack_for_db import MsgPackForDB
@@ -200,6 +202,7 @@ class Storage(object):
     def _rename_db(old_db_path: str, new_db_path: str):
         if os.path.exists(old_db_path) and not os.path.exists(new_db_path):
             os.rename(old_db_path, new_db_path)
+            Logger.info(tag=IISS_LOG_TAG, msg=f"Rename db: {old_db_path} -> {new_db_path}")
         else:
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
@@ -215,43 +218,55 @@ class Storage(object):
 
         # rename current db -> standby db
         assert block_height > 0
-        current_db_path: str = os.path.join(self._path, self.CURRENT_IISS_DB_NAME)
-        standby_db_path: str = self._rename_current_db_to_standby_db(current_db_path, block_height)
 
+        rc_version, _ = self.get_version_and_revision()
+        rc_version: int = max(rc_version, 0)
+        self._db.close()
+
+        standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height, rc_version)
         self._db = self.create_current_db(self._path)
-        self._db_iiss_tx_index = -1
 
         return RewardCalcDBInfo(standby_db_path, block_height)
 
-    def _rename_current_db_to_standby_db(self, current_db_path: str, block_height: int) -> str:
-        rc_version, _ = self.get_version_and_revision()
-        self._db.close()
+    @classmethod
+    def rename_current_db_to_standby_db(cls, rc_data_path: str, block_height: int, rc_version: int) -> str:
+        current_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
+        standby_db_name: str = cls.get_standby_rc_db_name(block_height, rc_version)
+        standby_db_path: str = os.path.join(rc_data_path, standby_db_name)
 
-        if rc_version < 0:
-            rc_version: int = 0
-
-        standby_db_name: str = self.get_standby_rc_db_name(block_height, rc_version)
-        standby_db_path = os.path.join(self._path, standby_db_name)
-
-        self._rename_db(current_db_path, standby_db_path)
+        cls._rename_db(current_db_path, standby_db_path)
 
         return standby_db_path
 
-    def rename_standby_db_to_iiss_db(self, standby_db_path: Optional[str] = None) -> str:
+    @classmethod
+    def rename_standby_db_to_iiss_db(cls, standby_db_path: str) -> str:
         # After change the db name, reward calc manage this db (icon service does not have a authority)
-        if standby_db_path is None:
-            standby_db_path: str = self._get_standby_db_path()
+        iiss_db_path: str = cls.IISS_RC_DB_NAME_PREFIX.\
+            join(standby_db_path.rsplit(cls.STANDBY_IISS_DB_NAME_PREFIX, 1))
 
-        iiss_db_path: str = self.IISS_RC_DB_NAME_PREFIX.\
-            join(standby_db_path.rsplit(self.STANDBY_IISS_DB_NAME_PREFIX, 1))
-
-        self._rename_db(standby_db_path, iiss_db_path)
+        cls._rename_db(standby_db_path, iiss_db_path)
 
         return iiss_db_path
 
-    def _get_standby_db_path(self) -> str:
-        for db_name in os.listdir(self._path):
-            if db_name.startswith(self.STANDBY_IISS_DB_NAME_PREFIX):
-                return os.path.join(self._path, db_name)
+    @classmethod
+    def scan_rc_db(cls, rc_data_path: str) -> Tuple[str, str, str]:
+        """Scan directories that are managed by RewardCalcStorage
 
-        raise DatabaseException("Standby database not exists")
+        :param rc_data_path: the parent directory of rc_dbs
+        :return: current_rc_db_exists(bool), standby_rc_db_path
+        """
+        current_rc_db_path: str = ""
+        standby_rc_db_path: str = ""
+        iiss_rc_db_path: str = ""
+
+        with os.scandir(rc_data_path) as it:
+            for entry in it:
+                if entry.is_dir():
+                    if entry.name == cls.CURRENT_IISS_DB_NAME:
+                        current_rc_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
+                    elif entry.name.startswith(cls.STANDBY_IISS_DB_NAME_PREFIX):
+                        standby_rc_db_path: str = os.path.join(rc_data_path, entry.name)
+                    elif entry.name.startswith(cls.IISS_RC_DB_NAME_PREFIX):
+                        iiss_rc_db_path: str = os.path.join(rc_data_path, entry.name)
+
+        return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
