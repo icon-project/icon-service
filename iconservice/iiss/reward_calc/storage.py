@@ -246,7 +246,7 @@ class Storage(object):
         return iiss_db_path
 
     @classmethod
-    def scan_rc_db(cls, rc_data_path: str) -> Tuple[str, str]:
+    def scan_rc_db(cls, rc_data_path: str) -> Tuple[str, str, str]:
         """Scan directories that are managed by RewardCalcStorage
 
         :param rc_data_path: the parent directory of rc_dbs
@@ -254,6 +254,7 @@ class Storage(object):
         """
         current_rc_db_path: str = ""
         standby_rc_db_path: str = ""
+        iiss_rc_db_path: str = ""
 
         with os.scandir(rc_data_path) as it:
             for entry in it:
@@ -262,5 +263,7 @@ class Storage(object):
                         current_rc_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
                     elif entry.name.startswith(cls.STANDBY_IISS_DB_NAME_PREFIX):
                         standby_rc_db_path: str = os.path.join(rc_data_path, entry.name)
+                    elif entry.name.startswith(cls.IISS_RC_DB_NAME_PREFIX):
+                        iiss_rc_db_path: str = os.path.join(rc_data_path, entry.name)
 
-        return current_rc_db_path, standby_rc_db_path
+        return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path

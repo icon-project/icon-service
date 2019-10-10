@@ -2027,12 +2027,13 @@ class IconServiceEngine(ContextContainer):
 
         # If WAL file is made at the start block of calc period
         if is_calc_period_start_block:
-            current_rc_db_path, standby_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
+            current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
             is_current_exists: bool = len(current_rc_db_path) == 0
             is_standby_exists: bool = len(standby_rc_db_path) == 0
+            is_iiss_exists: bool = len(iiss_rc_db_path) == 0
 
-            # If standby_rc_db is not exists, replace current db to standby_rc_db
-            if is_current_exists and not is_standby_exists:
+            # If only current_db exists, replace current db to standby_rc_db
+            if is_current_exists and not is_standby_exists and not is_iiss_exists:
                 # Get revision from the RC DB
                 prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
                 rc_version, revision = get_version_and_revision(prev_calc_db)
@@ -2042,16 +2043,20 @@ class IconServiceEngine(ContextContainer):
                 standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
                                                                                             reader.block.height,
                                                                                             rc_version)
+                is_standby_exists: bool = True
             elif not is_current_exists and not is_standby_exists:
+                # No matter iiss_db exists or not, If both current_db and standby_db do not exist, raise error
                 raise DatabaseException(f"RC related DB not exists")
 
-            # Replace standby_rc_db to iiss_rc_db
-            RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
-        db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            if is_standby_exists:
+                RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
+        else:
+            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
 
         # Write data to "current_db"
-        db.write_batch(reader.get_iterator(0))
-        db.close()
+        current_db.write_batch(reader.get_iterator(0))
+        current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
 
