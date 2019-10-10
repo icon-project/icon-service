@@ -19,6 +19,7 @@ from enum import IntEnum
 import msgpack
 
 from iconservice.base.address import Address
+from iconservice.utils import bytes_to_hex
 from iconservice.utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
 _next_msg_id: int = 1
@@ -122,8 +123,8 @@ class ClaimRequest(Request):
                (self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
 
     def __str__(self) -> str:
-        block_hash = self.block_hash if isinstance(self.block_hash, bytes) else self.block_hash.hex()
-        return f"{self.msg_type.name}({self.msg_id}, {self.address}, {self.block_height}, {block_hash})"
+        return f"{self.msg_type.name}({self.msg_id}, " \
+            f"{self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
 
 class ClaimResponse(Response):
@@ -140,8 +141,8 @@ class ClaimResponse(Response):
         self.iscore: int = iscore
 
     def __str__(self) -> str:
-        block_hash = self.block_hash if isinstance(self.block_hash, bytes) else self.block_hash.hex()
-        return f"CLAIM({self.msg_id}, {self.address}, {self.block_height}, {block_hash}, {self.iscore})"
+        return f"CLAIM({self.msg_id}, " \
+            f"{self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)}, {self.iscore})"
 
     @staticmethod
     def from_list(items: list) -> 'ClaimResponse':
@@ -173,9 +174,8 @@ class CommitClaimRequest(Request):
                (self.success, self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
 
     def __str__(self) -> str:
-        block_hash = self.block_hash if isinstance(self.block_hash, bytes) else self.block_hash.hex()
         return f"{self.msg_type.name}" \
-                f"({self.msg_id}, {self.success}, {self.address}, {self.block_height}, {block_hash})"
+                f"({self.msg_id}, {self.success}, {self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
 
 class CommitClaimResponse(Response):
@@ -258,9 +258,8 @@ class QueryCalculateResultResponse(Response):
         self.state_hash = state_hash
 
     def __str__(self):
-        state_hash = self.state_hash if isinstance(self.state_hash, bytes) else self.state_hash.hex()
         return f"QUERY_CALCULATE_RESULT_RESPONSE({self.msg_id}, " \
-            f"{self.status}, {self.block_height}, {self.iscore}, {state_hash})"
+            f"{self.status}, {self.block_height}, {self.iscore}, {bytes_to_hex(self.state_hash)})"
 
     @staticmethod
     def from_list(items: list) -> 'QueryCalculateResultResponse':
@@ -364,8 +363,8 @@ class CommitBlockRequest(Request):
         self.block_hash = block_hash
 
     def __str__(self):
-        block_hash = self.block_hash if isinstance(self.block_hash, bytes) else self.block_hash.hex()
-        return f"{self.msg_type.name}({self.msg_id}, {self.success}, {self.block_height}, {block_hash})"
+        return f"{self.msg_type.name}({self.msg_id}, " \
+            f"{self.success}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id, (self.success, self.block_height, self.block_hash)
@@ -383,8 +382,7 @@ class CommitBlockResponse(Response):
         self.block_hash: bytes = block_hash
 
     def __str__(self):
-        block_hash = self.block_hash if isinstance(self.block_hash, bytes) else self.block_hash.hex()
-        return f"COMMIT_BLOCK({self.msg_id}, {self.success}, {self.block_height}, {block_hash})"
+        return f"COMMIT_BLOCK({self.msg_id}, {self.success}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
     @staticmethod
     def from_list(items: list) -> 'CommitBlockResponse':
@@ -435,8 +433,8 @@ class CalculateDoneNotification(Response):
         self.state_hash = state_hash
 
     def __str__(self):
-        state_hash = self.state_hash if isinstance(self.state_hash, bytes) else self.state_hash.hex()
-        return f"CALCULATE_DONE({self.msg_id}, {self.success}, {self.block_height}, {self.iscore}, {state_hash})"
+        return f"CALCULATE_DONE({self.msg_id}, " \
+            f"{self.success}, {self.block_height}, {self.iscore}, {bytes_to_hex(self.state_hash)})"
 
     @staticmethod
     def from_list(items: list) -> 'CalculateDoneNotification':
