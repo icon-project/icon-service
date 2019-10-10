@@ -127,6 +127,3 @@ class Engine(EngineBase):
                                        event_signature="ICXBurned",
                                        arguments=[amount],
                                        indexed_args_count=0)
-
-    def get_limit_inflation_beta(self, expected_irep: int) -> int:
-        return self._formula.get_limit_inflation_beta(expected_irep)
