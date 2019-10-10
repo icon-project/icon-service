@@ -22,7 +22,9 @@ from iconcommons import Logger
 from ..reward_calc.msg_data import Header, TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
-from ...icon_constant import DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+from ...icon_constant import (
+    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+)
 from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils.msgpack_for_db import MsgPackForDB
@@ -200,6 +202,7 @@ class Storage(object):
     def _rename_db(old_db_path: str, new_db_path: str):
         if os.path.exists(old_db_path) and not os.path.exists(new_db_path):
             os.rename(old_db_path, new_db_path)
+            Logger.info(tag=IISS_LOG_TAG, msg=f"Rename db: {old_db_path} -> {new_db_path}")
         else:
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
@@ -217,7 +220,7 @@ class Storage(object):
         assert block_height > 0
 
         rc_version, _ = self.get_version_and_revision()
-        rc_version: int = rc_version if rc_version >= 0 else 0
+        rc_version: int = max(rc_version, 0)
         self._db.close()
 
         standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height, rc_version)

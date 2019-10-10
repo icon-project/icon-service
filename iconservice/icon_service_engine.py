@@ -18,8 +18,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
-
-from .database.db import KeyValueDatabase
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -30,6 +28,7 @@ from .base.exception import (
     DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
+from .database.db import KeyValueDatabase
 from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
@@ -1971,13 +1970,14 @@ class IconServiceEngine(ContextContainer):
         :param rc_data_path: The directory where iiss_dbs are contained
         """
 
-        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() start")
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() start: rc_data_path={rc_data_path}")
 
         path: str = self._get_write_ahead_log_path()
         if not os.path.isfile(path):
             Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() end: No WAL file {path}")
             return
 
+        self._wal_reader = None
         reader = WriteAheadLogReader()
         try:
             reader.open(path)
@@ -2005,13 +2005,12 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _is_need_to_recover_rc_db(wal_state: 'WALState', is_calc_period_start_block: bool) -> bool:
-        is_need_to_recover: bool = True
-
         if wal_state & WALState.WRITE_RC_DB:
-            if not is_calc_period_start_block or (is_calc_period_start_block and wal_state & WALState.SEND_CALCULATE):
-                is_need_to_recover = False
+            if not is_calc_period_start_block or \
+                    (is_calc_period_start_block and wal_state & WALState.SEND_CALCULATE):
+                return False
 
-        return is_need_to_recover
+        return True
 
     @classmethod
     def _recover_rc_db(cls, reader: 'WriteAheadLogReader', rc_data_path: str):
@@ -2031,13 +2030,17 @@ class IconServiceEngine(ContextContainer):
             is_current_exists: bool = len(current_rc_db_path) == 0
             is_standby_exists: bool = len(standby_rc_db_path) == 0
             is_iiss_exists: bool = len(iiss_rc_db_path) == 0
+            Logger.info(tag=WAL_LOG_TAG,
+                        msg=f"current_exists={is_current_exists}, "
+                            f"is_standby_exists={is_standby_exists}, "
+                            f"is_iiss_exists={is_iiss_exists}")
 
-            # If only current_db exists, replace current db to standby_rc_db
+            # If only current_db exists, replace current_db to standby_rc_db
             if is_current_exists and not is_standby_exists and not is_iiss_exists:
                 # Get revision from the RC DB
                 prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
                 rc_version, revision = get_version_and_revision(prev_calc_db)
-                rc_version: int = rc_version if rc_version >= 0 else 0
+                rc_version: int = max(rc_version, 0)
                 prev_calc_db.close()
 
                 standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
@@ -2069,7 +2072,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
-        Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: size={ret}")
+        Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: count={ret}")
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_state_db() end")
 
@@ -2089,11 +2092,9 @@ class IconServiceEngine(ContextContainer):
             wal_state = WALState(self._wal_reader.state)
 
             # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
-            # send COMMIT_BLOCK to rc before invoking a block
-            if wal_state & (WALState.WRITE_RC_DB | WALState.SEND_COMMIT_BLOCK) == WALState.WRITE_RC_DB:
-                block: 'Block' = self._wal_reader.block
-                context = self._context_factory.create(IconScoreContextType.DIRECT, block)
-                context.engine.iiss.send_commit(block)
+            # send COMMIT_BLOCK to rc prior to invoking a block
+            if not (wal_state & WALState.SEND_COMMIT_BLOCK):
+                IconScoreContext.engine.iiss.send_commit(self._wal_reader.block)
 
             # No need to use
             self._wal_reader = None
