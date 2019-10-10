@@ -17,21 +17,20 @@
 from typing import TYPE_CHECKING
 
 from iconcommons import Logger
-from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, IISS_LOG_TAG
+from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, IISS_LOG_TAG, PERCENTAGE_FOR_BETA_2
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
 
 
 class IssueFormula(object):
-    _PERCENTAGE_FOR_BETA_2: int = 100
 
     def __init__(self, main_prep_count: int):
         self._handler: dict = {
             'prep': self._handle_icx_issue_formula_for_prep
         }
         # todo: in case of issuing from IISS_REV, get from the storage (not constant value)
-        self._main_prep_count: int = main_prep_count
+        self.main_prep_count: int = main_prep_count
 
     def calculate(self, context: 'IconScoreContext', group: str, data: dict) -> int:
         handler = self._handler[group]
@@ -65,8 +64,8 @@ class IssueFormula(object):
         beta_1: int = 0
         beta_2: int = 0
         if context.is_decentralized():
-            beta_1: int = calculated_irep * self._main_prep_count
-            beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2 if context.term.total_delegated > 0 else 0
+            beta_1: int = calculated_irep * self.main_prep_count
+            beta_2: int = calculated_irep * PERCENTAGE_FOR_BETA_2 if context.term.total_delegated > 0 else 0
 
         temp_rrep = IssueFormula.calculate_temporary_reward_prep(rrep)
         beta_3: int = temp_rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
@@ -75,12 +74,6 @@ class IssueFormula(object):
                     f"total_delegation: {total_delegation} "
                     f"beta1: {beta_1} beta2: {beta_2} beta3: {beta_3}", IISS_LOG_TAG)
         return beta_1 + beta_2 + beta_3
-
-    def get_limit_inflation_beta(self, irep: int) -> int:
-        calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
-        beta_1: int = calculated_irep * self._main_prep_count
-        beta_2: int = calculated_irep * self._PERCENTAGE_FOR_BETA_2
-        return beta_1 + beta_2
 
     @staticmethod
     def calculate_temporary_reward_prep(rrep: int) -> int:

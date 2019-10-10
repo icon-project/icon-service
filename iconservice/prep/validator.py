@@ -19,7 +19,8 @@ import iso3166
 
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE
+from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
+    PERCENTAGE_FOR_BETA_2
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -115,22 +116,32 @@ def _validate_country(country_code: str):
 
 
 def validate_irep(context: 'IconScoreContext', irep: int, prep: 'PRep'):
-    prev_irep: int = prep.irep
-    prev_irep_block_height: int = prep.irep_block_height
     term: 'Term' = context.engine.prep.term
+    _validate_irep(irep=irep,
+                   prev_irep=prep.irep,
+                   prev_irep_block_height=prep.irep_block_height,
+                   term_start_block_height=term.start_block_height,
+                   term_total_supply=term.total_supply,
+                   main_prep_count=context.main_prep_count)
 
-    if prev_irep_block_height >= term.start_block_height:
+
+def _validate_irep(irep: int,
+                   prev_irep: int,
+                   prev_irep_block_height: int,
+                   term_start_block_height: int,
+                   term_total_supply: int,
+                   main_prep_count: int):
+
+    if prev_irep_block_height >= term_start_block_height:
         raise InvalidRequestException("Irep can be changed only once during a term")
 
     min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)  # 80% of previous irep
-    max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
 
-    if min_irep <= irep <= max_irep:
-        beta: int = context.engine.issue.get_limit_inflation_beta(irep)
-        # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
-        if beta * IISS_ANNUAL_BLOCK > term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
-            raise InvalidParamsException(f"Irep out of range: beta{beta} * ANNUAL_BLOCK > "
-                                         f"prev_term_total_supply{term.total_supply} * "
-                                         f"{IISS_MAX_IREP_PERCENTAGE} // 100")
-    else:
+    maximum_calculated_irep: int = \
+        term_total_supply * IISS_MAX_IREP_PERCENTAGE // \
+        (IISS_MONTH // 2 * 100 * (main_prep_count + PERCENTAGE_FOR_BETA_2))
+
+    max_irep: int = min(prev_irep * 12 // 10, maximum_calculated_irep)  # 120% of previous irep
+
+    if not min_irep <= irep <= max_irep:
         raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
