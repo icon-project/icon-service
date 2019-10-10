@@ -18,14 +18,16 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
+
+from .database.db import KeyValueDatabase
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException
-)
+    MethodNotFoundException,
+    DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.factory import ContextDatabaseFactory
@@ -2001,93 +2003,57 @@ class IconServiceEngine(ContextContainer):
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() end")
 
+    @staticmethod
+    def _is_need_to_recover_rc_db(wal_state: 'WALState', is_calc_period_start_block: bool) -> bool:
+        is_need_to_recover: bool = True
+
+        if wal_state & WALState.WRITE_RC_DB:
+            if not is_calc_period_start_block or (is_calc_period_start_block and wal_state & WALState.SEND_CALCULATE):
+                is_need_to_recover = False
+
+        return is_need_to_recover
+
     @classmethod
     def _recover_rc_db(cls, reader: 'WriteAheadLogReader', rc_data_path: str):
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rc_db() start: rc_data_path={rc_data_path}")
 
         wal_state = WALState(reader.state)
+        is_calc_period_start_block = bool(wal_state & WALState.CALC_PERIOD_START_BLOCK)
         Logger.info(tag=WAL_LOG_TAG, msg=f"reader state={wal_state}")
 
-        if wal_state & WALState.WRITE_RC_DB:
+        if not cls._is_need_to_recover_rc_db(wal_state, is_calc_period_start_block):
             Logger.info(tag=WAL_LOG_TAG, msg="rc_db has already been up-to-date")
             return
 
-        block: 'Block' = reader.block
-        is_calc_period_start_block = bool(wal_state & WALState.CALC_PERIOD_START_BLOCK)
-        is_rename_db_needed: bool = False
-        standby_rc_db_path: str = ""
-
         # If WAL file is made at the start block of calc period
         if is_calc_period_start_block:
-            current_rc_db_exists, standby_rc_db_path = cls._scan_rc_db(rc_data_path)
-            is_rename_db_needed = len(standby_rc_db_path) == 0 and current_rc_db_exists
+            current_rc_db_path, standby_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
+            is_current_exists: bool = len(current_rc_db_path) == 0
+            is_standby_exists: bool = len(standby_rc_db_path) == 0
 
+            # If standby_rc_db is not exists, replace current db to standby_rc_db
+            if is_current_exists and not is_standby_exists:
+                # Get revision from the RC DB
+                prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+                rc_version, revision = get_version_and_revision(prev_calc_db)
+                assert rc_version >= 0
+                prev_calc_db.close()
+
+                standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
+                                                                                            reader.block.height,
+                                                                                            rc_version)
+            elif not is_current_exists and not is_standby_exists:
+                raise DatabaseException(f"RC related DB not exists")
+
+            # Replace standby_rc_db to iiss_rc_db
+            RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
         db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-
-        # Rename current_db_name to standby_db_name
-        if is_rename_db_needed:
-            rc_version, revision = get_version_and_revision(db)
-            db.close()
-
-            current_rc_db_path: str = \
-                os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
-            standby_rc_db_name: str = \
-                f"{RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX}{block.height}_{rc_version}"
-            standby_rc_db_path: str = os.path.join(rc_data_path, standby_rc_db_name)
-
-            try:
-                os.rename(current_rc_db_path, standby_rc_db_path)
-            except BaseException as e:
-                Logger.error(tag=WAL_LOG_TAG, msg=str(e))
-
-            # Create a new current_rc_db for the next calc period
-            db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-
-        # Rename standby_db_name to iiss_db_name
-        # If standby_db_name is renamed to iiss_db_name, no need to send CALCULATE message to rc
-        if len(standby_rc_db_path) > 0:
-            standby_rc_db_name = os.path.basename(standby_rc_db_path)
-            iiss_rc_db_name = \
-                f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}" \
-                f"{standby_rc_db_name[len(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):]}"
-            iiss_rc_db_path = os.path.join(rc_data_path, iiss_rc_db_name)
-
-            try:
-                os.rename(standby_rc_db_path, iiss_rc_db_path)
-            except BaseException as e:
-                Logger.error(tag=WAL_LOG_TAG, msg=str(e))
 
         # Write data to "current_db"
         db.write_batch(reader.get_iterator(0))
         db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
-
-    @classmethod
-    def _scan_rc_db(cls, rc_data_path: str) -> Tuple[bool, str]:
-        Logger.debug(tag=WAL_LOG_TAG, msg=f"_scan_rc_db() start: {rc_data_path}")
-
-        """Scan directories that are managed by RewardCalcStorage
-
-        :param rc_data_path: the parent directory of rc_dbs
-        :return: current_rc_db_exists(bool), standby_rc_db_path
-        """
-        current_rc_db_exists = False
-        standby_rc_db_path: str = ""
-
-        with os.scandir(rc_data_path) as it:
-            for entry in it:
-                if entry.is_dir():
-                    if entry.name == RewardCalcStorage.CURRENT_IISS_DB_NAME:
-                        current_rc_db_exists = True
-                    elif entry.name.startswith(RewardCalcStorage.STANDBY_IISS_DB_NAME_PREFIX):
-                        standby_rc_db_path = os.path.join(rc_data_path, entry.name)
-
-        Logger.debug(tag=WAL_LOG_TAG,
-                     msg="_scan_rc_db() end: "
-                         f"current_rc_db_exists={current_rc_db_exists} "
-                         f"standby_rc_db_path={standby_rc_db_path}")
-        return current_rc_db_exists, standby_rc_db_path
 
     def _recover_state_db(self, reader: 'WriteAheadLogReader'):
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_state_db() start: reader={reader}")
