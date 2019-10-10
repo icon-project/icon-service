@@ -132,6 +132,13 @@ def _validate_irep(irep: int,
                    term_total_supply: int,
                    main_prep_count: int):
 
+    """
+    (irep * IISS_MONTH) * (1 / IISS_ANNUAL_BLOCK) * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2) * IISS_ANNUAL_BLOCK <=
+    total_supply * IISS_MAX_IREP_PERCENTAGE / 100
+
+    irep <= total_supply * IISS_MAX_IREP_PERCENTAGE / (600 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2)
+    """
+
     if prev_irep_block_height >= term_start_block_height:
         raise InvalidRequestException("Irep can be changed only once during a term")
 
