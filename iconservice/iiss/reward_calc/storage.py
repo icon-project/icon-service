@@ -217,7 +217,7 @@ class Storage(object):
         assert block_height > 0
 
         rc_version, _ = self.get_version_and_revision()
-        assert rc_version >= 0
+        rc_version: int = rc_version if rc_version >= 0 else 0
         self._db.close()
 
         standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height, rc_version)

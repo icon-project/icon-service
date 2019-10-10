@@ -2036,7 +2036,7 @@ class IconServiceEngine(ContextContainer):
                 # Get revision from the RC DB
                 prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
                 rc_version, revision = get_version_and_revision(prev_calc_db)
-                assert rc_version >= 0
+                rc_version: int = rc_version if rc_version >= 0 else 0
                 prev_calc_db.close()
 
                 standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
