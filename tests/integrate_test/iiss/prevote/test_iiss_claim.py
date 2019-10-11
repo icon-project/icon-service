@@ -19,6 +19,7 @@
 from typing import TYPE_CHECKING, List
 from unittest.mock import Mock
 
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -72,6 +73,10 @@ class TestIISSClaim(TestIISSBase):
 
         # claim iscore
         tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
+        self.assertEqual(1, len(tx_results[0].event_logs))
+        self.assertEqual(ZERO_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
+        self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
+        self.assertEqual([iscore, icx], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_called()
 
         accumulative_fee = tx_results[0].step_price * tx_results[0].step_used
@@ -95,3 +100,18 @@ class TestIISSClaim(TestIISSBase):
         expected_withdraw_icx_amount_from_treasury: int = icx
         self.assertEqual(expected_withdraw_icx_amount_from_treasury,
                          treasury_balance_before_claim - (treasury_balance_after_claim - accumulative_fee))
+
+        # 0 claim mocking
+        block_height = 10 ** 2 + 1
+        icx = 0
+        iscore = icx * 10 ** 3
+        RewardCalcProxy.claim_iscore = Mock(return_value=(iscore, block_height))
+        RewardCalcProxy.commit_claim = Mock()
+
+        # claim iscore
+        tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
+        self.assertEqual(1, len(tx_results[0].event_logs))
+        self.assertEqual(ZERO_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
+        self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
+        self.assertEqual([icx, iscore], tx_results[0].event_logs[0].data)
+        RewardCalcProxy.commit_claim.assert_not_called()
