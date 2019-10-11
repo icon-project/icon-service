@@ -193,11 +193,6 @@ class Storage(object):
         else:
             return int.from_bytes(encoded_last_index, DATA_BYTE_ORDER)
 
-    @classmethod
-    def create_current_db(cls, rc_data_path: str) -> 'KeyValueDatabase':
-        current_db_path = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
-        return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
-
     @staticmethod
     def _rename_db(old_db_path: str, new_db_path: str):
         if os.path.exists(old_db_path) and not os.path.exists(new_db_path):
@@ -229,6 +224,11 @@ class Storage(object):
         return RewardCalcDBInfo(standby_db_path, block_height)
 
     @classmethod
+    def create_current_db(cls, rc_data_path: str) -> 'KeyValueDatabase':
+        current_db_path = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
+        return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
+
+    @classmethod
     def rename_current_db_to_standby_db(cls, rc_data_path: str, block_height: int, rc_version: int) -> str:
         current_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
         standby_db_name: str = cls.get_standby_rc_db_name(block_height, rc_version)
@@ -253,7 +253,7 @@ class Storage(object):
         """Scan directories that are managed by RewardCalcStorage
 
         :param rc_data_path: the parent directory of rc_dbs
-        :return: current_rc_db_exists(bool), standby_rc_db_path
+        :return: current_rc_db_exists(bool), standby_rc_db_path, iiss_rc_db_path
         """
         current_rc_db_path: str = ""
         standby_rc_db_path: str = ""
