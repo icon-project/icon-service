@@ -586,13 +586,20 @@ class Engine(EngineBase):
 
         if iscore > 0:
             self._commit_claim(context, iscore)
-
         else:
             Logger.info(tag=_TAG, msg="I-Score is zero")
 
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature="IScoreClaimed(int,int)",
+            arguments=[iscore, self._iscore_to_icx(iscore)],
+            indexed_args_count=0
+        )
         Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
-    def _check_claim_tx(self, context: 'IconScoreContext') -> bool:
+    @staticmethod
+    def _check_claim_tx(context: 'IconScoreContext') -> bool:
         if context.tx.hash in INVALID_CLAIM_TX:
             Logger.error(tag=_TAG, msg=f"skip claim tx: {context.tx.hash.hex()}")
             return False
@@ -629,13 +636,6 @@ class Engine(EngineBase):
             context.storage.icx.put_account(context, treasury_account)
             context.storage.icx.put_account(context, from_account)
 
-            EventLogEmitter.emit_event_log(
-                context,
-                score_address=ZERO_SCORE_ADDRESS,
-                event_signature="IScoreClaimed(int,int)",
-                arguments=[iscore, icx],
-                indexed_args_count=0
-            )
         except BaseException as e:
             Logger.exception(tag=_TAG, msg=str(e))
             success = False
