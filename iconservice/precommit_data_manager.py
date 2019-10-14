@@ -22,8 +22,9 @@ from .base.block import Block, EMPTY_BLOCK
 from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .database.batch import TransactionBatchValue
+from .icon_constant import Revision
 from .iconscore.icon_score_mapper import IconScoreMapper
-from .utils import bytes_to_hex
+from .utils import bytes_to_hex, sha3_256
 
 if TYPE_CHECKING:
     from .base.address import Address
@@ -95,7 +96,8 @@ class PrecommitData(object):
                  prev_block_generator: Optional['Address'],
                  prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'] = None,
-                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
+                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE,
+                 rc_state_root_hash: Optional[bytes] = None):
         """
 
         :param block_batch: changed states for a block
@@ -116,13 +118,20 @@ class PrecommitData(object):
         self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
         self.precommit_flag = precommit_flag
+        
+        self.is_state_root_hash: bytes = self.block_batch.digest()
+        self.rc_state_root_hash: Optional[bytes] = rc_state_root_hash
 
-        self.state_root_hash: bytes = self.block_batch.digest()
+        self.state_root_hash: bytes = self._make_state_root_hash()
 
     def __str__(self):
+        rc_state_root_hash: str = self.rc_state_root_hash.hex() if self.rc_state_root_hash else "NONE"
+
         lines = [
             f"revision: {self.revision}",
             f"block: {self.block.height} {self.block.hash.hex()}",
+            f"is_state_root_hash: {self.is_state_root_hash}",
+            f"rc_state_root_hash: {rc_state_root_hash}",
             f"state_root_hash: {self.state_root_hash.hex()}",
             f"prev_block_generator: {self.prev_block_generator}",
             f"precommit_flag: {self.precommit_flag}"
@@ -141,6 +150,14 @@ class PrecommitData(object):
     @property
     def block(self) -> Optional['Block']:
         return None if self.block_batch is None else self.block_batch.block
+
+    def _make_state_root_hash(self):
+        if self.revision < Revision.DECENTRALIZATION.value or self.rc_state_root_hash is None:
+            return self.is_state_root_hash
+
+        data = [self.is_state_root_hash, self.rc_state_root_hash]
+        value: bytes = b'|'.join(data)
+        return sha3_256(value)
 
 
 class PrecommitDataManager(object):

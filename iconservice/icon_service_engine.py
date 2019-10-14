@@ -28,7 +28,6 @@ from .base.exception import (
     DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
-from .database.db import KeyValueDatabase
 from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
@@ -529,23 +528,11 @@ class IconServiceEngine(ContextContainer):
                                        prev_block_generator,
                                        prev_block_validators,
                                        context.new_icon_score_mapper,
-                                       precommit_flag)
+                                       precommit_flag,
+                                       rc_state_hash)
         self._precommit_data_manager.push(precommit_data)
 
-        state_root_hash: bytes = self._make_state_root_hash(precommit_data.revision,
-                                                            precommit_data.state_root_hash,
-                                                            rc_state_hash)
-
-        return block_result, state_root_hash, added_transactions, main_prep_as_dict
-
-    @staticmethod
-    def _make_state_root_hash(revision: int, block_state_root_hash: bytes, rc_state_hash: Optional[bytes]):
-        if revision < Revision.DECENTRALIZATION.value or rc_state_hash is None:
-            return block_state_root_hash
-
-        data = [block_state_root_hash, rc_state_hash]
-        value: bytes = b'|'.join(data)
-        return sha3_256(value)
+        return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
