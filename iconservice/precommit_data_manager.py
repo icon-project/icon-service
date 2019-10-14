@@ -24,6 +24,7 @@ from .database.batch import BlockBatch
 from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
 from .iconscore.icon_score_mapper import IconScoreMapper
+from .iiss.reward_calc.msg_data import TxData
 from .utils import bytes_to_hex, sha3_256
 
 if TYPE_CHECKING:
@@ -42,11 +43,9 @@ def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
             value = block_batch[key]
 
             if isinstance(value, TransactionBatchValue):
-                lines.append(f"{i}: {key.hex()} - {value.value.hex()}")
-            elif isinstance(value, bytes):
-                lines.append(f"{i}: {key.hex()} - {value.hex()}")
+                lines.append(f"{i}: {key.hex()} - {bytes_to_hex(value.value)} - {value.include_state_root_hash}")
             else:
-                lines.append(f"{i}: {key.hex()} - None")
+                lines.append(f"{i}: {key.hex()} - {bytes_to_hex(value)}")
     except:
         pass
 
@@ -57,8 +56,14 @@ def _print_rc_block_batch(rc_block_batch: list) -> List[str]:
     lines = []
 
     try:
+        tx_index = 0
         for i, data in enumerate(rc_block_batch):
-            key: bytes = data.make_key()
+            if isinstance(data, TxData):
+                key: bytes = data.make_key(tx_index)
+                tx_index += 1
+            else:
+                key: bytes = data.make_key()
+
             value: bytes = data.make_value()
             lines.append(f"{i}: {key.hex()} - {value.hex()}")
     except:
@@ -125,14 +130,12 @@ class PrecommitData(object):
         self.state_root_hash: bytes = self._make_state_root_hash()
 
     def __str__(self):
-        rc_state_root_hash: str = self.rc_state_root_hash.hex() if self.rc_state_root_hash else "NONE"
-
         lines = [
             f"revision: {self.revision}",
-            f"block: {self.block.height} {self.block.hash.hex()}",
-            f"is_state_root_hash: {self.is_state_root_hash}",
-            f"rc_state_root_hash: {rc_state_root_hash}",
-            f"state_root_hash: {self.state_root_hash.hex()}",
+            f"block: {self.block}",
+            f"is_state_root_hash: {bytes_to_hex(self.is_state_root_hash)}",
+            f"rc_state_root_hash: {bytes_to_hex(self.rc_state_root_hash)}",
+            f"state_root_hash: {bytes_to_hex(self.state_root_hash)}",
             f"prev_block_generator: {self.prev_block_generator}",
             f"precommit_flag: {self.precommit_flag}"
             "",
@@ -151,7 +154,7 @@ class PrecommitData(object):
     def block(self) -> Optional['Block']:
         return None if self.block_batch is None else self.block_batch.block
 
-    def _make_state_root_hash(self):
+    def _make_state_root_hash(self) -> bytes:
         if self.revision < Revision.DECENTRALIZATION.value or self.rc_state_root_hash is None:
             return self.is_state_root_hash
 
