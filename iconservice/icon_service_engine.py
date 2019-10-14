@@ -1852,10 +1852,7 @@ class IconServiceEngine(ContextContainer):
             wal_writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=False)
 
         wal_writer.write_walogable(iiss_wal)
-        wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
-
         wal_writer.write_walogable(state_wal)
-        wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
 
         return wal_writer, state_wal, iiss_wal
 
