@@ -23,7 +23,7 @@ from ..reward_calc.msg_data import Header, TxData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
-    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG
+    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG, WAL_LOG_TAG
 )
 from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
@@ -268,5 +268,10 @@ class Storage(object):
                         standby_rc_db_path: str = os.path.join(rc_data_path, entry.name)
                     elif entry.name.startswith(cls.IISS_RC_DB_NAME_PREFIX):
                         iiss_rc_db_path: str = os.path.join(rc_data_path, entry.name)
+
+        Logger.info(tag=WAL_LOG_TAG,
+                    msg=f"current_rc_db={current_rc_db_path}, "
+                        f"standby_rc_db={standby_rc_db_path}, "
+                        f"iiss_rc_db={iiss_rc_db_path}")
 
         return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
