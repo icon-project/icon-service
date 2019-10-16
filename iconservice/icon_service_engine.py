@@ -2013,9 +2013,9 @@ class IconServiceEngine(ContextContainer):
         # If WAL file is made at the start block of calc period
         if is_calc_period_start_block:
             current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
-            is_current_exists: bool = len(current_rc_db_path) == 0
-            is_standby_exists: bool = len(standby_rc_db_path) == 0
-            is_iiss_exists: bool = len(iiss_rc_db_path) == 0
+            is_current_exists: bool = len(current_rc_db_path) > 0
+            is_standby_exists: bool = len(standby_rc_db_path) > 0
+            is_iiss_exists: bool = len(iiss_rc_db_path) > 0
             Logger.info(tag=WAL_LOG_TAG,
                         msg=f"current_exists={is_current_exists}, "
                             f"is_standby_exists={is_standby_exists}, "
