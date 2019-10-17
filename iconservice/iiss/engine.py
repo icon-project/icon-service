@@ -703,7 +703,7 @@ class Engine(EngineBase):
                                                  prev_block_generator,
                                                  prev_block_votes)
 
-        start_term_block: int = context.term.start_block_height
+        start_term_block: int = context.engine.prep.term.start_block_height
         # New P-Rep Term is started
         if start_term_block == context.block.height:
             self._put_preps_to_rc_db(context)
@@ -799,7 +799,7 @@ class Engine(EngineBase):
 
         calculated_irep: int = 0
         if context.is_decentralized():
-            irep: int = context.term.irep
+            irep: int = context.engine.prep.term.irep
             calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_rate.reward_prep)
