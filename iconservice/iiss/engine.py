@@ -846,7 +846,7 @@ class Engine(EngineBase):
 
         if term is None:
             block_height: int = context.block.height - 1
-            term: 'Term' = context.term
+            term: 'Term' = context.engine.prep.term
         else:
             block_height: int = context.block.height
 
