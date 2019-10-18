@@ -720,8 +720,8 @@ class Engine(EngineBase):
         self._put_end_calc_block_height(context)
         self._put_rrep(context)
 
-    def send_commit(self, block: 'Block'):
-        self._reward_calc_proxy.commit_block(True, block.height, block.hash)
+    def send_commit(self, block_height: int, block_hash: bytes):
+        self._reward_calc_proxy.commit_block(True, block_height, block_hash)
 
     def send_calculate(self, iiss_db_path: str, block_height: int):
         self._reward_calc_proxy.calculate(iiss_db_path, block_height)

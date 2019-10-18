@@ -1831,6 +1831,7 @@ class IconServiceEngine(ContextContainer):
         Logger.info(tag=self.TAG, msg=f"tx_index={tx_index}")
         iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
+        # TODO: Need to add instance_block_hash to WriteAheadLogWriter (goldworm)
         wal_writer: 'WriteAheadLogWriter' = \
             WriteAheadLogWriter(precommit_data.revision, max_log_count=2, block=block)
         wal_writer.open(wal_path)
@@ -1902,7 +1903,8 @@ class IconServiceEngine(ContextContainer):
                      standby_db_info: Optional['RewardCalcDBInfo']):
         assert precommit_data.revision >= Revision.IISS.value
 
-        context.engine.iiss.send_commit(precommit_data.block)
+        context.engine.iiss.send_commit(
+            precommit_data.block.height, precommit_data.block.hash)
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
 
         if standby_db_info is not None:
@@ -2080,7 +2082,8 @@ class IconServiceEngine(ContextContainer):
             # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
             # send COMMIT_BLOCK to rc prior to invoking a block
             if not (wal_state & WALState.SEND_COMMIT_BLOCK):
-                IconScoreContext.engine.iiss.send_commit(self._wal_reader.block)
+                IconScoreContext.engine.iiss.send_commit(
+                    self._wal_reader.block.height, self._wal_reader.instance_block_hash)
 
             # No need to use
             self._wal_reader = None
