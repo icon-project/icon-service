@@ -1791,15 +1791,18 @@ class IconServiceEngine(ContextContainer):
 
         wal_writer, state_wal, iiss_wal = \
             self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
+        wal_writer.flush()
 
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \
             self._process_iiss_commit(context, precommit_data, iiss_wal, is_calc_period_start_block)
         wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
+        wal_writer.flush()
 
         # Write state_wal to state_db
         self._process_state_commit(context, precommit_data, state_wal)
         wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
+        wal_writer.flush()
 
         # send IPC
         self._process_ipc(context, wal_writer, precommit_data, standby_db_info, instant_block_hash)
@@ -1912,12 +1915,13 @@ class IconServiceEngine(ContextContainer):
 
         commit_block_hash: bytes = precommit_data.block.hash
         if commit_block_hash != instant_block_hash:
-            # leader node must apply before hash on invoke
+            # Leader node must use instant_block_hash which is used in invoke()
             commit_block_hash: bytes = instant_block_hash
 
         context.engine.iiss.send_commit(
             precommit_data.block.height, commit_block_hash)
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
+        wal_writer.flush()
 
         if standby_db_info is not None:
             iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)
