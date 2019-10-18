@@ -26,6 +26,7 @@ from iconservice.database.wal import (
     WriteAheadLogReader, WriteAheadLogWriter, WALogable, WALState
 )
 from iconservice.icon_constant import Revision
+from tests import create_block_hash
 
 
 class WALogableData(WALogable):
@@ -74,8 +75,9 @@ class TestWriteAheadLog(unittest.TestCase):
     def test_writer_and_reader(self):
         revision = Revision.IISS.value
         log_count = 2
+        instant_block_hash = create_block_hash()
 
-        writer = WriteAheadLogWriter(revision, log_count, self.block)
+        writer = WriteAheadLogWriter(revision, log_count, self.block, instant_block_hash)
         writer.open(self.path)
 
         writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=False)
@@ -98,6 +100,7 @@ class TestWriteAheadLog(unittest.TestCase):
         assert reader.state == state
         assert reader.log_count == log_count
         assert reader.block == self.block
+        assert reader.instant_block_hash == instant_block_hash
 
         for i in range(len(self.log_data)):
             data = {}
@@ -113,8 +116,9 @@ class TestWriteAheadLog(unittest.TestCase):
     def test_invalid_magic_key(self):
         revision = Revision.IISS.value
         log_count = 2
+        instant_block_hash = create_block_hash()
 
-        writer = WriteAheadLogWriter(revision, log_count, self.block)
+        writer = WriteAheadLogWriter(revision, log_count, self.block, instant_block_hash)
         writer.open(self.path)
         writer.close()
 
@@ -130,8 +134,9 @@ class TestWriteAheadLog(unittest.TestCase):
     def test_invalid_version(self):
         revision = Revision.IISS.value
         log_count = 2
+        instant_block_hash = create_block_hash()
 
-        writer = WriteAheadLogWriter(revision, log_count, self.block)
+        writer = WriteAheadLogWriter(revision, log_count, self.block, instant_block_hash)
         writer.open(self.path)
         writer.close()
 
@@ -147,8 +152,12 @@ class TestWriteAheadLog(unittest.TestCase):
             reader.open(self.path)
 
     def test_out_of_header_size(self):
+        revision = Revision.IISS.value
+        log_count = 2
+        instant_block_hash = create_block_hash()
+
         writer = WriteAheadLogWriter(
-            revision=Revision.IISS.value, max_log_count=2, block=self.block)
+            revision=revision, max_log_count=log_count, block=self.block, instant_block_hash=instant_block_hash)
         writer.open(self.path)
         writer.close()
 

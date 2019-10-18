@@ -47,8 +47,8 @@ _OFFSET_MAGIC_KEY = 0
 _OFFSET_VERSION = _OFFSET_MAGIC_KEY + 4
 _OFFSET_REVISION = _OFFSET_VERSION + 4
 _OFFSET_STATE = _OFFSET_REVISION + 4
-_OFFSET_INSTANCE_BLOCK_HASH = _OFFSET_STATE + 4
-_OFFSET_LOG_COUNT = _OFFSET_INSTANCE_BLOCK_HASH + 32
+_OFFSET_INSTANT_BLOCK_HASH = _OFFSET_STATE + 4
+_OFFSET_LOG_COUNT = _OFFSET_INSTANT_BLOCK_HASH + 32
 _OFFSET_LOG_START_OFFSETS = _OFFSET_LOG_COUNT + 4
 
 
@@ -148,14 +148,14 @@ def _bytes_to_uint32(data: bytes):
 class WriteAheadLogWriter(object):
     """Write write-ahead-logging for block, state_db and rc_db on commit
 
-    | magic_key(4) | version(4) | revision(4) | state(4) | instance_block_hash(32) |
+    | magic_key(4) | version(4) | revision(4) | state(4) | instant_block_hash(32) |
     | data count(4) | log start address_0 (4) | log start address_1 (4) | ...
     | block data size(4) | block data | size(4) | data | size(4) | data | ...
 
     Every number is written in big endian format
     """
 
-    def __init__(self, revision: int, max_log_count: int, block: 'Block', instance_block_hash: bytes):
+    def __init__(self, revision: int, max_log_count: int, block: 'Block', instant_block_hash: bytes):
         Logger.debug(tag=TAG,
                      msg=f"__init__(revision={revision}, "
                          f"max_log_out={max_log_count}, "
@@ -168,7 +168,7 @@ class WriteAheadLogWriter(object):
         self._max_log_count: int = max_log_count
         self._log_count: int = 0
 
-        self._instance_block_hash = instance_block_hash
+        self._instant_block_hash = instant_block_hash
         self._block = block
         self._fp = None
 
@@ -192,7 +192,7 @@ class WriteAheadLogWriter(object):
             self._version,
             self._revision,
             self._state,
-            self._instance_block_hash,
+            self._instant_block_hash,
             self._log_count
         ]
 
@@ -296,7 +296,7 @@ class WriteAheadLogReader(object):
         self._state: int = 0
         self._log_count: int = 0
         self._log_start_offsets: Optional[List[int]] = None
-        self._instance_block_hash: bytes = b""
+        self._instant_block_hash: bytes = b""
         self._block: Optional['Block'] = None
 
         self._fp = None
@@ -318,8 +318,8 @@ class WriteAheadLogReader(object):
         return self._state
 
     @property
-    def instance_block_hash(self) -> bytes:
-        return self._instance_block_hash
+    def instant_block_hash(self) -> bytes:
+        return self._instant_block_hash
 
     @property
     def block(self) -> Optional['Block']:
@@ -332,7 +332,7 @@ class WriteAheadLogReader(object):
     def __str__(self):
         return f"version={self._version}, " \
                f"state={self._state}, " \
-               f"instance_block_hash={bytes_to_hex(self._instance_block_hash)}, " \
+               f"instant_block_hash={bytes_to_hex(self._instant_block_hash)}, " \
                f"log_count={self._log_count}, " \
                f"block={self._block}"
 
@@ -350,7 +350,7 @@ class WriteAheadLogReader(object):
         data: bytes = self._fp.read(_HEADER_SIZE)
         self._check_bytes_data(data, _HEADER_SIZE)
 
-        magic_key, version, revision, state, instance_block_hash, log_count = \
+        magic_key, version, revision, state, instant_block_hash, log_count = \
             struct.unpack_from(_HEADER_STRUCT_FORMAT, data)
 
         if magic_key != _MAGIC_KEY:
@@ -365,6 +365,7 @@ class WriteAheadLogReader(object):
         self._revision = revision
         self._state = state
         self._log_count = log_count
+        self._instant_block_hash = instant_block_hash
         self._log_start_offsets = []
 
         for _ in range(self._log_count):

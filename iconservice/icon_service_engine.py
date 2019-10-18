@@ -1775,19 +1775,22 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.revision < Revision.IISS.value:
             self._commit_before_iiss(context, precommit_data)
         else:
-            self._commit_after_iiss(context, precommit_data)
+            self._commit_after_iiss(context, precommit_data, instant_block_hash)
 
     def _commit_before_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
         self._process_state_commit(context, precommit_data, state_wal)
 
-    def _commit_after_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+    def _commit_after_iiss(self,
+                           context: 'IconScoreContext',
+                           precommit_data: 'PrecommitData',
+                           instant_block_hash: bytes):
         # Check if this block is the start block of a calculation period
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
         is_calc_period_start_block: bool = context.block.height == start_calc_block_height
 
         wal_writer, state_wal, iiss_wal = \
-            self._process_wal(context, precommit_data, is_calc_period_start_block)
+            self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
 
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \
@@ -1799,7 +1802,7 @@ class IconServiceEngine(ContextContainer):
         wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
 
         # send IPC
-        self._process_ipc(context, wal_writer, precommit_data, standby_db_info)
+        self._process_ipc(context, wal_writer, precommit_data, standby_db_info, instant_block_hash)
         wal_writer.close()
 
         try:
@@ -1809,7 +1812,8 @@ class IconServiceEngine(ContextContainer):
 
     def _process_wal(self, context: 'IconScoreContext',
                      precommit_data: 'PrecommitData',
-                     is_calc_period_start_block: bool) \
+                     is_calc_period_start_block: bool,
+                     instant_block_hash: bytes) \
             -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
         """Assume that this method is called after Revision.IISS is on
 
@@ -1831,9 +1835,11 @@ class IconServiceEngine(ContextContainer):
         Logger.info(tag=self.TAG, msg=f"tx_index={tx_index}")
         iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
-        # TODO: Need to add instance_block_hash to WriteAheadLogWriter (goldworm)
         wal_writer: 'WriteAheadLogWriter' = \
-            WriteAheadLogWriter(precommit_data.revision, max_log_count=2, block=block)
+            WriteAheadLogWriter(precommit_data.revision,
+                                max_log_count=2,
+                                block=block,
+                                instant_block_hash=instant_block_hash)
         wal_writer.open(wal_path)
 
         if is_calc_period_start_block:
@@ -1900,11 +1906,17 @@ class IconServiceEngine(ContextContainer):
     def _process_ipc(context: 'IconScoreContext',
                      wal_writer: 'WriteAheadLogWriter',
                      precommit_data: 'PrecommitData',
-                     standby_db_info: Optional['RewardCalcDBInfo']):
+                     standby_db_info: Optional['RewardCalcDBInfo'],
+                     instant_block_hash: bytes):
         assert precommit_data.revision >= Revision.IISS.value
 
+        commit_block_hash: bytes = precommit_data.block.hash
+        if commit_block_hash != instant_block_hash:
+            # leader node must apply before hash on invoke
+            commit_block_hash: bytes = instant_block_hash
+
         context.engine.iiss.send_commit(
-            precommit_data.block.height, precommit_data.block.hash)
+            precommit_data.block.height, commit_block_hash)
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
 
         if standby_db_info is not None:
@@ -2083,7 +2095,7 @@ class IconServiceEngine(ContextContainer):
             # send COMMIT_BLOCK to rc prior to invoking a block
             if not (wal_state & WALState.SEND_COMMIT_BLOCK):
                 IconScoreContext.engine.iiss.send_commit(
-                    self._wal_reader.block.height, self._wal_reader.instance_block_hash)
+                    self._wal_reader.block.height, self._wal_reader.instant_block_hash)
 
             # No need to use
             self._wal_reader = None
