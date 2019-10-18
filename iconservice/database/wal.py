@@ -24,6 +24,7 @@ __all__ = ("WriteAheadLogWriter", "WriteAheadLogReader", "WALogable", "StateWAL"
 import struct
 from abc import ABCMeta
 from typing import Optional, Tuple, Iterable, List
+import os
 
 import msgpack
 from iconcommons.logger import Logger
@@ -37,16 +38,17 @@ from ..database.batch import BlockBatch, TransactionBatchValue
 
 TAG = "WAL"
 _MAGIC_KEY = b"IWAL"
-_FILE_VERSION = 0
-_HEADER_SIZE = 20
-_HEADER_STRUCT_FORMAT = ">4sIIII"
+_FILE_VERSION = 1
+_HEADER_SIZE = 52
+_HEADER_STRUCT_FORMAT = ">4sIII32sI"
 
 # FILE OFFSET
 _OFFSET_MAGIC_KEY = 0
 _OFFSET_VERSION = _OFFSET_MAGIC_KEY + 4
 _OFFSET_REVISION = _OFFSET_VERSION + 4
 _OFFSET_STATE = _OFFSET_REVISION + 4
-_OFFSET_LOG_COUNT = _OFFSET_STATE + 4
+_OFFSET_INSTANT_BLOCK_HASH = _OFFSET_STATE + 4
+_OFFSET_LOG_COUNT = _OFFSET_INSTANT_BLOCK_HASH + 32
 _OFFSET_LOG_START_OFFSETS = _OFFSET_LOG_COUNT + 4
 
 
@@ -146,15 +148,18 @@ def _bytes_to_uint32(data: bytes):
 class WriteAheadLogWriter(object):
     """Write write-ahead-logging for block, state_db and rc_db on commit
 
-    | magic_key(4) | version(4) | revision(4) | state(4) | data count(4) |
-    | log start address_0 (4) | log start address_1 (4) | ...
+    | magic_key(4) | version(4) | revision(4) | state(4) | instant_block_hash(32) |
+    | data count(4) | log start address_0 (4) | log start address_1 (4) | ...
     | block data size(4) | block data | size(4) | data | size(4) | data | ...
 
     Every number is written in big endian format
     """
 
-    def __init__(self, revision: int, max_log_count: int, block: 'Block'):
-        Logger.debug(tag=TAG, msg=f"__init__(revision={revision}, max_log_out={max_log_count}, block={block} start")
+    def __init__(self, revision: int, max_log_count: int, block: 'Block', instant_block_hash: bytes):
+        Logger.debug(tag=TAG,
+                     msg=f"__init__(revision={revision}, "
+                         f"max_log_out={max_log_count}, "
+                         f"block={block} start")
 
         self._magic_key = _MAGIC_KEY
         self._version = _FILE_VERSION
@@ -163,8 +168,7 @@ class WriteAheadLogWriter(object):
         self._max_log_count: int = max_log_count
         self._log_count: int = 0
 
-        self._header_size: _OFFSET_LOG_START_OFFSETS + max_log_count * 4
-
+        self._instant_block_hash = instant_block_hash
         self._block = block
         self._fp = None
 
@@ -188,6 +192,7 @@ class WriteAheadLogWriter(object):
             self._version,
             self._revision,
             self._state,
+            self._instant_block_hash,
             self._log_count
         ]
 
@@ -197,6 +202,13 @@ class WriteAheadLogWriter(object):
         struct_format = _HEADER_STRUCT_FORMAT + "I" * self._max_log_count
         data: bytes = struct.pack(struct_format, *values)
         return self._fp.write(data)
+
+    def flush(self):
+        fp = self._fp
+
+        if fp:
+            fp.flush()
+            os.fsync(fp.fileno())
 
     def close(self):
         if self._fp:
@@ -212,7 +224,7 @@ class WriteAheadLogWriter(object):
 
         return ret
 
-    def write_walogable(self, it: WALogable) -> int:
+    def write_walogable(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> int:
         self._fp.seek(0, 2)
         start_offset: int = self._fp.tell()
 
@@ -284,6 +296,7 @@ class WriteAheadLogReader(object):
         self._state: int = 0
         self._log_count: int = 0
         self._log_start_offsets: Optional[List[int]] = None
+        self._instant_block_hash: bytes = b""
         self._block: Optional['Block'] = None
 
         self._fp = None
@@ -305,6 +318,10 @@ class WriteAheadLogReader(object):
         return self._state
 
     @property
+    def instant_block_hash(self) -> bytes:
+        return self._instant_block_hash
+
+    @property
     def block(self) -> Optional['Block']:
         return self._block
 
@@ -313,7 +330,11 @@ class WriteAheadLogReader(object):
         return self._log_count
 
     def __str__(self):
-        return f"version={self._version}, state={self._state}, block={self._block}, log_count={self._log_count}"
+        return f"version={self._version}, " \
+               f"state={self._state}, " \
+               f"instant_block_hash={bytes_to_hex(self._instant_block_hash)}, " \
+               f"log_count={self._log_count}, " \
+               f"block={self._block}"
 
     def open(self, path: str):
         self._fp = open(path, "rb")
@@ -329,7 +350,7 @@ class WriteAheadLogReader(object):
         data: bytes = self._fp.read(_HEADER_SIZE)
         self._check_bytes_data(data, _HEADER_SIZE)
 
-        magic_key, version, revision, state, log_count = \
+        magic_key, version, revision, state, instant_block_hash, log_count = \
             struct.unpack_from(_HEADER_STRUCT_FORMAT, data)
 
         if magic_key != _MAGIC_KEY:
@@ -344,6 +365,7 @@ class WriteAheadLogReader(object):
         self._revision = revision
         self._state = state
         self._log_count = log_count
+        self._instant_block_hash = instant_block_hash
         self._log_start_offsets = []
 
         for _ in range(self._log_count):
