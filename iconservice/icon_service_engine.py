@@ -443,7 +443,11 @@ class IconServiceEngine(ContextContainer):
         if precommit_data is not None:
             Logger.info(tag=ICON_SERVICE_LOG_TAG,
                         msg=f"Block result already exists: \n{precommit_data}")
-            return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
+            return \
+                precommit_data.block_result, \
+                precommit_data.state_root_hash, \
+                precommit_data.added_transactions, \
+                precommit_data.main_prep_as_dict
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -529,10 +533,16 @@ class IconServiceEngine(ContextContainer):
                                        prev_block_validators,
                                        context.new_icon_score_mapper,
                                        precommit_flag,
-                                       rc_state_hash)
+                                       rc_state_hash,
+                                       added_transactions,
+                                       main_prep_as_dict)
         self._precommit_data_manager.push(precommit_data)
 
-        return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+        return \
+            block_result, \
+            precommit_data.state_root_hash, \
+            precommit_data.added_transactions, \
+            precommit_data.main_prep_as_dict
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
@@ -2036,8 +2046,8 @@ class IconServiceEngine(ContextContainer):
             is_iiss_exists: bool = len(iiss_rc_db_path) > 0
             Logger.info(tag=WAL_LOG_TAG,
                         msg=f"current_exists={is_current_exists}, "
-                            f"is_standby_exists={is_standby_exists}, "
-                            f"is_iiss_exists={is_iiss_exists}")
+                        f"is_standby_exists={is_standby_exists}, "
+                        f"is_iiss_exists={is_iiss_exists}")
 
             # If only current_db exists, replace current_db to standby_rc_db
             if is_current_exists and not is_standby_exists and not is_iiss_exists:
