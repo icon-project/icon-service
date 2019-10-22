@@ -226,18 +226,17 @@ class TestIntegrateBase(TestCase):
 
     def debug_make_and_req_block(self,
                                  tx_list: list,
-                                 block_height: int = None,
                                  prev_block_generator: Optional['Address'] = None,
                                  prev_block_validators: Optional[List['Address']] = None,
                                  prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
-                                 block_hash: bytes = None) -> tuple:
-        if block_height is None:
-            block_height: int = self._block_height + 1
-        if block_hash is None:
-            block_hash = create_block_hash()
-        timestamp_us = create_timestamp()
+                                 block: 'Block' = None) -> tuple:
 
-        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
+        if block is None:
+            block_height: int = self._block_height + 1
+            block_hash = create_block_hash()
+            timestamp_us = create_timestamp()
+            block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
+
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
