@@ -117,6 +117,7 @@ class IconScoreContext(object):
 
     decentralize_trigger: float = 0
 
+    precommitdata_log_flag = False
     step_trace_flag: bool = False
     log_level: str = None
 
