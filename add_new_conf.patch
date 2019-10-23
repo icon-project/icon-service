@@ -1,0 +1,57 @@
+diff --git a/iconservice/icon_config.py b/iconservice/icon_config.py
+index 47687c0d..fa244fd9 100644
+--- a/iconservice/icon_config.py
++++ b/iconservice/icon_config.py
+@@ -55,5 +55,6 @@ default_icon_config = {
+     ConfigKey.PENALTY_GRACE_PERIOD: PENALTY_GRACE_PERIOD,
+     ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD: LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
+     ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD: BLOCK_VALIDATION_PENALTY_THRESHOLD,
+-    ConfigKey.STEP_TRACE_FLAG: False
++    ConfigKey.STEP_TRACE_FLAG: False,
++    ConfigKey.PRECOMMIT_DATA_LOG_FLAG: False
+ }
+diff --git a/iconservice/icon_constant.py b/iconservice/icon_constant.py
+index ecee1e65..f096a2dd 100644
+--- a/iconservice/icon_constant.py
++++ b/iconservice/icon_constant.py
+@@ -162,6 +162,7 @@ class ConfigKey:
+     LOG = 'log'
+     LOG_FILE_PATH = 'filePath'
+     STEP_TRACE_FLAG = 'stepTraceFlag'
++    PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
+ 
+     # IISS meta data
+     IISS_META_DATA = "iissMetaData"
+diff --git a/iconservice/icon_service_engine.py b/iconservice/icon_service_engine.py
+index f950d705..e82fcb33 100644
+--- a/iconservice/icon_service_engine.py
++++ b/iconservice/icon_service_engine.py
+@@ -95,6 +95,7 @@ class IconServiceEngine(ContextContainer):
+         self._context_factory = None
+         self._state_db_root_path: Optional[str] = None
+         self._wal_reader: Optional['WriteAheadLogReader'] = None
++        self._precommit_data_log_flag = False
+ 
+         # JSON-RPC handlers
+         self._handlers = {
+@@ -178,7 +179,7 @@ class IconServiceEngine(ContextContainer):
+                                      conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
+                                      conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
+                                      conf[ConfigKey.IPC_TIMEOUT])
+-
++        self._precommit_data_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
+         self._load_builtin_scores(
+             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
+         self._init_global_value_by_governance_score(context)
+@@ -527,6 +528,11 @@ class IconServiceEngine(ContextContainer):
+                                        prev_block_validators,
+                                        context.new_icon_score_mapper,
+                                        precommit_flag)
++
++        if self._precommit_data_log_flag:
++            Logger.info(tag=ICON_SERVICE_LOG_TAG,
++                        msg=f"Created precommit_block: \n{precommit_data}")
++
+         self._precommit_data_manager.push(precommit_data)
+ 
+         state_root_hash: bytes = self._make_state_root_hash(precommit_data.revision,

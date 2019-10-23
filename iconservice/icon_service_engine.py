@@ -97,6 +97,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
+        self._precommit_data_log_flag = False
 
         # JSON-RPC handlers
         self._handlers = {
@@ -180,7 +181,7 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
                                      conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
                                      conf[ConfigKey.IPC_TIMEOUT])
-
+        self._precommit_data_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
@@ -536,6 +537,9 @@ class IconServiceEngine(ContextContainer):
                                        rc_state_hash,
                                        added_transactions,
                                        main_prep_as_dict)
+        if self._precommit_data_log_flag:
+            Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                        msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
 
         return \

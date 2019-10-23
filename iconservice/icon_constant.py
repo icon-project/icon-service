@@ -162,6 +162,7 @@ class ConfigKey:
     LOG = 'log'
     LOG_FILE_PATH = 'filePath'
     STEP_TRACE_FLAG = 'stepTraceFlag'
+    PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
