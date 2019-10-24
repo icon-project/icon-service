@@ -153,6 +153,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
         IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
         IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
+        IconScoreContext.precommitdata_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
         self._init_component_context()
 
         self._recover_dbs(rc_data_path)
@@ -539,6 +540,9 @@ class IconServiceEngine(ContextContainer):
                                        rc_state_hash,
                                        added_transactions,
                                        main_prep_as_dict)
+        if context.precommitdata_log_flag:
+            Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                        msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
 
         return \
