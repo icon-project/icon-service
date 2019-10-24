@@ -15,11 +15,12 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING
+import decimal
 
 from .engine import Engine as IISSEngine
 from .engine import EngineListener as IISSEngineListener
 from .storage import Storage as IISSStorage
-from ..icon_constant import REV_DECENTRALIZATION
+from ..icon_constant import Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -27,30 +28,38 @@ if TYPE_CHECKING:
 
 
 def check_decentralization_condition(context: 'IconScoreContext') -> bool:
-    if context.revision < REV_DECENTRALIZATION:
+    if context.revision < Revision.DECENTRALIZATION.value or context.is_decentralized():
+        # If revision is less than REV_DECENTRALIZATION or
+        # network has been already decentralized
         return False
+
+    context.update_dirty_prep_batch()
 
     """ICON network decentralize when the last prep of main prep count ( default: 22th )
     get delegation more than some value( default: total-supply * 0.002icx )"""
-    preps = context.preps
-    if preps.size(active_prep_only=True) >= context.main_prep_count:
+    if context.preps.size(active_prep_only=True) >= context.main_prep_count:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
-        bottom_prep: 'PRep' = preps.get_by_index(context.main_prep_count - 1)
-        bottom_prep_delegated = bottom_prep.delegated
-        return bottom_prep_delegated >= minimum_delegate
+        bottom_prep: 'PRep' = context.preps.get_by_index(context.main_prep_count - 1)
+        return bottom_prep.delegated >= minimum_delegate
     return False
 
 
 def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
     """Minimum delegate default value = total_supply * 0.002 ICX"""
     assert 1.0 > context.decentralize_trigger >= 0
-
-    str_float: str = str(context.decentralize_trigger)
-    decimal: str = str_float[str_float.find('.') + 1:]
-    numerator = int(decimal)
-    denominator = 10 ** len(decimal)
+    numerator, denominator = _split_float_to_numerator_and_denominator(context.decentralize_trigger)
+    if numerator == 0:
+        return 0
 
     total_supply: int = context.storage.icx.get_total_supply(context)
-
     minimum_delegate: int = total_supply * numerator // denominator
     return minimum_delegate
+
+
+def _split_float_to_numerator_and_denominator(float_data: float) -> tuple:
+    assert 1.0 > float_data >= 0
+    str_float: str = format(decimal.Decimal(str(float_data)), 'f')
+    str_decimal: str = str_float[str_float.find('.') + 1:]
+    numerator = int(str_decimal)
+    denominator = 10 ** len(str_decimal)
+    return numerator, denominator

@@ -26,7 +26,7 @@ from ..base.exception import InvalidParamsException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
 from ..icon_constant import DeployType
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, Revision
 from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
@@ -89,7 +89,7 @@ class Engine(EngineBase):
         :param score_address:
         :return: True(needed) False(not needed)
         """
-        if context.revision >= REVISION_2:
+        if context.revision >= Revision.TWO.value:
             is_system_score = is_builtin_score(str(score_address))
         else:
             is_system_score = False
@@ -166,7 +166,7 @@ class Engine(EngineBase):
 
         backup_msg = context.msg
         backup_tx = context.tx
-        new_score_mapper: 'IconScoreMapper' = context.new_icon_score_mapper
+        new_tx_score_mapper: dict = {}
 
         try:
             IconScoreContextUtil.validate_score_package(context, score_address, next_tx_hash)
@@ -183,13 +183,18 @@ class Engine(EngineBase):
             context.tx = None
 
             self._initialize_score(tx_params.deploy_type, score, params)
-            new_score_mapper[score_address] = score_info
+            new_tx_score_mapper[score_address] = score_info
         except BaseException as e:
             Logger.warning(f'Failed to deploy a SCORE: {score_address}', ICON_DEPLOY_LOG_TAG)
             raise e
         finally:
             context.msg = backup_msg
             context.tx = backup_tx
+            self._update_new_score_mapper(context.new_icon_score_mapper, new_tx_score_mapper)
+
+    def _update_new_score_mapper(self, block_mapper: 'IconScoreMapper', tx_mapper: dict):
+        for address, score_info in tx_mapper.items():
+            block_mapper[address] = score_info
 
     def _write_score_to_filesystem(self, context: 'IconScoreContext',
                                    score_address: 'Address', tx_hash: bytes, deploy_data: dict):
@@ -254,14 +259,14 @@ class Engine(EngineBase):
         score_root_path: str = context.score_root_path
         score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
 
-        if revision >= REVISION_3:
+        if revision >= Revision.THREE.value:
             # If the path to deploy a score has been present, remove it before deploying.
             score_root_path: str = context.score_root_path
             score_path: str =\
                 os.path.join(score_root_path, score_address.to_bytes().hex(), f'0x{tx_hash.hex()}')
             remove_path(score_path)
 
-        if revision >= REVISION_2:
+        if revision >= Revision.TWO.value:
             IconScoreDeployer.deploy(score_deploy_path, content, revision)
         else:
             IconScoreDeployer.deploy_legacy(score_deploy_path, content)

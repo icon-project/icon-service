@@ -20,7 +20,7 @@ import shutil
 import zipfile
 
 from ..base.exception import InvalidPackageException
-from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
+from ..icon_constant import Revision, PACKAGE_JSON_FILE
 
 
 class IconScoreDeployer(object):
@@ -69,7 +69,7 @@ class IconScoreDeployer(object):
                         has_package = True
                         break
 
-                if revision >= REVISION_3 and has_package is False:
+                if revision >= Revision.THREE.value and has_package is False:
                     raise InvalidPackageException("package.json not found")
 
                 for zip_info in memory_zip_infolist:
@@ -83,7 +83,7 @@ class IconScoreDeployer(object):
                                 and not file_path.startswith('.')
                                 and file_path.find('/.') < 0
                         ):
-                            if revision >= REVISION_3:
+                            if revision >= Revision.THREE.value:
                                 file_path = os.path.relpath(file_path, common_prefix)
                                 parent_directory = os.path.dirname(file_path)
                                 if file_path:

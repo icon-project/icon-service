@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 import plyvel
 
+from iconservice.icon_constant import RC_DB_VERSION_2, RC_DB_VERSION_0
 from iconservice.iiss.reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, TxType, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 from tests import create_address, rmtree
@@ -35,13 +36,29 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         self.debug = True
 
         self.iiss_header: 'Header' = Header()
-        self.iiss_header.version = 10
+        self.iiss_header.version = RC_DB_VERSION_0
         self.iiss_header.block_height = 20
+        # in version 0, revision must not be set
+        self.iiss_header.revision = 5
+
+        self.iiss_header_v2: 'Header' = Header()
+        self.iiss_header_v2.version = RC_DB_VERSION_2
+        self.iiss_header_v2.block_height = 20
+        self.iiss_header_v2.revision = 5
 
         self.iiss_gv: 'GovernanceVariable' = GovernanceVariable()
+        self.iiss_gv.version = RC_DB_VERSION_0
         self.iiss_gv.block_height = 20
         self.iiss_gv.calculated_irep = 30
         self.iiss_gv.reward_rep = 10_000
+
+        self.iiss_gv_v2: 'GovernanceVariable' = GovernanceVariable()
+        self.iiss_gv_v2.version = RC_DB_VERSION_2
+        self.iiss_gv_v2.block_height = 22
+        self.iiss_gv_v2.config_main_prep_count = 22
+        self.iiss_gv_v2.config_sub_prep_count = 100
+        self.iiss_gv_v2.calculated_irep = 30
+        self.iiss_gv_v2.reward_rep = 10_000
 
         self.iiss_block_produce_info: 'BlockProduceInfoData' = BlockProduceInfoData()
         self.iiss_block_produce_info.block_height = 20
@@ -108,6 +125,16 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         self.assertEqual(self.iiss_header.version, ret_h.version)
         self.assertEqual(self.iiss_header.block_height, ret_h.block_height)
+        # default value
+        self.assertEqual(0, ret_h.revision)
+
+    def test_iiss_header_v2_data(self):
+        value: bytes = self.iiss_header_v2.make_value()
+        ret_h: 'Header' = self.iiss_header_v2.from_bytes(value)
+
+        self.assertEqual(self.iiss_header_v2.version, ret_h.version)
+        self.assertEqual(self.iiss_header_v2.block_height, ret_h.block_height)
+        self.assertEqual(self.iiss_header_v2.revision, ret_h.revision)
 
     def test_iiss_governance_variable_data(self):
         key: bytes = self.iiss_gv.make_key()
@@ -115,8 +142,22 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_gv: 'GovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
+        # default value
+        self.assertEqual(0, ret_gv.config_main_prep_count)
+        self.assertEqual(0, ret_gv.config_sub_prep_count)
         self.assertEqual(self.iiss_gv.calculated_irep, ret_gv.calculated_irep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
+
+    def test_iiss_governance_variable_v2_data(self):
+        key: bytes = self.iiss_gv_v2.make_key()
+        value: bytes = self.iiss_gv_v2.make_value()
+        ret_gv: 'GovernanceVariable' = self.iiss_gv_v2.from_bytes(key, value)
+
+        self.assertEqual(self.iiss_gv_v2.block_height, ret_gv.block_height)
+        self.assertEqual(self.iiss_gv_v2.config_main_prep_count, ret_gv.config_main_prep_count)
+        self.assertEqual(self.iiss_gv_v2.config_sub_prep_count, ret_gv.config_sub_prep_count)
+        self.assertEqual(self.iiss_gv_v2.calculated_irep, ret_gv.calculated_irep)
+        self.assertEqual(self.iiss_gv_v2.reward_rep, ret_gv.reward_rep)
 
     def test_iiss_block_produce_info_data(self):
         key: bytes = self.iiss_block_produce_info.make_key()
@@ -202,6 +243,21 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
             print(f"value: {value}")
             print("")
 
+        key: bytes = self.iiss_gv_v2.make_key()
+        value: bytes = self.iiss_gv_v2.make_value()
+        self.db.put(key, value)
+
+        if self.debug:
+            print("===IISS_GOVERNANCE_VARIABLE_V2===")
+            print(f"block_height: {self.iiss_gv_v2.block_height}")
+            print(f"calculated irep: {self.iiss_gv_v2.calculated_irep}")
+            print(f"reward_rep: {self.iiss_gv_v2.reward_rep}")
+            print(f"main prep count: {self.iiss_gv_v2.config_main_prep_count}")
+            print(f"sub prep count: {self.iiss_gv_v2.config_sub_prep_count}")
+            print(f"key: {key}")
+            print(f"value: {value}")
+            print("")
+
         key: bytes = self.iiss_block_produce_info.make_key()
         value: bytes = self.iiss_block_produce_info.make_value()
         self.db.put(key, value)
@@ -279,17 +335,30 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         key: bytes = self.iiss_header.make_key()
         value = self.db.get(key)
         ret_h: 'Header' = self.iiss_header.from_bytes(value)
-
         self.assertEqual(self.iiss_header.version, ret_h.version)
         self.assertEqual(self.iiss_header.block_height, ret_h.block_height)
+        self.assertEqual(0, ret_h.revision)
 
         key: bytes = self.iiss_gv.make_key()
         value = self.db.get(key)
         ret_gv: 'GovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
+        # default value
+        self.assertEqual(0, ret_gv.config_main_prep_count)
+        self.assertEqual(0, ret_gv.config_sub_prep_count)
         self.assertEqual(self.iiss_gv.calculated_irep, ret_gv.calculated_irep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
+
+        key: bytes = self.iiss_gv_v2.make_key()
+        value = self.db.get(key)
+        ret_gv: 'GovernanceVariable' = self.iiss_gv_v2.from_bytes(key, value)
+
+        self.assertEqual(self.iiss_gv_v2.block_height, ret_gv.block_height)
+        self.assertEqual(self.iiss_gv_v2.config_main_prep_count, ret_gv.config_main_prep_count)
+        self.assertEqual(self.iiss_gv_v2.config_sub_prep_count, ret_gv.config_sub_prep_count)
+        self.assertEqual(self.iiss_gv_v2.calculated_irep, ret_gv.calculated_irep)
+        self.assertEqual(self.iiss_gv_v2.reward_rep, ret_gv.reward_rep)
 
         key: bytes = self.iiss_block_produce_info.make_key()
         value = self.db.get(key)

@@ -18,8 +18,9 @@ from struct import Struct
 from typing import Optional
 
 from .exception import InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, REV_IISS
+from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, Revision
 from ..utils.msgpack_for_db import MsgPackForDB
+from ..utils import bytes_to_hex
 
 
 @unique
@@ -64,6 +65,23 @@ class Block(object):
         self._prev_hash = prev_hash
         # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
+
+    def __str__(self) -> str:
+        return f"Block(height={self._height}, " \
+                f"hash={bytes_to_hex(self._hash)}, " \
+                f"prev_hash={bytes_to_hex(self._prev_hash)}, " \
+                f"timestamp={self._timestamp}, " \
+                f"cumulative_fee={self.cumulative_fee})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, other):
+        return isinstance(other, Block) \
+            and self._height == other._height \
+            and self._timestamp == other._timestamp \
+            and self._prev_hash == other._prev_hash \
+            and self.cumulative_fee == other.cumulative_fee
 
     @property
     def height(self) -> int:
@@ -120,8 +138,7 @@ class Block(object):
         byteorder = DATA_BYTE_ORDER
 
         version, block_height_bytes, block_hash_bytes, \
-        timestamp_bytes, block_prev_hash_bytes = \
-            Block._struct.unpack(buf)
+            timestamp_bytes, block_prev_hash_bytes = Block._struct.unpack(buf)
 
         block_height = int.from_bytes(block_height_bytes, byteorder)
         block_hash = block_hash_bytes
@@ -152,14 +169,14 @@ class Block(object):
                      cumulative_fee=data[5])
 
     def to_bytes(self, revision: int) -> bytes:
-        if revision >= REV_IISS:
+        if revision >= Revision.IISS.value:
             return self._to_msg_packed_bytes()
         else:
             return self._to_struct_packed_bytes()
 
     def _to_msg_packed_bytes(self) -> bytes:
         data = [
-            BlockVersion.MSG_PACK,
+            BlockVersion.MSG_PACK.value,
             self._height,
             self._hash,
             self._timestamp,

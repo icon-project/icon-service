@@ -19,7 +19,7 @@
 from typing import TYPE_CHECKING, List
 
 from iconservice import ZERO_SCORE_ADDRESS
-from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
+from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         # distribute icx for register
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],

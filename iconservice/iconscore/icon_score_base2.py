@@ -18,20 +18,21 @@ import hashlib
 import json
 from abc import ABC, ABCMeta
 from enum import IntEnum
-from typing import TYPE_CHECKING, Optional, Any, Tuple, List
+from typing import TYPE_CHECKING, Optional, Any, Callable
+from typing import Tuple, List
 
 from secp256k1 import PublicKey, ALL_FLAGS, NO_FLAGS
 
+from .icon_score_constant import FORMAT_IS_NOT_DERIVED_OF_OBJECT, T
 from ..base.address import Address, AddressPrefix
-from ..base.exception import InvalidParamsException, IconScoreException
-from ..icon_constant import REVISION_3, CHARSET_ENCODING
+from ..base.exception import InvalidParamsException, IconScoreException, InvalidInstanceException
+from ..icon_constant import CHARSET_ENCODING
+from ..icon_constant import Revision
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
-    from .icon_score_base import IconScoreBase
     from .icon_score_context import IconScoreContext
-    from ..prep.data import PRep
 
 """
 The explanation below are extracted
@@ -66,17 +67,18 @@ class InterfaceScoreMeta(ABCMeta):
 
 
 class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
-    def __init__(self, addr_to: 'Address', from_score: 'IconScoreBase'):
+    def __init__(self, addr_to: 'Address'):
         self.__addr_to = addr_to
-        self.__from_score = from_score
 
     @property
     def addr_to(self) -> 'Address':
         return self.__addr_to
 
     @property
-    def from_score(self) -> 'IconScoreBase':
-        return self.__from_score
+    def context(self) -> 'IconScoreContext':
+        context = ContextContainer._get_context()
+        assert context
+        return context
 
 
 class Block(object):
@@ -158,7 +160,7 @@ def sha3_256(data: bytes) -> bytes:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION_3:
+    if context and context.revision >= Revision.THREE.value:
         size = len(data)
         chunks = size // 32
         if size % 32 > 0:
@@ -182,7 +184,7 @@ def json_dumps(obj: Any) -> str:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION_3:
+    if context and context.revision >= Revision.THREE.value:
         ret: str = json.dumps(obj, separators=(',', ':'))
 
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_DUMPS)
@@ -208,7 +210,7 @@ def json_loads(src: str) -> Any:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION_3:
+    if context and context.revision >= Revision.THREE.value:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_LOADS)
         step: int = step_cost + step_cost * len(src.encode(CHARSET_ENCODING)) // 100
 
@@ -235,7 +237,7 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION_3:
+    if context and context.revision >= Revision.THREE.value:
         if key_size == 33:
             ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY
         else:
@@ -290,7 +292,7 @@ def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> O
     context = ContextContainer._get_context()
     assert context
 
-    if context and context.revision >= REVISION_3:
+    if context and context.revision >= Revision.THREE.value:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.RECOVER_KEY)
         context.step_counter.consume_step(StepType.API_CALL, step_cost)
 
@@ -317,36 +319,61 @@ def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optiona
 
 
 class PRepInfo(object):
-    def __init__(self, address: 'Address', delegated: int):
+    def __init__(self, address: 'Address', delegated: int, name: str):
         self.address = address
         self.delegated = delegated
-
-
-def __create_prep_info_from_prep(prep: 'PRep') -> 'PRepInfo':
-    return PRepInfo(prep.address, prep.delegated)
+        self.name = name
 
 
 def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    if context:
-        prep_info_list: List[PRepInfo] = []
-        for prep in context.engine.prep.term.main_preps:
-            prep_info_list.append(__create_prep_info_from_prep(prep))
-        return prep_info_list, context.engine.prep.term.end_block_height
-    else:
+    # TODO: Fix an error on unittest first before removing the commit below (goldworm)
+    term = context.term
+    if term is None:
         return [], -1
+
+    prep_info_list: List[PRepInfo] = []
+    for prep_snapshot in term.main_preps:
+        prep = context.get_prep(prep_snapshot.address)
+        prep_info_list.append(PRepInfo(
+            prep_snapshot.address,
+            prep_snapshot.delegated,
+            prep.name
+        ))
+    return prep_info_list, term.end_block_height
 
 
 def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    if context:
-        prep_info_list: List[PRepInfo] = []
-        for prep in context.engine.prep.term.sub_preps:
-            prep_info_list.append(__create_prep_info_from_prep(prep))
-        return prep_info_list, context.engine.prep.term.end_block_height
-    else:
+    term = context.term
+    if term is None:
         return [], -1
+
+    prep_info_list: List[PRepInfo] = []
+    for prep_snapshot in term.sub_preps:
+        prep = context.get_prep(prep_snapshot.address)
+        prep_info_list.append(PRepInfo(
+            prep_snapshot.address,
+            prep_snapshot.delegated,
+            prep.name
+        ))
+    return prep_info_list, term.end_block_height
+
+
+def create_interface_score(addr_to: 'Address',
+                           interface_cls: Callable[['Address'], T]) -> T:
+        """
+        Creates an object, through which you have an access to the designated SCORE’s external functions.
+
+        :param addr_to: SCORE address
+        :param interface_cls: interface class
+        :return: An instance of given class
+        """
+
+        if interface_cls is InterfaceScore:
+            raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
+        return interface_cls(addr_to)

@@ -34,7 +34,7 @@ from .internal_call import InternalCall
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_3
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -63,18 +63,19 @@ def interface(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: Any, *args, **kwargs):
+    def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
             raise InvalidInstanceException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
-        score = calling_obj.from_score
+        context = calling_obj.context
         addr_to = calling_obj.addr_to
+        addr_from: 'Address' = context.current_address
 
         if addr_to is None:
             raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')
 
-        return InternalCall.other_external_call(score._context, score.address, addr_to, 0, func_name, args, kwargs)
+        return InternalCall.other_external_call(context, addr_from, addr_to, 0, func_name, args, kwargs)
 
     return __wrapper
 
@@ -122,7 +123,7 @@ def eventlog(func=None, *, indexed=0):
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
-    def __wrapper(calling_obj: Any, *args, **kwargs):
+    def __wrapper(calling_obj: 'IconScoreBase', *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise InvalidInstanceException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
@@ -353,7 +354,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     @abstractmethod
     def on_install(self, **kwargs) -> None:
         """
-        Invoked when the contract is deployed for the first time, and will not be called again on contract update or deletion afterward.
+        Invoked when the contract is deployed for the first time,
+        and will not be called again on contract update or deletion afterward.
         This is the place where you initialize the state DB.
         """
         super().on_install(**kwargs)
@@ -385,9 +387,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def fallback(self) -> None:
         """
-        fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
+        fallback function can not be decorated with `@external`.
+        (i.e., fallback function is not allowed to be called by external contract or user.)
         This fallback function is executed whenever the contract receives plain icx coins without data.
-        If the fallback function is not decorated with `@payable`, it is not listed on the SCORE APIs also cannot be called.
+        If the fallback function is not decorated with `@payable`,
+        it is not listed on the SCORE APIs also cannot be called.
         """
         pass
 
@@ -419,7 +423,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                kw_params: Optional[dict] = None) -> Any:
 
         if func_name == STR_FALLBACK:
-            if self._context.revision >= REVISION_3:
+            if self._context.revision >= Revision.THREE.value:
                 if not self.__is_payable_method(func_name):
                     raise MethodNotFoundException(
                         f"Method not found: {type(self).__name__}.{func_name}")
@@ -653,21 +657,21 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def is_score_active(self, score_address: 'Address') -> bool:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision <= REVISION_3:
+        if self._context.revision <= Revision.THREE.value:
             return IconScoreContextUtil.is_score_active(self._context, score_address)
         else:
             raise AccessDeniedException('No permission')
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision <= REVISION_3:
+        if self._context.revision <= Revision.THREE.value:
             return IconScoreContextUtil.get_owner(self._context, score_address)
         else:
             raise AccessDeniedException('No permission')
 
-    def create_interface_score(self,
-                               addr_to: 'Address',
-                               interface_cls: Callable[['Address', callable], T]) -> T:
+    @staticmethod
+    def create_interface_score(addr_to: 'Address',
+                               interface_cls: Callable[['Address'], T]) -> T:
         """
         Creates an object, through which you have an access to the designated SCORE’s external functions.
 
@@ -678,11 +682,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if interface_cls is InterfaceScore:
             raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
-        return interface_cls(addr_to, self)
+        return interface_cls(addr_to)
 
     def deploy(self, tx_hash: bytes):
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision <= REVISION_3 and \
+        if self._context.revision <= Revision.THREE.value and \
                 self.address == GOVERNANCE_SCORE_ADDRESS:
             # switch
             score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
@@ -700,7 +704,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_tx_hashes_by_score_address(self,
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision <= REVISION_3:
+        if self._context.revision <= Revision.THREE.value:
             return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
         else:
             raise AccessDeniedException('No permission')
@@ -708,7 +712,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_score_address_by_tx_hash(self,
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision <= REVISION_3:
+        if self._context.revision <= Revision.THREE.value:
             return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
         else:
             raise AccessDeniedException('No permission')

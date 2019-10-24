@@ -53,13 +53,16 @@ class Regulator:
     def _set_corrected_issue_data(self, context: 'IconScoreContext', issue_amount: int):
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
         prev_block_cumulative_fee: int = context.storage.icx.last_block.cumulative_fee
-        calc_next_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
 
-        # update current calculated period total issued icx
+        # Update current calculated period total issued icx
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
-        if calc_next_block_height == context.block.height:
-            prev_calc_period_issued_iscore, _ = context.storage.rc.get_calc_response_from_rc()
+        if end_block_height_of_calc == context.block.height:
+            prev_calc_period_issued_iscore, _, _ = context.storage.rc.get_calc_response_from_rc()
+
+            assert prev_calc_period_issued_iscore >= 0
+
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
@@ -83,8 +86,11 @@ class Regulator:
         self._covered_icx_by_fee = covered_icx_by_fee
         self._covered_icx_by_remain = covered_icx_by_remain
         self._corrected_icx_issue_amount = corrected_icx_issue_amount
-        Logger.debug(f"Block height of this block: {context.block.height} "
-                     f"Regulator variable: {self._regulator_variable}", IISS_LOG_TAG)
+        Logger.info(f"Regulate BH: {context.block.height} "
+                    f"Covered by fee: {self._covered_icx_by_fee} "
+                    f"Covered by remain: {self._covered_icx_by_remain} "
+                    f"Corrected issue amount {self._corrected_icx_issue_amount}"
+                    f"Regulator variable: {self._regulator_variable}", IISS_LOG_TAG)
 
     def put_regulate_variable(self, context: 'IconScoreContext'):
         context.storage.issue.put_regulator_variable(context, self._regulator_variable)
@@ -162,10 +168,7 @@ class Regulator:
                                              prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
         assert icx_issue_amount >= 0
         assert prev_block_cumulative_fee >= 0
-
-        # check if RC has sent response about 'CALCULATE' requests. every period should get response
-        if prev_calc_period_issued_iscore == -1:
-            raise FatalException("There is no prev_calc_period_iscore")
+        assert prev_calc_period_issued_iscore >= 0
 
         # get difference between icon_service and reward_calc after set exchange rates
         prev_calc_over_issued_iscore: int = \

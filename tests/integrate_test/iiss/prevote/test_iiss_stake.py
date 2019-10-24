@@ -18,7 +18,7 @@
 """
 from typing import TYPE_CHECKING, List
 
-from iconservice.icon_constant import REV_IISS, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class TestIISSStake(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         # transfer 100 icx to self.addr_array[0]
         balance: int = 100 * ICX_IN_LOOP
@@ -65,7 +65,7 @@ class TestIISSStake(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         # gain 1000 icx
         balance: int = 1000 * ICX_IN_LOOP
@@ -121,6 +121,7 @@ class TestIISSStake(TestIISSBase):
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
+        estimate_unstake_lock_period_response: dict = self.estimate_unstake_lock_period()
         expected_response = {
             "stake": stake,
             "unstake": unstake
@@ -128,6 +129,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -164,6 +166,7 @@ class TestIISSStake(TestIISSBase):
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
+        estimate_unstake_lock_period_response: dict = self.estimate_unstake_lock_period()
         expected_response = {
             "stake": stake,
             "unstake": unstake
@@ -171,6 +174,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -207,6 +211,7 @@ class TestIISSStake(TestIISSBase):
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
+        estimate_unstake_lock_period_response: dict = self.estimate_unstake_lock_period()
         expected_response = {
             "stake": stake,
             "unstake": unstake
@@ -214,6 +219,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -279,7 +285,7 @@ class TestIISSStake(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         # gain 10 icx
         balance: int = 10 * ICX_IN_LOOP

@@ -20,7 +20,7 @@ import unittest
 
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
-from iconservice.icon_constant import REVISION_4, REVISION_3
+from iconservice.icon_constant import Revision
 from iconservice.icx.base_part import BasePartState
 from iconservice.icx.coin_part import CoinPartType, CoinPartFlag, CoinPart
 from iconservice.utils import set_flag
@@ -95,7 +95,7 @@ class TestCoinPart(unittest.TestCase):
     def test_coin_part_from_bytes_to_bytes_revision_4(self):
         part1 = CoinPart()
 
-        data = part1.to_bytes(REVISION_4)
+        data = part1.to_bytes(Revision.FOUR.value)
         self.assertTrue(isinstance(data, bytes))
 
         part2 = CoinPart.from_bytes(data)
@@ -107,7 +107,7 @@ class TestCoinPart(unittest.TestCase):
         part1.type = CoinPartType.GENESIS
         part1.deposit(1024)
 
-        part3 = CoinPart.from_bytes(part1.to_bytes(REVISION_4))
+        part3 = CoinPart.from_bytes(part1.to_bytes(Revision.FOUR.value))
         self.assertEqual(CoinPartType.GENESIS, part3.type)
         self.assertEqual(1024, part3.balance)
 
@@ -118,10 +118,10 @@ class TestCoinPart(unittest.TestCase):
         part1.type = CoinPartType.GENERAL
         part1.deposit(balance)
 
-        part2 = CoinPart.from_bytes(part1.to_bytes(REVISION_3))
+        part2 = CoinPart.from_bytes(part1.to_bytes(Revision.THREE.value))
         self.assertEqual(part1, part2)
 
-        data: bytes = part1.to_bytes(REVISION_4)
+        data: bytes = part1.to_bytes(Revision.FOUR.value)
         part3 = CoinPart.from_bytes(data)
         self.assertEqual(part1, part3)
 

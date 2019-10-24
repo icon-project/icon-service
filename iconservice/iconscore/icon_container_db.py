@@ -19,11 +19,11 @@ from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
-from ..icon_constant import REVISION_3, IconScoreContextType
+from ..icon_constant import Revision, IconScoreContextType
 from ..utils import int_to_bytes, bytes_to_int
 
 if TYPE_CHECKING:
-    from ..database.db import IconScoreDatabase
+    from ..database.db import IconScoreDatabase, IconScoreSubDatabase
 
 K = TypeVar('K', int, str, Address, bytes)
 V = TypeVar('V', int, str, Address, bytes, bool)
@@ -143,7 +143,7 @@ class ContainerUtil(object):
         return ContainerUtil.decode_object(byte_key, value_type)
 
     @staticmethod
-    def __put_to_db_internal(db: 'IconScoreDatabase', iters: iter) -> None:
+    def __put_to_db_internal(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
         for key, value in iters:
             sub_db = db.get_sub_db(ContainerUtil.encode_key(key))
             if isinstance(value, dict):
@@ -166,7 +166,12 @@ class DictDB(object):
     :V: [int, str, Address, bytes, bool]
     """
 
-    def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type, depth: int = 1) -> None:
+    def __init__(self,
+                 var_key: K,
+                 db: Union['IconScoreDatabase',
+                           'IconScoreSubDatabase'],
+                 value_type: type,
+                 depth: int = 1) -> None:
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
 
@@ -316,10 +321,10 @@ class ArrayDB(object):
     def __is_defective_revision():
         context = ContextContainer._get_context()
         revision = context.revision
-        return context.type == IconScoreContextType.INVOKE and revision < REVISION_3
+        return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
 
     @staticmethod
-    def _get(db: 'IconScoreDatabase', size: int, index: int, value_type: type) -> V:
+    def _get(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:
         if not isinstance(index, int):
             raise InvalidParamsException('Invalid index type: not an integer')
 
@@ -334,7 +339,7 @@ class ArrayDB(object):
         raise InvalidParamsException('ArrayDB out of index')
 
     @staticmethod
-    def _get_generator(db: 'IconScoreDatabase', size: int, value_type: type):
+    def _get_generator(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, value_type: type):
         for index in range(size):
             yield ArrayDB._get(db, size, index, value_type)
 

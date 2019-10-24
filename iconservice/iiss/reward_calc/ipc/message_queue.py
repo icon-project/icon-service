@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import asyncio
-from typing import Callable, Any
+from iconcommons.logger import Logger
+from typing import Callable, Any, Optional
 
-from .message import Request, Response
-from iconservice.base.exception import InvalidParamsException
+from iconservice.icon_constant import RCStatus
+from .message import Request, Response, MessageType
+from iconservice.base.exception import InvalidParamsException, ServiceNotReadyException
 
 
 class MessageQueue(object):
@@ -28,27 +30,39 @@ class MessageQueue(object):
         self._loop = loop
         self._requests = asyncio.Queue()
         self._msg_id_to_future = {}
-        self.notify_message: tuple = notify_message
+        self.notify_message: Optional[tuple] = notify_message
         self.notify_handler = notify_handler
+        self._rc_status = RCStatus.NOT_READY
 
     async def get(self) -> 'Request':
         return await self._requests.get()
 
-    def put(self, request) -> asyncio.Future:
+    def put(self, request, wait_for_response: bool = True) -> Optional[asyncio.Future]:
         assert isinstance(request, Request)
 
-        future: asyncio.Future = self._loop.create_future()
         self._requests.put_nowait(request)
-        self._msg_id_to_future[request.msg_id] = future
 
-        return future
+        if wait_for_response:
+            future: asyncio.Future = self._loop.create_future()
+            self._msg_id_to_future[request.msg_id] = future
+            return future
 
     def message_handler(self, response: 'Response'):
+
+        if self._rc_status == RCStatus.NOT_READY:
+            if response.MSG_TYPE == MessageType.READY:
+                self._rc_status = RCStatus.READY
+            else:
+                raise ServiceNotReadyException(f"Ready notification did not arrive: {response}")
+
+        if response.is_notification():
+            self.notify_handler(response)
+            return
+
         try:
             self.put_response(response)
         except KeyError:
-            if isinstance(response, self.notify_message):
-                self.notify_handler(response)
+            Logger.warning(f"Unexpected response arrived.  Respond Id : {response.msg_id}")
 
     def put_response(self, response: 'Response'):
         msg_id: int = response.msg_id

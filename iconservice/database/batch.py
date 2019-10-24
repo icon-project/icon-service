@@ -15,26 +15,36 @@
 # limitations under the License.
 
 
-import hashlib
-from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional
+from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
+from typing import Optional
 
-from ..base.exception import DatabaseException
+from iconcommons.logger import Logger
 
-if TYPE_CHECKING:
-    from ..base.block import Block
+from ..base.exception import DatabaseException, AccessDeniedException
+from ..utils import sha3_256
+
+from ..base.block import Block
+from ..icx import IcxStorage
+
+
+TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
 
 
 def digest(ordered_dict: OrderedDict):
     # items in data MUST be byte-like objects
     data = []
 
-    for key, value in ordered_dict.items():
+    for key, tx_batch_value in ordered_dict.items():
+        if tx_batch_value.include_state_root_hash is True:
+            value: bytes = tx_batch_value.value
+        else:
+            continue
         data.append(key)
         if value is not None:
             data.append(value)
-    return hashlib.sha3_256(b'|'.join(data)).digest()
+    value: bytes = b'|'.join(data)
+    return sha3_256(value)
 
 
 class Batch(OrderedDict):
@@ -150,10 +160,27 @@ class BlockBatch(Batch):
         super().__init__()
         self.block = block
 
+    def __setitem__(self, key, value):
+        raise AccessDeniedException("Can not set data on block batch directly.")
+
+    def update(self, tx_batch: 'TransactionBatch', **kwargs):
+        for key, value in tx_batch.items():
+            super().__setitem__(key, value)
+
+    def update_block_hash(self, block_hash: bytes):
+        self.block = Block(block_height=self.block.height,
+                           block_hash=block_hash,
+                           timestamp=self.block.timestamp,
+                           prev_hash=self.block.prev_hash,
+                           cumulative_fee=self.block.cumulative_fee)
+
+    def set_block_to_batch(self, revision: int):
+        Logger.debug(tag="DB", msg=f"set_block_to_batch() block={self.block}")
+        block_key: bytes = IcxStorage.LAST_BLOCK_KEY
+        block_value: tuple = TransactionBatchValue(self.block.to_bytes(revision), False)
+
+        super().__setitem__(block_key, block_value)
+
     def clear(self) -> None:
         self.block = None
         super().clear()
-
-
-class ExternalBatch(OrderedDict):
-    pass

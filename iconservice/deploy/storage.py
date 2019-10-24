@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import InvalidParamsException, AccessDeniedException
-from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2, ZERO_TX_HASH, DeployState, DeployType
+from ..icon_constant import DEFAULT_BYTE_SIZE, Revision, ZERO_TX_HASH, DeployState, DeployType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -302,7 +302,7 @@ class Storage(StorageBase):
         :param tx_hash:
         :return:
         """
-        if context.revision >= REVISION_2:
+        if context.revision >= Revision.TWO.value:
             key: bytes = self._create_db_key(
                 self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, tx_hash)
         else:

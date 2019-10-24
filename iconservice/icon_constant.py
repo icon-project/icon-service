@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique, IntEnum, Enum
+from enum import IntFlag, unique, IntEnum, Enum, auto
 
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
@@ -24,6 +24,8 @@ ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
 ICON_DB_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_DB'
 ICON_INNER_LOG_TAG = f'IconInnerService'
 IISS_LOG_TAG = "IISS"
+STEP_LOG_TAG = "STEP"
+WAL_LOG_TAG = "WAL"
 
 JSONRPC_VERSION = '2.0'
 CHARSET_ENCODING = 'utf-8'
@@ -100,15 +102,34 @@ ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP]
 
 BASE_TRANSACTION_INDEX = 0
 
-REVISION_2 = 2
-REVISION_3 = 3
-REVISION_4 = 4
-REVISION_5 = 5
 
-LATEST_REVISION = REVISION_4
+class Revision(Enum):
+    def _generate_next_value_(self, start, count, last_values):
+        if self != 'LATEST':
+            return start + count + 1
 
-REV_IISS = REVISION_5
-REV_DECENTRALIZATION = REV_IISS + 1
+        return last_values[-1]
+
+    TWO = auto()
+    THREE = auto()
+    FOUR = auto()
+    IISS = auto()
+    DECENTRALIZATION = auto()
+
+    LATEST = auto()
+
+
+RC_DB_VERSION_0 = 0
+RC_DB_VERSION_2 = 2
+
+
+# The case that version is updated but not revision, set the version to the current revision
+# The case that both version and revision is updated, add revision field to the version table
+# The case that only revision is changed, do not update this table
+RC_DATA_VERSION_TABLE = {
+    Revision.IISS.value: RC_DB_VERSION_0,
+    Revision.DECENTRALIZATION.value: RC_DB_VERSION_2
+}
 
 IISS_DB = 'iiss'
 RC_SOCKET = 'iiss.sock'
@@ -135,10 +156,12 @@ class ConfigKey:
     INITIAL_IREP = 'initialIRep'
     PREP_MAIN_PREPS = 'mainPRepCount'
     PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
+    IPC_TIMEOUT = 'ipcTimeout'
 
     # log
     LOG = 'log'
     LOG_FILE_PATH = 'filePath'
+    STEP_TRACE_FLAG = 'stepTraceFlag'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
@@ -151,6 +174,9 @@ class ConfigKey:
     PREP_REGISTRATION_FEE = "prepRegistrationFee"
 
     DECENTRALIZE_TRIGGER = "decentralizeTrigger"
+    PENALTY_GRACE_PERIOD = "penaltyGracePeriod"
+    LOW_PRODUCTIVITY_PENALTY_THRESHOLD = "lowProductivityPenaltyThreshold"
+    BLOCK_VALIDATION_PENALTY_THRESHOLD = "blockValidationPenaltyThreshold"
 
 
 class EnableThreadFlag(IntFlag):
@@ -199,6 +225,11 @@ class DeployState(IntEnum):
     ACTIVE = 1
 
 
+# 0xb9eeb235f715b166cf4b91ffcf8cc48a81913896086d30104ffc0cf47eed1cbd
+INVALID_CLAIM_TX = [
+    b'\xb9\xee\xb25\xf7\x15\xb1f\xcfK\x91\xff\xcf\x8c\xc4\x8a\x81\x918\x96\x08m0\x10O\xfc\x0c\xf4~\xed\x1c\xbd'
+]
+
 IISS_METHOD_TABLE = [
     "setStake",
     "getStake",
@@ -206,6 +237,7 @@ IISS_METHOD_TABLE = [
     "getDelegation",
     "claimIScore",
     "queryIScore",
+    "estimateUnstakeLockPeriod"
 ]
 
 PREP_METHOD_TABLE = [
@@ -216,7 +248,8 @@ PREP_METHOD_TABLE = [
     "getPRep",
     "getMainPReps",
     "getSubPReps",
-    "getPReps"
+    "getPReps",
+    "getPRepTerm"
 ]
 
 DEBUG_METHOD_TABLE = [
@@ -241,31 +274,54 @@ IISS_MIN_IREP = 10_000 * ICX_IN_LOOP
 IISS_MAX_IREP_PERCENTAGE = 14
 IISS_INITIAL_IREP = 50_000 * ICX_IN_LOOP
 
+# 24 hours * 60 minutes * 60 seconds / 2 - 80 <- for PRep terms
+TERM_PERIOD = 24 * 60 * 60 // 2 - 80
+
 # 24 hours * 60 minutes * 60 seconds / 2
 IISS_DAY_BLOCK = 24 * 60 * 60 // 2
 IISS_MONTH_BLOCK = IISS_DAY_BLOCK * 30
 IISS_MONTH = 12
 IISS_ANNUAL_BLOCK = IISS_MONTH_BLOCK * IISS_MONTH
 
+PERCENTAGE_FOR_BETA_2 = 100
+
 ISCORE_EXCHANGE_RATE = 1_000
 
 PENALTY_GRACE_PERIOD = IISS_DAY_BLOCK * 2
 
-MIN_PRODUCTIVITY_PERCENTAGE = 85
+LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 85     # Unit: Percent
+BLOCK_VALIDATION_PENALTY_THRESHOLD = 660    # Unit: Blocks
 
 BASE_TRANSACTION_VERSION = 3
 
 PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
 
 
+class RCStatus(IntEnum):
+    NOT_READY = 0
+    READY = 1
+
+
+class RCCalculateResult(IntEnum):
+    SUCCESS = 0
+    FAIL = 1
+    IN_PROGRESS = 2
+    INVALID_BLOCK_HEIGHT = 3
+
+
 class PRepStatus(Enum):
     ACTIVE = 0
-    # Unregistered by P-Rep itself
-    UNREGISTERED = 1
-    # "prep disqualification penalty"
-    DISQUALIFIED = 2
-    # "low productivity penalty"
-    LOW_PRODUCTIVITY = 3
+    UNREGISTERED = auto()
+    DISQUALIFIED = auto()
+
+
+class PenaltyReason(Enum):
+    NONE = 0
+    # disqualified
+    PREP_DISQUALIFICATION = auto()
+    LOW_PRODUCTIVITY = auto()
+    # suspended
+    BLOCK_VALIDATION = auto()
 
 
 class PRepGrade(Enum):
@@ -274,6 +330,12 @@ class PRepGrade(Enum):
     CANDIDATE = 2
 
 
-class PrepResultState(Enum):
+class PRepResultState(Enum):
     NORMAL = 0
-    PENALTY = 1
+    IN_TERM_UPDATED = 1
+
+
+class BlockVoteStatus(Enum):
+    NONE = 0
+    TRUE = 1
+    FALSE = 2

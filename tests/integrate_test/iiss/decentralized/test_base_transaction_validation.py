@@ -21,14 +21,13 @@ from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import InvalidBaseTransactionException
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
-    ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
+from iconservice.base.exception import InvalidBaseTransactionException, FatalException
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, Revision, \
+    ISCORE_EXCHANGE_RATE, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
     PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
-from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
-from iconservice.prep.data import PRepFlag
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateDoneNotification
 from tests import create_tx_hash, create_block_hash
 from tests.integrate_test import create_timestamp
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -48,12 +47,21 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         config[ConfigKey.TERM_PERIOD] = self.CALC_PERIOD
         return config
 
+    def _make_delegated_to_zero(self):
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                     origin_delegations=[])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
     def _init_decentralized(self):
         # decentralized
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
@@ -107,7 +115,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
         self.make_blocks_to_end_calculation()
 
@@ -137,13 +145,14 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _make_issue_info(self) -> tuple:
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
+        context._term = context.engine.prep.term.copy()
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context.block = block
-        issue_data, _ = IconScoreContext.engine.issue.create_icx_issue_info(context)
+        issue_data = IconScoreContext.engine.issue.create_icx_issue_info(context)
         total_issue_amount = 0
         for group_dict in issue_data.values():
             if "value" in group_dict:
@@ -153,13 +162,14 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.preps = context.engine.prep.preps.copy(mutable=True)
+        context._preps = context.engine.prep.preps.copy(mutable=True)
+        context._term = context.engine.prep.term.copy()
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context.block = block
-        transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
+        transaction = BaseTransactionCreator.create_base_transaction(context)
         return transaction
 
     def test_validate_base_transaction_position(self):
@@ -279,7 +289,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list, None, None, None, True, 0)
+                          tx_list, None, None, None, None, True, 0)
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is True
@@ -381,9 +391,18 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         calculate_response_iscore_of_last_calc_period = 5000000000000000000000000000
 
         prev_cumulative_fee = 1000000000000000
+
         def mock_calculated(_self, _path, _block_height):
-            response = CalculateResponse(0, True, 1, calculate_response_iscore_of_last_calc_period, b'mocked_response')
-            _self._calculation_callback(response)
+            context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+            end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+            calc_period: int = context.storage.iiss.get_calc_period(context)
+            response = CalculateDoneNotification(0, True,
+                                                 end_block_height_of_calc - calc_period,
+                                                 calculate_response_iscore_of_last_calc_period,
+                                                 b'mocked_response')
+            print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
+            _self._calculate_done_callback(response)
+
         self._mock_ipc(mock_calculated)
 
         self._init_decentralized()
@@ -405,9 +424,13 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         for term in range(0, 3):
             def mock_calculated(_self, _path, _block_height):
-                response = CalculateResponse(0, True, 0, response_iscore,
-                                             b'mocked_response')
-                _self._calculation_callback(response)
+                context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+                end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+                calc_period: int = context.storage.iiss.get_calc_period(context)
+                response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, response_iscore,
+                                                     b'mocked_response')
+                print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
+                _self._calculate_done_callback(response)
 
             self._mock_ipc(mock_calculated)
             next_calc = self.get_iiss_info()['nextCalculation']
@@ -448,3 +471,42 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                     self.assertEqual(expected_diff_in_calc_period, actual_covered_by_remain)
                     self.assertEqual(prev_cumulative_fee + actual_issue_amount + expected_diff_in_calc_period,
                                      issue_amount)
+
+    def test_total_delegated_amount_is_zero(self):
+        self._init_decentralized()
+        self._make_delegated_to_zero()
+        self.make_blocks_to_end_calculation()
+        # This is beta1 value when Irep is 10,000
+        expected_issued_amount: int = 84876543209876528
+
+        tx_results = self.make_blocks(self._block_height + 1)
+        # This event logs represent calculated total ICX amount.
+        actual_issued_amount: int = tx_results[0][0].event_logs[0].data[3]
+        self.assertEqual(expected_issued_amount, actual_issued_amount)
+
+    def test_calculate_response_invalid_block_height(self):
+        def mock_calculated(_self, _path, _block_height):
+            invalid_block_height: int = 0
+            response = CalculateDoneNotification(0, True,
+                                                 invalid_block_height,
+                                                 0,
+                                                 b'mocked_response')
+            _self._calculate_done_callback(response)
+
+        self._mock_ipc(mock_calculated)
+
+        with self.assertRaises(FatalException):
+            self._init_decentralized()
+
+    def test_calculate_response_fails(self):
+        def mock_calculated(_self, _path, _block_height):
+            response = CalculateDoneNotification(0, False,
+                                                 0,
+                                                 0,
+                                                 b'mocked_response')
+            _self._calculate_done_callback(response)
+
+        self._mock_ipc(mock_calculated)
+
+        with self.assertRaises(FatalException):
+            self._init_decentralized()

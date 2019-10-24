@@ -19,6 +19,9 @@ import warnings
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
+from iconcommons.logger import Logger
+from iconservice.icx.issue.regulator import Regulator
+from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.exception import FatalException
@@ -26,19 +29,16 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
-    IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 )
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
-    from .icon_score_mapper import IconScoreMapper
-    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
     from ..base.address import Address
-    from ..prep.data.prep_container import PRep, PRepContainer
+    from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
-    from ..database.batch import ExternalBatch
 
 _thread_local_data = threading.local()
 
@@ -100,6 +100,8 @@ class ContextGetter(object):
 
 
 class IconScoreContext(object):
+    TAG = "CTX"
+
     score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
     icon_service_flag: int = 0
@@ -111,8 +113,12 @@ class IconScoreContext(object):
 
     main_prep_count: int = PREP_MAIN_PREPS
     main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
+    term_period: int = TERM_PERIOD
 
     decentralize_trigger: float = 0
+
+    step_trace_flag: bool = False
+    log_level: str = None
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -125,30 +131,33 @@ class IconScoreContext(object):
         self.type: 'IconScoreContextType' = context_type
         # The type of external function which is called latest
         self.func_type: 'IconScoreFuncType' = IconScoreFuncType.WRITABLE
-        self.block: 'Block' = None
-        self.tx: 'Transaction' = None
-        self.msg: 'Message' = None
-        self.current_address: 'Address' = None
+        self.block: Optional['Block'] = None
+        self.tx: Optional['Transaction'] = None
+        self.msg: Optional['Message'] = None
+        self.current_address: Optional['Address'] = None
         self.revision: int = 0
-        self.block_batch: 'BlockBatch' = None
-        self.tx_batch: 'TransactionBatch' = None
+        self.block_batch: Optional['BlockBatch'] = None
+        self.tx_batch: Optional['TransactionBatch'] = None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
-        self.meta_block_batch: 'ExternalBatch' = None
-        self.meta_tx_batch: 'ExternalBatch' = None
-        self.new_icon_score_mapper: 'IconScoreMapper' = None
+        self.new_icon_score_mapper: Optional['IconScoreMapper'] = None
         self.cumulative_step_used: int = 0
-        self.step_counter: 'IconScoreStepCounter' = None
-        self.event_logs: List['EventLog'] = None
-        self.traces: List['Trace'] = None
+        self.step_counter: Optional['IconScoreStepCounter'] = None
+        self.event_logs: Optional[List['EventLog']] = None
+        self.traces: Optional[List['Trace']] = None
         self.fee_sharing_proportion = 0  # The proportion of fee by SCORE in percent (0-100)
 
         self.msg_stack = []
         self.event_log_stack = []
 
         # PReps to update on invoke
-        self.preps: Optional['PRepContainer'] = None
-        self.tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
+        self._preps: Optional['PRepContainer'] = None
+        self._tx_dirty_preps: Optional[OrderedDict['Address', 'PRep']] = None
+        # Collect Main and Sub P-Reps which have just been invalidated by penalty or unregister
+        # to use for updating term info at the end of invoke
+        self._term: Optional['Term'] = None
+
+        self.regulator: Optional['Regulator'] = None
 
     @classmethod
     def set_decentralize_trigger(cls, decentralize_trigger: float):
@@ -167,8 +176,27 @@ class IconScoreContext(object):
     def total_supply(self):
         return self.storage.icx.get_total_supply(self)
 
+    @property
+    def preps(self) -> Optional['PRepContainer']:
+        return self._preps
+
+    @property
+    def term(self) -> Optional['Term']:
+        return self._term
+
+    def is_term_updated(self) -> bool:
+        """Returns whether info in self._term is changed
+
+        :return:
+        """
+        return self._term and self._term.is_dirty()
+
     def is_decentralized(self) -> bool:
-        return self.revision >= REV_DECENTRALIZATION and self.engine.prep.term.sequence != -1
+        return self.engine.prep.term is not None
+
+    def is_the_first_block_on_decentralization(self) -> bool:
+        term = self.engine.prep.term
+        return term.sequence == 0 and self.block.height == term.start_block_height
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
@@ -183,11 +211,15 @@ class IconScoreContext(object):
         self.engine.deploy.deploy(self, tx_hash)
 
     def update_batch(self):
+        """Called when a transaction is done
+
+        :return:
+        """
+
         # Call update_dirty_prep_batch before update_state_db_batch()
         self.update_dirty_prep_batch()
         self.update_state_db_batch()
         self.update_rc_db_batch()
-        self.update_meta_db_batch()
 
     def update_state_db_batch(self):
         self.block_batch.update(self.tx_batch)
@@ -197,37 +229,62 @@ class IconScoreContext(object):
         self.rc_block_batch.extend(self.rc_tx_batch)
         self.rc_tx_batch.clear()
 
-    def update_meta_db_batch(self):
-        self.meta_block_batch.update(self.meta_tx_batch)
-        self.meta_tx_batch.clear()
-
     def update_dirty_prep_batch(self):
-        """Update context.preps and block_dirty_preps when a tx is done
+        """Update context.preps when a tx is done
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
-        for dirty_prep in self.tx_dirty_preps.values():
-            self.preps.replace(dirty_prep)
+        for dirty_prep in self._tx_dirty_preps.values():
+            # If dirty_prep is an invalid elected P-Rep,
+            # we should update P-Reps in this term
+            self._update_elected_preps_in_term(dirty_prep)
+
+            self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
             dirty_prep.freeze()
 
-        self.tx_dirty_preps.clear()
+        self._tx_dirty_preps.clear()
+
+    def _update_elected_preps_in_term(self, dirty_prep: 'PRep'):
+        """Collect main and sub preps which cannot serve as a main and sub prep
+        to update the current term at the end of invoke
+
+        :param dirty_prep: dirty prep
+        """
+        if self._term is None:
+            return
+
+        if dirty_prep.is_electable():
+            return
+
+        # If dirty_prep is not in term, no need to update elected P-Reps
+        if dirty_prep.address not in self._term:
+            return
+
+        # Just in case, reset the P-Rep grade one to CANDIDATE
+        dirty_prep.grade = PRepGrade.CANDIDATE
+
+        self._term.update_preps([dirty_prep])
+
+        Logger.info(tag=self.TAG, msg=f"Invalid main and sub prep: {dirty_prep}")
 
     def clear_batch(self):
         if self.tx_batch:
             self.tx_batch.clear()
         if self.rc_tx_batch:
             self.rc_tx_batch.clear()
-        if self.meta_tx_batch:
-            self.meta_tx_batch.clear()
-        if self.tx_dirty_preps:
-            self.tx_dirty_preps.clear()
+        if self._tx_dirty_preps:
+            self._tx_dirty_preps.clear()
 
-    def get_prep(self, address: 'Address', mutable: bool = False):
-        prep: 'PRep' = self.tx_dirty_preps.get(address)
+    def get_prep(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
+        prep: Optional['PRep'] = None
+
+        if self._tx_dirty_preps is not None:
+            prep = self._tx_dirty_preps.get(address)
+
         if prep is None:
-            prep = self.preps.get_by_address(address)
+            prep = self._preps.get_by_address(address)
 
         if prep and prep.is_frozen() and mutable:
             prep = prep.copy()
@@ -235,4 +292,54 @@ class IconScoreContext(object):
         return prep
 
     def put_dirty_prep(self, prep: 'PRep'):
-        self.tx_dirty_preps[prep.address] = prep
+        Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
+
+        if self._tx_dirty_preps is not None:
+            self._tx_dirty_preps[prep.address] = prep
+
+        Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() end")
+
+
+class IconScoreContextFactory(object):
+    def __init__(self, step_counter_factory: 'IconScoreStepCounterFactory'):
+        self.step_counter_factory = step_counter_factory
+
+    def create(self, context_type: 'IconScoreContextType', block: 'Block'):
+        context: 'IconScoreContext' = IconScoreContext(context_type)
+        context.block = block
+
+        if context_type == IconScoreContextType.DIRECT:
+            return context
+
+        self._set_step_counter(context)
+        self._set_context_attributes_for_processing_tx(context)
+
+        return context
+
+    @staticmethod
+    def _is_step_trace_on(context: 'IconScoreContext') -> bool:
+        return context.step_trace_flag and context.type == IconScoreContextType.INVOKE
+
+    def _set_step_counter(self, context: 'IconScoreContext'):
+        step_trace_flag = self._is_step_trace_on(context)
+        if context.type == IconScoreContextType.ESTIMATION:
+            context.step_counter = self.step_counter_factory.create(IconScoreContextType.INVOKE, step_trace_flag)
+        else:
+            context.step_counter = self.step_counter_factory.create(context.type, step_trace_flag)
+
+    @staticmethod
+    def _set_context_attributes_for_processing_tx(context: 'IconScoreContext'):
+        if context.type in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            context.block_batch = BlockBatch(Block.from_block(context.block))
+            context.tx_batch = TransactionBatch()
+            context.new_icon_score_mapper = IconScoreMapper()
+
+            # For PRep management
+            context._preps = context.engine.prep.preps.copy(mutable=True)
+            context._tx_dirty_preps = OrderedDict()
+            if context.engine.prep.term:
+                context._term = context.engine.prep.term.copy()
+        else:
+            # Readonly
+            context._preps = context.engine.prep.preps
+            context._term = context.engine.prep.term

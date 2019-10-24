@@ -38,7 +38,7 @@ class TypeConverter:
         return converted_params
 
     @staticmethod
-    def _convert(params: Union[str, dict, None], template: Union[list, dict, ValueType]) -> Any:
+    def _convert(params: Union[str, list, dict, None], template: Union[list, dict, ValueType]) -> Any:
         if TypeConverter._skip_params(params, template):
             return params
 
@@ -58,8 +58,15 @@ class TypeConverter:
         elif isinstance(params, list) and isinstance(template, list):
             new_params = []
             for item in params:
-                new_item = TypeConverter._convert(item, template[0])
-                new_params.append(new_item)
+                if isinstance(item, list):
+                    new_item = []
+                    for element, templete_type in zip(item, template[0]):
+                        new_element = TypeConverter._convert(element, templete_type)
+                        new_item.append(new_element)
+                    new_params.append(new_item)
+                else:
+                    new_item = TypeConverter._convert(item, template[0])
+                    new_params.append(new_item)
         elif isinstance(template, ValueType):
             new_params = TypeConverter._convert_value(params, template)
         else:

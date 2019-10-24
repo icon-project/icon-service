@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice.base.address import Address
-from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
+from iconservice.icon_constant import Revision, \
     PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_MIN_IREP, IISS_INITIAL_IREP, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
@@ -31,7 +30,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
@@ -85,7 +84,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
         self.make_blocks_to_end_calculation()
 
@@ -109,7 +108,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         for i in range(10):
             end_block: int = self.make_blocks_to_end_calculation()
@@ -178,7 +177,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         expected_irep_when_rev_iiss = 0
         response: dict = self.get_iiss_info()
@@ -244,7 +243,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.process_confirm_block_tx(tx_list)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
         self.make_blocks_to_end_calculation()
 

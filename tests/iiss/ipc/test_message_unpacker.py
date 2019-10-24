@@ -36,6 +36,8 @@ class TestMessageUnpacker(unittest.TestCase):
         iscore: int = 5000
         success: bool = True
 
+        status: int = 1
+
         messages = [
             (
                 MessageType.VERSION,
@@ -49,10 +51,8 @@ class TestMessageUnpacker(unittest.TestCase):
                 MessageType.CALCULATE,
                 msg_id,
                 (
-                    success,
-                    block_height,
-                    MsgPackForIpc.encode(iscore),
-                    state_hash
+                    status,
+                    block_height
                 )
             ),
             (
@@ -82,6 +82,29 @@ class TestMessageUnpacker(unittest.TestCase):
                     block_height,
                     block_hash
                 )
+            ),
+            (
+                MessageType.COMMIT_CLAIM,
+                msg_id
+            ),
+            (
+                MessageType.READY,
+                msg_id,
+                (
+                    version,
+                    block_height
+                )
+
+            ),
+            (
+                MessageType.CALCULATE_DONE,
+                msg_id,
+                (
+                    success,
+                    block_height,
+                    int_to_bytes(iscore),
+                    state_hash
+                )
             )
         ]
 
@@ -96,9 +119,6 @@ class TestMessageUnpacker(unittest.TestCase):
 
         calculate_response = next(it)
         self.assertIsInstance(calculate_response, CalculateResponse)
-        self.assertTrue(calculate_response.success)
-        self.assertEqual(block_height, calculate_response.block_height)
-        self.assertEqual(state_hash, calculate_response.state_hash)
 
         query_response = next(it)
         self.assertIsInstance(query_response, QueryResponse)
@@ -115,6 +135,20 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertEqual(block_height, commit_block_response.block_height)
         self.assertEqual(block_hash, commit_block_response.block_hash)
 
+        commit_claim_response = next(it)
+        self.assertIsInstance(commit_claim_response, CommitClaimResponse)
+
+        ready_notification = next(it)
+        self.assertIsInstance(ready_notification, ReadyNotification)
+        self.assertEqual(version, ready_notification.version)
+        self.assertEqual(block_height, ready_notification.block_height)
+
+        calculate_done_notification = next(it)
+        self.assertIsInstance(calculate_done_notification, CalculateDoneNotification)
+        self.assertTrue(calculate_done_notification.success)
+        self.assertEqual(block_height, calculate_done_notification.block_height)
+        self.assertEqual(state_hash, calculate_done_notification.state_hash)
+
         with self.assertRaises(StopIteration):
             next(it)
 
@@ -124,7 +158,8 @@ class TestMessageUnpacker(unittest.TestCase):
 
         expected = [
             version_response, calculate_response, query_response,
-            claim_response, commit_block_response
+            claim_response, commit_block_response, commit_claim_response,
+            ready_notification, calculate_done_notification
         ]
         for expected_response, response in zip(expected, self.unpacker):
             self.assertEqual(expected_response.MSG_TYPE, response.MSG_TYPE)

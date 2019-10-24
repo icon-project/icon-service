@@ -21,8 +21,9 @@ from typing import TYPE_CHECKING, List, Tuple, Dict, Union, Optional
 from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import ConfigKey, REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, \
-    REV_DECENTRALIZATION, PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import ConfigKey, Revision, PREP_MAIN_PREPS, \
+    PREP_MAIN_AND_SUB_PREPS
+from iconservice.utils import icx_to_loop
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
 
 if TYPE_CHECKING:
@@ -47,19 +48,66 @@ class TestIISSBase(TestIntegrateBase):
             }
         }
 
-    def make_blocks(self, to: int):
+    def make_blocks(self,
+                    to: int,
+                    prev_block_generator: Optional['Address'] = None,
+                    prev_block_validators: Optional[List['Address']] = None,
+                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None)\
+            -> List[List['TransactionResult']]:
         block_height = self._block_height
+        tx_results: List[List['TransactionResult']] = []
 
         while to > block_height:
             tx = self.create_transfer_icx_tx(self._admin, self._genesis, 0)
-            self.process_confirm_block_tx([tx])
+            tx_results.append(self.process_confirm_block_tx([tx],
+                                                            prev_block_generator=prev_block_generator,
+                                                            prev_block_validators=prev_block_validators,
+                                                            prev_block_votes=prev_block_votes))
             block_height = self._block_height
 
-    def make_blocks_to_end_calculation(self) -> int:
+        return tx_results
+
+    def make_empty_blocks(self,
+                          count: int,
+                          prev_block_generator: Optional['Address'] = None,
+                          prev_block_validators: Optional[List['Address']] = None,
+                          prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
+            -> List[List['TransactionResult']]:
+        tx_results: List[List['TransactionResult']] = []
+
+        for _ in range(count):
+            tx_results.append(
+                self.process_confirm_block_tx(
+                    [],
+                    prev_block_generator=prev_block_generator,
+                    prev_block_validators=prev_block_validators,
+                    prev_block_votes=prev_block_votes
+                )
+            )
+
+        return tx_results
+
+    def make_blocks_to_end_calculation(self,
+                                       prev_block_generator: Optional['Address'] = None,
+                                       prev_block_validators: Optional[List['Address']] = None,
+                                       prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> int:
         iiss_info: dict = self.get_iiss_info()
         next_calculation: int = iiss_info.get('nextCalculation', 0)
 
-        self.make_blocks(to=next_calculation - 1)
+        cur_block_height: int = self._block_height
+        if cur_block_height == next_calculation - 1:
+            # last calculate block
+            self.make_blocks(to=next_calculation,
+                             prev_block_generator=prev_block_generator,
+                             prev_block_validators=prev_block_validators,
+                             prev_block_votes=prev_block_votes)
+            iiss_info: dict = self.get_iiss_info()
+            next_calculation: int = iiss_info.get('nextCalculation', 0)
+
+        self.make_blocks(to=next_calculation - 1,
+                         prev_block_generator=prev_block_generator,
+                         prev_block_validators=prev_block_validators,
+                         prev_block_votes=prev_block_votes)
 
         self.assertEqual(self._block_height, next_calculation - 1)
 
@@ -108,7 +156,7 @@ class TestIISSBase(TestIntegrateBase):
     def create_register_prep_params(cls,
                                     from_: 'EOAAccount') -> Dict[str, str]:
 
-        name = f"node{from_.address}"
+        name = str(from_)
 
         return {
             ConstantKeys.NAME: name,
@@ -159,6 +207,18 @@ class TestIISSBase(TestIntegrateBase):
                                          to_=ZERO_SCORE_ADDRESS,
                                          func_name="claimIScore",
                                          params={})
+
+    def get_prep_term(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepTerm"
+            }
+        }
+        return self._query(query_request)
 
     def get_main_prep_list(self) -> dict:
         query_request = {
@@ -239,6 +299,19 @@ class TestIISSBase(TestIntegrateBase):
         }
         return self._query(query_request)
 
+    def estimate_unstake_lock_period(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "estimateUnstakeLockPeriod"
+            }
+
+        }
+        return self._query(query_request)
+
     def get_delegation(self,
                        from_: Union['EOAAccount', 'Address', str]) -> dict:
         address: Optional['Address'] = self._convert_address_from_address_type(from_)
@@ -288,78 +361,106 @@ class TestIISSBase(TestIntegrateBase):
 
     def claim_iscore(self,
                      from_: Union['EOAAccount', 'Address'],
-                     expected_status: bool = True) -> List['TransactionResult']:
+                     expected_status: bool = True,
+                     prev_block_generator: Optional['Address'] = None,
+                     prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx: dict = self.create_claim_tx(from_=from_)
         return self.process_confirm_block_tx([tx],
-                                             expected_status=expected_status)
+                                             expected_status=expected_status,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def set_stake(self,
                   from_: Union['EOAAccount', 'Address'],
                   value: int,
-                  expected_status: bool = True) -> List['TransactionResult']:
+                  expected_status: bool = True,
+                  prev_block_generator: Optional['Address'] = None,
+                  prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx: dict = self.create_set_stake_tx(from_=from_,
                                             value=value)
 
         return self.process_confirm_block_tx([tx],
-                                             expected_status=expected_status)
+                                             expected_status=expected_status,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def set_delegation(self,
                        from_: Union['EOAAccount', 'Address'],
                        origin_delegations: List[Tuple[Union['EOAAccount', 'Address'], int]],
-                       expected_status: bool = True) -> List['TransactionResult']:
+                       expected_status: bool = True,
+                       prev_block_generator: Optional['Address'] = None,
+                       prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx: dict = self.create_set_delegation_tx(from_=from_,
                                                  origin_delegations=origin_delegations)
         return self.process_confirm_block_tx([tx],
-                                             expected_status=expected_status)
+                                             expected_status=expected_status,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def register_prep(self,
                       from_: 'EOAAccount',
                       reg_data: Dict[str, Union[str, bytes]] = None,
                       value: int = None,
-                      expected_status: bool = True) -> List['TransactionResult']:
+                      expected_status: bool = True,
+                      prev_block_generator: Optional['Address'] = None,
+                      prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx: dict = self.create_register_prep_tx(from_=from_,
                                                 reg_data=reg_data,
                                                 value=value)
 
         return self.process_confirm_block_tx([tx],
-                                             expected_status=expected_status)
+                                             expected_status=expected_status,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def unregister_prep(self,
                         from_: 'EOAAccount',
-                        expected_status: bool = True) -> List['TransactionResult']:
+                        expected_status: bool = True,
+                        prev_block_generator: Optional['Address'] = None,
+                        prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx: dict = self.create_unregister_prep_tx(from_=from_)
 
         return self.process_confirm_block_tx([tx],
-                                             expected_status=expected_status)
+                                             expected_status=expected_status,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def set_governance_variables(self,
                                  from_: Union['EOAAccount', 'Address'],
                                  irep: int,
-                                 expected_status: bool = True) -> List['TransactionResult']:
+                                 expected_status: bool = True,
+                                 prev_block_generator: Optional['Address'] = None,
+                                 prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx: dict = self.create_set_governance_variables(from_=from_,
                                                         irep=irep)
         return self.process_confirm_block_tx([tx],
-                                             expected_status=expected_status)
+                                             expected_status=expected_status,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def distribute_icx(self,
                        accounts: List[Union['EOAAccount', 'Address']],
-                       init_balance: int) -> List['TransactionResult']:
+                       init_balance: int,
+                       prev_block_generator: Optional['Address'] = None,
+                       prev_block_validators: Optional[List['Address']] = None) -> List['TransactionResult']:
         tx_list: List[dict] = []
         for account in accounts:
             tx: dict = self.create_transfer_icx_tx(from_=self._admin,
                                                    to_=account,
                                                    value=init_balance)
             tx_list.append(tx)
-        return self.process_confirm_block_tx(tx_list)
+        return self.process_confirm_block_tx(tx_list,
+                                             prev_block_generator=prev_block_generator,
+                                             prev_block_validators=prev_block_validators)
 
     def init_decentralized(self):
         # decentralized
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
-        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        total_supply = icx_to_loop(TOTAL_SUPPLY)
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
         minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
@@ -378,9 +479,10 @@ class TestIISSBase(TestIntegrateBase):
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
-        # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        # distribute 3000 icx to the self._accounts
+        # which range from 0 to PREP_MAIN_PREPS, exclusive
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=3000 * ICX_IN_LOOP)
+                            init_balance=icx_to_loop(3000))
 
         # register PRep
         tx_list: list = []
@@ -411,8 +513,12 @@ class TestIISSBase(TestIntegrateBase):
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
+        # Update governance SCORE-1.0.0 to support network proposal
+        self.update_governance("1_0_0", True)
+
+        # make blocks to start decentralization
         self.make_blocks_to_end_calculation()
 
         # get main prep
@@ -460,8 +566,7 @@ class TestIISSBase(TestIntegrateBase):
 
         tx_list: list = []
         for account in self._accounts:
-            tx: dict = self.create_set_stake_tx(from_=account,
-                                                value=0)
+            tx: dict = self.create_set_stake_tx(from_=account, value=0)
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 

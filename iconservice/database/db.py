@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 import plyvel
 
 from iconcommons.logger import Logger
+from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
@@ -100,21 +100,29 @@ class KeyValueDatabase(object):
     def iterator(self) -> iter:
         return self._db.iterator()
 
-    def write_batch(self, states: dict) -> None:
+    def write_batch(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> int:
         """Write a batch to the database for the specified states dict.
 
-        :param states: key/value pairs
-            key and value should be bytes type
+        :param it: iterable which return tuple(key, value)
+            key: bytes
+            value: optional bytes
+        :return: the number of key-value pairs written
         """
-        if states is None or len(states) == 0:
-            return
+        size = 0
+
+        if it is None:
+            return size
 
         with self._db.write_batch() as wb:
-            for key, value in states.items():
+            for key, value in it:
                 if value:
                     wb.put(key, value)
                 else:
                     wb.delete(key)
+
+                size += 1
+
+        return size
 
 
 class DatabaseObserver(object):
@@ -221,14 +229,28 @@ class ContextDatabase(object):
 
         # get value from tx_batch
         if key in tx_batch:
-            return tx_batch[key]
+            return tx_batch[key].value
 
         # get value from block_batch
         if key in block_batch:
-            return block_batch[key]
+            return block_batch[key].value
 
         # get value from state_db
         return self.key_value_db.get(key)
+
+    @staticmethod
+    def _check_tx_batch_value(context: Optional['IconScoreContext'],
+                              key: bytes,
+                              include_state_root_hash: bool):
+        tx_batch_value: 'TransactionBatchValue' = context.tx_batch.get(key)
+        if tx_batch_value is None:
+            return
+
+        if not isinstance(tx_batch_value, TransactionBatchValue):
+            raise DatabaseException(
+                f'Only TransactionBatchValue type is allowed on tx_batch: {type(tx_batch_value)}')
+        elif tx_batch_value.include_state_root_hash != include_state_root_hash:
+            raise DatabaseException('Do not change the include_state_root_hash on the same data')
 
     def put(self,
             context: Optional['IconScoreContext'],
@@ -240,6 +262,13 @@ class ContextDatabase(object):
         :param key:
         :param value:
         """
+        self._put(context, key, value, include_state_root_hash=True)
+
+    def _put(self,
+             context: Optional['IconScoreContext'],
+             key: bytes,
+             value: Optional[bytes],
+             include_state_root_hash: bool) -> None:
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to write')
 
@@ -248,14 +277,23 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
         else:
-            context.tx_batch[key] = value
+            self._check_tx_batch_value(context, key, include_state_root_hash)
+            context.tx_batch[key] = TransactionBatchValue(value, include_state_root_hash)
 
-    def delete(self, context: Optional['IconScoreContext'], key: bytes):
+    def delete(self,
+               context: Optional['IconScoreContext'],
+               key: bytes):
         """Delete key from db
 
         :param context:
         :param key: key to delete from db
         """
+        self._delete(context, key, include_state_root_hash=True)
+
+    def _delete(self,
+                context: Optional['IconScoreContext'],
+                key: bytes,
+                include_state_root_hash: bool):
         if not _is_db_writable_on_context(context):
             raise DatabaseException('No permission to delete')
 
@@ -264,7 +302,8 @@ class ContextDatabase(object):
         if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
         else:
-            context.tx_batch[key] = None
+            self._check_tx_batch_value(context, key, include_state_root_hash)
+            context.tx_batch[key] = TransactionBatchValue(None, include_state_root_hash)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
@@ -279,13 +318,13 @@ class ContextDatabase(object):
 
     def write_batch(self,
                     context: 'IconScoreContext',
-                    states: dict):
+                    it: Iterable[Tuple[bytes, Optional[bytes]]]):
 
         if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return self.key_value_db.write_batch(states)
+        return self.key_value_db.write_batch(it)
 
     @staticmethod
     def from_path(path: str,
@@ -294,11 +333,42 @@ class ContextDatabase(object):
         return ContextDatabase(db)
 
 
+class MetaContextDatabase(ContextDatabase):
+    def put(self,
+            context: Optional['IconScoreContext'],
+            key: bytes,
+            value: Optional[bytes]) -> None:
+        """Set the value to StateDB or cache it according to context type
+
+        :param context:
+        :param key:
+        :param value:
+        """
+        self._put(context, key, value, include_state_root_hash=False)
+
+    def delete(self,
+               context: Optional['IconScoreContext'],
+               key: bytes) -> None:
+        """Set the value to StateDB or cache it according to context type
+
+        :param context:
+        :param key:
+        """
+        self._delete(context, key, include_state_root_hash=False)
+
+    @staticmethod
+    def from_path(path: str,
+                  create_if_missing: bool = True) -> 'MetaContextDatabase':
+        db = KeyValueDatabase.from_path(path, create_if_missing)
+        return MetaContextDatabase(db)
+
+
 class IconScoreDatabase(ContextGetter):
     """It is used in IconScore
 
     IconScore can access its states only through IconScoreDatabase
     """
+
     def __init__(self,
                  address: 'Address',
                  context_db: 'ContextDatabase',
@@ -312,7 +382,7 @@ class IconScoreDatabase(ContextGetter):
         self.address = address
         self._prefix = prefix
         self._context_db = context_db
-        self._observer: DatabaseObserver = None
+        self._observer: Optional[DatabaseObserver] = None
 
     def get(self, key: bytes) -> bytes:
         """
@@ -480,26 +550,3 @@ class IconScoreSubDatabase(object):
         data.append(key)
 
         return b'|'.join(data)
-
-
-class ExternalDatabase(KeyValueDatabase):
-    def __init__(self, db: plyvel.DB) -> None:
-        super().__init__(db)
-
-    @staticmethod
-    def from_path(path: str,
-                  create_if_missing: bool = True) -> 'ExternalDatabase':
-        """
-        :param path: db path
-        :param create_if_missing:
-        :return: KeyValueDatabase instance
-        """
-        db = plyvel.DB(path, create_if_missing=create_if_missing)
-        return ExternalDatabase(db)
-
-    def get_sub_db(self, prefix: bytes) -> 'ExternalDatabase':
-        """Return a new prefixed database.
-
-        :param prefix: (bytes): prefix to use
-        """
-        return ExternalDatabase(self._db.prefixed_db(prefix))

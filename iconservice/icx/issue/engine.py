@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Tuple, Optional
+from typing import TYPE_CHECKING, Optional
 
+from iconcommons import Logger
 from .issue_formula import IssueFormula
 from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
 from ...base.exception import OutOfBalanceException
-from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
@@ -37,9 +38,9 @@ class Engine(EngineBase):
         self._formula: Optional['IssueFormula'] = None
 
     def open(self, context: 'IconScoreContext'):
-        self._formula = IssueFormula(context.main_prep_count, context.main_and_sub_prep_count)
+        self._formula = IssueFormula(context.main_prep_count)
 
-    def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
+    def create_icx_issue_info(self, context: 'IconScoreContext') -> dict:
         irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             IssueDataKey.PREP: {
@@ -50,18 +51,18 @@ class Engine(EngineBase):
         }
         total_issue_amount = 0
         for group in iiss_data_for_issue:
-            issue_amount_per_group = self._formula.calculate(group, iiss_data_for_issue[group])
+            issue_amount_per_group = self._formula.calculate(context, group, iiss_data_for_issue[group])
             iiss_data_for_issue[group][IssueDataKey.VALUE] = issue_amount_per_group
             total_issue_amount += issue_amount_per_group
 
-        regulator = Regulator(context, total_issue_amount)
+        context.regulator = Regulator(context, total_issue_amount)
 
         iiss_data_for_issue[IssueDataKey.ISSUE_RESULT] = {
-            IssueDataKey.COVERED_BY_FEE: regulator.covered_icx_by_fee,
-            IssueDataKey.COVERED_BY_OVER_ISSUED_ICX: regulator.covered_icx_by_over_issue,
-            IssueDataKey.ISSUE: regulator.corrected_icx_issue_amount
+            IssueDataKey.COVERED_BY_FEE: context.regulator.covered_icx_by_fee,
+            IssueDataKey.COVERED_BY_OVER_ISSUED_ICX: context.regulator.covered_icx_by_over_issue,
+            IssueDataKey.ISSUE: context.regulator.corrected_icx_issue_amount
         }
-        return iiss_data_for_issue, regulator
+        return iiss_data_for_issue
 
     @staticmethod
     def _issue(context: 'IconScoreContext',
@@ -73,16 +74,18 @@ class Engine(EngineBase):
             current_total_supply = context.storage.icx.get_total_supply(context)
             context.storage.icx.put_account(context, to_account)
             context.storage.icx.put_total_supply(context, current_total_supply + amount)
+            Logger.info(f"Issue icx. amount: {amount} "
+                        f"Total supply: {current_total_supply + amount} "
+                        f"Treasury: {to_account.balance}", ICX_LOG_TAG)
 
     def issue(self,
               context: 'IconScoreContext',
               to_address: 'Address',
-              issue_data: dict,
-              regulator: 'Regulator'):
-        assert isinstance(regulator, Regulator)
+              issue_data: dict):
+        assert isinstance(context.regulator, Regulator)
 
-        self._issue(context, to_address, regulator.corrected_icx_issue_amount)
-        regulator.put_regulate_variable(context)
+        self._issue(context, to_address, context.regulator.corrected_icx_issue_amount)
+        context.regulator.put_regulate_variable(context)
 
         for group_key in ISSUE_CALCULATE_ORDER:
             if group_key not in issue_data:
@@ -98,10 +101,10 @@ class Engine(EngineBase):
         EventLogEmitter.emit_event_log(context,
                                        score_address=ZERO_SCORE_ADDRESS,
                                        event_signature=ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["event_signature"],
-                                       arguments=[regulator.covered_icx_by_fee,
-                                                  regulator.covered_icx_by_over_issue,
-                                                  regulator.corrected_icx_issue_amount,
-                                                  regulator.remain_over_issued_icx],
+                                       arguments=[context.regulator.covered_icx_by_fee,
+                                                  context.regulator.covered_icx_by_over_issue,
+                                                  context.regulator.corrected_icx_issue_amount,
+                                                  context.regulator.remain_over_issued_icx],
                                        indexed_args_count=0)
 
     @staticmethod
@@ -124,6 +127,3 @@ class Engine(EngineBase):
                                        event_signature="ICXBurned",
                                        arguments=[amount],
                                        indexed_args_count=0)
-
-    def get_limit_inflation_beta(self, expected_irep: int) -> int:
-        return self._formula.get_limit_inflation_beta(expected_irep)

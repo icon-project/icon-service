@@ -208,22 +208,23 @@ class TestIssueRegulator:
         assert covered_icx_by_fee == 0
         assert corrected_icx_issue_amount == icx_issue_amount
 
-    def test_correct_issue_amount_on_calc_period_invalid_scenario(self):
-        # failure case: when prev issued i score is None, should raise error
-
-        prev_calc_period_issued_icx = 1_000
-        prev_calc_period_issued_iscore = -1
-
-        prev_block_cumulative_fee = 0
-        icx_issue_amount = 1000
-        over_issued_i_score = 0
-
-        with pytest.raises(FatalException):
-            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                           prev_calc_period_issued_iscore,
-                                                           over_issued_i_score,
-                                                           icx_issue_amount,
-                                                           prev_block_cumulative_fee)
+    # Before, there were case that prev_calc_period_issued_iscore is -1, but now, removed this case
+    # def test_correct_issue_amount_on_calc_period_invalid_scenario(self):
+    #     # failure case: when prev issued i score is None, should raise error
+    #
+    #     prev_calc_period_issued_icx = 1_000
+    #     prev_calc_period_issued_iscore = -1
+    #
+    #     prev_block_cumulative_fee = 0
+    #     icx_issue_amount = 1000
+    #     over_issued_i_score = 0
+    #
+    #     with pytest.raises(FatalException):
+    #         Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+    #                                                        prev_calc_period_issued_iscore,
+    #                                                        over_issued_i_score,
+    #                                                        icx_issue_amount,
+    #                                                        prev_block_cumulative_fee)
 
     def test_correct_issue_amount_on_calc_period_prev_icx_is_more_than_prev_i_score(self):
         # success case: when remain over issued icx + prev calc over issued icx < icx_issue amount
@@ -393,9 +394,9 @@ class TestIssueRegulator:
         issue_amount = 10_000
         mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
         mocked_context_engine.prep.term.sequence = 0
+        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(0, 0, None))
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
-        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(0, 0))
         regulator = Regulator(self.context, issue_amount)
 
         actual_current_icx = regulator._regulator_variable.current_calc_period_issued_icx
@@ -429,9 +430,9 @@ class TestIssueRegulator:
 
         mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
         mocked_context_engine.prep.term.sequence = 0
+        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(prev_calc_period_issued_iscore, 0, None))
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
-        mocked_context_storage.rc.get_calc_response_from_rc = Mock(return_value=(prev_calc_period_issued_iscore, 0))
         regulator = Regulator(self.context, issue_amount)
 
         assert regulator._regulator_variable.prev_calc_period_issued_icx == issue_amount + current_calc_preiod_issued_icx

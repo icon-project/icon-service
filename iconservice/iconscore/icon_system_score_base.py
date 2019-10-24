@@ -15,12 +15,11 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.exception import AccessDeniedException
+from ..base.exception import AccessDeniedException, IconServiceBaseException
 from ..iconscore.icon_score_base import IconScoreBase
-from ..icon_constant import PRepStatus
 from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
@@ -72,5 +71,13 @@ class IconSystemScoreBase(IconScoreBase):
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
-    def unregister_prep(self, address: 'Address'):
-        self._context.engine.prep.unregister_prep(self._context, address, PRepStatus.DISQUALIFIED)
+    def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
+        success: bool = True
+        reason: str = ""
+        try:
+            self._context.engine.prep.impose_prep_disqualified_penalty(self._context, address)
+        except IconServiceBaseException as e:
+            success = False
+            reason = str(e)
+        finally:
+            return success, reason

@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice import Address
-from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
+from iconservice.icon_constant import Revision, \
     PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -28,7 +27,7 @@ class TestChangedMinimumDelegate(TestIISSBase):
     def test_decentralized_minimum_delegation_set_zero(self):
         self.update_governance()
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
@@ -42,7 +41,7 @@ class TestChangedMinimumDelegate(TestIISSBase):
         self.process_confirm_block_tx(tx_list)
 
         # set Revision REV_IISS (decentralization)
-        self.set_revision(REV_DECENTRALIZATION)
+        self.set_revision(Revision.DECENTRALIZATION.value)
 
         self.make_blocks_to_end_calculation()
 

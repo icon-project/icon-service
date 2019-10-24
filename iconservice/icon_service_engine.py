@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os
-from collections import OrderedDict
 from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
@@ -22,26 +21,27 @@ from iconcommons.logger import Logger
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
-from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException, \
-    MethodNotFoundException
+from .base.exception import (
+    ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
+    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
+    MethodNotFoundException,
+    DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
-from .database.batch import BlockBatch, TransactionBatch
-from .database.batch import ExternalBatch
 from .database.factory import ContextDatabaseFactory
+from .database.wal import WriteAheadLogReader
+from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX,
-    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PRepStatus, PREP_PENALTY_SIGNATURE,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    META_DB, ISCORE_EXCHANGE_RATE)
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
+    IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
-from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
+from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
@@ -54,13 +54,15 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
-from .icx.issue.regulator import Regulator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
-from .iiss.reward_calc import RewardCalcStorage
+from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
+from .iiss.reward_calc.storage import RewardCalcDBInfo, get_version_and_revision
 from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
+from .prep.data import PRep
+from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
@@ -69,9 +71,10 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
-    from .prep.data import PRep
+    from .prep.data import Term
     from .iiss.storage import RewardRate
-    from .prep.term import Term
+    from .database.db import KeyValueDatabase
+    from .iiss.reward_calc.msg_data import BlockProduceInfoData
 
 
 class IconServiceEngine(ContextContainer):
@@ -81,6 +84,7 @@ class IconServiceEngine(ContextContainer):
     It is contained in IconInnerService.
     """
     TAG = "ISE"
+    WAL_FILE = "block.wal"
 
     def __init__(self):
         """Constructor
@@ -90,6 +94,9 @@ class IconServiceEngine(ContextContainer):
         self._step_counter_factory = None
         self._icon_pre_validator = None
         self._deposit_handler = None
+        self._context_factory = None
+        self._state_db_root_path: Optional[str] = None
+        self._wal_reader: Optional['WriteAheadLogReader'] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -114,23 +121,22 @@ class IconServiceEngine(ContextContainer):
         score_root_path: str = conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         score_root_path: str = os.path.abspath(score_root_path)
         state_db_root_path: str = conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
+        state_db_root_path: str = os.path.abspath(state_db_root_path)
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
-        rc_data_path: str = os.path.abspath(rc_data_path)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
-
-        meta_db_path: str = os.path.join(state_db_root_path, META_DB)
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
         os.makedirs(rc_data_path, exist_ok=True)
-        os.makedirs(meta_db_path, exist_ok=True)
 
-        # Share one context db with all SCOREs
+        # Share one context db with all SCORE
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+        self._state_db_root_path = state_db_root_path
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
+        self._context_factory = IconScoreContextFactory(self._step_counter_factory)
 
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
@@ -143,26 +149,37 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.iiss_initial_irep = conf.get(ConfigKey.INITIAL_IREP, IISS_INITIAL_IREP)
         IconScoreContext.main_prep_count = conf.get(ConfigKey.PREP_MAIN_PREPS, PREP_MAIN_PREPS)
         IconScoreContext.main_and_sub_prep_count = conf.get(ConfigKey.PREP_MAIN_AND_SUB_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        IconScoreContext.term_period = conf.get(ConfigKey.TERM_PERIOD, TERM_PERIOD)
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
-
+        IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
+        IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
         self._init_component_context()
+
+        self._recover_dbs(rc_data_path)
 
         # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.storage.icx.load_last_block_info(context)
-        self._precommit_data_manager.last_block: 'Block' = IconScoreContext.storage.icx.last_block
-        context.block: 'Block' = self._get_last_block()
+        self._init_last_block_info(context)
+
+        # set revision (if governance SCORE does not exist, remain revision to default).
+        try:
+            self._set_revision_to_context(context)
+        except ScoreNotFoundException:
+            pass
 
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
                                      rc_socket_path,
-                                     meta_db_path,
                                      conf[ConfigKey.IISS_META_DATA],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.INITIAL_IREP],
-                                     conf[ConfigKey.PREP_REGISTRATION_FEE])
+                                     conf[ConfigKey.PREP_REGISTRATION_FEE],
+                                     conf[ConfigKey.PENALTY_GRACE_PERIOD],
+                                     conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
+                                     conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
+                                     conf[ConfigKey.IPC_TIMEOUT])
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -182,23 +199,32 @@ class IconServiceEngine(ContextContainer):
                                                    iiss=IISSStorage(self._icx_context_db),
                                                    prep=PRepStorage(self._icx_context_db),
                                                    issue=IssueStorage(self._icx_context_db),
-                                                   rc=RewardCalcStorage(),
-                                                   meta=MetaDBStorage())
+                                                   meta=MetaDBStorage(self._icx_context_db),
+                                                   rc=RewardCalcStorage())
 
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage
 
-    def _open_component_context(self,
+    def _init_last_block_info(self, context: 'IconScoreContext'):
+        context.storage.icx.load_last_block_info(context)
+        self._precommit_data_manager.last_block = IconScoreContext.storage.icx.last_block
+        context.block = self._get_last_block()
+
+    @classmethod
+    def _open_component_context(cls,
                                 context: 'IconScoreContext',
                                 log_dir: str,
                                 rc_data_path: str,
                                 rc_socket_path: str,
-                                meta_db_path: str,
                                 iiss_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
                                 irep: int,
-                                prep_reg_fee: int):
+                                prep_reg_fee: int,
+                                penalty_grace_period: int,
+                                low_productivity_penalty_threshold: int,
+                                block_validation_penalty_threshold: int,
+                                ipc_timeout: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -206,10 +232,14 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.iiss.open(context,
                                           log_dir,
                                           rc_data_path,
-                                          rc_socket_path)
+                                          rc_socket_path,
+                                          ipc_timeout)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
-                                          irep)
+                                          irep,
+                                          penalty_grace_period,
+                                          low_productivity_penalty_threshold,
+                                          block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)
@@ -221,11 +251,11 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.prep.open(context,
                                            prep_reg_fee)
         IconScoreContext.storage.issue.open(context)
-        IconScoreContext.storage.rc.open(rc_data_path)
+        IconScoreContext.storage.meta.open(context)
+        IconScoreContext.storage.rc.open(context, rc_data_path)
 
-        IconScoreContext.storage.meta.open(meta_db_path)
-
-    def _close_component_context(self, context: 'IconScoreContext'):
+    @classmethod
+    def _close_component_context(cls, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
         IconScoreContext.engine.fee.close()
         IconScoreContext.engine.icx.close()
@@ -239,8 +269,16 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.iiss.close(context)
         IconScoreContext.storage.prep.close(context)
         IconScoreContext.storage.issue.close(context)
+        IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
-        IconScoreContext.storage.meta.close()
+
+    @classmethod
+    def get_ready_future(cls):
+        return IconScoreContext.engine.iiss.get_ready_future()
+
+    @classmethod
+    def is_reward_calculator_ready(cls) -> bool:
+        return IconScoreContext.engine.iiss.is_reward_calculator_ready()
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
@@ -306,7 +344,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _get_governance_score(context: 'IconScoreContext') -> 'Governance':
-        governance_score: 'Governance' = \
+        governance_score = \
             IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ScoreNotFoundException('Governance SCORE not found')
@@ -385,6 +423,7 @@ class IconServiceEngine(ContextContainer):
                tx_requests: list,
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
+               prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
                is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
 
         """Process transactions in a block sent by loopchain
@@ -392,7 +431,8 @@ class IconServiceEngine(ContextContainer):
         :param block:
         :param tx_requests: transactions in a block
         :param prev_block_generator: previous block generator
-        :param prev_block_validators: previous block validators
+        :param prev_block_validators: previous block validators (legacy)
+        :param prev_block_votes: previous block vote info
         :param is_block_editable: boolean which imply whether creating base transaction or not
         :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
@@ -401,44 +441,36 @@ class IconServiceEngine(ContextContainer):
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
-            Logger.info(
-                tag=ICON_SERVICE_LOG_TAG,
-                msg=f"Block result already exists: {block.height}, 0x{block.hash.hex()}")
+            Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                        msg=f"Block result already exists: \n{precommit_data}")
             return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = block
-        context.block_batch = BlockBatch(Block.from_block(block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
-        # For PRep management
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
-
-        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
-        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
+        # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
+        prev_block_votes: List[Tuple['Address', int]] = self._get_prev_block_votes(context,
+                                                                                   prev_block_generator,
+                                                                                   prev_block_validators,
+                                                                                   prev_block_votes)
 
         self._set_revision_to_context(context)
+
+        # For RC DB
+        rc_db_revision: int = self._get_rc_db_revision_before_process_transactions(context)
+
         block_result = []
         precommit_flag = PrecommitFlag.NONE
         added_transactions = {}
-        base_tx_result: Optional['TransactionResult'] = None
 
-        regulator: Optional['Regulator'] = None
-        if is_block_editable and context.is_decentralized():
-            base_transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
-            # todo: if the txHash field is add to addedTransaction, should remove this logic
-            tx_params_to_added = deepcopy(base_transaction["params"])
-            del tx_params_to_added["txHash"]
-            added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
-            tx_requests.insert(0, base_transaction)
-
-        self.before_transaction_process(context, prev_block_generator, prev_block_validators)
+        self._before_transaction_process(context,
+                                         is_block_editable,
+                                         tx_requests,
+                                         added_transactions,
+                                         prev_block_generator,
+                                         prev_block_votes)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -450,13 +482,13 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
-                        raise InvalidBaseTransactionException("Invalid block: "
-                                                              "first transaction must be an base transaction")
-                    tx_result = self._invoke_base_request(context, tx_request, is_block_editable, regulator)
-                    base_tx_result = tx_result
+                        raise InvalidBaseTransactionException(
+                            "Invalid block: first transaction must be an base transaction")
+                    tx_result = self._invoke_base_request(context, tx_request, is_block_editable)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
+                self._log_step_trace(context)
                 block_result.append(tx_result)
                 context.update_batch()
 
@@ -464,52 +496,207 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
 
-                if context.revision >= REV_IISS:
+                if context.revision >= Revision.IISS.value:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-        if self.check_end_block_height_of_calc(context):
+        if self._check_end_block_height_of_calc(context):
             precommit_flag |= PrecommitFlag.IISS_CALC
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
+                Logger.info(tag=self.TAG,
+                            msg=f"Decentralization condition is met: {context.block}")
 
-        main_prep_as_dict, next_term = self.after_transaction_process(
-            context, precommit_flag, base_tx_result, prev_block_generator, prev_block_validators)
+                # When decentralization begins,
+                # change the reward calculation period from 43200 to 43120 which is the same as term_period
+                context.storage.iiss.put_calc_period(context, context.term_period)
 
-        context.preps.freeze()
+        main_prep_as_dict, term, rc_state_hash = self._after_transaction_process(context,
+                                                                                 precommit_flag,
+                                                                                 rc_db_revision,
+                                                                                 prev_block_generator,
+                                                                                 prev_block_votes)
 
         # Save precommit data
         # It will be written to levelDB on commit
-        precommit_data = PrecommitData(
-            context.revision,
-            context.block_batch,
-            block_result,
-            context.rc_block_batch,
-            context.meta_block_batch,
-            context.preps,
-            next_term,
-            prev_block_generator,
-            prev_block_validators,
-            context.new_icon_score_mapper,
-            precommit_flag)
+        precommit_data = PrecommitData(context.revision,
+                                       rc_db_revision,
+                                       context.block_batch,
+                                       block_result,
+                                       context.rc_block_batch,
+                                       context.preps,
+                                       term,
+                                       prev_block_generator,
+                                       prev_block_validators,
+                                       context.new_icon_score_mapper,
+                                       precommit_flag,
+                                       rc_state_hash)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
-    def before_transaction_process(self,
-                                   context: 'IconScoreContext',
-                                   prev_block_generator: Optional['Address'] = None,
-                                   prev_block_validators: Optional[List['Address']] = None):
-        self._update_productivity(context, prev_block_generator, prev_block_validators)
-        self._update_last_generate_block_height(context, prev_block_generator)
-        context.update_dirty_prep_batch()
+    @classmethod
+    def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
 
-    def after_transaction_process(
-            self,
+        if context.revision < Revision.IISS.value:
+            return 0
+
+        start: int = context.engine.iiss.get_start_block_of_calc(context)
+        if start == context.block.height:
+            return context.revision
+        else:
+            return cls._get_revision_from_rc(context)
+
+    @classmethod
+    def _get_revision_from_rc(cls,
+                              context: 'IconScoreContext') -> int:
+        version, revision = context.storage.rc.get_version_and_revision()
+        return revision
+
+    @classmethod
+    def _get_prev_block_votes(cls,
+                              context: 'IconScoreContext',
+                              prev_block_generator: Optional['Address'] = None,
+                              prev_block_validators: Optional[List['Address']] = None,
+                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
+            -> Optional[List[Tuple['Address', int]]]:
+
+        """
+        If prev_block_votes is valid field, you can just return origin data but if not,
+        you have to make prev_block_votes by using meta storage and prev_block_validators params for being simple logic.
+
+        :param context:
+        :param prev_block_validators:
+        :param prev_block_votes:
+        :return:
+        """
+
+        if prev_block_votes:
+            return prev_block_votes
+
+        if prev_block_generator is None or prev_block_validators is None:
+            return None
+
+        new_prev_block_votes: List[Tuple['Address', int]] = []
+        last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
+
+        for address in last_main_preps:
+            if address == prev_block_generator:
+                continue
+            else:
+                # we can't support denied vote in low version.
+                # so we can set only Approve.
+                vote_status: 'BlockVoteStatus' = BlockVoteStatus.NONE
+                if address in prev_block_validators:
+                    vote_status: 'BlockVoteStatus' = BlockVoteStatus.TRUE
+                new_prev_block_votes.append([address, vote_status.value])
+        return new_prev_block_votes
+
+    @classmethod
+    def _log_step_trace(cls, context: 'IconScoreContext'):
+        """If steptrace option is turned on, write step trace messages to a log file
+
+        :param context:
+        :return:
+        """
+        try:
+            if context.step_counter.step_tracer is not None:
+                msg: str = f"txHash(0x{context.tx.hash.hex()})\n{context.step_counter.step_tracer}"
+                print_log_with_level(context.log_level, tag=STEP_LOG_TAG, msg=msg)
+        except:
+            pass
+
+    def _before_transaction_process(self,
+                                    context: 'IconScoreContext',
+                                    is_block_editable: bool,
+                                    tx_requests: list,
+                                    added_transactions: dict,
+                                    prev_block_generator: Optional['Address'],
+                                    prev_block_votes: Optional[List[Tuple['Address', int]]]):
+
+        # if you want to use rc_version here, you must use it.
+        # rc_db_revision: int = self._get_revision_from_rc(context)
+
+        self._check_calculate_done(context)
+
+        if not context.is_decentralized():
+            return
+
+        self._make_base_transaction(context, is_block_editable, tx_requests, added_transactions)
+
+        # Skip the first block after decentralization
+        if context.is_the_first_block_on_decentralization():
+            Logger.info(tag=self.TAG,
+                        msg=f"The first block of decentralization: {context.block}")
+            return
+
+        self._put_block_produce_info_on_start_calc(context,
+                                                   prev_block_generator,
+                                                   prev_block_votes)
+
+        self._update_productivity(context, prev_block_generator, prev_block_votes)
+        self._update_last_generate_block_height(context, prev_block_generator)
+
+    @classmethod
+    def _check_calculate_done(cls,
+                              context: 'IconScoreContext'):
+
+        end_block: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        if end_block == context.block.height:
+            iscore, rc_latest_calculate_bh, _ = context.storage.rc.get_calc_response_from_rc()
+            period: int = context.storage.iiss.get_calc_period(context)
+
+            latest_calculate_bh: int = end_block - period
+
+            # Check if the response has been received
+            if iscore == -1:
+                iscore, calc_bh, state_hash = context.engine.iiss.query_calculate_result(latest_calculate_bh)
+                context.storage.rc.put_calc_response_from_rc(iscore, calc_bh, state_hash)
+            else:
+                context.engine.iiss.check_calculate_request_block_height(rc_latest_calculate_bh,
+                                                                         latest_calculate_bh)
+
+    @classmethod
+    def _make_base_transaction(cls,
+                               context: 'IconScoreContext',
+                               is_block_editable: bool,
+                               tx_requests: list,
+                               added_transactions: dict):
+
+        if is_block_editable:
+            base_transaction: dict = BaseTransactionCreator.create_base_transaction(context)
+            # todo: if the txHash field is add to addedTransaction, should remove this logic
+            tx_params_to_added = deepcopy(base_transaction["params"])
+            del tx_params_to_added["txHash"]
+            tx_hash: bytes = base_transaction["params"]["txHash"]
+            added_transactions[tx_hash.hex()] = tx_params_to_added
+            tx_requests.insert(0, base_transaction)
+
+    @classmethod
+    def _put_block_produce_info_on_start_calc(cls,
+                                              context: 'IconScoreContext',
+                                              prev_block_generator: Optional['Address'] = None,
+                                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
+        if prev_block_generator is None or prev_block_votes is None:
+            return
+
+        start = context.engine.iiss.get_start_block_of_calc(context)
+        if start != context.block.height:
+            return
+        prev_block_height: int = context.block.height - 1
+        bp_data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
+                                                                                               prev_block_generator,
+                                                                                               prev_block_votes)
+        context.storage.rc.put_data_directly(bp_data)
+
+    @classmethod
+    def _after_transaction_process(
+            cls,
             context: 'IconScoreContext',
             flag: 'PrecommitFlag',
-            base_tx_result: Optional['TransactionResult'],
+            rc_db_revision: int,
             prev_block_generator: Optional['Address'] = None,
-            prev_block_validators: Optional[List['Address']] = None) -> Tuple[Optional[dict], Optional['Term']]:
+            prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
+            -> Tuple[Optional[dict], Optional['Term'], bytes]:
         """If the current term is ended, prepare the next term,
         - Prepare the list of main P-Reps for the next term which is passed to loopchain
         - Calculate the weighted average of ireps
@@ -518,109 +705,89 @@ class IconServiceEngine(ContextContainer):
 
         :param context:
         :param flag:
-        :param base_tx_result:
+        :param rc_db_revision
         :param prev_block_generator:
-        :param prev_block_validators:
-        :return:
+        :param prev_block_votes:
+        :return: (main_preps_as_dict, term, rc_state_hash)
         """
-        main_prep_as_dict: Optional[dict] = None
-        next_term: Optional['Term'] = None
 
-        if self._is_prep_term_ended(context, flag):
-            if base_tx_result is not None:
-                self._impose_low_productivity_penalty_on_main_preps(context, base_tx_result)
+        main_prep_as_dict, term = context.engine.prep.on_block_invoked(
+            context, bool(flag & PrecommitFlag.DECENTRALIZATION))
 
-            # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, next_term = context.engine.prep.on_term_ended(context)
-
-            context.storage.meta.put_last_term_end_block(context.meta_block_batch, next_term.start_block_height - 1)
-
-        if context.revision >= REV_IISS:
-            if flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC):
-                last_calc_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-                if last_calc_end_block_height is not None:
-                    calc_period: int = context.storage.iiss.get_calc_period(context)
-                    start_block_height: int = last_calc_end_block_height - calc_period + 1
-                    context.storage.meta.put_last_calc_info(context.meta_block_batch,
-                                                            start_block_height,
-                                                            last_calc_end_block_height)
-            context.engine.iiss.update_db(
-                context, next_term, prev_block_generator, prev_block_validators, flag)
+        rc_state_hash: Optional[bytes] = None
+        if context.revision >= Revision.IISS.value:
+            rc_state_hash: Optional[bytes] = context.engine.iiss.update_db(context,
+                                                                           term,
+                                                                           prev_block_generator,
+                                                                           prev_block_votes,
+                                                                           flag,
+                                                                           rc_db_revision)
 
         context.update_batch()
 
-        return main_prep_as_dict, next_term
+        if main_prep_as_dict is not None:
+            Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")
+        context.preps.freeze()
+        if context.term:
+            context.term.freeze()
 
-    def _impose_low_productivity_penalty_on_main_preps(
-            self, context: 'IconScoreContext', base_tx_result: 'TransactionResult'):
-        """Check the P-Reps to impose low productivity penalty on every block
+        return main_prep_as_dict, term, rc_state_hash
+
+    @classmethod
+    def _update_productivity(cls,
+                             context: 'IconScoreContext',
+                             prev_block_generator: Optional['Address'],
+                             prev_block_votes: Optional[List[Tuple['Address', int]]]):
+
+        """Update block validation statistics of Main P-Reps
+        This method should be called only after decentralization
 
         :param context:
-        :param base_tx_result:
+        :param prev_block_generator:
+        :param prev_block_votes:
         :return:
         """
 
-        lazy_preps: list = []
-        for main_prep in context.engine.prep.term.main_preps:
-            prep: 'PRep' = context.get_prep(main_prep.address)
-            assert prep is not None
+        if prev_block_generator is None or prev_block_votes is None:
+            Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
+            return
 
-            if prep.is_low_productivity():
-                lazy_preps.append(prep)
+        validators: List[Tuple['Address', int]] = [[prev_block_generator, BlockVoteStatus.TRUE.value]]
+        validators.extend(prev_block_votes)
 
-        for prep in lazy_preps:
-            dirty_prep: 'PRep' = prep.copy()
-            dirty_prep.status = PRepStatus.LOW_PRODUCTIVITY
+        Logger.info(f"update_productivity(validators): {validators}")
+
+        for address, vote_state in validators:
+            dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
+            assert isinstance(dirty_prep, PRep)
+
+            is_validator: bool = vote_state != BlockVoteStatus.NONE.value
+
+            dirty_prep.update_block_statistics(is_validator)
             context.put_dirty_prep(dirty_prep)
 
-            EventLogEmitter.emit_event_log(
-                context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
-                [prep.address, PRepStatus.LOW_PRODUCTIVITY.value, prep.productivity], 1)
-
-        base_tx_result.event_logs.extend(context.event_logs)
-        base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
         context.update_dirty_prep_batch()
 
-    @staticmethod
-    def _update_productivity(context: 'IconScoreContext',
-                             prev_block_generator: Optional['Address'] = None,
-                             prev_block_validators: Optional[List['Address']] = None):
-        validates: set = set()
-        if prev_block_generator:
-            validates.add(prev_block_generator)
-        if prev_block_validators:
-            validates.update(prev_block_validators)
+    @classmethod
+    def _update_last_generate_block_height(cls,
+                                           context: 'IconScoreContext',
+                                           prev_block_generator: Optional['Address']):
+        """This method should be called only after decentralization
 
-        main_preps: list = context.engine.prep.term.main_preps
-        for main_prep in main_preps:
-            is_validate: bool = main_prep.address in validates
-            prep: 'PRep' = context.get_prep(main_prep.address, mutable=True)
-            if prep:
-                prep.update_productivity(is_validate)
-                context.put_dirty_prep(prep)
-
-    @staticmethod
-    def _is_prep_term_ended(context: 'IconScoreContext', flag: 'PrecommitFlag') -> bool:
-        if context.revision < REV_DECENTRALIZATION:
-            return False
-
-        if context.engine.prep.term.sequence > -1:
-            return context.engine.prep.check_end_block_height_of_term(context)
-        else:
-            return flag & PrecommitFlag.DECENTRALIZATION == PrecommitFlag.DECENTRALIZATION
-
-    @staticmethod
-    def _update_last_generate_block_height(
-            context: 'IconScoreContext', prev_block_generator: Optional['Address']):
-        if not context.is_decentralized():
-            return
+        :param context:
+        :param prev_block_generator:
+        :return:
+        """
         if prev_block_generator is None:
             return
 
-        prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        if prep:
-            prep.last_generate_block_height = context.block.height - 1
-            context.put_dirty_prep(prep)
+        dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
+        assert isinstance(dirty_prep, PRep)
+
+        dirty_prep.last_generate_block_height = context.block.height - 1
+        context.put_dirty_prep(dirty_prep)
+
+        context.update_dirty_prep_batch()
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
@@ -629,6 +796,7 @@ class IconServiceEngine(ContextContainer):
         """Updates the revision code of given context
         if governance or its state has been updated
 
+        :param flags:
         :param context: current context
         :param tx_result: transaction result
         :return:
@@ -637,7 +805,7 @@ class IconServiceEngine(ContextContainer):
                 tx_result.status == TransactionResult.SUCCESS:
             # If the tx is heading for Governance, updates the revision
             if self._set_revision_to_context(context):
-                if context.revision == REV_IISS:
+                if context.revision == Revision.IISS.value:
                     flags |= PrecommitFlag.GENESIS_IISS_CALC
         return flags
 
@@ -656,8 +824,8 @@ class IconServiceEngine(ContextContainer):
         return flags
 
     @staticmethod
-    def check_end_block_height_of_calc(context: 'IconScoreContext') -> bool:
-        if context.revision < REV_IISS:
+    def _check_end_block_height_of_calc(context: 'IconScoreContext') -> bool:
+        if context.revision < Revision.IISS.value:
             return False
 
         check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
@@ -726,10 +894,10 @@ class IconServiceEngine(ContextContainer):
 
         return tx_result
 
-    def _process_base_transaction(self,
+    @classmethod
+    def _process_base_transaction(cls,
                                   context: 'IconScoreContext',
-                                  issue_data: dict,
-                                  regulator: 'Regulator'):
+                                  issue_data: dict):
 
         treasury_address: 'Address' = context.storage.icx.fee_treasury
         tx_result = TransactionResult(context.tx, context.block)
@@ -738,12 +906,8 @@ class IconServiceEngine(ContextContainer):
         # proceed issue
         context.engine.issue.issue(context,
                                    treasury_address,
-                                   issue_data,
-                                   regulator)
-        # proceed term
-        # todo: in case of issuing from IISS_REV, should use below comments
-        # if context.engine.prep.term.sequence != -1 and \
-        # context.engine.prep.term.start_block_height == context.block.height:
+                                   issue_data)
+
         if context.engine.prep.term.start_block_height == context.block.height:
             EventLogEmitter.emit_event_log(context,
                                            score_address=ZERO_SCORE_ADDRESS,
@@ -753,8 +917,10 @@ class IconServiceEngine(ContextContainer):
                                                       context.engine.prep.term.end_block_height],
                                            indexed_args_count=0)
 
-        tx_result.status = TransactionResult.SUCCESS
+        # Handles to impose low productivity and block validation penalties, if exists
+        context.engine.prep.impose_penalty(context)
 
+        tx_result.status = TransactionResult.SUCCESS
         tx_result.event_logs = context.event_logs
         tx_result.traces = context.traces
 
@@ -763,14 +929,13 @@ class IconServiceEngine(ContextContainer):
     def _invoke_base_request(self,
                              context: 'IconScoreContext',
                              request: dict,
-                             is_block_editable: bool,
-                             regulator: Optional['Regulator']) -> 'TransactionResult':
+                             is_block_editable: bool) -> 'TransactionResult':
         assert 'params' in request
         assert 'data' in request['params']
 
         issue_data_in_tx: dict = request['params'].get('data')
         if not is_block_editable:
-            issue_data_in_db, regulator = context.engine.issue.create_icx_issue_info(context)
+            issue_data_in_db: dict = context.engine.issue.create_icx_issue_info(context)
             if issue_data_in_tx != issue_data_in_db:
                 raise InvalidBaseTransactionException("Have difference between "
                                                       "base transaction and actual db data. "
@@ -783,12 +948,12 @@ class IconServiceEngine(ContextContainer):
                                  timestamp=context.block.timestamp,
                                  nonce=None)
 
-        context.event_logs: List['EventLog'] = []
-        context.traces: List['Trace'] = []
+        context.event_logs = []
+        context.traces = []
         context.msg_stack.clear()
         context.event_log_stack.clear()
 
-        tx_result = self._process_base_transaction(context, issue_data_in_tx, regulator)
+        tx_result = self._process_base_transaction(context, issue_data_in_tx)
         return tx_result
 
     def _invoke_request(self,
@@ -822,8 +987,8 @@ class IconServiceEngine(ContextContainer):
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
-        context.event_logs: List['EventLog'] = []
-        context.traces: List['Trace'] = []
+        context.event_logs = []
+        context.traces = []
         context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
@@ -831,7 +996,8 @@ class IconServiceEngine(ContextContainer):
 
         return self._call(context, method, params)
 
-    def _estimate_step_by_request(self, request, context) -> int:
+    @classmethod
+    def _estimate_step_by_request(cls, request, context) -> int:
         """Calculates simply and estimates step with request data.
 
         :param request:
@@ -881,8 +1047,8 @@ class IconServiceEngine(ContextContainer):
                                  nonce=params.get('nonce', None))
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
-        context.event_logs: List['EventLog'] = []
-        context.traces: List['Trace'] = []
+        context.event_logs = []
+        context.traces = []
 
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = context.storage.icx.get_account(context, from_)
@@ -909,17 +1075,7 @@ class IconServiceEngine(ContextContainer):
 
         :return: The amount of step
         """
-        context = IconScoreContext(IconScoreContextType.ESTIMATION)
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = self._get_last_block()
-        context.block_batch = BlockBatch(Block.from_block(context.block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
-        context.meta_block_batch: 'ExternalBatch' = ExternalBatch()
-        context.meta_tx_batch: 'ExternalBatch' = ExternalBatch()
-        context.preps = context.engine.prep.preps.copy(mutable=True)
-        context.tx_dirty_preps = OrderedDict()
-
+        context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.
         step_limit: int = context.step_counter.max_step_limit
@@ -949,9 +1105,10 @@ class IconServiceEngine(ContextContainer):
         :param params:
         :return: the result of query
         """
-        context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._get_last_block()
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(
+            IconScoreContextType.QUERY,
+            block=self._get_last_block()
+        )
         self._set_revision_to_context(context)
         step_limit: int = context.step_counter.max_step_limit
 
@@ -960,7 +1117,7 @@ class IconServiceEngine(ContextContainer):
             context.msg = Message(sender=from_)
             step_limit: int = params.get('stepLimit', step_limit)
 
-        context.traces: List['Trace'] = []
+        context.traces = []
         context.step_counter.reset(step_limit)
 
         ret = self._call(context, method, params)
@@ -988,9 +1145,7 @@ class IconServiceEngine(ContextContainer):
         params: dict = request['params']
         to: 'Address' = params.get('to')
 
-        context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._get_last_block()
-        context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
+        context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
         self._set_revision_to_context(context)
 
         try:
@@ -1051,7 +1206,8 @@ class IconServiceEngine(ContextContainer):
 
         return ret
 
-    def _handle_icx_get_balance(self,
+    @classmethod
+    def _handle_icx_get_balance(cls,
                                 context: 'IconScoreContext',
                                 params: dict) -> int:
         """Returns the icx balance of the given address
@@ -1063,12 +1219,14 @@ class IconServiceEngine(ContextContainer):
         address = params['address']
         return context.engine.icx.get_balance(context, address)
 
-    def _handle_icx_get_total_supply(self,
+    @classmethod
+    def _handle_icx_get_total_supply(cls,
                                      context: 'IconScoreContext',
-                                     params: dict) -> int:
+                                     _params: dict) -> int:
         """Returns the amount of icx total supply
 
         :param context:
+        :param _params:
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
         return context.storage.icx.get_total_supply(context)
@@ -1085,7 +1243,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if self._check_new_process(params):
-            if context.revision < REV_IISS:
+            if context.revision < Revision.IISS.value:
                 raise InvalidParamsException(f"Method Not Found")
 
             data: dict = params['data']
@@ -1114,8 +1272,15 @@ class IconServiceEngine(ContextContainer):
         if start_block < 0 or end_block < 0:
             return rc_result
 
-        iscore, _ = context.storage.rc.get_calc_response_from_rc()
+        # (iscore, block_height, rc_state_hash)
+        iscore, request_block_height, _ = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
+            return rc_result
+
+        if request_block_height != end_block:
+            Logger.warning(f"Response block height is not matched to the request: "
+                           f"response block height:{request_block_height} "
+                           f"request block height:{end_block}", ICON_SERVICE_LOG_TAG)
             return rc_result
 
         rc_result['iscore'] = iscore
@@ -1125,25 +1290,29 @@ class IconServiceEngine(ContextContainer):
 
         return rc_result
 
-    def _handle_get_iiss_info(self, context: 'IconScoreContext', params: dict) -> dict:
+    def _handle_get_iiss_info(self, context: 'IconScoreContext', _params: dict) -> dict:
         response = dict()
+        term = context.engine.prep.term
 
         response['blockHeight'] = context.block.height
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         response['variable'] = dict()
-        response['variable']['irep'] = context.engine.prep.term.irep
+        response['variable']['irep'] = term.irep if term else 0
         response['variable']['rrep'] = reward_rate.reward_prep
 
         calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
-        if calc_end_block < 0 or context.block.height != calc_end_block:
-            calc_end_block: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-            if calc_end_block is None:
-                calc_end_block = -1
-        response['nextCalculation'] = calc_end_block + 1
 
-        term_end_block: int = context.storage.meta.get_last_term_end_block(context)
+        next_calculation: int = calc_end_block
+        if calc_start_block < 0 or context.block.height != next_calculation:
+            next_calculation: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+            if next_calculation is None:
+                next_calculation = -1
+        response['nextCalculation'] = next_calculation + 1
+
+        term_start_block, term_end_block = context.storage.meta.get_last_term_info(context)
+
         if term_end_block < 0 or context.block.height != term_end_block:
-            term_end_block: int = context.engine.prep.term.end_block_height
+            term_end_block: int = term.end_block_height if term else -1
         response['nextPRepTerm'] = term_end_block + 1
 
         response['rcResult'] = self._create_rc_result(context, calc_start_block, calc_end_block)
@@ -1230,7 +1399,7 @@ class IconServiceEngine(ContextContainer):
             tmp_context.block = self._get_last_block()
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= REVISION_3 else tmp_context,
+                context if context.revision >= Revision.THREE.value else tmp_context,
                 params,
                 step_price=context.step_counter.step_price)
 
@@ -1242,7 +1411,7 @@ class IconServiceEngine(ContextContainer):
         # TODO Branch IISS Engine
         if self._check_new_process(params):
 
-            if context.revision < REV_IISS:
+            if context.revision < Revision.IISS.value:
                 """
                 raise InvalidParamsException(f"Method Not Found")
                 above code is what I want to raise
@@ -1325,11 +1494,13 @@ class IconServiceEngine(ContextContainer):
     def _process_new_transaction(self,
                                  context: 'IconScoreContext',
                                  params: dict,
-                                 tx_result: 'TransactionResult') -> None:
+                                 _tx_result: 'TransactionResult') -> None:
         """
         Processes the iiss transaction
 
+        :param context:
         :param params: JSON-RPC params
+        :param _tx_result:
         """
 
         to: Address = params['to']
@@ -1337,7 +1508,7 @@ class IconServiceEngine(ContextContainer):
 
         assert to == ZERO_SCORE_ADDRESS, "Invalid to Address"
 
-        # Only 'registerPRep' method allow to set value
+        # Only 'registerPRep' method is allowed to set value
         if context.msg.value > 0 and data.get("method") != "registerPRep":
             raise InvalidParamsException(f"Do not allow to set value in this method: {data.get('method')}")
 
@@ -1346,9 +1517,10 @@ class IconServiceEngine(ContextContainer):
         elif self._check_prep_process(params):
             context.engine.prep.invoke(context, data)
         else:
-            raise InvalidParamsException("invalid method")
+            raise InvalidParamsException("Invalid method")
 
-    def _transfer_coin(self,
+    @classmethod
+    def _transfer_coin(cls,
                        context: 'IconScoreContext',
                        params: dict) -> None:
         """Transfer coin between EOA and EOA based on protocol v2
@@ -1364,7 +1536,8 @@ class IconServiceEngine(ContextContainer):
 
         context.engine.icx.transfer(context, from_, to, value)
 
-    def _charge_transaction_fee(self,
+    @classmethod
+    def _charge_transaction_fee(cls,
                                 context: 'IconScoreContext',
                                 params: dict,
                                 status: int,
@@ -1438,10 +1611,9 @@ class IconServiceEngine(ContextContainer):
                     path: str = data.get('content')
                     score_address = generate_score_address_for_tbears(path)
                 else:
-                    score_address = generate_score_address(
-                        context.tx.origin,
-                        context.tx.timestamp,
-                        context.tx.nonce)
+                    score_address = generate_score_address(context.tx.origin,
+                                                           context.tx.timestamp,
+                                                           context.tx.nonce)
                     deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
                     if deploy_info is not None:
                         raise AccessDeniedException(f'SCORE address already in use: {score_address}')
@@ -1454,11 +1626,10 @@ class IconServiceEngine(ContextContainer):
             content_size = get_deploy_content_size(context.revision, data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
 
-            context.engine.deploy.invoke(
-                context=context,
-                to=to,
-                icon_score_address=score_address,
-                data=data)
+            context.engine.deploy.invoke(context=context,
+                                         to=to,
+                                         icon_score_address=score_address,
+                                         data=data)
             return score_address
         elif data_type == 'deposit':
             self._deposit_handler.handle_deposit_request(context, data)
@@ -1500,8 +1671,8 @@ class IconServiceEngine(ContextContainer):
                 code = int(e.code)
                 message = str(e.message)
             else:
-                Logger.exception(e, ICON_SERVICE_LOG_TAG)
-                Logger.error(e, ICON_SERVICE_LOG_TAG)
+                Logger.exception(str(e), ICON_SERVICE_LOG_TAG)
+                Logger.error(str(e), ICON_SERVICE_LOG_TAG)
 
                 code: int = ExceptionCode.SYSTEM_ERROR.value
                 message = str(e)
@@ -1544,10 +1715,11 @@ class IconServiceEngine(ContextContainer):
 
         return logs_bloom
 
-    def _handle_icx_get_score_api(self,
+    @classmethod
+    def _handle_icx_get_score_api(cls,
                                   context: 'IconScoreContext',
                                   params: dict) -> object:
-        """Handles an icx_get_score_api jsonrpc request
+        """Handles an icx_get_score_api JSON-RPC request
 
         get score api
 
@@ -1559,7 +1731,7 @@ class IconServiceEngine(ContextContainer):
         return IconScoreEngine.get_score_api(
             context, icon_score_address)
 
-    def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
+    def _handle_ise_get_status(self, _context: 'IconScoreContext', params: dict) -> dict:
 
         response = dict()
         if not bool(params) or params.get('filter'):
@@ -1587,56 +1759,174 @@ class IconServiceEngine(ContextContainer):
             'prevBlockHash': prev_block_hash
         }
 
-    @staticmethod
-    def _create_invalid_block():
-        block_height = -1
-        block_hash = b'\x00' * 32
-        timestamp = 0
-        prev_block_hash = block_hash
-        return Block(block_height, block_hash, timestamp, prev_block_hash, 0)
-
-    def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
+    def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
-        :param block_height: height of block being committed
+        :param _block_height: height of block being committed
         :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed
         """
         # Check for block validation before commit
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
 
+        precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
+        context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
+
+        if precommit_data.revision < Revision.IISS.value:
+            self._commit_before_iiss(context, precommit_data)
+        else:
+            self._commit_after_iiss(context, precommit_data, instant_block_hash)
+
+    def _commit_before_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
+        self._process_state_commit(context, precommit_data, state_wal)
+
+    def _commit_after_iiss(self,
+                           context: 'IconScoreContext',
+                           precommit_data: 'PrecommitData',
+                           instant_block_hash: bytes):
+        # Check if this block is the start block of a calculation period
+        start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
+        is_calc_period_start_block: bool = context.block.height == start_calc_block_height
+
+        wal_writer, state_wal, iiss_wal = \
+            self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
+        wal_writer.flush()
+
+        # Write iiss_wal to rc_db
+        standby_db_info: Optional['RewardCalcDBInfo'] = \
+            self._process_iiss_commit(context, precommit_data, iiss_wal, is_calc_period_start_block)
+        wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
+        wal_writer.flush()
+
+        # Write state_wal to state_db
+        self._process_state_commit(context, precommit_data, state_wal)
+        wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
+        wal_writer.flush()
+
+        # send IPC
+        self._process_ipc(context, wal_writer, precommit_data, standby_db_info, instant_block_hash)
+        wal_writer.close()
+
+        try:
+            os.remove(self._get_write_ahead_log_path())
+        except BaseException as e:
+            Logger.error(tag=self.TAG, msg=str(e))
+
+    def _process_wal(self, context: 'IconScoreContext',
+                     precommit_data: 'PrecommitData',
+                     is_calc_period_start_block: bool,
+                     instant_block_hash: bytes) \
+            -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
+        """Assume that this method is called after Revision.IISS is on
+
+        :param context:
+        :param precommit_data:
+        :param is_calc_period_start_block:
+        :return:
+        """
+        assert precommit_data.revision >= Revision.IISS.value
+
+        block: 'Block' = precommit_data.block
+        wal_path: str = self._get_write_ahead_log_path()
+        state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
+
+        # At the start of calc period, put revision and version to newly created current_rc_db
+        revision: int = precommit_data.rc_db_revision if is_calc_period_start_block else -1
+
+        tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
+        Logger.info(tag=self.TAG, msg=f"tx_index={tx_index}")
+        iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
+
+        wal_writer: 'WriteAheadLogWriter' = \
+            WriteAheadLogWriter(precommit_data.revision,
+                                max_log_count=2,
+                                block=block,
+                                instant_block_hash=instant_block_hash)
+        wal_writer.open(wal_path)
+
+        if is_calc_period_start_block:
+            wal_writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=False)
+
+        wal_writer.write_walogable(iiss_wal)
+        wal_writer.write_walogable(state_wal)
+
+        return wal_writer, state_wal, iiss_wal
+
+    def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
         precommit_data: 'PrecommitData' = \
             self._precommit_data_manager.get(instant_block_hash)
-        block_batch = precommit_data.block_batch
         if block_hash:
-            block_batch.block = Block(block_height=block_batch.block.height,
-                                      block_hash=block_hash,
-                                      timestamp=block_batch.block.timestamp,
-                                      prev_hash=block_batch.block.prev_hash,
-                                      cumulative_fee=block_batch.block.cumulative_fee)
+            precommit_data.block_batch.update_block_hash(block_hash)
 
+        precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
+        return precommit_data
+
+    def _process_state_commit(self,
+                              context: 'IconScoreContext',
+                              precommit_data: 'PrecommitData',
+                              state_wal: 'StateWAL'):
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
-        context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.block = block_batch.block
+        self._icx_context_db.write_batch(context, state_wal)
 
-        self._icx_context_db.write_batch(context=context, states=block_batch)
+        context.storage.icx.set_last_block(precommit_data.block_batch.block)
+        self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
-        context.storage.icx.put_block_info(context, block_batch.block, precommit_data.revision)
-        self._precommit_data_manager.commit(block_batch.block)
-
+        # after status DB commit
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
-            context.block = block_batch.block
+            context.block = precommit_data.block_batch.block
             self._init_global_value_by_governance_score(context)
 
-        if precommit_data.revision >= REV_IISS:
-            context.engine.prep.commit(context, precommit_data)
-            context.storage.rc.commit(precommit_data.rc_block_batch)
-            context.storage.meta.commit(precommit_data.meta_block_batch)
+    @staticmethod
+    def _process_iiss_commit(context: 'IconScoreContext',
+                             precommit_data: 'PrecommitData',
+                             iiss_wal: Optional['IissWAL'],
+                             is_calc_period_start_block: bool) -> Optional['RewardCalcDBInfo']:
+        """Assume that this method is called after Revision.IISS is on
 
-            context.engine.iiss.send_ipc(context, precommit_data)
+        :param context:
+        :param precommit_data:
+        :param iiss_wal:
+        :param is_calc_period_start_block:
+        :return:
+        """
+        assert precommit_data.revision >= Revision.IISS.value
+        assert isinstance(iiss_wal, IissWAL)
+
+        standby_db_info: Optional['RewardCalcDBInfo'] = None
+        if is_calc_period_start_block:
+            calculate_block_height: int = context.block.height - 1
+            standby_db_info: 'RewardCalcDBInfo' = context.storage.rc.replace_db(calculate_block_height)
+
+        context.engine.prep.commit(context, precommit_data)
+        context.storage.rc.commit(iiss_wal)
+        return standby_db_info
+
+    @staticmethod
+    def _process_ipc(context: 'IconScoreContext',
+                     wal_writer: 'WriteAheadLogWriter',
+                     precommit_data: 'PrecommitData',
+                     standby_db_info: Optional['RewardCalcDBInfo'],
+                     instant_block_hash: bytes):
+        assert precommit_data.revision >= Revision.IISS.value
+
+        commit_block_hash: bytes = precommit_data.block.hash
+        if commit_block_hash != instant_block_hash:
+            # Leader node must use instant_block_hash which is used in invoke()
+            commit_block_hash: bytes = instant_block_hash
+
+        context.engine.iiss.send_commit(
+            precommit_data.block.height, commit_block_hash)
+        wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
+        wal_writer.flush()
+
+        if standby_db_info is not None:
+            iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)
+            context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
+            wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
@@ -1644,11 +1934,12 @@ class IconServiceEngine(ContextContainer):
         :param block_height: height of block which is needed to be removed from the pre-commit data manager
         :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
-        # Check for block validation before rollback
+        Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}")
 
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
         self._precommit_data_manager.rollback(instant_block_hash)
-        # TODO add rollback
+
+        Logger.warning(tag=self.TAG, msg="rollback() end")
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks
@@ -1670,6 +1961,149 @@ class IconServiceEngine(ContextContainer):
         return EMPTY_BLOCK
 
     def inner_call(self, request: dict):
-        context = IconScoreContext(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(
+            IconScoreContextType.QUERY, block=self._get_last_block()
+        )
+
         self._set_revision_to_context(context)
         return inner_call(context, request)
+
+    def _recover_dbs(self, rc_data_path: str):
+        """Recover iiss_db and state_db with a wal file
+
+        :param rc_data_path: The directory where iiss_dbs are contained
+        """
+
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() start: rc_data_path={rc_data_path}")
+
+        path: str = self._get_write_ahead_log_path()
+        if not os.path.isfile(path):
+            Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() end: No WAL file {path}")
+            return
+
+        self._wal_reader = None
+        reader = WriteAheadLogReader()
+        try:
+            reader.open(path)
+            Logger.info(tag=WAL_LOG_TAG, msg=f"reader=({reader})")
+
+            if reader.log_count == 2:
+                self._recover_rc_db(reader, rc_data_path)
+                self._recover_state_db(reader)
+                self._wal_reader = reader
+            else:
+                Logger.debug(tag=WAL_LOG_TAG, msg=f"Incomplete WAL file: {path}")
+        except IconServiceBaseException as e:
+            Logger.info(tag=WAL_LOG_TAG, msg=e.message)
+        except BaseException as e:
+            Logger.warning(tag=WAL_LOG_TAG, msg=str(e))
+        finally:
+            reader.close()
+
+        try:
+            os.remove(path)
+        except BaseException as e:
+            Logger.error(tag=WAL_LOG_TAG, msg=str(e))
+
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() end")
+
+    @staticmethod
+    def _is_need_to_recover_rc_db(wal_state: 'WALState', is_calc_period_start_block: bool) -> bool:
+        if wal_state & WALState.WRITE_RC_DB:
+            if not is_calc_period_start_block or \
+                    (is_calc_period_start_block and wal_state & WALState.SEND_CALCULATE):
+                return False
+
+        return True
+
+    @classmethod
+    def _recover_rc_db(cls, reader: 'WriteAheadLogReader', rc_data_path: str):
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rc_db() start: rc_data_path={rc_data_path}")
+
+        wal_state = WALState(reader.state)
+        is_calc_period_start_block = bool(wal_state & WALState.CALC_PERIOD_START_BLOCK)
+        Logger.info(tag=WAL_LOG_TAG, msg=f"reader state={wal_state}")
+
+        if not cls._is_need_to_recover_rc_db(wal_state, is_calc_period_start_block):
+            Logger.info(tag=WAL_LOG_TAG, msg="rc_db has already been up-to-date")
+            return
+
+        # If WAL file is made at the start block of calc period
+        if is_calc_period_start_block:
+            current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
+            is_current_exists: bool = len(current_rc_db_path) > 0
+            is_standby_exists: bool = len(standby_rc_db_path) > 0
+            is_iiss_exists: bool = len(iiss_rc_db_path) > 0
+            Logger.info(tag=WAL_LOG_TAG,
+                        msg=f"current_exists={is_current_exists}, "
+                            f"is_standby_exists={is_standby_exists}, "
+                            f"is_iiss_exists={is_iiss_exists}")
+
+            # If only current_db exists, replace current_db to standby_rc_db
+            if is_current_exists and not is_standby_exists and not is_iiss_exists:
+                # Get revision from the RC DB
+                prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+                rc_version, revision = get_version_and_revision(prev_calc_db)
+                rc_version: int = max(rc_version, 0)
+                prev_calc_db.close()
+
+                standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
+                                                                                            reader.block.height,
+                                                                                            rc_version)
+                is_standby_exists: bool = True
+            elif not is_current_exists and not is_standby_exists:
+                # No matter iiss_db exists or not, If both current_db and standby_db do not exist, raise error
+                raise DatabaseException(f"RC related DB not exists")
+
+            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            if is_standby_exists:
+                RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
+        else:
+            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+
+        # Write data to "current_db"
+        current_db.write_batch(reader.get_iterator(0))
+        current_db.close()
+
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
+
+    def _recover_state_db(self, reader: 'WriteAheadLogReader'):
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_state_db() start: reader={reader}")
+
+        wal_state = WALState(reader.state)
+        if wal_state & WALState.WRITE_STATE_DB:
+            Logger.info(tag=WAL_LOG_TAG, msg="state_db has already been up-to-date")
+            return
+
+        ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
+        Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: count={ret}")
+
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_state_db() end")
+
+    def _get_write_ahead_log_path(self) -> str:
+        return os.path.join(self._state_db_root_path, self.WAL_FILE)
+
+    def hello(self) -> dict:
+        """If state_db and rc_db are recovered, send COMMIT_BLOCK message to reward calculator
+        It is called on INVOKE thread
+        Assume that the connection between iconservice and rc is ready
+
+        :return:
+        """
+        Logger.debug(tag=self.TAG, msg="hello() start")
+
+        if isinstance(self._wal_reader, WriteAheadLogReader):
+            wal_state = WALState(self._wal_reader.state)
+
+            # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
+            # send COMMIT_BLOCK to rc prior to invoking a block
+            if not (wal_state & WALState.SEND_COMMIT_BLOCK):
+                IconScoreContext.engine.iiss.send_commit(
+                    self._wal_reader.block.height, self._wal_reader.instant_block_hash)
+
+            # No need to use
+            self._wal_reader = None
+
+        Logger.debug(tag=self.TAG, msg="hello() end")
+
+        return {}

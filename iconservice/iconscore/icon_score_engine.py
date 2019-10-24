@@ -108,6 +108,7 @@ class IconScoreEngine(object):
 
         converted_params = IconScoreEngine._convert_score_params_by_annotations(icon_score, func_name, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
+        context.current_address: 'Address' = icon_score_address
 
         score_func = getattr(icon_score, ATTR_SCORE_CALL)
         return score_func(func_name=func_name, kw_params=converted_params)

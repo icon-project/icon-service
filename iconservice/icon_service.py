@@ -128,6 +128,8 @@ def main():
                         help="icon score config")
     parser.add_argument("-tbears", dest=ConfigKey.TBEARS_MODE, action='store_true',
                         help="tbears mode")
+    parser.add_argument("-steptrace", dest=ConfigKey.STEP_TRACE_FLAG, action="store_true", help="enable step tracing")
+
     args = parser.parse_args()
 
     args_params = dict(vars(args))

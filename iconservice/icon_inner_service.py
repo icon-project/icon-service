@@ -22,11 +22,11 @@ from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBaseTransactionException, \
-    FatalException
+    FatalException, ServiceNotReadyException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
-    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey
+    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey, RCStatus
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case
 
@@ -58,6 +58,10 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
+    def _check_icon_service_ready(self):
+        if not self._icon_service_engine.is_reward_calculator_ready():
+            raise ServiceNotReadyException("Reward Calculator is not ready")
+
     @staticmethod
     def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
@@ -65,8 +69,23 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def hello(self):
-        Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
-        return {}
+        Logger.info('hello() start', ICON_INNER_LOG_TAG)
+
+        ready_future = self._icon_service_engine.get_ready_future()
+        await ready_future
+
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
+            loop = get_event_loop()
+            ret = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE], self._hello)
+        else:
+            ret = self._hello()
+
+        Logger.info('hello() end', ICON_INNER_LOG_TAG)
+
+        return ret
+
+    def _hello(self):
+        return self._icon_service_engine.hello()
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
@@ -83,6 +102,9 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def invoke(self, request: dict):
         Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
+
+        self._check_icon_service_ready()
+
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -110,12 +132,14 @@ class IconScoreInnerTask(object):
             converted_is_block_editable = params.get('isBlockEditable', False)
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
+            converted_prev_votes = params.get('prevBlockVotes')
 
             tx_results, state_root_hash, added_transactions, main_prep_as_dict = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
                 prev_block_generator=converted_prev_block_generator,
                 prev_block_validators=converted_prev_block_validators,
+                prev_block_votes=converted_prev_votes,
                 is_block_editable=converted_is_block_editable)
 
             if convert_tx_result_to_dict:
@@ -132,6 +156,8 @@ class IconScoreInnerTask(object):
 
             if main_prep_as_dict:
                 results["prep"] = main_prep_as_dict
+
+            Logger.info(f'invoke origin response with {results}', ICON_INNER_LOG_TAG)
             response = MakeResponse.make_response(results)
         except FatalException as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
@@ -147,14 +173,16 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
             if self._icon_service_engine:
                 self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
     async def query(self, request: dict):
-        Logger.info(f'query request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
+
+        self._check_icon_service_ready()
+
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
@@ -188,13 +216,16 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
+            Logger.debug(f'query response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
     async def call(self, request: dict):
         Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
+
+        self._check_icon_service_ready()
+
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
@@ -226,6 +257,9 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def write_precommit_state(self, request: dict):
         Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+
+        self._check_icon_service_ready()
+
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -271,6 +305,9 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
         Logger.info(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+
+        self._check_icon_service_ready()
+
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -303,7 +340,10 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def validate_transaction(self, request: dict):
-        Logger.info(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
+
+        self._check_icon_service_ready()
+
         if self._is_thread_flag_on(EnableThreadFlag.VALIDATE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
@@ -328,12 +368,15 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
     async def change_block_hash(self, params):
+
+        self._check_icon_service_ready()
+
         return ExceptionCode.OK
 
 

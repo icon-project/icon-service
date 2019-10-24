@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING, List
 
-from iconservice.icon_constant import REV_IISS
+from iconservice.icon_constant import Revision
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -77,7 +77,7 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(REV_IISS)
+        self.set_revision(Revision.IISS.value)
 
         # success case: when isBlockEditable is false, block which does not have base tx should be invoked successfully.
         tx_list = [

@@ -14,20 +14,20 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from ..icon_constant import REV_DECENTRALIZATION
 from ..base.type_converter import TypeConverter
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..base.block import Block
-    from ..prep.term import Term
+    from ..prep.data import Term
 
 
 def get_main_preps(context: 'IconScoreContext', **_kwargs):
     term: 'Term' = context.engine.prep.term
     preps: Optional[dict] = None
-    if context.revision >= REV_DECENTRALIZATION:
-        preps: Optional[dict] = context.engine.prep.get_main_preps_in_dict(context.main_prep_count, term.main_preps)
+    if context.is_decentralized():
+        preps: Optional[dict] = \
+            context.engine.prep.get_main_preps_in_dict(context, term)
     if preps is None:
         preps = {}
 

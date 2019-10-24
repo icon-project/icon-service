@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from .base_part import BasePart
 from ..base.address import AddressPrefix
 from ..base.exception import InvalidParamsException, OutOfBalanceException
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REV_IISS
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision
 from ..utils import set_flag
 from ..utils.msgpack_for_db import MsgPackForDB
 
@@ -214,7 +214,7 @@ class CoinPart(BasePart):
 
         :return: data including information of CoinPart object
         """
-        if revision >= REV_IISS:
+        if revision >= Revision.IISS.value:
             return self._to_msg_packed_bytes()
         else:
             return self._to_struct_packed_bytes()
