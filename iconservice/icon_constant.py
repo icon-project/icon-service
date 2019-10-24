@@ -163,6 +163,9 @@ class ConfigKey:
     LOG_FILE_PATH = 'filePath'
     STEP_TRACE_FLAG = 'stepTraceFlag'
 
+    #icon rc
+    ICON_RC_DIR_PATH = 'iconRcPath'
+
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
     REWARD_POINT = 'rewardPoint'
