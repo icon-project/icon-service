@@ -88,8 +88,8 @@ class Engine(EngineBase):
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
         self._listeners: List['EngineListener'] = []
 
-    def open(self, context: 'IconScoreContext', log_dir: str, data_path: str, socket_path: str, ipc_timeout: int):
-        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout)
+    def open(self, context: 'IconScoreContext', log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
+        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path)
 
     def add_listener(self, listener: 'EngineListener'):
         assert isinstance(listener, EngineListener)
@@ -181,10 +181,11 @@ class Engine(EngineBase):
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height, cb_data.state_hash)
         Logger.debug(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
-    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int):
+    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
         self._reward_calc_proxy = RewardCalcProxy(calc_done_callback=self.calculate_done_callback,
                                                   ready_callback=self.ready_callback,
-                                                  ipc_timeout=ipc_timeout)
+                                                  ipc_timeout=ipc_timeout,
+                                                  icon_rc_path=icon_rc_path)
         self._reward_calc_proxy.open(log_dir=log_dir, sock_path=socket_path, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 

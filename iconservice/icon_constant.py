@@ -164,6 +164,9 @@ class ConfigKey:
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
+    #icon rc
+    ICON_RC_DIR_PATH = 'iconRcPath'
+
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
     REWARD_POINT = 'rewardPoint'
