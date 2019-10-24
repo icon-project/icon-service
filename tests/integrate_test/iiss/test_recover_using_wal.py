@@ -47,7 +47,7 @@ class RCDataCheckFlag(IntFlag):
 
 
 # In this test, do not check about the IPC
-class TestWAL(TestIISSBase):
+class TestRecoverUsingWAL(TestIISSBase):
     def setUp(self):
         super().setUp()
         self.init_decentralized()
@@ -164,6 +164,8 @@ class TestWAL(TestIISSBase):
 
         if is_calc_period_start_block:
             self.assertEqual(RCDataCheckFlag.ALL_ON_START, rc_data_flag)
+            self.assertTrue(os.path.exists(os.path.join(rc_data_path,
+                                                        f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}{block_height - 1}_2")))
         else:
             self.assertEqual(RCDataCheckFlag.ALL_ON_CALC, rc_data_flag)
 
