@@ -16,6 +16,7 @@
 
 import os
 import shutil
+from enum import IntFlag, auto
 
 from iconservice.database.db import KeyValueDatabase
 from iconservice.database.wal import WriteAheadLogWriter, StateWAL, IissWAL, WALState
@@ -28,6 +29,21 @@ from iconservice.iiss.reward_calc.msg_data import PRepsData, TxData, \
 from iconservice.precommit_data_manager import PrecommitData
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
+
+
+class RCDataCheckFlag(IntFlag):
+    NONE = 0
+    PREP = auto()
+    UNREGISTER_TX = auto()
+    DELEGATION_TX = auto()
+    TX_INDEX = auto()
+
+    VERSION = auto()
+    HEADER = auto()
+    GOVERNANCE = auto()
+
+    ALL_ON_CALC = PREP | UNREGISTER_TX | DELEGATION_TX | TX_INDEX
+    ALL_ON_START = ALL_ON_CALC | VERSION | HEADER | GOVERNANCE
 
 
 # In this test, do not check about the IPC
@@ -117,48 +133,39 @@ class TestWAL(TestIISSBase):
         rc_data_path: str = os.path.join(self._state_db_root_path, IISS_DB)
         # Get_last_rc_db: str = TestRCDatabase.get_last_rc_db_data(rc_data_path)
         cuerent_rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, "current_db"))
-        is_prep_written: bool = False
-        is_unregister_written: bool = False
-        is_delegation_written: bool = False
-        is_head_written: bool = False
-        is_gv_written: bool = False
-        is_version_written: bool = False
-        is_tx_index_written: bool = False
+        rc_data_flag = RCDataCheckFlag(0)
         for rc_data in cuerent_rc_db.iterator():
             if rc_data[0][:2] == PRepsData.PREFIX:
                 pr: 'PRepsData' = PRepsData.from_bytes(rc_data[0], rc_data[1])
                 if pr.block_height == block_height:
-                    is_prep_written = True
+                    rc_data_flag |= RCDataCheckFlag.PREP
             if rc_data[0][:2] == TxData.PREFIX:
                 tx: 'TxData' = TxData.from_bytes(rc_data[1])
                 expected_index: int = -1
                 tx_index: int = int.from_bytes(rc_data[0][2:], 'big')
                 if tx.type == TxType.PREP_UNREGISTER:
                     expected_index: int = 0
-                    is_unregister_written = True
+                    rc_data_flag |= RCDataCheckFlag.UNREGISTER_TX
                 elif tx.type == TxType.DELEGATION:
                     expected_index: int = 1
-                    is_delegation_written = True
+                    rc_data_flag |= RCDataCheckFlag.DELEGATION_TX
                 self.assertEqual(expected_index, tx_index)
                 self.assertEqual(block_height, tx.block_height)
             if rc_data[0] == RewardCalcStorage.KEY_FOR_GETTING_LAST_TRANSACTION_INDEX:
-                is_tx_index_written = True
-            if is_calc_period_start_block and rc_data[0] == RewardCalcStorage.KEY_FOR_VERSION_AND_REVISION:
-                is_version_written = True
+                rc_data_flag |= RCDataCheckFlag.TX_INDEX
 
-            # In case of the start of calc, should check if header and gv has been put correctly
+            # In case of the start of calc, should check if version, header and gv has been put correctly
+            if is_calc_period_start_block and rc_data[0] == RewardCalcStorage.KEY_FOR_VERSION_AND_REVISION:
+                rc_data_flag |= RCDataCheckFlag.VERSION
             if is_calc_period_start_block and rc_data[0][:2] == Header.PREFIX:
-                is_head_written = True
+                rc_data_flag |= RCDataCheckFlag.HEADER
             if is_calc_period_start_block and rc_data[0][:2] == GovernanceVariable.PREFIX:
-                is_gv_written = True
-        self.assertTrue(is_prep_written)
-        self.assertTrue(is_unregister_written)
-        self.assertTrue(is_delegation_written)
-        self.assertTrue(is_tx_index_written)
+                rc_data_flag |= RCDataCheckFlag.GOVERNANCE
+
         if is_calc_period_start_block:
-            self.assertTrue(is_version_written)
-            self.assertTrue(is_head_written)
-            self.assertTrue(is_gv_written)
+            self.assertEqual(RCDataCheckFlag.ALL_ON_START, rc_data_flag)
+        else:
+            self.assertEqual(RCDataCheckFlag.ALL_ON_CALC, rc_data_flag)
 
     def _check_the_db_after_recover(self, last_block_before_close: int, is_calc_period_start_block: bool):
         last_block_after_open: int = self._get_last_block_from_icon_service()
@@ -183,7 +190,6 @@ class TestWAL(TestIISSBase):
         wal_writer.write_walogable(iiss_wal)
         wal_writer.close()
 
-        # Close last
         self._close_and_reopen_iconservice()
         last_block_after_open: int = self._get_last_block_from_icon_service()
 
@@ -202,10 +208,9 @@ class TestWAL(TestIISSBase):
         self._write_batch_to_wal(wal_writer, state_wal, iiss_wal, is_start_block)
 
         # write rc data to rc db
+        # do not write state of wal (which means overwriting the rc data to db)
         self.icon_service_engine._process_iiss_commit(context, precommit_data, iiss_wal, is_start_block)
-        # do not write state of wal (which is mean overwriting the rc data to db)
 
-        # close and reopen
         self._close_and_reopen_iconservice()
 
         self._check_the_db_after_recover(last_block_before_close, is_start_block)
@@ -225,7 +230,6 @@ class TestWAL(TestIISSBase):
         self.icon_service_engine._process_iiss_commit(context, precommit_data, iiss_wal, is_start_block)
         wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
 
-        # close and reopen
         self._close_and_reopen_iconservice()
 
         self._check_the_db_after_recover(last_block_before_close, is_start_block)
@@ -243,7 +247,6 @@ class TestWAL(TestIISSBase):
 
         # remove all iiss_db
         self._remove_all_iiss_db_before_reopen()
-        # close and reopen
         self._close_and_reopen_iconservice()
 
         self._check_the_db_after_recover(last_block_before_close, is_start_block)
@@ -264,14 +267,13 @@ class TestWAL(TestIISSBase):
 
         # Remove all iiss_db
         self._remove_all_iiss_db_before_reopen()
-        # Close and reopen
         self._close_and_reopen_iconservice()
 
         self._check_the_db_after_recover(last_block_before_close, is_start_block)
 
     def test_close_standby_and_current_exists_on_the_start(self):
         # Success case: Iconservice is closed after changing current db to standby db and create new current db,
-        # should change stanby db to iiss db  (That is before commit data to rc db)
+        # should change standby db to iiss db  (That is before commit data to rc db)
         self.make_blocks_to_end_calculation()
         is_start_block: bool = True
         last_block_before_close: int = self._get_last_block_from_icon_service()
@@ -286,7 +288,6 @@ class TestWAL(TestIISSBase):
 
         # Remove all iiss_db
         self._remove_all_iiss_db_before_reopen()
-        # Close and reopen
         self._close_and_reopen_iconservice()
 
         self._check_the_db_after_recover(last_block_before_close, is_start_block)
@@ -321,7 +322,6 @@ class TestWAL(TestIISSBase):
         self._remove_all_iiss_db_before_reopen()
         # Change the standby db to iiss_db
         RewardCalcStorage.rename_standby_db_to_iiss_db(standby_db_path.path)
-        # Close and reopen
         self._close_and_reopen_iconservice()
 
         self._check_the_db_after_recover(last_block_before_close, is_start_block)
