@@ -331,7 +331,7 @@ class IconScoreInnerTask(object):
             block_height, instant_block_hash, _ = \
                 self._get_block_info_for_precommit_state(converted_block_params)
 
-            self._icon_service_engine.rollback(block_height, instant_block_hash)
+            self._icon_service_engine.remove_precommit_state(block_height, instant_block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
@@ -345,6 +345,51 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            return response
+
+    @message_queue_task
+    async def rollback(self, request: dict):
+        """Go back to the state of the given previous block
+
+        :param request:
+        :return:
+        """
+
+        Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"rollback() start: {request}")
+
+        self._check_icon_service_ready()
+
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
+            loop = get_event_loop()
+            response = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE], self._rollback, request)
+        else:
+            response = self._rollback(request)
+
+        Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"rollback() end: {response}")
+
+    def _rollback(self, request: dict) -> dict:
+        Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"_rollback() start: {request}")
+
+        response = {}
+        try:
+            converted_params = TypeConverter.convert(request, ParamType.ROLLBACK)
+            block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
+            block_hash: bytes = converted_params[ConstantKeys.BLOCK_HASH]
+
+            response: dict = self._icon_service_engine.rollback(block_height, block_hash)
+            response = MakeResponse.make_response(response)
+        except FatalException as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+            self._close()
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except BaseException as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        finally:
+            Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"_rollback() end: {response}")
             return response
 
     @message_queue_task

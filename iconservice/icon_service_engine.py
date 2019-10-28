@@ -62,10 +62,11 @@ from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
-from .utils import print_log_with_level
+from .utils import print_log_with_level, bytes_to_hex
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
+from .base.type_converter_templates import ConstantKeys
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -1960,18 +1961,30 @@ class IconServiceEngine(ContextContainer):
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
             wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
 
-    def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
+    def remove_precommit_state(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         :param block_height: height of block which is needed to be removed from the pre-commit data manager
         :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
-        Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}")
+        Logger.warning(tag=self.TAG, msg=f"remove_precommit_state() start: height={block_height}")
 
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
-        self._precommit_data_manager.rollback(instant_block_hash)
+        self._precommit_data_manager.remove_precommit_state(instant_block_hash)
 
-        Logger.warning(tag=self.TAG, msg="rollback() end")
+        Logger.warning(tag=self.TAG, msg="remove_precommit_state() end")
+
+    def rollback(self, block_height: int, block_hash: bytes) -> dict:
+        Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}, hash={bytes_to_hex(block_hash)}")
+
+        response = {
+            ConstantKeys.BLOCK_HEIGHT: block_height,
+            ConstantKeys.BLOCK_HASH: block_hash
+        }
+
+        Logger.warning(tag=self.TAG, msg=f"rollback() end: height={block_height}, hash={bytes_to_hex(block_hash)}")
+
+        return response
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks
