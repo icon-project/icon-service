@@ -869,8 +869,6 @@ class Engine(EngineBase, IISSEngineListener):
         :param updated_accounts:
         return:
         """
-        assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
-
         for account in updated_accounts:
             assert isinstance(account, Account)
             address = account.address

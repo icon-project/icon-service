@@ -16,6 +16,7 @@
 
 import time
 from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
@@ -320,7 +321,7 @@ class Engine(EngineBase):
         :return:
         """
         sender: 'Address' = context.tx.origin
-        cached_accounts: Dict['Address', Tuple['Account', int]] = {}
+        cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
 
         # Convert setDelegation params
         total_delegating, new_delegations = \
@@ -370,7 +371,7 @@ class Engine(EngineBase):
             return 0, []
 
         if len(delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException("Delegations out of range")
+            raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
         delegations: List[Dict[str, Union['Address', int]]] = \
@@ -378,7 +379,7 @@ class Engine(EngineBase):
 
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
-        delegated_addresses: Dict['Address', int] = {}
+        delegated_addresses = set()
 
         for delegation in delegations:
             address: 'Address' = delegation["address"]
@@ -392,7 +393,7 @@ class Engine(EngineBase):
             if address in delegated_addresses:
                 raise InvalidParamsException(f"Duplicated address: {address}")
 
-            delegated_addresses[address] = value
+            delegated_addresses.add(address)
 
             if value > 0:
                 total_delegating += value
