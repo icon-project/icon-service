@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
+from iconservice.database.backup_manager import BackupManager
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -28,6 +29,7 @@ from .base.exception import (
     DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
+from .base.type_converter_templates import ConstantKeys
 from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
@@ -66,7 +68,6 @@ from .utils import print_log_with_level, bytes_to_hex
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
-from .base.type_converter_templates import ConstantKeys
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -98,6 +99,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
+        self._backup_manager: Optional[BackupManager] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -141,6 +143,7 @@ class IconServiceEngine(ContextContainer):
 
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
+        self._backup_manager = BackupManager(state_db_root_path, rc_data_path, self._icx_context_db.key_value_db)
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
@@ -1825,6 +1828,14 @@ class IconServiceEngine(ContextContainer):
         wal_writer, state_wal, iiss_wal = \
             self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
         wal_writer.flush()
+
+        # Backup the previous block state
+        self._backup_manager.run(context=context,
+                                 prev_block=self._get_last_block(),
+                                 precommit_data=precommit_data,
+                                 iiss_wal=iiss_wal,
+                                 is_calc_period_start_block=is_calc_period_start_block,
+                                 instant_block_hash=instant_block_hash)
 
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \
