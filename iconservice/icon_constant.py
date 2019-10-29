@@ -257,7 +257,8 @@ PREP_METHOD_TABLE = [
 ]
 
 DEBUG_METHOD_TABLE = [
-    "getIISSInfo"
+    "getIISSInfo",
+    "getServiceConfig"
 ]
 
 HASH_TYPE_TABLE = [

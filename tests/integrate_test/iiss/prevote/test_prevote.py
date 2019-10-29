@@ -74,6 +74,16 @@ class TestIISS(TestIISSBase):
         }
         self.assertEqual(expected_response, response)
 
+    def test_get_service_config(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(Revision.IISS.value)
+
+        # get iiss info
+        response: dict = self.get_service_config()
+        self.assertEqual(self._config, response["config"])
+
     def test_estimate_step_prevote(self):
         self.update_governance()
 

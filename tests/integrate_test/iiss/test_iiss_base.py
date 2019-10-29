@@ -357,6 +357,19 @@ class TestIISSBase(TestIntegrateBase):
         }
         return self._query(query_request)
 
+    def get_service_config(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getServiceConfig",
+                "params": {}
+            }
+        }
+        return self._query(query_request)
+
     # ===== API =====#
 
     def claim_iscore(self,

@@ -89,7 +89,13 @@ class Engine(EngineBase):
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
         self._listeners: List['EngineListener'] = []
 
-    def open(self, context: 'IconScoreContext', log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
+    def open(self,
+             context: 'IconScoreContext',
+             log_dir: str,
+             data_path: str,
+             socket_path: str,
+             ipc_timeout: int,
+             icon_rc_path: str):
         self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path)
 
     def add_listener(self, listener: 'EngineListener'):

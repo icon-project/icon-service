@@ -97,6 +97,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
+        self._conf: 'IconConfig' = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -186,6 +187,8 @@ class IconServiceEngine(ContextContainer):
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
+
+        self._conf = conf
 
     def _init_component_context(self):
         engine: 'ContextEngine' = ContextEngine(deploy=DeployEngine(),
@@ -1269,7 +1272,11 @@ class IconServiceEngine(ContextContainer):
             elif self._check_prep_process(params):
                 return context.engine.prep.query(context, data)
             elif self._check_debug_process(params):
-                return self._handle_get_iiss_info(context, data)
+                method_name: str = data["method"]
+                if method_name == "getIISSInfo":
+                    return self._handle_get_iiss_info(context, data)
+                elif method_name == "getServiceConfig":
+                    return self._handle_get_service_config(context, data)
             else:
                 raise InvalidParamsException("Invalid Method")
         else:
@@ -1334,6 +1341,13 @@ class IconServiceEngine(ContextContainer):
 
         response['rcResult'] = self._create_rc_result(context, calc_start_block, calc_end_block)
 
+        return response
+
+    def _handle_get_service_config(self,
+                                   context: 'IconScoreContext',
+                                   _params: dict) -> dict:
+        response = dict()
+        response['config'] = self._conf
         return response
 
     def _handle_icx_send_transaction(self,
