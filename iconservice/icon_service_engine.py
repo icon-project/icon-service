@@ -97,7 +97,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
-        self._conf: 'IconConfig' = None
+        self._conf: dict = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -188,7 +188,7 @@ class IconServiceEngine(ContextContainer):
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
 
-        self._conf = conf
+        self._conf = dict(conf)
 
     def _init_component_context(self):
         engine: 'ContextEngine' = ContextEngine(deploy=DeployEngine(),
@@ -1262,7 +1262,16 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        if self._check_new_process(params):
+        if self._check_debug_process(params):
+            data: dict = params['data']
+            method_name: str = data["method"]
+            if method_name == "getIISSInfo":
+                return self._handle_get_iiss_info(context, data)
+            elif method_name == "getServiceConfig":
+                return self._handle_get_service_config(context, data)
+            else:
+                raise InvalidParamsException("Invalid Method")
+        elif self._check_new_process(params):
             if context.revision < Revision.IISS.value:
                 raise InvalidParamsException(f"Method Not Found")
 
@@ -1271,12 +1280,6 @@ class IconServiceEngine(ContextContainer):
                 return context.engine.iiss.query(context, data)
             elif self._check_prep_process(params):
                 return context.engine.prep.query(context, data)
-            elif self._check_debug_process(params):
-                method_name: str = data["method"]
-                if method_name == "getIISSInfo":
-                    return self._handle_get_iiss_info(context, data)
-                elif method_name == "getServiceConfig":
-                    return self._handle_get_service_config(context, data)
             else:
                 raise InvalidParamsException("Invalid Method")
         else:
@@ -1315,6 +1318,9 @@ class IconServiceEngine(ContextContainer):
         return rc_result
 
     def _handle_get_iiss_info(self, context: 'IconScoreContext', _params: dict) -> dict:
+        if context.revision < Revision.IISS.value:
+            raise InvalidParamsException(f"Method Not Found")
+
         response = dict()
         term = context.engine.prep.term
 
@@ -1346,9 +1352,7 @@ class IconServiceEngine(ContextContainer):
     def _handle_get_service_config(self,
                                    context: 'IconScoreContext',
                                    _params: dict) -> dict:
-        response = dict()
-        response['config'] = self._conf
-        return response
+        return dict(self._conf)
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -1498,7 +1502,24 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _check_debug_process(params: dict) -> bool:
+        """Check if data in params is debug
+
+        :param params: tx params
+        :return: True(IISS tx), False(None IISS tx)
+        """
+
+        to: Optional['Address'] = params.get('to')
+        if to != ZERO_SCORE_ADDRESS:
+            return False
+
+        data_type: Optional[str] = params.get('dataType')
+        if data_type != 'call':
+            return False
+
         data: Optional[dict] = params.get('data')
+        if data is None or not isinstance(data, dict):
+            return False
+
         method_name: Optional[str] = data.get("method")
         return method_name in DEBUG_METHOD_TABLE
 

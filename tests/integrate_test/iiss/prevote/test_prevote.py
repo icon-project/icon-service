@@ -82,7 +82,7 @@ class TestIISS(TestIISSBase):
 
         # get iiss info
         response: dict = self.get_service_config()
-        self.assertEqual(self._config, response["config"])
+        self.assertEqual(self._config, response)
 
     def test_estimate_step_prevote(self):
         self.update_governance()
