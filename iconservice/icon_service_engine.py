@@ -2121,8 +2121,8 @@ class IconServiceEngine(ContextContainer):
             is_iiss_exists: bool = len(iiss_rc_db_path) > 0
             Logger.info(tag=WAL_LOG_TAG,
                         msg=f"current_exists={is_current_exists}, "
-                        f"is_standby_exists={is_standby_exists}, "
-                        f"is_iiss_exists={is_iiss_exists}")
+                            f"is_standby_exists={is_standby_exists}, "
+                            f"is_iiss_exists={is_iiss_exists}")
 
             # If only current_db exists, replace current_db to standby_rc_db
             if is_current_exists and not is_standby_exists and not is_iiss_exists:
