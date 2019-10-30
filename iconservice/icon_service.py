@@ -17,12 +17,13 @@
 import argparse
 import asyncio
 import os
+import setproctitle
 import signal
 import sys
 
-import setproctitle
-
+import pkg_resources
 from earlgrey import MessageQueueService, aio_pika
+
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
 from iconservice.base.exception import FatalException
@@ -57,10 +58,13 @@ class IconService(object):
         amqp_target = config[ConfigKey.AMQP_TARGET]
         score_root_path = config[ConfigKey.SCORE_ROOT_PATH]
         db_root_path = config[ConfigKey.STATE_DB_ROOT_PATH]
+        version: str = get_version()
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
         Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
+
+        Logger.info(f'version : {version}', ICON_SERVICE)
         Logger.info(f'score_root_path : {score_root_path}', ICON_SERVICE)
         Logger.info(f'icon_score_state_db_root_path  : {db_root_path}', ICON_SERVICE)
         Logger.info(f'amqp_target  : {amqp_target}', ICON_SERVICE)
@@ -180,6 +184,27 @@ async def _check_rabbitmq(amqp_target: str):
     finally:
         if connection:
             await connection.close()
+
+
+DIR_PATH = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT_PATH = os.path.abspath(os.path.join(DIR_PATH, '..'))
+
+
+def get_version() -> str:
+    """Get version of iconservice.
+    The location of the file that holds the version information is different when packaging and when executing.
+    :return: version of tbears.
+    """
+    try:
+        version = pkg_resources.get_distribution('iconservice').version
+    except pkg_resources.DistributionNotFound:
+        version_path = os.path.join(PROJECT_ROOT_PATH, 'VERSION')
+        with open(version_path, mode='r') as version_file:
+            version = version_file.read()
+    except:
+        version = 'unknown'
+    return version
+
 
 if __name__ == '__main__':
     main()
