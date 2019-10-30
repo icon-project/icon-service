@@ -1352,7 +1352,40 @@ class IconServiceEngine(ContextContainer):
     def _handle_get_service_config(self,
                                    context: 'IconScoreContext',
                                    _params: dict) -> dict:
-        return dict(self._conf)
+        info: dict = self._flatten_config(self._conf)
+
+        flag: int = IconScoreContextUtil.get_service_flag(context)
+        info[ConfigKey.SERVICE_FEE] = \
+            IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE)
+        info[ConfigKey.SERVICE_AUDIT] = \
+            IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.AUDIT)
+        info[ConfigKey.SERVICE_DEPLOYER_WHITE_LIST] = \
+            IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST)
+        info[ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR] = \
+            IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.SCORE_PACKAGE_VALIDATOR)
+
+        info[ConfigKey.BUILTIN_SCORE_OWNER] = IconScoreContextUtil.get_owner(context, GOVERNANCE_SCORE_ADDRESS)
+        info[ConfigKey.IISS_CALCULATE_PERIOD] = context.storage.iiss.get_calc_period(context)
+        info[ConfigKey.PREP_REGISTRATION_FEE] = context.storage.prep.prep_registration_fee
+
+        return info
+
+    @classmethod
+    def _flatten_config(cls, conf: dict):
+        obj = {}
+
+        def recurse(k, v):
+            if k == 'log':
+                return
+
+            if isinstance(v, dict):
+                for k, v in v.items():
+                    recurse(k, v)
+            else:
+                obj[k] = v
+
+        recurse("", conf)
+        return obj
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -2088,8 +2121,8 @@ class IconServiceEngine(ContextContainer):
             is_iiss_exists: bool = len(iiss_rc_db_path) > 0
             Logger.info(tag=WAL_LOG_TAG,
                         msg=f"current_exists={is_current_exists}, "
-                            f"is_standby_exists={is_standby_exists}, "
-                            f"is_iiss_exists={is_iiss_exists}")
+                        f"is_standby_exists={is_standby_exists}, "
+                        f"is_iiss_exists={is_iiss_exists}")
 
             # If only current_db exists, replace current_db to standby_rc_db
             if is_current_exists and not is_standby_exists and not is_iiss_exists:

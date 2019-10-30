@@ -17,6 +17,7 @@
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from iconservice.utils import is_flag_on
 from .icon_score_class_loader import IconScoreClassLoader
 from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
@@ -205,15 +206,11 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:
-        service_flag = IconScoreContextUtil._get_service_flag(context)
-        return IconScoreContextUtil._is_flag_on(service_flag, flag)
+        service_flag = IconScoreContextUtil.get_service_flag(context)
+        return is_flag_on(service_flag, flag)
 
     @staticmethod
-    def _is_flag_on(src_flag: int, dst_flag: int) -> bool:
-        return src_flag & dst_flag == dst_flag
-
-    @staticmethod
-    def _get_service_flag(context: 'IconScoreContext') -> int:
+    def get_service_flag(context: 'IconScoreContext') -> int:
         governance_score = \
             IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
 

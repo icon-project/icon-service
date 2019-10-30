@@ -16,7 +16,7 @@
 """Test for icon_score_base.py and icon_score_base2.py"""
 from unittest.mock import Mock
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.exception import MethodNotFoundException, ServiceNotReadyException, FatalException
 from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -80,9 +80,38 @@ class TestIISS(TestIISSBase):
         # set Revision REV_IISS
         self.set_revision(Revision.IISS.value)
 
+        expected_response: dict = {'amqpKey': self._config[ConfigKey.AMQP_KEY],
+                                   'amqpTarget': self._config[ConfigKey.AMQP_TARGET],
+                                   'audit': self._config[ConfigKey.SERVICE][ConfigKey.SERVICE_AUDIT],
+                                   'blockValidationPenaltyThreshold': self._config[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
+                                   'builtinScoreOwner': Address.from_string(self._config[ConfigKey.BUILTIN_SCORE_OWNER]),
+                                   'channel': self._config[ConfigKey.CHANNEL],
+                                   'decentralizeTrigger': self._config[ConfigKey.DECENTRALIZE_TRIGGER],
+                                   'deployerWhiteList': self._config[ConfigKey.SERVICE][ConfigKey.SERVICE_DEPLOYER_WHITE_LIST],
+                                   'fee': self._config[ConfigKey.SERVICE][ConfigKey.SERVICE_FEE],
+                                   'iconRcPath': self._config[ConfigKey.ICON_RC_DIR_PATH],
+                                   'iissCalculatePeriod': self._config[ConfigKey.IISS_CALCULATE_PERIOD],
+                                   'initialIRep': self._config[ConfigKey.INITIAL_IREP],
+                                   'ipcTimeout': self._config[ConfigKey.IPC_TIMEOUT],
+                                   'lockMax': self._config[ConfigKey.IISS_META_DATA][ConfigKey.UN_STAKE_LOCK_MAX],
+                                   'lockMin': self._config[ConfigKey.IISS_META_DATA][ConfigKey.UN_STAKE_LOCK_MIN],
+                                   'lowProductivityPenaltyThreshold': self._config[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
+                                   'mainAndSubPRepCount': self._config[ConfigKey.PREP_MAIN_AND_SUB_PREPS],
+                                   'mainPRepCount': self._config[ConfigKey.PREP_MAIN_PREPS],
+                                   'penaltyGracePeriod': self._config[ConfigKey.PENALTY_GRACE_PERIOD],
+                                   'precommitDataLogFlag': self._config[ConfigKey.PRECOMMIT_DATA_LOG_FLAG],
+                                   'prepRegistrationFee': self._config[ConfigKey.PREP_REGISTRATION_FEE],
+                                   'rewardMAX': self._config[ConfigKey.IISS_META_DATA][ConfigKey.REWARD_MAX],
+                                   'rewardMin': self._config[ConfigKey.IISS_META_DATA][ConfigKey.REWARD_MIN],
+                                   'rewardPoint': self._config[ConfigKey.IISS_META_DATA][ConfigKey.REWARD_POINT],
+                                   'scorePackageValidator': True,
+                                   'scoreRootPath': self._config[ConfigKey.SCORE_ROOT_PATH],
+                                   'stateDbRootPath': self._config[ConfigKey.STATE_DB_ROOT_PATH],
+                                   'stepTraceFlag': self._config[ConfigKey.STEP_TRACE_FLAG],
+                                   'termPeriod': self._config[ConfigKey.TERM_PERIOD]}
         # get iiss info
         response: dict = self.get_service_config()
-        self.assertEqual(self._config, response)
+        self.assertEqual(expected_response, response)
 
     def test_estimate_step_prevote(self):
         self.update_governance()
