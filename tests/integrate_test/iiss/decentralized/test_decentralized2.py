@@ -132,7 +132,8 @@ class TestIISSDecentralized2(TestIISSBase):
                 "iscore": 0,
                 "estimatedICX": 0,
                 "startBlockHeight": block_height - calc_period + 1,
-                "endBlockHeight": block_height
+                "endBlockHeight": block_height,
+                'stateHash': b'mocked_response'
             }
         }
         self.assertEqual(expected_response, response)
@@ -157,7 +158,8 @@ class TestIISSDecentralized2(TestIISSBase):
                 "iscore": 0,
                 "estimatedICX": 0,
                 "startBlockHeight": block_height - prev_calc_period + 1,
-                "endBlockHeight": block_height
+                "endBlockHeight": block_height,
+                'stateHash': b'mocked_response'
             }
         }
         self.assertEqual(expected_response, response)
