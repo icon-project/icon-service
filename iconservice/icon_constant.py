@@ -115,6 +115,7 @@ class Revision(Enum):
     FOUR = auto()
     IISS = auto()
     DECENTRALIZATION = auto()
+    FIX_IS_902 = auto()
 
     LATEST = auto()
 

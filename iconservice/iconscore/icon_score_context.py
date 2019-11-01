@@ -265,7 +265,7 @@ class IconScoreContext(object):
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
 
-        self._term.update_preps([dirty_prep])
+        self._term.update_preps(self.revision, [dirty_prep])
 
         Logger.info(tag=self.TAG, msg=f"Invalid main and sub prep: {dirty_prep}")
 
