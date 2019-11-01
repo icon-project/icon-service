@@ -97,6 +97,7 @@ class DataCreator:
         data.address = address
         data.block_height = block_height
         data.data = tx_data
+        data.type = tx_data.get_type()
         return data
 
     @staticmethod

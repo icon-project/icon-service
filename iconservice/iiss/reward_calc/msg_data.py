@@ -318,6 +318,10 @@ class TxData(Data):
         else:
             raise InvalidParamsException(f"InvalidParams TxType: {tx_type}")
 
+    def __str__(self):
+        return f"[{self.PREFIX}] " \
+               f"address: {self.address}, block height: {str(self.block_height)}, TX type: {self.type}"
+
 
 class Tx(object, metaclass=ABCMeta):
     @abstractmethod
