@@ -142,6 +142,7 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_main_prep_unregistration(self):
         context = Mock()
+        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -162,7 +163,7 @@ class TestEngine(unittest.TestCase):
         assert new_preps.get_by_index(0) != prep
 
         # Replace main P-Rep0 with sub P-Rep0
-        new_term.update_preps([dirty_prep])
+        new_term.update_preps(revision, [dirty_prep])
         PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
         assert len(new_term.main_preps) == self.main_prep_count
         assert len(new_term.sub_preps) == self.sub_prep_count - 1
@@ -174,6 +175,7 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_sub_prep_unregistration(self):
         context = Mock()
+        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -194,7 +196,7 @@ class TestEngine(unittest.TestCase):
         assert old_preps.get_by_index(index) == prep
         assert new_preps.get_by_index(index) != prep
 
-        new_term.update_preps([dirty_prep])
+        new_term.update_preps(revision, [dirty_prep])
         PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
         _check_prep_grades(new_preps, len(new_term.main_preps), len(new_term))
         assert len(new_term.main_preps) == self.main_prep_count
@@ -208,6 +210,7 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_disqualification(self):
         context = Mock()
+        revision: int = 0
 
         states = [PRepStatus.DISQUALIFIED, PRepStatus.DISQUALIFIED, PRepStatus.ACTIVE]
         penalties = [
@@ -237,7 +240,7 @@ class TestEngine(unittest.TestCase):
             assert old_preps.get_by_index(index) == prep
             assert new_preps.get_by_index(index) != prep
 
-            new_term.update_preps([dirty_prep])
+            new_term.update_preps(revision, [dirty_prep])
             PRepEngine._update_prep_grades(context, new_preps, old_term, new_term)
             if penalties[i] != PenaltyReason.BLOCK_VALIDATION:
                 _check_prep_grades(new_preps, len(new_term.main_preps), len(new_term))
@@ -260,6 +263,7 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_multiple_cases(self):
         context = Mock()
+        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -287,7 +291,7 @@ class TestEngine(unittest.TestCase):
             assert new_preps.get_by_address(prep.address) != prep
             assert new_preps.get_by_address(prep.address) == dirty_prep
 
-            new_term.update_preps([dirty_prep])
+            new_term.update_preps(revision, [dirty_prep])
 
         # Sub P-Rep
         main_prep_count = len(new_term.main_preps)
@@ -310,7 +314,7 @@ class TestEngine(unittest.TestCase):
             assert new_preps.get_by_address(address) != prep
             assert new_preps.get_by_address(address) == dirty_prep
 
-            new_term.update_preps([dirty_prep])
+            new_term.update_preps(revision, [dirty_prep])
 
         # Candidate P-Rep
         for _ in range(3):

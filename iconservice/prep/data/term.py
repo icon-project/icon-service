@@ -81,6 +81,7 @@ class Term(object):
         self._total_supply = total_supply
         self._total_delegated = total_delegated
         self._total_elected_prep_delegated = 0
+        self._total_elected_prep_delegated_snapshot: int = 0
 
         self._main_preps: List['PRepSnapshot'] = []
         self._sub_preps: List['PRepSnapshot'] = []
@@ -115,6 +116,7 @@ class Term(object):
             f"total_supply={self._total_supply} " \
             f"total_delegated={self._total_delegated} " \
             f"total_elected_prep_delegated={self._total_elected_prep_delegated} " \
+            f"_total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot} " \
             f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
 
     def __contains__(self, address: 'Address') -> bool:
@@ -136,6 +138,7 @@ class Term(object):
             and self._total_supply == other._total_supply \
             and self._total_delegated == other._total_delegated \
             and self._total_elected_prep_delegated == other._total_elected_prep_delegated \
+            and self._total_elected_prep_delegated_snapshot == other._total_elected_prep_delegated_snapshot \
             and self._main_preps == other._main_preps \
             and self._sub_preps == other._sub_preps \
             and self._preps_dict == other._preps_dict \
@@ -195,6 +198,14 @@ class Term(object):
         :return:
         """
         return self._total_elected_prep_delegated
+
+    @property
+    def total_elected_prep_delegated_snapshot(self) -> int:
+        """The sum of delegated amount which only main and sub P-Reps got on start Term
+
+        :return:
+        """
+        return self._total_elected_prep_delegated_snapshot
 
     @property
     def main_preps(self) -> List['PRepSnapshot']:
@@ -257,10 +268,12 @@ class Term(object):
 
             self._preps_dict[snapshot.address] = snapshot
 
+        self._total_elected_prep_delegated_snapshot = total_elected_prep_delegated
         self._total_elected_prep_delegated = total_elected_prep_delegated
+
         self._generate_root_hash()
 
-    def update_preps(self, invalid_elected_preps: Iterable['PRep']):
+    def update_preps(self, revision: int, invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
 
         :param invalid_elected_preps:
@@ -270,9 +283,9 @@ class Term(object):
         self._check_access_permission()
 
         for prep in invalid_elected_preps:
-            if self._remove_invalid_main_prep(prep) >= 0:
+            if self._remove_invalid_main_prep(revision, prep) >= 0:
                 continue
-            if self._remove_invalid_sub_prep(prep) >= 0:
+            if self._remove_invalid_sub_prep(revision, prep) >= 0:
                 continue
 
             raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
@@ -280,7 +293,7 @@ class Term(object):
         if self.is_dirty():
             self._generate_root_hash()
 
-    def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_main_prep(self, revision: int, invalid_prep: 'PRep') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
 
         :param invalid_prep: an invalid main P-Rep
@@ -306,13 +319,13 @@ class Term(object):
                 msg=f"Replace a main P-Rep: "
                     f"index={index} {address} -> {self._main_preps[index].address}")
 
-        self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
+        self._reduce_total_elected_prep_delegated(revision, invalid_prep, invalid_prep_snapshot.delegated)
         del self._preps_dict[address]
 
         self._flag |= _Flag.DIRTY
         return index
 
-    def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_sub_prep(self, revision: int, invalid_prep: 'PRep') -> int:
         """Remove an invalid sub P-Rep from self._sub_preps
 
         :param invalid_prep: an invalid sub P-Rep
@@ -323,20 +336,21 @@ class Term(object):
 
         if index >= 0:
             invalid_prep_snapshot = self._sub_preps.pop(index)
-            self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
+            self._reduce_total_elected_prep_delegated(revision, invalid_prep, invalid_prep_snapshot.delegated)
             del self._preps_dict[invalid_prep.address]
 
             self._flag |= _Flag.DIRTY
 
         return index
 
-    def _reduce_total_elected_prep_delegated(self, invalid_prep: 'PRep', delegated: int):
+    def _reduce_total_elected_prep_delegated(self, revision: int, invalid_prep: 'PRep', delegated: int):
         """Reduce total_elected_prep_delegated by the delegated amount of the given invalid P-Rep
 
         :param invalid_prep:
         :param delegated:
         :return:
         """
+
         # The P-Rep that gets BLOCK_VALIDATION penalty cannot serve as a main or sub P-Rep during this term,
         # but its B2 reward should be provided continuously
         if invalid_prep.status != PRepStatus.ACTIVE \
@@ -357,7 +371,6 @@ class Term(object):
         return -1
 
     def _generate_root_hash(self):
-
         def _gen(snapshots: Iterable['PRepSnapshot']) -> bytes:
             for snapshot in snapshots:
                 yield snapshot.address.to_bytes_including_prefix()
@@ -366,7 +379,7 @@ class Term(object):
             RootHashGenerator.generate_root_hash(values=_gen(self._main_preps), do_hash=True)
 
     @classmethod
-    def from_list(cls, data: List) -> 'Term':
+    def from_list(cls, data: List, total_elected_prep_delegated_from_rc: int) -> 'Term':
         assert data[0] == cls._VERSION
         sequence: int = data[1]
         start_block_height: int = data[2]
@@ -393,6 +406,14 @@ class Term(object):
             total_elected_prep_delegated += delegated
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
+
+        if total_elected_prep_delegated_from_rc < 0:
+            Logger.warning(tag=cls.TAG,
+                           msg=f"total_elected_prep_delegated_from_rc < 0")
+            term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated
+        else:
+            term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
+
         term._generate_root_hash()
 
         return term

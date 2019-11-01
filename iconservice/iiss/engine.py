@@ -30,7 +30,7 @@ from ..base.exception import \
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX
+    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -706,11 +706,11 @@ class Engine(EngineBase):
         start_term_block: int = context.engine.prep.term.start_block_height
         # New P-Rep Term is started
         if start_term_block == context.block.height:
-            self._put_preps_to_rc_db(context)
+            self._put_preps_to_rc_db(context, context.revision)
             self._put_gv_to_rc_db(context, version)
 
         if term is not None and term.is_in_term(context.block.height):
-            self._put_preps_to_rc_db(context, term)
+            self._put_preps_to_rc_db(context, context.revision, term)
 
         return rc_state_hash
 
@@ -840,7 +840,7 @@ class Engine(EngineBase):
         context.storage.rc.put(rc_block_batch, data)
 
     @classmethod
-    def _put_preps_to_rc_db(cls, context: 'IconScoreContext', term: Optional['Term'] = None):
+    def _put_preps_to_rc_db(cls, context: 'IconScoreContext', revision: int, term: Optional['Term'] = None):
         # If term is not None, it is the term which has been changed in term
         assert context.is_decentralized()
 
@@ -850,13 +850,20 @@ class Engine(EngineBase):
         else:
             block_height: int = context.block.height
 
-        Logger.debug(
+        if revision < Revision.FIX_IS_902.value:
+            total_elected_prep_delegated: int = term.total_elected_prep_delegated_snapshot
+        else:
+            total_elected_prep_delegated: int = term.total_elected_prep_delegated
+
+        Logger.info(
             tag=cls.TAG,
-            msg="_put_preps_for_rc_db() start: "
-            f"total_elected_prep_delegated={term.total_elected_prep_delegated}")
+            msg=f"put_preps_for_rc_db"
+                f"block_height={block_height}"
+                f"total_elected_prep_delegated={term.total_elected_prep_delegated}"
+                f"total_elected_prep_delegated_snapshot={total_elected_prep_delegated}")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
-                                                                   term.total_elected_prep_delegated,
+                                                                   total_elected_prep_delegated,
                                                                    term.preps)
         context.storage.rc.put(context.rc_block_batch, data)
 

@@ -19,7 +19,7 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from iconcommons import Logger
-from ..reward_calc.msg_data import Header, TxData
+from ..reward_calc.msg_data import Header, TxData, PRepsData
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
@@ -84,6 +84,7 @@ class Storage(object):
         self._path = path
 
         self._db = self.create_current_db(path)
+
         self._db_iiss_tx_index = self._load_last_transaction_index()
         Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index={self._db_iiss_tx_index}")
 
@@ -275,3 +276,24 @@ class Storage(object):
                         f"iiss_rc_db={iiss_rc_db_path}")
 
         return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
+
+    def get_total_elected_prep_delegated_snapshot(self) -> int:
+        db = self._db.get_sub_db(PRepsData.PREFIX)
+        preps: list = []
+        for k, v in db.iterator():
+            data: 'PRepsData' = PRepsData.from_bytes(k, v)
+            preps = data.prep_list
+            break
+
+        if not preps:
+            return -1
+
+        ret = 0
+        if preps:
+            for info in preps:
+                ret += info.value
+
+        Logger.info(tag=IISS_LOG_TAG,
+                    msg=f"get_total_elected_prep_delegated_snapshot load: {ret}")
+
+        return ret
