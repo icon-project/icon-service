@@ -86,7 +86,7 @@ class Storage(object):
         self._db = self.create_current_db(path)
 
         self._db_iiss_tx_index = self._load_last_transaction_index()
-        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index={self._db_iiss_tx_index}")
+        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index on open={self._db_iiss_tx_index}")
 
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
@@ -227,6 +227,8 @@ class Storage(object):
     @classmethod
     def create_current_db(cls, rc_data_path: str) -> 'KeyValueDatabase':
         current_db_path = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
+
+        Logger.info(tag=IISS_LOG_TAG, msg=f"Create new current_db")
         return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
 
     @classmethod

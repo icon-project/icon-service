@@ -97,6 +97,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
+        self._last_precommit_data: 'PrecommitData' = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -447,8 +448,13 @@ class IconServiceEngine(ContextContainer):
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
-            Logger.info(tag=ICON_SERVICE_LOG_TAG,
-                        msg=f"Block result already exists: \n{precommit_data}")
+            if precommit_data != self._last_precommit_data:
+                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                            msg=f"Block result already exists: \n{precommit_data}")
+                self._last_precommit_data: 'PrecommitData' = precommit_data
+            else:
+                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                            msg=f"Block result already exists: \n{precommit_data.state_root_hash}")
             return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
 
         # Check for block validation before invoke
@@ -693,6 +699,7 @@ class IconServiceEngine(ContextContainer):
                                                                                                prev_block_generator,
                                                                                                prev_block_votes)
         context.storage.rc.put_data_directly(bp_data)
+        Logger.info(tag="TERM", msg=f"Put BP directly on start term. BP: {bp_data}")
 
     @classmethod
     def _after_transaction_process(
