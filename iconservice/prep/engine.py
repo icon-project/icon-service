@@ -872,6 +872,12 @@ class Engine(EngineBase, IISSEngineListener):
         :param updated_accounts:
         return:
         """
+        if context.revision <= Revision.DECENTRALIZATION.value:
+            # Although the following statement has a bug,
+            # preserve it for state compatibility
+            # IISS_MAX_DELEGATIONS * 2 + 1 is correct
+            assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
+
         for account in updated_accounts:
             assert isinstance(account, Account)
             address = account.address
