@@ -704,6 +704,7 @@ class IconServiceEngine(ContextContainer):
                                                                                                prev_block_generator,
                                                                                                prev_block_votes)
         context.storage.rc.put_data_directly(bp_data)
+        Logger.info(tag="TERM", msg=f"Put BP directly on start term. BP: {bp_data}")
 
     @classmethod
     def _after_transaction_process(
