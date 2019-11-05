@@ -278,8 +278,15 @@ class Storage(object):
         return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
 
     def get_total_elected_prep_delegated_snapshot(self) -> int:
+        """
+        this method calculates about origin preps delegated amount.
+
+        preps who are determied on new term are included on new RC DB when it created first.
+        so you can get origin preps data in first element.
+        """
+
         db = self._db.get_sub_db(PRepsData.PREFIX)
-        preps: list = []
+        preps: Optional[list] = None
         for k, v in db.iterator():
             data: 'PRepsData' = PRepsData.from_bytes(k, v)
             preps = data.prep_list

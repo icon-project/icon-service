@@ -850,7 +850,7 @@ class Engine(EngineBase):
         else:
             block_height: int = context.block.height
 
-        if revision < Revision.FIX_IS_902.value:
+        if revision < Revision.IS_1_5_16.value:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated_snapshot
         else:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated
