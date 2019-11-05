@@ -183,6 +183,8 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IPC_TIMEOUT],
                                      conf[ConfigKey.ICON_RC_DIR_PATH])
 
+        self._post_open_component_context(context)
+
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
@@ -275,6 +277,10 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.close(context)
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
+
+    @classmethod
+    def _post_open_component_context(cls, context: 'IconScoreContext'):
+        IconScoreContext.engine.prep.load_term(context)
 
     @classmethod
     def get_ready_future(cls):

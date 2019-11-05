@@ -14,8 +14,9 @@
 
 from typing import TYPE_CHECKING, Optional, Iterable
 
-from .data.prep import PRep
+from iconcommons import Logger
 from .data import Term
+from .data.prep import PRep
 from ..base.ComponentBase import StorageBase
 from ..base.exception import InvalidParamsException
 from ..utils.msgpack_for_db import MsgPackForDB
@@ -93,8 +94,11 @@ class Storage(StorageBase):
         value: bytes = MsgPackForDB.dumps(term.to_list())
         self._db.put(context, self.TERM_KEY, value)
 
-    def get_term(self, context: 'IconScoreContext') -> Optional['Term']:
+    def get_term(self,
+                 context: 'IconScoreContext') -> Optional['Term']:
+
         value: bytes = self._db.get(context, self.TERM_KEY)
         if value:
+            total_elected_prep_delegated_snapshot: int = context.storage.rc.get_total_elected_prep_delegated_snapshot()
             data: list = MsgPackForDB.loads(value)
-            return Term.from_list(data)
+            return Term.from_list(data, total_elected_prep_delegated_snapshot)
