@@ -64,7 +64,7 @@ from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
 from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
-from .utils import to_camel_case
+from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -451,8 +451,15 @@ class IconServiceEngine(ContextContainer):
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
-            Logger.info(tag=ICON_SERVICE_LOG_TAG,
-                        msg=f"Block result already exists: \n{precommit_data}")
+            if not precommit_data.already_exists:
+                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                            msg=f"Block result already exists: \n{precommit_data}")
+                precommit_data.already_exists = True
+            else:
+                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                            msg=f"Block result already exists: \n"
+                                f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
+
             return \
                 precommit_data.block_result, \
                 precommit_data.state_root_hash, \
