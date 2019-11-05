@@ -2065,6 +2065,11 @@ class IconServiceEngine(ContextContainer):
                 rc_version, revision = get_version_and_revision(prev_calc_db)
                 rc_version: int = max(rc_version, 0)
                 prev_calc_db.close()
+
+                # Process compaction before send the RC DB to reward calculator
+                prev_calc_db_path: str = os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
+                RewardCalcStorage.process_db_compaction(prev_calc_db_path)
+
                 calculate_block_height: int = reader.block.height - 1
                 standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
                                                                                             calculate_block_height,
