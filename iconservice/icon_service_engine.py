@@ -1290,7 +1290,7 @@ class IconServiceEngine(ContextContainer):
             return rc_result
 
         # (iscore, block_height, rc_state_hash)
-        iscore, request_block_height, _ = context.storage.rc.get_calc_response_from_rc()
+        iscore, request_block_height, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
             return rc_result
 
@@ -1304,6 +1304,7 @@ class IconServiceEngine(ContextContainer):
         rc_result['estimatedICX'] = iscore // ISCORE_EXCHANGE_RATE
         rc_result['startBlockHeight'] = start_block
         rc_result['endBlockHeight'] = end_block
+        rc_result['stateHash'] = rc_state_hash
 
         return rc_result
 
