@@ -134,7 +134,7 @@ class PrecommitData(object):
         self.added_transactions: dict = added_transactions
         self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
 
-        # To prevent redundant prevent precommit_data from being logged
+        # To prevent redundant precommit data logging
         self.already_exists = False
 
     def __str__(self):
