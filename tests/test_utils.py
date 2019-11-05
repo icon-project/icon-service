@@ -76,6 +76,20 @@ class TestUtils(unittest.TestCase):
         data: bytes = RootHashGenerator.generate_root_hash([data1, data2], do_hash=True)
         self.assertIsInstance(data, bytes)
 
+    def test_set(self):
+        a = set()
+        a.add(1)
+        a.add(2)
+        a.add(3)
+
+        a.add(1)
+
+        self.assertTrue(1 in a)
+        self.assertTrue(2 in a)
+        self.assertTrue(3 in a)
+
+        a.clear()
+
 
 if __name__ == '__main__':
     unittest.main()
