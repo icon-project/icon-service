@@ -166,7 +166,7 @@ class Engine(EngineBase):
                                  f"request:{reward_calc_bh} ")
 
     def calculate_done_callback(self, cb_data: 'CalculateDoneNotification'):
-        Logger.debug(tag=_TAG, msg=f"calculate_done_callback start")
+        Logger.info(tag=_TAG, msg=f"calculate_done_callback start")
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
         if not cb_data.success:
             raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
@@ -180,7 +180,7 @@ class Engine(EngineBase):
         self.check_calculate_request_block_height(cb_data.block_height, latest_calculate_bh)
 
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height, cb_data.state_hash)
-        Logger.debug(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
+        Logger.info(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
     def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
         self._reward_calc_proxy = RewardCalcProxy(calc_done_callback=self.calculate_done_callback,
