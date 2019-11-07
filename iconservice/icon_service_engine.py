@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
 from iconservice.database.backup_manager import BackupManager
+from iconservice.database.rollback_manager import RollbackManager
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -64,7 +65,7 @@ from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
-from .utils import print_log_with_level, bytes_to_hex
+from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
@@ -98,6 +99,7 @@ class IconServiceEngine(ContextContainer):
         self._deposit_handler = None
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
+        self._rc_data_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
         self._backup_manager: Optional[BackupManager] = None
 
@@ -136,6 +138,7 @@ class IconServiceEngine(ContextContainer):
         # Share one context db with all SCORE
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
         self._state_db_root_path = state_db_root_path
+        self._rc_data_path = rc_data_path
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
@@ -1987,6 +1990,15 @@ class IconServiceEngine(ContextContainer):
 
     def rollback(self, block_height: int, block_hash: bytes) -> dict:
         Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}, hash={bytes_to_hex(block_hash)}")
+
+        context = self._context_factory.create(IconScoreContextType.DIRECT, block=self._get_last_block())
+
+        # Rollback state_db and rc_data_db to those of a given block_height
+        rollback_manager = RollbackManager(self._state_db_root_path, self._rc_data_path)
+        rollback_manager.run(block_height)
+
+        # Rollback preps and term
+        context.engine.prep.rollback(context)
 
         response = {
             ConstantKeys.BLOCK_HEIGHT: block_height,

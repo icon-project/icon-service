@@ -28,7 +28,7 @@ from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
     PenaltyReason, TermFlag
-from ..icon_constant import PRepGrade, PRepResultState, PRepStatus
+from ..icon_constant import PRepGrade, PRepResultState, PRepStatus, ROLLBACK_LOG_TAG
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -72,13 +72,17 @@ class Engine(EngineBase, IISSEngineListener):
             "getInactivePReps": self.handle_get_inactive_preps
         }
 
-        self.preps = PRepContainer()
+        self._preps: Optional['PRepContainer'] = None
         # self.term should be None before decentralization
         self.term: Optional['Term'] = None
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
+
+    @property
+    def preps(self) -> Optional['PRepContainer']:
+        return self._preps
 
     def open(self,
              context: 'IconScoreContext',
@@ -93,7 +97,8 @@ class Engine(EngineBase, IISSEngineListener):
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
 
-        self._load_preps(context)
+        self._preps = self._load_preps(context)
+        self.load_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
@@ -117,12 +122,14 @@ class Engine(EngineBase, IISSEngineListener):
                                                low_productivity_penalty_threshold,
                                                block_validation_penalty_threshold)
 
-    def _load_preps(self, context: 'IconScoreContext'):
-        """Load a prep from db
+    @classmethod
+    def _load_preps(cls, context: 'IconScoreContext') -> 'PRepContainer':
+        """Load preps from state db
 
-        :return:
+        :return: new prep container instance
         """
         icx_storage: 'IcxStorage' = context.storage.icx
+        preps = PRepContainer()
 
         for prep in context.storage.prep.get_prep_iterator():
             account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
@@ -130,9 +137,10 @@ class Engine(EngineBase, IISSEngineListener):
             prep.stake = account.stake
             prep.delegated = account.delegated_amount
 
-            self.preps.add(prep)
+            preps.add(prep)
 
-        self.preps.freeze()
+        preps.freeze()
+        return preps
 
     def close(self):
         IconScoreContext.engine.iiss.remove_listener(self)
@@ -161,7 +169,7 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         # Updated every block
-        self.preps = precommit_data.preps
+        self._preps = precommit_data.preps
 
         # Exchange a term instance for some reasons:
         # - penalty for elected P-Reps(main, sub)
@@ -169,8 +177,20 @@ class Engine(EngineBase, IISSEngineListener):
         if precommit_data.term is not None:
             self.term: 'Term' = precommit_data.term
 
-    def rollback(self):
-        pass
+    def rollback(self, context: 'IconScoreContext'):
+        """After rollback is called, the state of prep_engine is reverted to that of a given block
+
+        :param context:
+        :param _block_height: the height of the block to go back
+        :param _block_hash:
+        :return:
+        """
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
+
+        self._preps = self._load_preps(context)
+        self.term = context.storage.prep.get_term(context)
+
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
 
     def on_block_invoked(
             self,
