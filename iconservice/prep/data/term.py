@@ -276,6 +276,7 @@ class Term(object):
     def update_preps(self, revision: int, invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
 
+        :param revision:
         :param invalid_elected_preps:
             elected P-Reps that cannot keep governance during this term as their penalties
         :return:
@@ -351,16 +352,22 @@ class Term(object):
         :return:
         """
 
-        # The P-Rep that gets BLOCK_VALIDATION penalty cannot serve as a main or sub P-Rep during this term,
-        # but its B2 reward should be provided continuously
+        # This code is preserved only for state backward compatibility.
+        # After revision 7, B2 reward is not provided to block-validation-penalty
+        # (consecutive 660 blocks validation failure)
         if invalid_prep.status != PRepStatus.ACTIVE \
                 or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
-            old_delegated: int = self._total_elected_prep_delegated
-            self._total_elected_prep_delegated -= delegated
-
+            self._total_elected_prep_delegated_snapshot -= delegated
             Logger.info(tag=self.TAG,
-                        msg="Reduce total_elected_prep_delegated: "
-                        f"{old_delegated} -> {self.total_elected_prep_delegated}")
+                        msg="total_elected_prep_delegated_snapshot is changed: "
+                            f"delta={-delegated} "
+                            f"total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot}")
+
+        self._total_elected_prep_delegated -= delegated
+        Logger.info(tag=self.TAG,
+                    msg="total_elected_prep_delegated is changed: "
+                        f"delta={-delegated} "
+                        f"total_elected_prep_delegated={self._total_elected_prep_delegated}")
 
     @classmethod
     def _index_of_prep(cls, preps: List['PRepSnapshot'], address: 'Address') -> int:
@@ -406,13 +413,7 @@ class Term(object):
             total_elected_prep_delegated += delegated
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
-
-        if total_elected_prep_delegated_from_rc < 0:
-            Logger.warning(tag=cls.TAG,
-                           msg=f"total_elected_prep_delegated_from_rc < 0")
-            term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated
-        else:
-            term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
+        term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
 
         term._generate_root_hash()
 

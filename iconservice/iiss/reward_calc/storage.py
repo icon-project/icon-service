@@ -16,11 +16,11 @@
 
 import os
 from collections import namedtuple
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
-from ..reward_calc.msg_data import Header, TxData, PRepsData
-from ...base.exception import DatabaseException
+from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
+from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
     DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG, WAL_LOG_TAG
@@ -30,8 +30,9 @@ from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
+    from ...base.address import Address
     from ...database.wal import IissWAL
-    from ..reward_calc.msg_data import Data
+    from ..reward_calc.msg_data import Data, DelegationInfo
 
 
 RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
@@ -294,25 +295,34 @@ class Storage(object):
 
     def get_total_elected_prep_delegated_snapshot(self) -> int:
         """
-        this method calculates about origin preps delegated amount.
+        total_elected_prep_delegated_snapshot =
+            the delegated amount which the elected P-Reps received at the beginning of this term
+            - the delegated amount which unregistered P-Reps received in this term
 
-        preps who are determied on new term are included on new RC DB when it created first.
-        so you can get origin preps data in first element.
+        This function is only intended for state backward compatibility
+        and not used any more after revision is set to 7.
         """
 
+        unreg_preps: Set['Address'] = set()
+        db = self._db.get_sub_db(TxData.PREFIX)
+        for k, v in db.iterator():
+            data: 'TxData' = TxData.from_bytes(v)
+            if data.type == TxType.PREP_UNREGISTER:
+                unreg_preps.add(data.address)
+
         db = self._db.get_sub_db(PRepsData.PREFIX)
-        preps: Optional[list] = None
+        preps: Optional[List['DelegationInfo']] = None
         for k, v in db.iterator():
             data: 'PRepsData' = PRepsData.from_bytes(k, v)
             preps = data.prep_list
             break
 
         if not preps:
-            return -1
+            raise InternalServiceErrorException(f"No PRepsData in iiss_data")
 
         ret = 0
-        if preps:
-            for info in preps:
+        for info in preps:
+            if info.address not in unreg_preps:
                 ret += info.value
 
         Logger.info(tag=IISS_LOG_TAG,
