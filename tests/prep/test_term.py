@@ -153,7 +153,7 @@ class TestTerm(unittest.TestCase):
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
-        assert term.total_elected_prep_delegated == self.total_elected_prep_delegated
+        assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
 
     def test_update_preps_with_unregistered_prep(self):
         revision: int = 0
