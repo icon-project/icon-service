@@ -99,6 +99,7 @@ class Storage(StorageBase):
 
         value: bytes = self._db.get(context, self.TERM_KEY)
         if value:
-            total_elected_prep_delegated_snapshot: int = context.storage.rc.get_total_elected_prep_delegated_snapshot()
+            total_elected_prep_delegated_snapshot: int = \
+                context.storage.rc.get_total_elected_prep_delegated_snapshot()
             data: list = MsgPackForDB.loads(value)
             return Term.from_list(data, total_elected_prep_delegated_snapshot)
