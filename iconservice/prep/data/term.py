@@ -406,13 +406,7 @@ class Term(object):
             total_elected_prep_delegated += delegated
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
-
-        if total_elected_prep_delegated_from_rc < 0:
-            Logger.warning(tag=cls.TAG,
-                           msg=f"total_elected_prep_delegated_from_rc < 0")
-            term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated
-        else:
-            term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
+        term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
 
         term._generate_root_hash()
 
