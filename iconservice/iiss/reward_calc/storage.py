@@ -19,7 +19,7 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from iconcommons import Logger
-from ..reward_calc.msg_data import Header, TxData, PRepsData
+from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
 from ...base.exception import DatabaseException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
@@ -300,6 +300,13 @@ class Storage(object):
         so you can get origin preps data in first element.
         """
 
+        unreg_preps: list = []
+        db = self._db.get_sub_db(TxData.PREFIX)
+        for k, v in db.iterator():
+            data: 'TxData' = TxData.from_bytes(v)
+            if data.type == TxType.PREP_UNREGISTER:
+                unreg_preps.append(data.address)
+
         db = self._db.get_sub_db(PRepsData.PREFIX)
         preps: Optional[list] = None
         for k, v in db.iterator():
@@ -311,8 +318,8 @@ class Storage(object):
             return -1
 
         ret = 0
-        if preps:
-            for info in preps:
+        for info in preps:
+            if info.address not in unreg_preps:
                 ret += info.value
 
         Logger.info(tag=IISS_LOG_TAG,
