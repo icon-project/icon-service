@@ -454,6 +454,46 @@ class RewardCalcProxy(object):
 
         return future.result()
 
+    def rollback(self, block_height: int, block_hash: bytes) -> Tuple[bool, int, bytes]:
+        """Request reward calculator to rollback the DB of the reward calculator to the specific block height.
+
+        Reward calculator DOES NOT process other messages while processing ROLLBACK message
+
+        :param block_height:
+        :param block_hash:
+        :return:
+        """
+
+        Logger.debug(
+            tag=_TAG,
+            msg=f"rollback() start: block_height={block_height}, block_hash={bytes_to_hex(block_hash)}"
+        )
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._rollback(block_height, block_hash), self._loop)
+
+        try:
+            response: 'RollbackResponse' = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("rollback message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg=f"rollback() end. response: {response}")
+
+        return response.status, response.block_height, response.block_hash
+
+    async def _rollback(self, block_height: int, block_hash: bytes) -> list:
+        Logger.debug(tag=_TAG, msg="_rollback() start")
+
+        request = RollbackRequest(block_height, block_hash)
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="_rollback() end")
+
+        return future.result()
+
     def ready_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"ready_handler() start {response}")
 

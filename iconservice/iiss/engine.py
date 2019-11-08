@@ -26,8 +26,10 @@ from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import \
-    InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException
+from ..base.exception import (
+    InvalidParamsException, InvalidRequestException,
+    OutOfBalanceException, FatalException, InternalServiceErrorException
+)
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
@@ -906,3 +908,13 @@ class Engine(EngineBase):
         if end_block_height is not None and period is not None:
             start_calc_block: int = end_block_height - period + 1
         return start_calc_block
+
+    def rollback(self, _context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        _status, _height, _hash = self._reward_calc_proxy.rollback(block_height, block_hash)
+        if _status and _height == block_height and _hash == block_hash:
+            return
+
+        raise InternalServiceErrorException(
+            "rollback is failed: "
+            f"expected(True, {block_height}, {bytes_to_hex(block_hash)}) != "
+            f"actual({_status}, {_height}, {bytes_to_hex(_hash)})")

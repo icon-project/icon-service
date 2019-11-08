@@ -2011,6 +2011,9 @@ class IconServiceEngine(ContextContainer):
         # Rollback preps and term
         context.engine.prep.rollback(context)
 
+        # Request reward calculator to rollback its db to the specific block_height
+        context.engine.iiss.rollback(context)
+
         response = {
             ConstantKeys.BLOCK_HEIGHT: block_height,
             ConstantKeys.BLOCK_HASH: block_hash
