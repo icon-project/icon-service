@@ -15,7 +15,7 @@
 
 import os
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Any, Optional, Tuple
+from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
 from iconservice.database.backup_manager import BackupManager
@@ -102,6 +102,7 @@ class IconServiceEngine(ContextContainer):
         self._rc_data_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
         self._backup_manager: Optional[BackupManager] = None
+        self._conf: Optional[Dict[str, Union[str, int]]] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -195,6 +196,9 @@ class IconServiceEngine(ContextContainer):
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
+
+        # DO NOT change the values in conf
+        self._conf = conf
 
     def _init_component_context(self):
         engine: 'ContextEngine' = ContextEngine(deploy=DeployEngine(),
@@ -308,6 +312,8 @@ class IconServiceEngine(ContextContainer):
         return make_flag
 
     def _load_builtin_scores(self, context: 'IconScoreContext', builtin_score_owner: 'Address'):
+        context.icon_score_mapper.clear()
+
         current_address: 'Address' = context.current_address
         context.current_address = GOVERNANCE_SCORE_ADDRESS
 
@@ -1996,6 +2002,11 @@ class IconServiceEngine(ContextContainer):
         # Rollback state_db and rc_data_db to those of a given block_height
         rollback_manager = RollbackManager(self._state_db_root_path, self._rc_data_path)
         rollback_manager.run(block_height)
+
+        # Reload iconscores
+        builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
+        self._load_builtin_scores(context, builtin_score_owner)
+        self._init_global_value_by_governance_score(context)
 
         # Rollback preps and term
         context.engine.prep.rollback(context)

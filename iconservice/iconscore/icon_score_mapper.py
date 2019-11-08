@@ -85,6 +85,13 @@ class IconScoreMapper(object):
             with self._lock:
                 self._score_mapper.update(mapper._score_mapper)
 
+    def clear(self):
+        if self._lock is None:
+            self._score_mapper.clear()
+        else:
+            with self._lock:
+                self._score_mapper.clear()
+
     def close(self):
         for _, score_info in self._score_mapper.items():
             score_info.score_db.close()

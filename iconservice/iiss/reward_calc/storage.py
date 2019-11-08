@@ -92,6 +92,10 @@ class Storage(object):
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
 
+    @property
+    def key_value_db(self) -> 'KeyValueDatabase':
+        return self._db
+
     def _supplement_db(self, context: 'IconScoreContext', revision: int):
         # Supplement db which is made by previous icon service version (as there is no version, revision and header)
         if revision < Revision.IISS.value:

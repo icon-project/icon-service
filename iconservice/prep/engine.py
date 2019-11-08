@@ -72,17 +72,13 @@ class Engine(EngineBase, IISSEngineListener):
             "getInactivePReps": self.handle_get_inactive_preps
         }
 
-        self._preps: Optional['PRepContainer'] = None
+        self.preps = PRepContainer()
         # self.term should be None before decentralization
         self.term: Optional['Term'] = None
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
-
-    @property
-    def preps(self) -> Optional['PRepContainer']:
-        return self._preps
 
     def open(self,
              context: 'IconScoreContext',
@@ -97,7 +93,7 @@ class Engine(EngineBase, IISSEngineListener):
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
 
-        self._preps = self._load_preps(context)
+        self.preps = self._load_preps(context)
         self.load_term(context)
         self._initial_irep = irep
 
@@ -169,7 +165,7 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         # Updated every block
-        self._preps = precommit_data.preps
+        self.preps = precommit_data.preps
 
         # Exchange a term instance for some reasons:
         # - penalty for elected P-Reps(main, sub)
@@ -187,7 +183,7 @@ class Engine(EngineBase, IISSEngineListener):
         """
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
 
-        self._preps = self._load_preps(context)
+        self.preps = self._load_preps(context)
         self.term = context.storage.prep.get_term(context)
 
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
