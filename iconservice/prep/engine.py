@@ -94,14 +94,10 @@ class Engine(EngineBase, IISSEngineListener):
                                    block_validation_penalty_threshold)
 
         self.preps = self._load_preps(context)
-        self.load_term(context)
+        self.term = context.storage.prep.get_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
-
-    def load_term(self,
-                  context: 'IconScoreContext'):
-        self.term: Optional['Term'] = context.storage.prep.get_term(context)
 
     def _init_penalty_imposer(self,
                               penalty_grace_period: int,

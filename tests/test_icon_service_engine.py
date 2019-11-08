@@ -788,7 +788,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsInstance(block_result, list)
         self.assertEqual(state_root_hash, hashlib.sha3_256(b'').digest())
 
-        self._engine.rollback(block.height, block.hash)
+        self._engine.remove_precommit_state(block.height, block.hash)
         self.assertIsNone(self._engine._precommit_data_manager.get(block.hash))
 
     def test_invoke_v2_with_malformed_to_address_and_type_converter(self):

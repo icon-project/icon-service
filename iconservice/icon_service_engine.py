@@ -191,8 +191,6 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IPC_TIMEOUT],
                                      conf[ConfigKey.ICON_RC_DIR_PATH])
 
-        self._post_open_component_context(context)
-
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
@@ -241,6 +239,15 @@ class IconServiceEngine(ContextContainer):
                                 block_validation_penalty_threshold: int,
                                 ipc_timeout: int,
                                 icon_rc_path: str):
+        # storages MUST be prepared prior to engines because engines use them on open()
+        IconScoreContext.storage.deploy.open(context)
+        IconScoreContext.storage.fee.open(context)
+        IconScoreContext.storage.icx.open(context)
+        IconScoreContext.storage.iiss.open(context, iiss_meta_data, calc_period)
+        IconScoreContext.storage.prep.open(context, prep_reg_fee)
+        IconScoreContext.storage.issue.open(context)
+        IconScoreContext.storage.meta.open(context)
+        IconScoreContext.storage.rc.open(context, rc_data_path)
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -259,18 +266,6 @@ class IconServiceEngine(ContextContainer):
                                           block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
 
-        IconScoreContext.storage.deploy.open(context)
-        IconScoreContext.storage.fee.open(context)
-        IconScoreContext.storage.icx.open(context)
-        IconScoreContext.storage.iiss.open(context,
-                                           iiss_meta_data,
-                                           calc_period)
-        IconScoreContext.storage.prep.open(context,
-                                           prep_reg_fee)
-        IconScoreContext.storage.issue.open(context)
-        IconScoreContext.storage.meta.open(context)
-        IconScoreContext.storage.rc.open(context, rc_data_path)
-
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
@@ -288,10 +283,6 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.close(context)
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
-
-    @classmethod
-    def _post_open_component_context(cls, context: 'IconScoreContext'):
-        IconScoreContext.engine.prep.load_term(context)
 
     @classmethod
     def get_ready_future(cls):
@@ -1995,15 +1986,24 @@ class IconServiceEngine(ContextContainer):
         Logger.warning(tag=self.TAG, msg="remove_precommit_state() end")
 
     def rollback(self, block_height: int, block_hash: bytes) -> dict:
+        """Rollback the current confirmed states to the old one indicated by block_height
+
+        :param block_height:
+        :param block_hash:
+        :return:
+        """
         Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}, hash={bytes_to_hex(block_hash)}")
 
-        context = self._context_factory.create(IconScoreContextType.DIRECT, block=self._get_last_block())
+        last_block: 'Block' = self._get_last_block()
+        Logger.info(tag=self.TAG, msg=f"BH-{last_block.height} -> BH-{block_height}")
+
+        context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
 
         # Rollback state_db and rc_data_db to those of a given block_height
         rollback_manager = RollbackManager(self._state_db_root_path, self._rc_data_path)
         rollback_manager.run(block_height)
 
-        # Reload iconscores
+        # Clear all iconscores and reload builtin scores only
         builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
         self._load_builtin_scores(context, builtin_score_owner)
         self._init_global_value_by_governance_score(context)
