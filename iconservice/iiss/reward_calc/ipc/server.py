@@ -24,6 +24,9 @@ from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker
 
 
+_TAG = "RCP"
+
+
 class IPCServer(object):
     def __init__(self):
         self._loop = None
@@ -69,50 +72,62 @@ class IPCServer(object):
         self._unpacker = None
 
     def _on_accepted(self, reader: 'StreamReader', writer: 'StreamWriter'):
-        Logger.debug(f"on_accepted() start: {reader} {writer}")
+        Logger.debug(tag=_TAG, msg=f"on_accepted() start: {reader} {writer}")
 
         self._tasks.append(asyncio.ensure_future(self._on_send(writer)))
         self._tasks.append(asyncio.ensure_future(self._on_recv(reader)))
 
-        Logger.debug("on_accepted() end")
+        Logger.debug(tag=_TAG, msg="on_accepted() end")
 
     async def _on_send(self, writer: 'StreamWriter'):
-        Logger.debug("_on_send() start")
+        Logger.debug(tag=_TAG, msg="_on_send() start")
 
         while True:
-            request: 'Request' = await self._queue.get()
-            if request.msg_type == MessageType.NONE:
-                self._queue.put_response(
-                    NoneResponse.from_list([request.msg_type, request.msg_id])
-                )
-                break
+            try:
+                request: 'Request' = await self._queue.get()
+                if request.msg_type == MessageType.NONE:
+                    self._queue.put_response(
+                        NoneResponse.from_list([request.msg_type, request.msg_id])
+                    )
 
-            data: bytes = request.to_bytes()
-            Logger.debug(f"on_send(): data({data.hex()}")
-            Logger.info(f"Sending Data : {request}")
-            writer.write(data)
-            await writer.drain()
+                    self._queue.task_done()
+                    break
+
+                data: bytes = request.to_bytes()
+                Logger.debug(tag=_TAG, msg=f"on_send(): data({data.hex()}")
+                Logger.info(tag=_TAG, msg=f"Sending Data : {request}")
+                writer.write(data)
+                await writer.drain()
+
+                self._queue.task_done()
+
+            except BaseException as e:
+                Logger.error(tag=_TAG, msg=str(e))
 
         writer.close()
 
-        Logger.debug("_on_send() end")
+        Logger.debug(tag=_TAG, msg="_on_send() end")
 
     async def _on_recv(self, reader: 'StreamReader'):
-        Logger.debug("_on_recv() start")
+        Logger.debug(tag=_TAG, msg="_on_recv() start")
 
         while True:
-            data: bytes = await reader.read(1024)
-            if not isinstance(data, bytes) or len(data) == 0:
-                break
+            try:
+                data: bytes = await reader.read(1024)
+                if not isinstance(data, bytes) or len(data) == 0:
+                    break
 
-            Logger.debug(f"_on_recv(): data({data.hex()})")
+                Logger.debug(tag=_TAG, msg=f"_on_recv(): data({data.hex()})")
 
-            self._unpacker.feed(data)
+                self._unpacker.feed(data)
 
-            for response in self._unpacker:
-                Logger.info(f"Received Data : {response}")
-                self._queue.message_handler(response)
+                for response in self._unpacker:
+                    Logger.info(tag=_TAG, msg=f"Received Data : {response}")
+                    self._queue.message_handler(response)
+
+            except BaseException as e:
+                Logger.error(tag=_TAG, msg=str(e))
 
         await self._queue.put(NoneRequest())
 
-        Logger.debug("_on_recv() end")
+        Logger.debug(tag=_TAG, msg="_on_recv() end")

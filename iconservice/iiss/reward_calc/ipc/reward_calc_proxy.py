@@ -252,6 +252,8 @@ class RewardCalcProxy(object):
         :return: [i-score(int), block_height(int)]
         :exception TimeoutException: The operation has timed-out
         """
+        assert isinstance(address, Address)
+
         Logger.debug(tag=_TAG, msg="query_iscore() start")
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
