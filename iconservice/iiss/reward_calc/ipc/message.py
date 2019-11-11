@@ -275,6 +275,9 @@ class QueryCalculateResultResponse(Response):
 
 
 class QueryRequest(Request):
+    """queryIScore
+    """
+
     def __init__(self, address: 'Address'):
         super().__init__(MessageType.QUERY)
 
