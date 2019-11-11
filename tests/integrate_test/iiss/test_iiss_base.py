@@ -329,8 +329,8 @@ class TestIISSBase(TestIntegrateBase):
         return self._query(query_request)
 
     def query_iscore(self,
-                     from_: Union['EOAAccount', 'Address', str]) -> dict:
-        address: Optional['Address'] = self._convert_address_from_address_type(from_)
+                     address: Union['EOAAccount', 'Address', str]) -> dict:
+        address: Optional['Address'] = self._convert_address_from_address_type(address)
 
         query_request = {
             "version": self._version,

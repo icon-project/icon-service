@@ -660,7 +660,7 @@ class Engine(EngineBase):
                             _context: 'IconScoreContext',
                             params: dict) -> dict:
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
+        address: 'Address' = ret_params.get(ConstantKeys.ADDRESS)
 
         if not isinstance(address, Address):
             raise InvalidParamsException(f"Invalid address: {address}")
