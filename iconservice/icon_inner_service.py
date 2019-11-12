@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from asyncio import get_event_loop
+import asyncio
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Any, TYPE_CHECKING, Optional, Tuple
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
-
 from iconcommons.logger import Logger
+
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBaseTransactionException, \
@@ -26,7 +26,7 @@ from iconservice.base.exception import ExceptionCode, IconServiceBaseException, 
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
-    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey, RCStatus
+    EnableThreadFlag, ENABLE_THREAD_FLAG
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case
 
@@ -37,6 +37,9 @@ if TYPE_CHECKING:
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
 THREAD_VALIDATE = 'validate'
+
+
+_TAG = "IIS"
 
 
 class IconScoreInnerTask(object):
@@ -75,7 +78,7 @@ class IconScoreInnerTask(object):
         await ready_future
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             ret = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE], self._hello)
         else:
             ret = self._hello()
@@ -88,16 +91,22 @@ class IconScoreInnerTask(object):
         return self._icon_service_engine.hello()
 
     def _close(self):
-        Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg="_close() start")
 
         if self._icon_service_engine:
             self._icon_service_engine.close()
             self._icon_service_engine = None
         MessageQueueService.loop.stop()
 
+        Logger.info(tag=_TAG, msg="_close() end")
+
     @message_queue_task
     async def close(self):
+        Logger.info(tag=_TAG, msg="close() start")
+
         self._close()
+
+        Logger.info(tag=_TAG, msg="close() end")
 
     @message_queue_task
     async def invoke(self, request: dict):
@@ -106,7 +115,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
                                               self._invoke, request)
         else:
@@ -184,7 +193,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
                                               self._query, request)
         else:
@@ -227,7 +236,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
                                               self._call, request)
         else:
@@ -261,7 +270,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
                                               self._write_precommit_state, request)
         else:
@@ -309,7 +318,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
                                               self._remove_precommit_state, request)
         else:
@@ -345,7 +354,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.VALIDATE):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
                                               self._validate_transaction, request)
         else:

@@ -19,16 +19,20 @@ import asyncio
 import concurrent.futures
 import os
 from subprocess import Popen
-from typing import Optional, Callable, Any, Tuple
+from typing import TYPE_CHECKING, Optional, Callable, Any, Tuple
 
 from iconcommons.logger import Logger
-from iconservice.icon_constant import RCStatus
+
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
 from ....base.address import Address
 from ....base.exception import TimeoutException
+from ....icon_constant import RCStatus
 from ....utils import bytes_to_hex
+
+if TYPE_CHECKING:
+    from .message import ReadyNotification, CalculateDoneNotification, NoneResponse
 
 _TAG = "RCP"
 
@@ -77,25 +81,37 @@ class RewardCalcProxy(object):
 
     def start(self):
         Logger.debug(tag=_TAG, msg="start() end")
+
         self._ipc_server.start()
+
         Logger.debug(tag=_TAG, msg="start() end")
 
     def stop(self):
         Logger.debug(tag=_TAG, msg="stop() start")
+
+        self._stop_message_queue()
         self._ipc_server.stop()
+
         Logger.debug(tag=_TAG, msg="stop() end")
 
     def close(self):
         Logger.debug(tag=_TAG, msg="close() start")
 
         self._ipc_server.close()
+        self.stop_reward_calc()
 
         self._message_queue = None
         self._loop = None
 
-        self.stop_reward_calc()
-
         Logger.debug(tag=_TAG, msg="close() end")
+
+    def _stop_message_queue(self):
+        Logger.info(tag=_TAG, msg="_stop_ipc_server() start")
+
+        request = NoneRequest()
+        future: asyncio.Future = self._message_queue.put(request)
+
+        Logger.info(tag=_TAG, msg="_stop_ipc_server() start")
 
     def is_reward_calculator_ready(self) -> bool:
         return self._ready_future.done()
