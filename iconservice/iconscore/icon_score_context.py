@@ -29,8 +29,8 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
-    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-)
+    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    Revision)
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -190,7 +190,7 @@ class IconScoreContext(object):
 
         :return:
         """
-        return self._term and self._term.is_dirty()
+        return self._term and (self._term.is_dirty() or self._term.is_update_main_preps())
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
@@ -240,6 +240,9 @@ class IconScoreContext(object):
             # we should update P-Reps in this term
             self._update_elected_preps_in_term(dirty_prep)
 
+            if self.revision >= Revision.IS_1_5_16.value:
+                self._update_main_preps_in_term(dirty_prep)
+
             self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
@@ -266,9 +269,27 @@ class IconScoreContext(object):
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
 
-        self._term.update_preps(self.revision, [dirty_prep])
+        self._term.update_invalid_elected_preps([dirty_prep])
 
         Logger.info(tag=self.TAG, msg=f"Invalid main and sub prep: {dirty_prep}")
+
+    def _update_main_preps_in_term(self, dirty_prep: 'PRep'):
+        """
+        :param dirty_prep: dirty prep
+        """
+        if self._term is None:
+            return
+
+        if not dirty_prep.is_update_main_preps():
+            return
+
+        main_prep_list: List['Address'] = [snap_shot.address for snap_shot in self._term.main_preps]
+        if dirty_prep.address not in main_prep_list:
+            return
+
+        self._term.update_main_preps()
+
+        Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
 
     def clear_batch(self):
         if self.tx_batch:

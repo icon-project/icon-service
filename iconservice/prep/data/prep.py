@@ -33,6 +33,7 @@ class PRepFlag(Flag):
     NONE = 0
     DIRTY = auto()
     FROZEN = auto()
+    UPDATE_MAIN_PREPS = auto()
 
 
 class PRepDictType(Enum):
@@ -147,7 +148,7 @@ class PRep(Sortable):
         self.website: str = website
         self.details: str = details
         # information required for PRep Consensus
-        self.p2p_endpoint: str = p2p_endpoint
+        self._p2p_endpoint: str = p2p_endpoint
         # Governance Variables
         self._irep: int = irep
         self._irep_block_height: int = irep_block_height
@@ -177,6 +178,12 @@ class PRep(Sortable):
     def _set_dirty(self, on: bool):
         self._flags = utils.set_flag(self._flags, PRepFlag.DIRTY, on)
 
+    def is_update_main_preps(self) -> bool:
+        return utils.is_flag_on(self._flags, PRepFlag.UPDATE_MAIN_PREPS)
+
+    def _set_update_main_preps(self, on: bool):
+        self._flags = utils.set_flag(self._flags, PRepFlag.UPDATE_MAIN_PREPS, on)
+
     @property
     def status(self) -> 'PRepStatus':
         return self._status
@@ -189,6 +196,20 @@ class PRep(Sortable):
     @property
     def penalty(self) -> 'PenaltyReason':
         return self._penalty
+
+    @penalty.setter
+    def penalty(self, value: 'PenaltyReason'):
+        self._penalty = value
+        self._set_dirty(True)
+
+    @property
+    def p2p_endpoint(self) -> str:
+        return self._p2p_endpoint
+
+    @p2p_endpoint.setter
+    def p2p_endpoint(self, value: str):
+        self._p2p_endpoint = value
+        self._set_update_main_preps(True)
 
     def is_suspended(self) -> bool:
         """The suspended P-Rep cannot serve as Main P-Rep during this term
@@ -203,11 +224,6 @@ class PRep(Sortable):
         :return:
         """
         return self._status == PRepStatus.ACTIVE and self._penalty == PenaltyReason.NONE
-
-    @penalty.setter
-    def penalty(self, value: 'PenaltyReason'):
-        self._penalty = value
-        self._set_dirty(True)
 
     @property
     def grade(self) -> 'PRepGrade':
@@ -232,7 +248,6 @@ class PRep(Sortable):
     @country.setter
     def country(self, alpha3_country_code: str):
         self._country = self._get_country(alpha3_country_code)
-        self._set_dirty(True)
 
     @classmethod
     def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
@@ -253,7 +268,6 @@ class PRep(Sortable):
             self._unvalidated_sequence_blocks = 0
         else:
             self._unvalidated_sequence_blocks += 1
-
         self._set_dirty(True)
 
     def reset_block_validation_penalty(self):
@@ -360,7 +374,7 @@ class PRep(Sortable):
 
         :return:
         """
-        self._flags |= PRepFlag.FROZEN
+        self._flags = PRepFlag.FROZEN
 
     def set(self,
             *,

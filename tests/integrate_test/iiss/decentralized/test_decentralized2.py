@@ -163,3 +163,71 @@ class TestIISSDecentralized2(TestIISSBase):
             }
         }
         self.assertEqual(expected_response, response)
+
+    def test_check_update_endpoint1(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(Revision.IISS.value)
+        self._decentralized()
+
+        self.make_blocks_to_end_calculation()
+        self.make_blocks(self._block_height + 1)
+
+        response: dict = self.get_main_prep_list()
+        address = response["preps"][0]["address"]
+
+        self.distribute_icx([address], ICX_IN_LOOP)
+
+        # set prep
+        tx: dict = self.create_set_prep_tx(from_=address,
+                                           set_data={"p2pEndpoint": "192.168.0.1:9000"})
+
+        _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        self.assertIsNone(main_prep_as_dict)
+
+        self.set_revision(Revision.IS_1_5_16.value)
+
+        endpoint: str = "192.168.0.1:9001"
+        # set prep
+        tx: dict = self.create_set_prep_tx(from_=address,
+                                           set_data={"p2pEndpoint": endpoint})
+
+        _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        self.assertEqual(endpoint, main_prep_as_dict["preps"][0]["p2pEndpoint"])
+
+    def test_check_update_endpoint2(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(Revision.IISS.value)
+        self._decentralized()
+
+        # register PRep
+        tx_list: list = []
+        for account in self._accounts[PREP_MAIN_PREPS:]:
+            tx: dict = self.create_register_prep_tx(from_=account)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        self.make_blocks_to_end_calculation()
+        self.make_blocks(self._block_height + 1)
+
+        self.set_revision(Revision.IS_1_5_16.value)
+
+        main_preps_count: int = self._config[ConfigKey.PREP_MAIN_PREPS]
+
+        self.distribute_icx(self._accounts[:main_preps_count], ICX_IN_LOOP)
+
+        endpoint: str = "192.168.0.1:9000"
+        tx_list: list = []
+        for i in range(main_preps_count):
+            # set prep
+            tx: dict = self.create_set_prep_tx(from_=self._accounts[i + main_preps_count],
+                                               set_data={"p2pEndpoint": endpoint})
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        tx: dict = self.create_unregister_prep_tx(self._accounts[0])
+        _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        self.assertEqual(endpoint, main_prep_as_dict["preps"][0]["p2pEndpoint"])

@@ -34,6 +34,7 @@ class _Flag(enum.Flag):
     NONE = 0
     DIRTY = enum.auto()
     FROZEN = enum.auto()
+    UPDATE_MAIN_PREPS = enum.auto()
 
 
 class PRepSnapshot(object):
@@ -95,6 +96,12 @@ class Term(object):
 
     def is_dirty(self) -> bool:
         return bool(self._flag & _Flag.DIRTY)
+
+    def is_update_main_preps(self) -> bool:
+        return bool(self._flag & _Flag.UPDATE_MAIN_PREPS)
+
+    def update_main_preps(self):
+        self._flag |= _Flag.UPDATE_MAIN_PREPS
 
     def freeze(self):
         self._flag = _Flag.FROZEN
@@ -273,10 +280,9 @@ class Term(object):
 
         self._generate_root_hash()
 
-    def update_preps(self, revision: int, invalid_elected_preps: Iterable['PRep']):
+    def update_invalid_elected_preps(self, invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
 
-        :param revision:
         :param invalid_elected_preps:
             elected P-Reps that cannot keep governance during this term as their penalties
         :return:
@@ -284,9 +290,9 @@ class Term(object):
         self._check_access_permission()
 
         for prep in invalid_elected_preps:
-            if self._remove_invalid_main_prep(revision, prep) >= 0:
+            if self._remove_invalid_main_prep(prep) >= 0:
                 continue
-            if self._remove_invalid_sub_prep(revision, prep) >= 0:
+            if self._remove_invalid_sub_prep(prep) >= 0:
                 continue
 
             raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
@@ -294,7 +300,7 @@ class Term(object):
         if self.is_dirty():
             self._generate_root_hash()
 
-    def _remove_invalid_main_prep(self, revision: int, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
 
         :param invalid_prep: an invalid main P-Rep
@@ -320,13 +326,13 @@ class Term(object):
                 msg=f"Replace a main P-Rep: "
                     f"index={index} {address} -> {self._main_preps[index].address}")
 
-        self._reduce_total_elected_prep_delegated(revision, invalid_prep, invalid_prep_snapshot.delegated)
+        self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
         del self._preps_dict[address]
 
         self._flag |= _Flag.DIRTY
         return index
 
-    def _remove_invalid_sub_prep(self, revision: int, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
         """Remove an invalid sub P-Rep from self._sub_preps
 
         :param invalid_prep: an invalid sub P-Rep
@@ -337,14 +343,14 @@ class Term(object):
 
         if index >= 0:
             invalid_prep_snapshot = self._sub_preps.pop(index)
-            self._reduce_total_elected_prep_delegated(revision, invalid_prep, invalid_prep_snapshot.delegated)
+            self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
             del self._preps_dict[invalid_prep.address]
 
             self._flag |= _Flag.DIRTY
 
         return index
 
-    def _reduce_total_elected_prep_delegated(self, revision: int, invalid_prep: 'PRep', delegated: int):
+    def _reduce_total_elected_prep_delegated(self, invalid_prep: 'PRep', delegated: int):
         """Reduce total_elected_prep_delegated by the delegated amount of the given invalid P-Rep
 
         :param invalid_prep:

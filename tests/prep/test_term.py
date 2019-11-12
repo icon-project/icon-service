@@ -125,7 +125,7 @@ class TestTerm(unittest.TestCase):
             invalid_main_prep.penalty = penalty
             invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
-            term.update_preps(revision, invalid_elected_preps)
+            term.update_invalid_elected_preps(invalid_elected_preps)
             _check_prep_snapshots_in_term(term)
             assert len(term.main_preps) == PREP_MAIN_PREPS
             assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
@@ -147,7 +147,7 @@ class TestTerm(unittest.TestCase):
         invalid_main_prep.penalty = PenaltyReason.BLOCK_VALIDATION
         invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
-        term.update_preps(revision, invalid_elected_preps)
+        term.update_invalid_elected_preps(invalid_elected_preps)
         _check_prep_snapshots_in_term(term)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
@@ -169,7 +169,7 @@ class TestTerm(unittest.TestCase):
         invalid_main_prep.status = PRepStatus.UNREGISTERED
         invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
-        term.update_preps(revision, invalid_elected_preps)
+        term.update_invalid_elected_preps(invalid_elected_preps)
         _check_prep_snapshots_in_term(term)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
@@ -191,7 +191,7 @@ class TestTerm(unittest.TestCase):
             invalid_elected_preps.append(prep)
         assert len(invalid_elected_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS
 
-        term.update_preps(revision, invalid_elected_preps)
+        term.update_invalid_elected_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == 0
         assert isinstance(term.root_hash, bytes)
@@ -204,7 +204,7 @@ class TestTerm(unittest.TestCase):
         _check_prep_snapshots_in_term(term)
 
         invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[:PREP_MAIN_PREPS]]
-        term.update_preps(revision, invalid_elected_preps)
+        term.update_invalid_elected_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS * 2
         assert isinstance(term.root_hash, bytes)
@@ -215,7 +215,7 @@ class TestTerm(unittest.TestCase):
         _check_prep_snapshots_in_term(term)
 
         invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[1:PREP_MAIN_AND_SUB_PREPS]]
-        term.update_preps(revision, invalid_elected_preps)
+        term.update_invalid_elected_preps(invalid_elected_preps)
         assert len(term.main_preps) == 1
         assert len(term.sub_preps) == 0
         assert isinstance(term.root_hash, bytes)

@@ -272,19 +272,15 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         context.storage.meta.put_last_main_preps(context, main_preps)
 
-        if not context.is_term_updated():
-            # No elected P-Rep is disqualified during this term
-            return None, None
+        if context.is_term_updated():
+            new_term = context.term
+        else:
+            new_term = None
 
-        new_term = context.term
-        assert new_term.is_dirty()
-
-        if self.term.root_hash != new_term.root_hash:
-            # Case 2 or 4: Some main P-Reps are replaced or removed
+        if new_term and (self.term.root_hash != new_term.root_hash or new_term.is_update_main_preps()):
             main_preps_as_dict: Optional[dict] = \
                 self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
-            # Case 3: Only sub P-Reps are invalidated
             main_preps_as_dict = None
 
         return main_preps_as_dict, new_term
