@@ -132,7 +132,7 @@ class RewardCalcProxy(object):
 
         return response.version
 
-    async def _get_version(self):
+    async def _get_version(self) -> 'VersionResponse':
         Logger.debug(tag=_TAG, msg="_get_version() start")
 
         request = VersionRequest()
@@ -166,7 +166,7 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg=f"calculate() end: {response}")
         return response.status
 
-    async def _calculate(self, db_path: str, block_height: int):
+    async def _calculate(self, db_path: str, block_height: int) -> 'CalculateResponse':
         Logger.debug(tag=_TAG, msg="_calculate() start")
 
         request = CalculateRequest(db_path, block_height)
@@ -284,7 +284,7 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def query_iscore(self, address: 'Address') -> tuple:
+    def query_iscore(self, address: 'Address') -> Tuple[int, int]:
         """Returns the I-Score of a given address
 
         It should be called on query thread
@@ -310,7 +310,7 @@ class RewardCalcProxy(object):
 
         return response.iscore, response.block_height
 
-    async def _query_iscore(self, address: 'Address') -> list:
+    async def _query_iscore(self, address: 'Address') -> 'QueryResponse':
         """
 
         :param address:
@@ -343,7 +343,7 @@ class RewardCalcProxy(object):
 
         return response.status, response.block_height
 
-    async def _query_calculate_status(self) -> list:
+    async def _query_calculate_status(self) -> 'QueryCalculateStatusResponse':
         Logger.debug(tag=_TAG, msg="_query_calculate_status() start")
 
         request = QueryCalculateStatusRequest()
@@ -371,7 +371,7 @@ class RewardCalcProxy(object):
 
         return response.status, response.block_height, response.iscore, response.state_hash
 
-    async def _query_calculate_result(self, block_height) -> list:
+    async def _query_calculate_result(self, block_height) -> 'QueryCalculateResultResponse':
         Logger.debug(tag=_TAG, msg="_query_calculate_result() start")
 
         request = QueryCalculateResultRequest(block_height)
@@ -414,7 +414,7 @@ class RewardCalcProxy(object):
 
         return response.success, response.block_height, response.block_hash
 
-    async def _commit_block(self, success: bool, block_height: int, block_hash: bytes) -> list:
+    async def _commit_block(self, success: bool, block_height: int, block_hash: bytes) -> 'CommitBlockResponse':
         Logger.debug(tag=_TAG, msg="_commit_block() start")
 
         request = CommitBlockRequest(success, block_height, block_hash)
@@ -482,7 +482,7 @@ class RewardCalcProxy(object):
 
         return response.status, response.block_height, response.block_hash
 
-    async def _rollback(self, block_height: int, block_hash: bytes) -> list:
+    async def _rollback(self, block_height: int, block_hash: bytes) -> 'RollbackResponse':
         Logger.debug(tag=_TAG, msg="_rollback() start")
 
         request = RollbackRequest(block_height, block_hash)
