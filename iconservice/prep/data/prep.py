@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-from enum import auto, Flag, IntEnum, Enum
+from enum import auto, IntEnum, Enum
 from typing import TYPE_CHECKING, Tuple, Any
 
 import iso3166
@@ -22,18 +22,11 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, Revision
+from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, Revision, PRepFlag
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
-
-
-class PRepFlag(Flag):
-    NONE = 0
-    DIRTY = auto()
-    FROZEN = auto()
-    UPDATE_MAIN_PREPS = auto()
 
 
 class PRepDictType(Enum):
@@ -141,12 +134,12 @@ class PRep(Sortable):
         self._grade: 'PRepGrade' = grade
 
         # registration info
-        self.name: str = name
+        self._name: str = name
         self._country: 'iso3166.Country' = self._get_country(country)
-        self.city: str = city
-        self.email: str = email
-        self.website: str = website
-        self.details: str = details
+        self._city: str = city
+        self._email: str = email
+        self._website: str = website
+        self._details: str = details
         # information required for PRep Consensus
         self._p2p_endpoint: str = p2p_endpoint
         # Governance Variables
@@ -172,17 +165,10 @@ class PRep(Sortable):
         # DO NOT STORE IT TO DB (MEMORY ONLY)
         self.extension: Any = None
 
-    def is_dirty(self) -> bool:
-        return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
+        self._is_frozen: bool = False
 
-    def _set_dirty(self, on: bool):
-        self._flags = utils.set_flag(self._flags, PRepFlag.DIRTY, on)
-
-    def is_update_main_preps(self) -> bool:
-        return utils.is_flag_on(self._flags, PRepFlag.UPDATE_MAIN_PREPS)
-
-    def _set_update_main_preps(self, on: bool):
-        self._flags = utils.set_flag(self._flags, PRepFlag.UPDATE_MAIN_PREPS, on)
+    def is_flags_on(self, flags: 'PRepFlag') -> bool:
+        return utils.is_flag_on(self._flags, flags)
 
     @property
     def status(self) -> 'PRepStatus':
@@ -191,7 +177,6 @@ class PRep(Sortable):
     @status.setter
     def status(self, value: 'PRepStatus'):
         self._status = value
-        self._set_dirty(True)
 
     @property
     def penalty(self) -> 'PenaltyReason':
@@ -200,8 +185,68 @@ class PRep(Sortable):
     @penalty.setter
     def penalty(self, value: 'PenaltyReason'):
         self._penalty = value
-        self._set_dirty(True)
 
+    # == setPRep ==#
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name: str = value
+        self._flags |= PRepFlag.NAME
+
+    @property
+    def country(self) -> str:
+        return self._country.alpha3
+
+    @country.setter
+    def country(self, alpha3_country_code: str):
+        self._country = self._get_country(alpha3_country_code)
+        self._flags |= PRepFlag.COUNTRY
+
+    @classmethod
+    def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
+        return iso3166.countries_by_alpha3.get(
+            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
+
+    @property
+    def city(self) -> str:
+        return self._city
+
+    @city.setter
+    def city(self, value: str):
+        self._city: str = value
+        self._flags |= PRepFlag.CITY
+
+    @property
+    def email(self) -> str:
+        return self._email
+
+    @email.setter
+    def email(self, value: str):
+        self._email: str = value
+        self._flags |= PRepFlag.EMAIL
+
+    @property
+    def website(self) -> str:
+        return self._website
+
+    @website.setter
+    def website(self, value: str):
+        self._website: str = value
+        self._flags |= PRepFlag.WEBSITE
+
+    @property
+    def details(self) -> str:
+        return self._details
+
+    @details.setter
+    def details(self, value: str):
+        self._details: str = value
+        self._flags |= PRepFlag.DETAILS
+
+    # ===== #
     @property
     def p2p_endpoint(self) -> str:
         return self._p2p_endpoint
@@ -209,8 +254,9 @@ class PRep(Sortable):
     @p2p_endpoint.setter
     def p2p_endpoint(self, value: str):
         self._p2p_endpoint = value
-        self._set_update_main_preps(True)
+        self._flags |= PRepFlag.P2P_ENDPOINT
 
+    # ===== #
     def is_suspended(self) -> bool:
         """The suspended P-Rep cannot serve as Main P-Rep during this term
 
@@ -239,20 +285,6 @@ class PRep(Sortable):
     @grade.setter
     def grade(self, value: 'PRepGrade'):
         self._grade = value
-        self._set_dirty(True)
-
-    @property
-    def country(self) -> str:
-        return self._country.alpha3
-
-    @country.setter
-    def country(self, alpha3_country_code: str):
-        self._country = self._get_country(alpha3_country_code)
-
-    @classmethod
-    def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
-        return iso3166.countries_by_alpha3.get(
-            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
 
     def update_block_statistics(self, is_validator: bool):
         """Update the block validation statistics of P-Rep
@@ -268,7 +300,6 @@ class PRep(Sortable):
             self._unvalidated_sequence_blocks = 0
         else:
             self._unvalidated_sequence_blocks += 1
-        self._set_dirty(True)
 
     def reset_block_validation_penalty(self):
         """Reset block validation penalty and
@@ -352,7 +383,6 @@ class PRep(Sortable):
     def last_generate_block_height(self, value: int):
         assert value >= 0
         self._last_generate_block_height = value
-        self._set_dirty(True)
 
     @property
     def block_height(self) -> int:
@@ -367,14 +397,14 @@ class PRep(Sortable):
         return cls.PREFIX + address.to_bytes_including_prefix()
 
     def is_frozen(self) -> bool:
-        return bool(self._flags & PRepFlag.FROZEN)
+        return self._is_frozen
 
     def freeze(self):
         """Make all member variables immutable
 
         :return:
         """
-        self._flags = PRepFlag.FROZEN
+        self._is_frozen = True
 
     def set(self,
             *,
@@ -412,8 +442,6 @@ class PRep(Sortable):
             if value is not None:
                 setattr(self, key, value)
 
-        self._set_dirty(True)
-
     def set_irep(self, irep: int, block_height: int):
         """Set incentive rep
 
@@ -425,7 +453,6 @@ class PRep(Sortable):
 
         self._irep = irep
         self._irep_block_height = block_height
-        self._set_dirty(True)
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()
@@ -580,9 +607,9 @@ class PRep(Sortable):
 
         return str(info)
 
-    def copy(self, flags: 'PRepFlag' = PRepFlag.NONE) -> 'PRep':
+    def copy(self) -> 'PRep':
         prep = copy.copy(self)
-        prep._flags = flags
+        prep._is_frozen: bool = False
 
         return prep
 

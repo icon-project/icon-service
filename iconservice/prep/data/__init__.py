@@ -13,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .prep import PRep, PRepFlag, PRepStatus
+from .prep import PRep
 from .term import Term, PRepSnapshot
 from .prep_container import PRepContainer

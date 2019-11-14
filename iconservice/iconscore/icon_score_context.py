@@ -20,7 +20,6 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
-from iconservice.icx.issue.regulator import Regulator
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -30,7 +29,8 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision)
+    Revision, PRepFlag)
+from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -280,7 +280,7 @@ class IconScoreContext(object):
         if self._term is None:
             return
 
-        if not dirty_prep.is_update_main_preps():
+        if not dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
             return
 
         main_prep_list: List['Address'] = [snap_shot.address for snap_shot in self._term.main_preps]

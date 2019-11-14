@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique, IntEnum, Enum, auto
+from enum import IntFlag, unique, IntEnum, Enum, auto, Flag
 
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
@@ -344,3 +344,19 @@ class BlockVoteStatus(Enum):
     NONE = 0
     TRUE = 1
     FALSE = 2
+
+
+class PRepFlag(Flag):
+    NONE = 0
+    NAME = auto()
+    COUNTRY = auto()
+    CITY = auto()
+    EMAIL = auto()
+    WEBSITE = auto()
+    DETAILS = auto()
+    P2P_ENDPOINT = auto()
+
+
+class PRepContainerFlag(Flag):
+    NONE = 0
+    DIRTY = auto()
