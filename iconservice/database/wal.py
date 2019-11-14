@@ -19,12 +19,15 @@ from ..iiss.reward_calc.msg_data import TxData
 from ..iiss.reward_calc.storage import Storage, get_rc_version
 from ..utils.msgpack_for_db import MsgPackForDB
 
-__all__ = ("WriteAheadLogWriter", "WriteAheadLogReader", "WALogable", "StateWAL", "IissWAL", "WALState")
+__all__ = (
+    "WriteAheadLogWriter", "WriteAheadLogReader", "WALogable", "StateWAL", "IissWAL", "WALState", "WALDBType"
+)
 
 import struct
 from abc import ABCMeta
 from typing import Optional, Tuple, Iterable, List
 import os
+from enum import Enum
 
 import msgpack
 from iconcommons.logger import Logger
@@ -50,6 +53,11 @@ _OFFSET_STATE = _OFFSET_REVISION + 4
 _OFFSET_INSTANT_BLOCK_HASH = _OFFSET_STATE + 4
 _OFFSET_LOG_COUNT = _OFFSET_INSTANT_BLOCK_HASH + 32
 _OFFSET_LOG_START_OFFSETS = _OFFSET_LOG_COUNT + 4
+
+
+class WALDBType(Enum):
+    RC = 0
+    STATE = 1
 
 
 class WALState(Flag):

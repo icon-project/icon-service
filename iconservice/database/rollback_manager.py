@@ -15,22 +15,28 @@
 
 import os
 import shutil
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 from iconcommons.logger import Logger
+
 from .backup_manager import WALBackupState, get_backup_filename
 from .db import KeyValueDatabase
-from .wal import WriteAheadLogReader
+from .wal import WriteAheadLogReader, WALDBType
 from ..base.exception import DatabaseException
 from ..icon_constant import ROLLBACK_LOG_TAG
 from ..iiss.reward_calc import RewardCalcStorage
 from ..iiss.reward_calc.msg_data import make_block_produce_info_key
 
+if TYPE_CHECKING:
+    from .db import KeyValueDatabase
+
+
 TAG = ROLLBACK_LOG_TAG
 
 
 class RollbackManager(object):
-    def __init__(self, state_db_root_path: str, rc_data_path: str):
+    def __init__(self, icx_db: 'KeyValueDatabase', state_db_root_path: str, rc_data_path: str):
+        self._icx_db: 'KeyValueDatabase' = icx_db
         self._rc_data_path = rc_data_path
         self._root_path = os.path.join(state_db_root_path, "backup")
 
@@ -91,16 +97,31 @@ class RollbackManager(object):
         return os.path.join(self._root_path, filename)
 
     def _rollback_rc_db(self, reader: 'WriteAheadLogReader', is_calc_period_end_block: bool):
+        """Rollback the state of rc_db to the previous one
+
+        :param reader:
+        :param is_calc_period_end_block:
+        :return:
+        """
         if is_calc_period_end_block:
             Logger.info(tag=TAG, msg=f"BH-{reader.block.height} is a calc period end block")
             self._rollback_rc_db_on_end_block(reader)
         else:
             db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(self._rc_data_path)
-            db.write_batch(reader.get_iterator(self._RC_DB))
+            db.write_batch(reader.get_iterator(WALDBType.RC.value))
             db.close()
 
     def _rollback_rc_db_on_end_block(self, reader: 'WriteAheadLogReader'):
-        current_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(self._rc_data_path)
+        """
+
+        :param reader:
+        :return:
+        """
+
+        current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = \
+            RewardCalcStorage.scan_rc_db(self._rc_data_path)
+        # Assume that standby_rc_db does not exist
+        assert standby_rc_db_path == ""
 
         current_rc_db_exists = len(current_rc_db_path) > 0
         iiss_rc_db_exists = len(iiss_rc_db_path) > 0
@@ -121,7 +142,7 @@ class RollbackManager(object):
         self._remove_block_produce_info(current_rc_db_path, reader.block.height)
 
     def _rollback_state_db(self, reader: 'WriteAheadLogReader'):
-        self._icx_db.write_batch(reader.get_iterator(self._STATE_DB))
+        self._icx_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
 
     def _clear_backup_files(self):
         try:

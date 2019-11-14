@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
+
 from iconservice.database.backup_manager import BackupManager
 from iconservice.database.rollback_manager import RollbackManager
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
@@ -2000,7 +2001,8 @@ class IconServiceEngine(ContextContainer):
         context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
 
         # Rollback state_db and rc_data_db to those of a given block_height
-        rollback_manager = RollbackManager(self._state_db_root_path, self._rc_data_path)
+        rollback_manager = RollbackManager(
+            self._icx_context_db.key_value_db, self._state_db_root_path, self._rc_data_path)
         rollback_manager.run(block_height)
 
         # Clear all iconscores and reload builtin scores only

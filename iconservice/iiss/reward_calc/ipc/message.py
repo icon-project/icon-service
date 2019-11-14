@@ -504,11 +504,11 @@ class RollbackRequest(Request):
 class RollbackResponse(Response):
     MSG_TYPE = MessageType.ROLLBACK
 
-    def __init__(self, msg_id: int, status: bool, block_height: int, block_hash: bytes):
+    def __init__(self, msg_id: int, success: bool, block_height: int, block_hash: bytes):
         super().__init__()
 
         self.msg_id: int = msg_id
-        self.status: bool = status
+        self.success: bool = success
         self.block_height: int = block_height
         self.block_hash: bytes = block_hash
 
@@ -520,11 +520,11 @@ class RollbackResponse(Response):
         msg_id: int = items[1]
         payload: list = items[2]
 
-        status: bool = payload[0]
+        success: bool = payload[0]
         block_height: int = payload[1]
         block_hash: bytes = payload[2]
 
-        return RollbackResponse(msg_id, status, block_height, block_hash)
+        return RollbackResponse(msg_id, success, block_height, block_hash)
 
 
 class ReadyNotification(Response):

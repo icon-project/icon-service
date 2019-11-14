@@ -480,7 +480,7 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg=f"rollback() end. response: {response}")
 
-        return response.status, response.block_height, response.block_hash
+        return response.success, response.block_height, response.block_hash
 
     async def _rollback(self, block_height: int, block_hash: bytes) -> 'RollbackResponse':
         Logger.debug(tag=_TAG, msg="_rollback() start")
