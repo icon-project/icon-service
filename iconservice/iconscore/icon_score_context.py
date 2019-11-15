@@ -20,6 +20,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
+
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -231,7 +232,7 @@ class IconScoreContext(object):
         self.rc_tx_batch.clear()
 
     def update_dirty_prep_batch(self):
-        """Update context.preps when a tx is done
+        """Apply updated P-Rep data to context.preps every time when a tx is done
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
@@ -240,7 +241,7 @@ class IconScoreContext(object):
             # we should update P-Reps in this term
             self._update_elected_preps_in_term(dirty_prep)
 
-            if self.revision >= Revision.IS_1_5_16.value:
+            if self.revision >= Revision.REALTIME_P2P_ENDPOINT_UPDATE.value:
                 self._update_main_preps_in_term(dirty_prep)
 
             self._preps.replace(dirty_prep)
@@ -275,19 +276,15 @@ class IconScoreContext(object):
 
     def _update_main_preps_in_term(self, dirty_prep: 'PRep'):
         """
+
         :param dirty_prep: dirty prep
         """
         if self._term is None:
             return
 
-        if not dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
-            return
-
-        main_prep_list: List['Address'] = [snap_shot.address for snap_shot in self._term.main_preps]
-        if dirty_prep.address not in main_prep_list:
-            return
-
-        self._term.update_main_preps()
+        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) and \
+                self._term.is_main_prep(dirty_prep.address):
+            self._term.update_main_preps()
 
         Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
 

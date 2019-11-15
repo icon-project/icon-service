@@ -151,6 +151,13 @@ class Term(object):
             and self._preps_dict == other._preps_dict \
             and self._merkle_root_hash == other._merkle_root_hash
 
+    def is_main_prep(self, address: 'Address') -> bool:
+        for prep_snapshot in self._main_preps:
+            if address == prep_snapshot.address:
+                return True
+
+        return False
+
     @property
     def sequence(self) -> int:
         return self._sequence

@@ -110,12 +110,13 @@ class Revision(Enum):
 
         return last_values[-1]
 
-    TWO = auto()
-    THREE = auto()
-    FOUR = auto()
-    IISS = auto()
-    DECENTRALIZATION = auto()
-    IS_1_5_16 = auto()
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    IISS = 5
+    DECENTRALIZATION = 6
+    IS_1_5_16 = 7
+    REALTIME_P2P_ENDPOINT_UPDATE = 8
 
     LATEST = auto()
 
@@ -165,7 +166,7 @@ class ConfigKey:
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
-    #icon rc
+    # Reward calculator executable path
     ICON_RC_DIR_PATH = 'iconRcPath'
 
     # IISS meta data
