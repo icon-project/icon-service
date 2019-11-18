@@ -187,6 +187,7 @@ class TestIISSDecentralized2(TestIISSBase):
         self.assertIsNone(main_prep_as_dict)
 
         self.set_revision(Revision.IS_1_5_16.value)
+        self.set_revision(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value)
 
         endpoint: str = "192.168.0.1:9001"
         # set prep
