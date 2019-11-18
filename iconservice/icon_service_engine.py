@@ -1830,9 +1830,10 @@ class IconServiceEngine(ContextContainer):
         wal_writer.flush()
 
         # Backup the previous block state
-        self._backup_manager.run(context=context,
+        self._backup_manager.run(revision=context.revision,
+                                 rc_db=context.storage.rc.key_value_db,
                                  prev_block=self._get_last_block(),
-                                 precommit_data=precommit_data,
+                                 block_batch=precommit_data.block_batch,
                                  iiss_wal=iiss_wal,
                                  is_calc_period_start_block=is_calc_period_start_block,
                                  instant_block_hash=instant_block_hash)

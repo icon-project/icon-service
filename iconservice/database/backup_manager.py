@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from .wal import IissWAL
     from ..base.block import Block
     from ..database.batch import BlockBatch
-    from ..iconscore.icon_score_context import IconScoreContext
     from ..precommit_data_manager import PrecommitData
 
 
@@ -50,8 +49,6 @@ class BackupManager(object):
     """Backup and rollback for the previous block state
 
     """
-    _RC_DB = 0
-    _STATE_DB = 1
 
     def __init__(self, state_db_root_path: str, rc_data_path: str, icx_db: 'KeyValueDatabase'):
         Logger.debug(tag=TAG,
@@ -83,17 +80,19 @@ class BackupManager(object):
         return os.path.join(self._root_path, filename)
 
     def run(self,
-            context: 'IconScoreContext',
+            revision: int,
+            rc_db: 'KeyValueDatabase',
             prev_block: 'Block',
-            precommit_data: 'PrecommitData',
+            block_batch: 'BlockBatch',
             iiss_wal: 'IissWAL',
             is_calc_period_start_block: bool,
             instant_block_hash: bytes):
         """Backup the previous block state
 
-        :param context:
+        :param revision:
+        :param rc_db:
         :param prev_block: the latest confirmed block height during commit
-        :param precommit_data:
+        :param block_batch:
         :param iiss_wal:
         :param is_calc_period_start_block:
         :param instant_block_hash:
@@ -107,14 +106,14 @@ class BackupManager(object):
         self._clear_backup_files()
 
         writer = WriteAheadLogWriter(
-            context.revision, max_log_count=2, block=prev_block, instant_block_hash=instant_block_hash)
+            revision, max_log_count=2, block=prev_block, instant_block_hash=instant_block_hash)
         writer.open(path)
 
         if is_calc_period_start_block:
             writer.write_state(WALBackupState.CALC_PERIOD_END_BLOCK.value)
 
-        self._backup_rc_db(writer, context.storage.rc.key_value_db, iiss_wal)
-        self._backup_state_db(writer, self._icx_db, precommit_data.block_batch)
+        self._backup_rc_db(writer, rc_db, iiss_wal)
+        self._backup_state_db(writer, self._icx_db, block_batch)
 
         writer.close()
 
