@@ -25,7 +25,17 @@ from iconservice.utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 _next_msg_id: int = 1
 
 
-def _get_next_id() -> int:
+def reset_next_msg_id(msg_id: int):
+    """Only used for unittest
+
+    :param msg_id:
+    :return:
+    """
+    global _next_msg_id
+    _next_msg_id = msg_id
+
+
+def _get_next_msg_id() -> int:
     global _next_msg_id
 
     msg_id: int = _next_msg_id
@@ -51,7 +61,7 @@ class MessageType(IntEnum):
 class Request(metaclass=ABCMeta):
     def __init__(self, msg_type: 'MessageType'):
         self.msg_type = msg_type
-        self.msg_id = _get_next_id()
+        self.msg_id = _get_next_msg_id()
 
     @abstractmethod
     def _to_list(self) -> tuple:
@@ -453,8 +463,13 @@ class CalculateDoneNotification(Response):
 
 
 class NoneRequest(Request):
+    """This request is used to stop ipc channel on iconservice stopping
+    """
     def __init__(self):
         super().__init__(MessageType.NONE)
+
+    def __str__(self):
+        return f"NONE_REQUEST({self.msg_id})"
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id
@@ -466,6 +481,9 @@ class NoneResponse(Response):
     def __init__(self, msg_id: int):
         super().__init__()
         self.msg_id = msg_id
+
+    def __str__(self):
+        return f"NONE_RESPONSE({self.msg_id})"
 
     @staticmethod
     def from_list(items: list) -> 'NoneResponse':

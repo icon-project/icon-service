@@ -19,78 +19,86 @@ from typing import Optional
 
 from iconcommons import Logger
 
-from .message import MessageType, Request, NoneRequest, NoneResponse
+from .message import MessageType, Request
 from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker
-
 
 _TAG = "RCP"
 
 
 class IPCServer(object):
     def __init__(self):
+        self._running = False
         self._loop = None
-        self._server = None
+        self._path = None
         self._queue: Optional['MessageQueue'] = None
         self._unpacker: Optional['MessageUnpacker'] = MessageUnpacker()
         self._tasks = []
 
     def open(self, loop,  message_queue: 'MessageQueue', path: str):
+        Logger.info(tag=_TAG, msg="open() start")
+
         assert loop
         assert message_queue
         assert isinstance(path, str)
 
         self._loop = loop
         self._queue = message_queue
+        self._path = path
 
-        server = asyncio.start_unix_server(self._on_accepted, path)
-
-        self._server = server
+        Logger.info(tag=_TAG, msg="open() end")
 
     def start(self):
-        if self._server is None:
+        Logger.info(tag=_TAG, msg="start() start")
+
+        if self._running:
             return
 
-        self._server = self._loop.run_until_complete(self._server)
+        self._running = True
+        co = asyncio.start_unix_server(self._on_accepted, self._path)
+        asyncio.ensure_future(co)
+
+        Logger.info(tag=_TAG, msg="start() end")
 
     def stop(self):
+        Logger.info(tag=_TAG, msg="stop() start")
+
+        if not self._running:
+            return
+
+        self._running = False
+
         for t in self._tasks:
             t.cancel()
 
-        if self._server is None:
-            return
-
-        self._server.close()
+        Logger.info(tag=_TAG, msg="stop() end")
 
     def close(self):
-        if self._server is not None:
-            asyncio.wait_for(self._server.wait_closed(), 5)
-            self._server = None
+        Logger.info(tag=_TAG, msg="close() start")
 
         self._loop = None
-        self._queue = None
         self._unpacker = None
 
+        Logger.info(tag=_TAG, msg="close() end")
+
     def _on_accepted(self, reader: 'StreamReader', writer: 'StreamWriter'):
-        Logger.debug(tag=_TAG, msg=f"on_accepted() start: {reader} {writer}")
+        Logger.info(tag=_TAG, msg=f"on_accepted() start: {reader} {writer}")
 
         self._tasks.append(asyncio.ensure_future(self._on_send(writer)))
         self._tasks.append(asyncio.ensure_future(self._on_recv(reader)))
 
-        Logger.debug(tag=_TAG, msg="on_accepted() end")
+        Logger.info(tag=_TAG, msg="on_accepted() end")
 
     async def _on_send(self, writer: 'StreamWriter'):
-        Logger.debug(tag=_TAG, msg="_on_send() start")
+        Logger.info(tag=_TAG, msg="_on_send() start")
 
-        while True:
+        while self._running:
             try:
                 request: 'Request' = await self._queue.get()
-                if request.msg_type == MessageType.NONE:
-                    self._queue.put_response(
-                        NoneResponse.from_list([request.msg_type, request.msg_id])
-                    )
+                self._queue.task_done()
 
-                    self._queue.task_done()
+                if request.msg_type == MessageType.NONE:
+                    # Stopping IPCServer
                     break
 
                 data: bytes = request.to_bytes()
@@ -99,19 +107,19 @@ class IPCServer(object):
                 writer.write(data)
                 await writer.drain()
 
-                self._queue.task_done()
-
+            except asyncio.CancelledError:
+                pass
             except BaseException as e:
-                Logger.error(tag=_TAG, msg=str(e))
+                Logger.warning(tag=_TAG, msg=str(e))
 
         writer.close()
 
-        Logger.debug(tag=_TAG, msg="_on_send() end")
+        Logger.info(tag=_TAG, msg="_on_send() end")
 
     async def _on_recv(self, reader: 'StreamReader'):
-        Logger.debug(tag=_TAG, msg="_on_recv() start")
+        Logger.info(tag=_TAG, msg="_on_recv() start")
 
-        while True:
+        while self._running:
             try:
                 data: bytes = await reader.read(1024)
                 if not isinstance(data, bytes) or len(data) == 0:
@@ -125,9 +133,9 @@ class IPCServer(object):
                     Logger.info(tag=_TAG, msg=f"Received Data : {response}")
                     self._queue.message_handler(response)
 
+            except asyncio.CancelledError:
+                pass
             except BaseException as e:
-                Logger.error(tag=_TAG, msg=str(e))
+                Logger.warning(tag=_TAG, msg=str(e))
 
-        await self._queue.put(NoneRequest())
-
-        Logger.debug(tag=_TAG, msg="_on_recv() end")
+        Logger.info(tag=_TAG, msg="_on_recv() end")
