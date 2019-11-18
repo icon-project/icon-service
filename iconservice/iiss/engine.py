@@ -926,3 +926,6 @@ class Engine(EngineBase):
                             f"height={block_height} hash={bytes_to_hex(block_hash)}")
 
         raise InternalServiceErrorException("Failed to rollback RewardCalculator")
+
+    def get_reward_calculator_commit_block(self) -> Optional[Tuple[int, bytes]]:
+        return self._reward_calc_proxy.get_commit_block()

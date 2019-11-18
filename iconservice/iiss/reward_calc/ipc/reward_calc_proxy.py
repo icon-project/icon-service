@@ -37,6 +37,23 @@ if TYPE_CHECKING:
 _TAG = "RCP"
 
 
+class RewardCalcBlock(object):
+    """Stores the latest commit status of reward calculator
+    """
+
+    def __init__(self, block_height: int, block_hash: bytes):
+        self._block_height = block_height
+        self._block_hash = block_hash
+
+    @property
+    def block_height(self) -> int:
+        return self._block_height
+
+    @property
+    def block_hash(self) -> bytes:
+        return self._block_hash
+
+
 class RewardCalcProxy(object):
     """Communicates with Reward Calculator through UNIX Domain Socket
 
@@ -62,6 +79,7 @@ class RewardCalcProxy(object):
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
         self._ipc_timeout = ipc_timeout
         self._icon_rc_path = icon_rc_path
+        self._rc_block: Optional[RewardCalcBlock] = None
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
@@ -102,6 +120,7 @@ class RewardCalcProxy(object):
 
         self._message_queue = None
         self._loop = None
+        self._rc_block = None
 
         Logger.debug(tag=_TAG, msg="close() end")
 
@@ -494,13 +513,14 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def ready_handler(self, response: 'Response'):
+    def ready_handler(self, response: 'ReadyNotification'):
         Logger.debug(tag=_TAG, msg=f"ready_handler() start {response}")
 
         if self._ready_callback is not None:
             self._ready_callback(response)
 
         self._ready_future.set_result(RCStatus.READY)
+        self._rc_block = RewardCalcBlock(response.block_height, response.block_height)
 
     def get_ready_future(self):
         return self._ready_future
@@ -570,3 +590,9 @@ class RewardCalcProxy(object):
         if self._reward_calc is not None:
             self._reward_calc.kill()
             self._reward_calc = None
+
+    def get_commit_block(self) -> Optional[Tuple[int, bytes]]:
+        if self._rc_block is None:
+            return None
+
+        return self._rc_block.block_height, self._rc_block.block_hash
