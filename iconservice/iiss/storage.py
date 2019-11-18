@@ -58,6 +58,9 @@ class Storage(StorageBase):
 
         self._meta_data: 'IISSMetaData' = meta_data
 
+    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        pass
+
     @property
     def reward_min(self) -> int:
         return self._meta_data.reward_min

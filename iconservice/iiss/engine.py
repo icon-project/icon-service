@@ -20,6 +20,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
+
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -33,7 +34,7 @@ from ..base.exception import (
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision
+    IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -909,12 +910,19 @@ class Engine(EngineBase):
             start_calc_block: int = end_block_height - period + 1
         return start_calc_block
 
-    def rollback(self, _context: 'IconScoreContext', block_height: int, block_hash: bytes):
-        _status, _height, _hash = self._reward_calc_proxy.rollback(block_height, block_hash)
-        if _status and _height == block_height and _hash == block_hash:
-            return
+    def rollback_reward_calculator(self, block_height: int, block_hash: bytes):
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"rollback_reward_calculator() start: "
+                        f"height={block_height} hash={bytes_to_hex(block_hash)}")
 
-        raise InternalServiceErrorException(
-            "rollback is failed: "
-            f"expected(True, {block_height}, {bytes_to_hex(block_hash)}) != "
-            f"actual({_status}, {_height}, {bytes_to_hex(_hash)})")
+        _status, _height, _hash = self._reward_calc_proxy.rollback(block_height, block_hash)
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"RewardCalculator response: "
+                        f"status={_status} height={_height} hash={bytes_to_hex(_hash)}")
+
+        if _status and _height == block_height and _hash == block_hash:
+            Logger.info(tag=ROLLBACK_LOG_TAG,
+                        msg=f"rollback_reward_calculator() end: "
+                            f"height={block_height} hash={bytes_to_hex(block_hash)}")
+
+        raise InternalServiceErrorException("Failed to rollback RewardCalculator")

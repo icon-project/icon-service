@@ -67,8 +67,8 @@ class IconScoreInnerTask(object):
 
     @staticmethod
     def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
-        Logger.exception(e, tag)
-        Logger.error(e, tag)
+        Logger.exception(str(e), tag)
+        Logger.error(str(e), tag)
 
     @message_queue_task
     async def hello(self):
@@ -360,7 +360,7 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
-            loop = get_event_loop()
+            loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE], self._rollback, request)
         else:
             response = self._rollback(request)
@@ -427,7 +427,7 @@ class IconScoreInnerTask(object):
             return response
 
     @message_queue_task
-    async def change_block_hash(self, params):
+    async def change_block_hash(self, _params):
 
         self._check_icon_service_ready()
 

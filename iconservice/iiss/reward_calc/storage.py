@@ -19,14 +19,17 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
+
 from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
 from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
-    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG, WAL_LOG_TAG
+    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0,
+    IISS_LOG_TAG, WAL_LOG_TAG, ROLLBACK_LOG_TAG
 )
 from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
+from ...utils import bytes_to_hex
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -91,6 +94,23 @@ class Storage(object):
 
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
+
+    def rollback(self, _context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"rollback() start: block_height={block_height} block_hash={bytes_to_hex(block_hash)}")
+
+        if self._db is not None:
+            raise InternalServiceErrorException("current_db has been opened on rollback")
+
+        if not os.path.exists(self._path):
+            raise DatabaseException(f"Invalid IISS DB path: {self._path}")
+
+        self._db = self.create_current_db(self._path)
+
+        self._db_iiss_tx_index = self._load_last_transaction_index()
+        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index on open={self._db_iiss_tx_index}")
+
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
 
     @property
     def key_value_db(self) -> 'KeyValueDatabase':

@@ -27,8 +27,7 @@ from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException,
-    DatabaseException)
+    MethodNotFoundException, InternalServiceErrorException, DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
@@ -42,7 +41,7 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
@@ -1993,12 +1992,54 @@ class IconServiceEngine(ContextContainer):
         :param block_hash:
         :return:
         """
-        Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}, hash={bytes_to_hex(block_hash)}")
+        Logger.warning(tag=ROLLBACK_LOG_TAG,
+                       msg=f"rollback() start: height={block_height} hash={bytes_to_hex(block_hash)}")
 
         last_block: 'Block' = self._get_last_block()
-        Logger.info(tag=self.TAG, msg=f"BH-{last_block.height} -> BH-{block_height}")
+        Logger.info(tag=self.TAG, msg=f"last_block={last_block}")
 
-        context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
+        # If rollback is impossible for the current status,
+        # self._is_rollback_needed() should raise an InternalServiceErrorException
+        try:
+            if self._is_rollback_needed(last_block, block_height, block_hash):
+                context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
+                self._rollback(context, block_height, block_hash)
+        except BaseException as e:
+            Logger.error(tag=ROLLBACK_LOG_TAG, msg=str(e))
+            raise InternalServiceErrorException(
+                f"Failed to rollback: {last_block.height} -> {block_height}")
+
+        response = {
+            ConstantKeys.BLOCK_HEIGHT: block_height,
+            ConstantKeys.BLOCK_HASH: block_hash
+        }
+
+        Logger.warning(tag=ROLLBACK_LOG_TAG,
+                       msg=f"rollback() end: height={block_height}, hash={bytes_to_hex(block_hash)}")
+
+        return response
+
+    @classmethod
+    def _is_rollback_needed(cls, last_block: 'Block', block_height: int, block_hash: bytes) -> bool:
+        """Check if rollback is needed
+        """
+        if block_height == last_block.height + 1:
+            return True
+        if block_height == last_block.height and block_hash == last_block.hash:
+            return False
+
+        raise InternalServiceErrorException(
+            f"Failed to rollback: "
+            f"height={block_height} "
+            f"hash={bytes_to_hex(block_hash)} "
+            f"last_block={last_block}")
+
+    def _rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        # Close storage
+        IconScoreContext.storage.rc.close()
+
+        # Rollback the state of reward_calculator prior to iconservice
+        IconScoreContext.engine.iiss.rollback_reward_calculator(block_height, block_hash)
 
         # Rollback state_db and rc_data_db to those of a given block_height
         rollback_manager = RollbackManager(
@@ -2010,20 +2051,31 @@ class IconServiceEngine(ContextContainer):
         self._load_builtin_scores(context, builtin_score_owner)
         self._init_global_value_by_governance_score(context)
 
-        # Rollback preps and term
-        context.engine.prep.rollback(context)
+        # Rollback storages
+        storages = [
+            IconScoreContext.storage.deploy,
+            IconScoreContext.storage.fee,
+            IconScoreContext.storage.icx,
+            IconScoreContext.storage.iiss,
+            IconScoreContext.storage.prep,
+            IconScoreContext.storage.issue,
+            IconScoreContext.storage.meta,
+            IconScoreContext.storage.rc,
+        ]
+        for storage in storages:
+            storage.rollback(context, block_height, block_hash)
 
-        # Request reward calculator to rollback its db to the specific block_height
-        context.engine.iiss.rollback(context)
-
-        response = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.BLOCK_HASH: block_hash
-        }
-
-        Logger.warning(tag=self.TAG, msg=f"rollback() end: height={block_height}, hash={bytes_to_hex(block_hash)}")
-
-        return response
+        # Rollback engines to block_height
+        engines = [
+            IconScoreContext.engine.deploy,
+            IconScoreContext.engine.fee,
+            IconScoreContext.engine.icx,
+            IconScoreContext.engine.iiss,
+            IconScoreContext.engine.prep,
+            IconScoreContext.engine.issue,
+        ]
+        for engine in engines:
+            engine.rollback(context, block_height, block_hash)
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks

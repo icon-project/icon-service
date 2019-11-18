@@ -169,7 +169,7 @@ class Engine(EngineBase, IISSEngineListener):
         if precommit_data.term is not None:
             self.term: 'Term' = precommit_data.term
 
-    def rollback(self, context: 'IconScoreContext'):
+    def rollback(self, context: 'IconScoreContext', _block_height: int, _block_hash: bytes):
         """After rollback is called, the state of prep_engine is reverted to that of a given block
 
         :param context:
