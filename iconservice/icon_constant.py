@@ -361,3 +361,9 @@ class PRepFlag(Flag):
 class PRepContainerFlag(Flag):
     NONE = 0
     DIRTY = auto()
+
+
+class TermFlag(Flag):
+    NONE = 0
+    DIRTY = auto()
+    UPDATE_MAIN_PREPS = auto()

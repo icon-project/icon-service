@@ -30,7 +30,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag)
+    Revision, PRepFlag, TermFlag)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -191,7 +191,7 @@ class IconScoreContext(object):
 
         :return:
         """
-        return self._term and (self._term.is_dirty() or self._term.is_update_main_preps())
+        return self._term and self._term.is_dirty()
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None

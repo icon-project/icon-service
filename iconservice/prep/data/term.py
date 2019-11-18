@@ -16,25 +16,18 @@
 __all__ = ("Term", "PRepSnapshot")
 
 import copy
-import enum
 from typing import TYPE_CHECKING, List, Iterable, Optional, Dict
 
 from iconcommons.logger import Logger
+from ... import utils
 from ...base.exception import AccessDeniedException
-from ...icon_constant import PRepStatus, PenaltyReason
+from ...icon_constant import PRepStatus, PenaltyReason, TermFlag
 from ...utils import bytes_to_hex
 from ...utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
     from ...base.address import Address
     from .prep import PRep
-
-
-class _Flag(enum.Flag):
-    NONE = 0
-    DIRTY = enum.auto()
-    FROZEN = enum.auto()
-    UPDATE_MAIN_PREPS = enum.auto()
 
 
 class PRepSnapshot(object):
@@ -72,7 +65,6 @@ class Term(object):
                  irep: int,
                  total_supply: int,
                  total_delegated: int):
-        self._flag: _Flag = _Flag.NONE
         self._sequence = sequence
 
         self._start_block_height = start_block_height
@@ -90,21 +82,20 @@ class Term(object):
 
         # made from main P-Rep addresses
         self._merkle_root_hash: Optional[bytes] = None
+        self._is_frozen: bool = False
+        self._flags: 'TermFlag' = TermFlag.NONE
 
-    def is_frozen(self) -> bool:
-        return bool(self._flag & _Flag.FROZEN)
-
-    def is_dirty(self) -> bool:
-        return bool(self._flag & _Flag.DIRTY)
-
-    def is_update_main_preps(self) -> bool:
-        return bool(self._flag & _Flag.UPDATE_MAIN_PREPS)
+    def is_dirty(self):
+        return utils.is_flag_on(self._flags, TermFlag.DIRTY | TermFlag.UPDATE_MAIN_PREPS)
 
     def update_main_preps(self):
-        self._flag |= _Flag.UPDATE_MAIN_PREPS
+        self._flags |= TermFlag.UPDATE_MAIN_PREPS
+
+    def is_frozen(self) -> bool:
+        return self._is_frozen
 
     def freeze(self):
-        self._flag = _Flag.FROZEN
+        self._is_frozen: bool = True
 
     def _check_access_permission(self):
         if self.is_frozen():
@@ -304,7 +295,7 @@ class Term(object):
 
             raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
 
-        if self.is_dirty():
+        if utils.is_flag_on(self._flags, TermFlag.DIRTY):
             self._generate_root_hash()
 
     def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
@@ -336,7 +327,7 @@ class Term(object):
         self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
         del self._preps_dict[address]
 
-        self._flag |= _Flag.DIRTY
+        self._flags |= TermFlag.DIRTY
         return index
 
     def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
@@ -353,7 +344,7 @@ class Term(object):
             self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
             del self._preps_dict[invalid_prep.address]
 
-            self._flag |= _Flag.DIRTY
+            self._flags |= TermFlag.DIRTY
 
         return index
 
@@ -447,7 +438,8 @@ class Term(object):
 
     def copy(self) -> 'Term':
         term = copy.copy(self)
-        term._flag = _Flag.NONE
+        term._is_frozen: bool = False
+        term._flags = TermFlag.NONE
 
         term._main_preps = list(self._main_preps)
         term._sub_preps = list(self._sub_preps)

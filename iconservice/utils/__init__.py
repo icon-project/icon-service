@@ -108,7 +108,7 @@ def is_builtin_score(score_address: str) -> bool:
 
 
 def is_flag_on(src_flags: Flag, flag: Flag) -> bool:
-    return src_flags & flag == flag
+    return bool(src_flags & flag)
 
 
 def set_flag(src_flags: Flag, flag: Flag, on: bool) -> Flag:
