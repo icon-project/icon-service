@@ -31,7 +31,8 @@ class MessageUnpacker(object):
             MessageType.QUERY_CALCULATE_RESULT: QueryCalculateResultResponse,
             MessageType.INIT: InitResponse,
             MessageType.READY: ReadyNotification,
-            MessageType.CALCULATE_DONE: CalculateDoneNotification
+            MessageType.CALCULATE_DONE: CalculateDoneNotification,
+            MessageType.ROLLBACK: RollbackResponse,
         }
 
     def feed(self, data: bytes):

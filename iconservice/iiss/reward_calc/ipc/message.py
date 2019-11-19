@@ -276,7 +276,7 @@ class QueryCalculateStatusResponse(Response):
         payload: list = items[2]
 
         status: int = payload[0]
-        block_height: int = payload[2]
+        block_height: int = payload[1]
 
         return QueryCalculateStatusResponse(msg_id, status, block_height)
 
