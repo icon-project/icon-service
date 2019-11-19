@@ -131,10 +131,12 @@ class IconServiceEngine(ContextContainer):
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
+        backup_root_path: str = os.path.join(state_db_root_path, "backup")
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
         os.makedirs(rc_data_path, exist_ok=True)
+        os.makedirs(backup_root_path, exist_ok=True)
 
         # Share one context db with all SCORE
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
@@ -147,7 +149,7 @@ class IconServiceEngine(ContextContainer):
 
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
-        self._backup_manager = BackupManager(state_db_root_path, rc_data_path, self._icx_context_db.key_value_db)
+        self._backup_manager = BackupManager(backup_root_path, rc_data_path)
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
@@ -1830,13 +1832,15 @@ class IconServiceEngine(ContextContainer):
         wal_writer.flush()
 
         # Backup the previous block state
-        self._backup_manager.run(revision=context.revision,
-                                 rc_db=context.storage.rc.key_value_db,
-                                 prev_block=self._get_last_block(),
-                                 block_batch=precommit_data.block_batch,
-                                 iiss_wal=iiss_wal,
-                                 is_calc_period_start_block=is_calc_period_start_block,
-                                 instant_block_hash=instant_block_hash)
+        self._backup_manager.run(
+            icx_db=self._icx_context_db.key_value_db,
+            rc_db=context.storage.rc.key_value_db,
+            revision=context.revision,
+            prev_block=self._get_last_block(),
+            block_batch=precommit_data.block_batch,
+            iiss_wal=iiss_wal,
+            is_calc_period_start_block=is_calc_period_start_block,
+            instant_block_hash=instant_block_hash)
 
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \

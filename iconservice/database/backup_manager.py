@@ -18,6 +18,7 @@ from enum import Flag
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
+
 from .wal import WriteAheadLogWriter
 from ..database.db import KeyValueDatabase
 from ..icon_constant import ROLLBACK_LOG_TAG
@@ -26,8 +27,6 @@ if TYPE_CHECKING:
     from .wal import IissWAL
     from ..base.block import Block
     from ..database.batch import BlockBatch
-    from ..precommit_data_manager import PrecommitData
-
 
 TAG = ROLLBACK_LOG_TAG
 
@@ -50,22 +49,16 @@ class BackupManager(object):
 
     """
 
-    def __init__(self, state_db_root_path: str, rc_data_path: str, icx_db: 'KeyValueDatabase'):
+    def __init__(self, backup_root_path: str, rc_data_path: str):
         Logger.debug(tag=TAG,
-                     msg=f"__init__() start: state_db_root_path={state_db_root_path}, "
+                     msg=f"__init__() start: "
+                         f"backup_root_path={backup_root_path}, "
                          f"rc_data_path={rc_data_path}")
 
         self._rc_data_path = rc_data_path
-        self._root_path = os.path.join(state_db_root_path, "backup")
-        self._icx_db = icx_db
+        self._backup_root_path = backup_root_path
 
-        Logger.info(tag=TAG, msg=f"backup_root_path={self._root_path}")
-
-        try:
-            os.mkdir(self._root_path)
-        except FileExistsError:
-            pass
-
+        Logger.info(tag=TAG, msg=f"backup_root_path={self._backup_root_path}")
         Logger.debug(tag=TAG, msg="__init__() end")
 
     def _get_backup_file_path(self, block_height: int) -> str:
@@ -77,11 +70,12 @@ class BackupManager(object):
         assert block_height >= 0
 
         filename = get_backup_filename(block_height)
-        return os.path.join(self._root_path, filename)
+        return os.path.join(self._backup_root_path, filename)
 
     def run(self,
-            revision: int,
+            icx_db: 'KeyValueDatabase',
             rc_db: 'KeyValueDatabase',
+            revision: int,
             prev_block: 'Block',
             block_batch: 'BlockBatch',
             iiss_wal: 'IissWAL',
@@ -89,8 +83,9 @@ class BackupManager(object):
             instant_block_hash: bytes):
         """Backup the previous block state
 
-        :param revision:
+        :param icx_db:
         :param rc_db:
+        :param revision:
         :param prev_block: the latest confirmed block height during commit
         :param block_batch:
         :param iiss_wal:
@@ -113,7 +108,7 @@ class BackupManager(object):
             writer.write_state(WALBackupState.CALC_PERIOD_END_BLOCK.value)
 
         self._backup_rc_db(writer, rc_db, iiss_wal)
-        self._backup_state_db(writer, self._icx_db, block_batch)
+        self._backup_state_db(writer, icx_db, block_batch)
 
         writer.close()
 
@@ -121,12 +116,12 @@ class BackupManager(object):
 
     def _clear_backup_files(self):
         try:
-            with os.scandir(self._root_path) as it:
+            with os.scandir(self._backup_root_path) as it:
                 for entry in it:
                     if entry.is_file() \
                             and entry.name.startswith("block-") \
                             and entry.name.endswith(".bak"):
-                        path = os.path.join(self._root_path, entry.name)
+                        path = os.path.join(self._backup_root_path, entry.name)
                         self._remove_backup_file(path)
         except BaseException as e:
             Logger.info(tag=TAG, msg=str(e))
