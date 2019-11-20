@@ -99,6 +99,7 @@ class IconServiceEngine(ContextContainer):
         self._deposit_handler = None
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
+        self._backup_root_path: Optional[str] = None
         self._rc_data_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
         self._backup_manager: Optional[BackupManager] = None
@@ -2047,9 +2048,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.iiss.rollback_reward_calculator(block_height, block_hash)
 
         # Rollback state_db and rc_data_db to those of a given block_height
-        rollback_manager = RollbackManager(
-            self._icx_context_db.key_value_db, self._state_db_root_path, self._rc_data_path)
-        rollback_manager.run(block_height)
+        rollback_manager = RollbackManager(self._backup_root_path, self._rc_data_path)
+        rollback_manager.run(self._icx_context_db.key_value_db, block_height)
 
         # Clear all iconscores and reload builtin scores only
         builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])

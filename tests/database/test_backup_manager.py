@@ -22,8 +22,10 @@ from collections import OrderedDict
 from iconservice.base.block import Block
 from iconservice.database.backup_manager import BackupManager
 from iconservice.database.db import KeyValueDatabase
+from iconservice.database.rollback_manager import RollbackManager
 from iconservice.database.wal import WriteAheadLogReader, WALDBType
 from iconservice.icon_constant import Revision
+from iconservice.iiss.reward_calc.storage import Storage as RewardCalcStorage
 
 
 def _create_dummy_data(count: int) -> OrderedDict:
@@ -35,6 +37,10 @@ def _create_dummy_data(count: int) -> OrderedDict:
         data[key] = value
 
     return data
+
+
+def _create_rc_db(rc_data_path: str) -> 'KeyValueDatabase':
+    return RewardCalcStorage.create_current_db(rc_data_path)
 
 
 class TestBackupManager(unittest.TestCase):
@@ -55,7 +61,7 @@ class TestBackupManager(unittest.TestCase):
         icx_db.write_batch(org_state_db_data.items())
 
         org_rc_db_data = _create_dummy_data(0)
-        rc_db = KeyValueDatabase.from_path(rc_data_path)
+        rc_db = _create_rc_db(rc_data_path)
         rc_db.write_batch(org_rc_db_data.items())
 
         self.backup_manager = BackupManager(
@@ -63,8 +69,14 @@ class TestBackupManager(unittest.TestCase):
             rc_data_path=rc_data_path
         )
 
-        self._state_db_root_path = state_db_root_path
+        self.rollback_manager = RollbackManager(
+            backup_root_path=backup_root_path,
+            rc_data_path=rc_data_path
+        )
+
+        self.state_db_root_path = state_db_root_path
         self.backup_root_path = backup_root_path
+        self.rc_data_path = rc_data_path
 
         self.state_db = icx_db
         self.org_state_db_data = org_state_db_data
@@ -81,7 +93,7 @@ class TestBackupManager(unittest.TestCase):
             self.rc_db.close()
             self.rc_db = None
 
-        shutil.rmtree(self._state_db_root_path, ignore_errors=True)
+        shutil.rmtree(self.state_db_root_path, ignore_errors=True)
 
     def test_run(self):
         backup_manager = self.backup_manager
@@ -108,23 +120,30 @@ class TestBackupManager(unittest.TestCase):
         rc_batch = OrderedDict()
         rc_batch[b"key0"] = b"hello"
 
-        def iiss_wal():
-            for key in rc_batch:
-                yield key, rc_batch[key]
-
         backup_manager.run(icx_db=self.state_db,
                            rc_db=self.rc_db,
                            revision=revision,
                            prev_block=last_block,
                            block_batch=block_batch,
-                           iiss_wal=iiss_wal(),
+                           iiss_wal=rc_batch.items(),
                            is_calc_period_start_block=is_calc_period_start_block,
                            instant_block_hash=instant_block_hash)
 
         self._commit_state_db(self.state_db, block_batch)
         self._commit_rc_db(self.rc_db, rc_batch)
-
         self._rollback(last_block)
+        self._check_if_rollback_is_done(self.rc_db, self.org_rc_db_data)
+        self._check_if_rollback_is_done(self.state_db, self.org_state_db_data)
+
+        self._commit_state_db(self.state_db, block_batch)
+        self._commit_rc_db(self.rc_db, rc_batch)
+        self.rc_db.close()
+        self.rc_db = None
+        self._rollback_with_rollback_manager(last_block)
+
+        self.rc_db = _create_rc_db(self.rc_data_path)
+        self._check_if_rollback_is_done(self.rc_db, self.org_rc_db_data)
+        self._check_if_rollback_is_done(self.state_db, self.org_state_db_data)
 
     @staticmethod
     def _commit_state_db(db: 'KeyValueDatabase', block_batch: OrderedDict):
@@ -155,21 +174,6 @@ class TestBackupManager(unittest.TestCase):
 
         reader.close()
 
-        self._check_if_rollback_is_done(self.rc_db, self.org_rc_db_data)
-        self._check_if_rollback_is_done(self.state_db, self.org_state_db_data)
-
-    @staticmethod
-    def _rollback_and_check(reader: WriteAheadLogReader, db: 'KeyValueDatabase', prev_state: OrderedDict):
-        it = reader.get_iterator(WALDBType.STATE.value)
-        db.write_batch(it)
-
-        i = 0
-        for key, value in db.iterator():
-            assert value == prev_state[key]
-            i += 1
-
-        assert i == len(prev_state)
-
     @staticmethod
     def _check_if_rollback_is_done(db: 'KeyValueDatabase', prev_state: OrderedDict):
         i = 0
@@ -178,3 +182,11 @@ class TestBackupManager(unittest.TestCase):
             i += 1
 
         assert i == len(prev_state)
+
+    def _rollback_with_rollback_manager(self, last_block: 'Block'):
+        rollback_manager = self.rollback_manager
+
+        block_height, is_calc_end_block_height = \
+            rollback_manager.run(self.state_db, last_block.height)
+        assert block_height == last_block.height
+        assert not is_calc_end_block_height

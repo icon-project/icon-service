@@ -35,20 +35,20 @@ TAG = ROLLBACK_LOG_TAG
 
 
 class RollbackManager(object):
-    def __init__(self, icx_db: 'KeyValueDatabase', state_db_root_path: str, rc_data_path: str):
-        self._icx_db: 'KeyValueDatabase' = icx_db
+    def __init__(self, backup_root_path: str, rc_data_path: str):
+        self._backup_root_path = backup_root_path
         self._rc_data_path = rc_data_path
-        self._root_path = os.path.join(state_db_root_path, "backup")
 
-    def run(self, block_height: int = -1) -> Tuple[int, bool]:
+    def run(self, icx_db: 'KeyValueDatabase', block_height: int = -1) -> Tuple[int, bool]:
         """Rollback to the previous block state
 
         Called on self.open()
 
+        :param icx_db: state db
         :param block_height: the height of block to rollback to
-        :return: the height of block which is rollback to
+        :return: the height of block after rollback, is_calc_period_end_block
         """
-        Logger.debug(tag=TAG, msg=f"rollback() start: BH={block_height}")
+        Logger.info(tag=TAG, msg=f"rollback() start: BH={block_height}")
 
         if block_height < 0:
             Logger.debug(tag=TAG, msg="rollback() end")
@@ -70,7 +70,7 @@ class RollbackManager(object):
 
             if reader.log_count == 2:
                 self._rollback_rc_db(reader, is_calc_period_end_block)
-                self._rollback_state_db(reader)
+                self._rollback_state_db(reader, icx_db)
                 block_height = reader.block.height
 
         except BaseException as e:
@@ -81,7 +81,7 @@ class RollbackManager(object):
         # Remove backup file after rollback is done
         self._remove_backup_file(path)
 
-        Logger.debug(tag=TAG, msg=f"rollback() end: return={block_height}")
+        Logger.info(tag=TAG, msg=f"rollback() end: return={block_height}, {is_calc_period_end_block}")
 
         return block_height, is_calc_period_end_block
 
@@ -94,7 +94,7 @@ class RollbackManager(object):
         assert block_height >= 0
 
         filename = get_backup_filename(block_height)
-        return os.path.join(self._root_path, filename)
+        return os.path.join(self._backup_root_path, filename)
 
     def _rollback_rc_db(self, reader: 'WriteAheadLogReader', is_calc_period_end_block: bool):
         """Rollback the state of rc_db to the previous one
@@ -141,17 +141,18 @@ class RollbackManager(object):
 
         self._remove_block_produce_info(current_rc_db_path, reader.block.height)
 
-    def _rollback_state_db(self, reader: 'WriteAheadLogReader'):
-        self._icx_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
+    @classmethod
+    def _rollback_state_db(cls, reader: 'WriteAheadLogReader', icx_db: 'KeyValueDatabase'):
+        icx_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
 
     def _clear_backup_files(self):
         try:
-            with os.scandir(self._root_path) as it:
+            with os.scandir(self._backup_root_path) as it:
                 for entry in it:
                     if entry.is_file() \
                             and entry.name.startswith("block-") \
                             and entry.name.endswith(".bak"):
-                        path = os.path.join(self._root_path, entry.name)
+                        path = os.path.join(self._backup_root_path, entry.name)
                         self._remove_backup_file(path)
         except BaseException as e:
             Logger.info(tag=TAG, msg=str(e))
