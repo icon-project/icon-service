@@ -186,7 +186,7 @@ class TestIISSDecentralized2(TestIISSBase):
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertIsNone(main_prep_as_dict)
 
-        self.set_revision(Revision.IS_1_5_16.value)
+        self.set_revision(Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value)
         self.set_revision(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value)
 
         endpoint: str = "192.168.0.1:9001"
@@ -214,7 +214,7 @@ class TestIISSDecentralized2(TestIISSBase):
         self.make_blocks_to_end_calculation()
         self.make_blocks(self._block_height + 1)
 
-        self.set_revision(Revision.IS_1_5_16.value)
+        self.set_revision(Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value)
 
         main_preps_count: int = self._config[ConfigKey.PREP_MAIN_PREPS]
 

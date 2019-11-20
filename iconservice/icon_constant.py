@@ -104,21 +104,15 @@ BASE_TRANSACTION_INDEX = 0
 
 
 class Revision(Enum):
-    def _generate_next_value_(self, start, count, last_values):
-        if self != 'LATEST':
-            return start + count + 1
-
-        return last_values[-1]
-
     TWO = 2
     THREE = 3
     FOUR = 4
     IISS = 5
     DECENTRALIZATION = 6
-    IS_1_5_16 = 7
+    FIX_TOTAL_ELECTED_PREP_DELEGATED = 7
     REALTIME_P2P_ENDPOINT_UPDATE = 8
 
-    LATEST = auto()
+    LATEST = 8
 
 
 RC_DB_VERSION_0 = 0
