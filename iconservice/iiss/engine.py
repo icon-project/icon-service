@@ -637,6 +637,7 @@ class Engine(EngineBase):
     def _commit_claim(self, context: 'IconScoreContext', iscore: int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
+        tx: 'Transaction' = context.tx
         success = True
 
         try:
@@ -656,7 +657,7 @@ class Engine(EngineBase):
             success = False
             raise e
         finally:
-            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash)
+            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash, tx.index, tx.hash)
 
     def handle_query_iscore(self,
                             _context: 'IconScoreContext',

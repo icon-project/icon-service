@@ -190,21 +190,40 @@ class CommitClaimRequest(Request):
     """Send the result of claimIScore tx to reward calculator
         No response for CommitClaimRequest
     """
-    def __init__(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+    def __init__(self, success: bool, address: 'Address',
+                 block_height: int, block_hash: bytes,
+                 tx_index: int, tx_hash: bytes):
         super().__init__(MessageType.COMMIT_CLAIM)
 
         self.success = success
         self.address = address
         self.block_height = block_height
         self.block_hash = block_hash
+        self.tx_index = tx_index
+        self.tx_hash = tx_hash
 
     def _to_list(self) -> tuple:
-        return self.msg_type, self.msg_id,\
-               (self.success, self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
+        return self.msg_type, self.msg_id, \
+               (
+                   self.success,
+                   self.address.to_bytes_including_prefix(),
+                   self.block_height,
+                   self.block_hash,
+                   self.tx_index,
+                   self.tx_hash
+               )
 
     def __str__(self) -> str:
-        return f"{self.msg_type.name}" \
-                f"({self.msg_id}, {self.success}, {self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
+        return \
+            f"{self.msg_type.name}(" \
+            f"{self.msg_id}, " \
+            f"{self.success}, " \
+            f"{self.address}, " \
+            f"{self.block_height}, " \
+            f"{bytes_to_hex(self.block_hash)}, " \
+            f"{self.tx_index}, " \
+            f"{bytes_to_hex(self.tx_hash)}" \
+            f")"
 
 
 class CommitClaimResponse(Response):

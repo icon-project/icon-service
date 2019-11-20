@@ -106,12 +106,12 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="close() end")
 
     def _stop_message_queue(self):
-        Logger.info(tag=_TAG, msg="_stop_ipc_server() start")
+        Logger.info(tag=_TAG, msg="_stop_message_queue() start")
 
         request = NoneRequest()
-        future: asyncio.Future = self._message_queue.put(request)
+        self._message_queue.put(request)
 
-        Logger.info(tag=_TAG, msg="_stop_ipc_server() start")
+        Logger.info(tag=_TAG, msg="_stop_message_queue() end")
 
     def is_reward_calculator_ready(self) -> bool:
         return self._ready_future.done()
@@ -233,15 +233,24 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def commit_claim(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+    def commit_claim(self, success: bool, address: 'Address',
+                     block_height: int, block_hash: bytes,
+                     tx_index: int, tx_hash: bytes):
         Logger.debug(
             tag=_TAG,
             msg=f"commit_claim() start: "
-                f"success({success}) address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
+                f"success={success} "
+                f"address={address} "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)} "
+                f"tx_index={tx_index} "
+                f"tx_hash={bytes_to_hex(tx_hash)}"
         )
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._commit_claim(success, address, block_height, block_hash), self._loop)
+            self._commit_claim(success, address, block_height, block_hash, tx_index, tx_hash),
+            self._loop
+        )
 
         try:
             future.result(self._ipc_timeout)
@@ -252,14 +261,21 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="commit_claim() end")
 
-    async def _commit_claim(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+    async def _commit_claim(self, success: bool, address: 'Address',
+                            block_height: int, block_hash: bytes,
+                            tx_index: int, tx_hash: bytes) -> 'CommitClaimResponse':
         Logger.debug(
             tag=_TAG,
             msg=f"_commit_claim() start: "
-                f"success({success} address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
+                f"success={success} "
+                f"address={address} "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)} "
+                f"tx_index={tx_index} "
+                f"tx_hash={bytes_to_hex(tx_hash)}"
         )
 
-        request = CommitClaimRequest(success, address, block_height, block_hash)
+        request = CommitClaimRequest(success, address, block_height, block_hash, tx_index, tx_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
         await future
