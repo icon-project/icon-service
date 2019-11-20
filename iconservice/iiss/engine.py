@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from ..icx import IcxStorage
     from ..prep.data import Term
     from ..base.block import Block
+    from ..base.transaction import Transaction
 
 _TAG = IISS_LOG_TAG
 
@@ -622,10 +623,11 @@ class Engine(EngineBase):
     def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
+        tx: 'Transaction' = context.tx
 
         if context.type == IconScoreContextType.INVOKE and self._check_claim_tx(context):
             iscore, block_height = self._reward_calc_proxy.claim_iscore(
-                address, block.height, block.hash)
+                address, block.height, block.hash, tx.index, tx.hash)
         else:
             # For debug_estimateStep request
             iscore, block_height = 0, 0

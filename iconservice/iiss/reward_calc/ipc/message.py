@@ -121,38 +121,55 @@ class VersionResponse(Response):
 
 
 class ClaimRequest(Request):
-    def __init__(self, address: 'Address', block_height: int, block_hash: bytes):
+    def __init__(self, address: 'Address', block_height: int, block_hash: bytes, tx_index: int, tx_hash: bytes):
         super().__init__(MessageType.CLAIM)
 
         self.address = address
         self.block_height = block_height
         self.block_hash = block_hash
+        self.tx_index = tx_index
+        self.tx_hash = tx_hash
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id,\
-               (self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
+               (
+                   self.address.to_bytes_including_prefix(),
+                   self.block_height, self.block_hash,
+                   self.tx_index, self.tx_hash
+               )
 
     def __str__(self) -> str:
-        return f"{self.msg_type.name}({self.msg_id}, " \
-            f"{self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
+        return \
+            f"{self.msg_type.name}({self.msg_id}, " \
+            f"{self.address}, " \
+            f"{self.block_height}, {bytes_to_hex(self.block_hash)}), " \
+            f"{self.tx_index}, {bytes_to_hex(self.tx_hash)}"
 
 
 class ClaimResponse(Response):
     MSG_TYPE = MessageType.CLAIM
 
     def __init__(self, msg_id: int, address: 'Address',
-                 block_height: int, block_hash: bytes, iscore: int):
+                 block_height: int, block_hash: bytes,
+                 tx_index: int, tx_hash: bytes,
+                 iscore: int):
         super().__init__()
 
         self.msg_id = msg_id
         self.address: 'Address' = address
         self.block_height: int = block_height
         self.block_hash: bytes = block_hash
+        self.tx_index: int = tx_index
+        self.tx_hash: bytes = tx_hash
         self.iscore: int = iscore
 
     def __str__(self) -> str:
-        return f"CLAIM({self.msg_id}, " \
-            f"{self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)}, {self.iscore})"
+        return \
+            f"CLAIM({self.msg_id}, " \
+            f"{self.address}, " \
+            f"{self.block_height}, {bytes_to_hex(self.block_hash)}, " \
+            f"{self.tx_index}, {bytes_to_hex(self.tx_hash)}, " \
+            f"{self.iscore})"
 
     @staticmethod
     def from_list(items: list) -> 'ClaimResponse':
@@ -162,9 +179,11 @@ class ClaimResponse(Response):
         address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, payload[0])
         block_height: int = payload[1]
         block_hash: bytes = payload[2]
-        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[3])
+        tx_index: int = payload[3]
+        tx_hash: bytes = payload[4]
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[5])
 
-        return ClaimResponse(msg_id, address, block_height, block_hash, iscore)
+        return ClaimResponse(msg_id, address, block_height, block_hash, tx_index, tx_hash, iscore)
 
 
 class CommitClaimRequest(Request):

@@ -179,7 +179,8 @@ class RewardCalcProxy(object):
         return future.result()
 
     def claim_iscore(self, address: 'Address',
-                     block_height: int, block_hash: bytes) -> Tuple[int, int]:
+                     block_height: int, block_hash: bytes,
+                     tx_index: int, tx_hash: bytes) -> Tuple[int, int]:
         """Claim IScore of a given address
 
         It is called on invoke thread
@@ -187,6 +188,8 @@ class RewardCalcProxy(object):
         :param address: the address to claim
         :param block_height: the height of block which contains this claim tx
         :param block_hash: the hash of block which contains this claim tx
+        :param tx_index: the index of claimIScore transaction which is contained in a block
+        :param tx_hash: the hash of claimIScore transaction
         :return: [i-score(int), block_height(int)]
         :exception TimeoutException: The operation has timed-out
         """
@@ -197,7 +200,7 @@ class RewardCalcProxy(object):
         )
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._claim_iscore(address, block_height, block_hash), self._loop)
+            self._claim_iscore(address, block_height, block_hash, tx_index, tx_hash), self._loop)
 
         try:
             response: 'ClaimResponse' = future.result(self._ipc_timeout)
@@ -210,12 +213,18 @@ class RewardCalcProxy(object):
         return response.iscore, response.block_height
 
     async def _claim_iscore(self, address: 'Address',
-                            block_height: int, block_hash: bytes) -> int:
+                            block_height: int, block_hash: bytes,
+                            tx_index: int, tx_hash: bytes) -> 'ClaimResponse':
         Logger.debug(
             tag=_TAG,
-            msg=f"_claim_iscore() start: address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
+            msg=f"_claim_iscore() start: "
+                f"address={address} "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)} "
+                f"tx_index={tx_index} "
+                f"tx_hash={bytes_to_hex(tx_hash)}"
         )
-        request = ClaimRequest(address, block_height, block_hash)
+        request = ClaimRequest(address, block_height, block_hash, tx_index, tx_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
         await future

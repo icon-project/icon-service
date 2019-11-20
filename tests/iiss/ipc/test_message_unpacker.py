@@ -32,6 +32,8 @@ class TestMessageUnpacker(unittest.TestCase):
         block_height: int = 100
         state_hash: bytes = hashlib.sha3_256(b'').digest()
         block_hash: bytes = hashlib.sha3_256(b'block_hash').digest()
+        tx_index: int = 1
+        tx_hash: bytes = hashlib.sha3_256(b"tx_hash").digest()
         address = Address.from_data(AddressPrefix.EOA, b'')
         iscore: int = 5000
         success: bool = True
@@ -71,6 +73,8 @@ class TestMessageUnpacker(unittest.TestCase):
                     address.to_bytes_including_prefix(),
                     block_height,
                     block_hash,
+                    tx_index,
+                    tx_hash,
                     int_to_bytes(iscore)
                 )
             ),
@@ -129,6 +133,8 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertIsInstance(claim_response, ClaimResponse)
         self.assertEqual(iscore, claim_response.iscore)
         self.assertEqual(block_height, claim_response.block_height)
+        self.assertEqual(tx_index, claim_response.tx_index)
+        self.assertEqual(tx_hash, claim_response.tx_hash)
 
         commit_block_response = next(it)
         self.assertIsInstance(commit_block_response, CommitBlockResponse)
