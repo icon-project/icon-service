@@ -143,6 +143,7 @@ class IconServiceEngine(ContextContainer):
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
         self._state_db_root_path = state_db_root_path
         self._rc_data_path = rc_data_path
+        self._backup_root_path = backup_root_path
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
@@ -2029,7 +2030,7 @@ class IconServiceEngine(ContextContainer):
     def _is_rollback_needed(cls, last_block: 'Block', block_height: int, block_hash: bytes) -> bool:
         """Check if rollback is needed
         """
-        if block_height == last_block.height + 1:
+        if block_height == last_block.height - 1:
             return True
         if block_height == last_block.height and block_hash == last_block.hash:
             return False
@@ -2081,6 +2082,8 @@ class IconServiceEngine(ContextContainer):
         ]
         for engine in engines:
             engine.rollback(context, block_height, block_hash)
+
+        self._init_last_block_info(context)
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks
