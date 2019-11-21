@@ -424,3 +424,34 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(expected_gv_block, gv.block_height)
                 self.assertEqual(expected_version, gv.version)
 
+        # unregister on term
+        self.make_blocks(self._block_height + 4)
+        tx: dict = self.create_score_call_tx(from_=main_preps_address[1],
+                                             to_=ZERO_SCORE_ADDRESS,
+                                             func_name="unregisterPRep",
+                                             params={},
+                                             value=0)
+        self.process_confirm_block_tx([tx])
+
+        expected_gv_block: int = expected_hd_block
+        self.make_blocks_to_end_calculation()
+        expected_prep_block: int = expected_gv_block
+
+        self.make_blocks(self._block_height + 1)
+        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
+        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+
+        for rc_data in rc_db.iterator():
+            if rc_data[0][:2] == PRepsData.PREFIX:
+                preps: 'PRepsData' = PRepsData.from_bytes(rc_data[0], rc_data[1])
+                self.assertEqual(expected_prep_block, preps.block_height)
+                prep_addresses: list = [del_info.address for del_info in preps.prep_list]
+                if expected_gv_block == expected_prep_block:
+                    # In case of term change
+                    expected_prep_address = main_preps_address[1:]
+                else:
+                    # In case of unregister
+                    expected_prep_address = main_preps_address[2:]
+                diff_cnt: int = 0
+                self.assertEqual(diff_cnt, len(set(expected_prep_address) ^ set(prep_addresses)))
+                expected_prep_block += 6

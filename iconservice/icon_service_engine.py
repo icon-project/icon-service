@@ -64,7 +64,7 @@ from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
 from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
-from .utils import to_camel_case
+from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -153,6 +153,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
         IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
         IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
+        IconScoreContext.precommitdata_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
         self._init_component_context()
 
         self._recover_dbs(rc_data_path)
@@ -179,7 +180,10 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.PENALTY_GRACE_PERIOD],
                                      conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
                                      conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
-                                     conf[ConfigKey.IPC_TIMEOUT])
+                                     conf[ConfigKey.IPC_TIMEOUT],
+                                     conf[ConfigKey.ICON_RC_DIR_PATH])
+
+        self._post_open_component_context(context)
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -224,7 +228,8 @@ class IconServiceEngine(ContextContainer):
                                 penalty_grace_period: int,
                                 low_productivity_penalty_threshold: int,
                                 block_validation_penalty_threshold: int,
-                                ipc_timeout: int):
+                                ipc_timeout: int,
+                                icon_rc_path: str):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -233,7 +238,8 @@ class IconServiceEngine(ContextContainer):
                                           log_dir,
                                           rc_data_path,
                                           rc_socket_path,
-                                          ipc_timeout)
+                                          ipc_timeout,
+                                          icon_rc_path)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
                                           irep,
@@ -271,6 +277,10 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.close(context)
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
+
+    @classmethod
+    def _post_open_component_context(cls, context: 'IconScoreContext'):
+        IconScoreContext.engine.prep.load_term(context)
 
     @classmethod
     def get_ready_future(cls):
@@ -441,9 +451,20 @@ class IconServiceEngine(ContextContainer):
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
-            Logger.info(tag=ICON_SERVICE_LOG_TAG,
-                        msg=f"Block result already exists: \n{precommit_data}")
-            return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
+            if not precommit_data.already_exists:
+                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                            msg=f"Block result already exists: \n{precommit_data}")
+                precommit_data.already_exists = True
+            else:
+                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                            msg=f"Block result already exists: \n"
+                                f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
+
+            return \
+                precommit_data.block_result, \
+                precommit_data.state_root_hash, \
+                precommit_data.added_transactions, \
+                precommit_data.main_prep_as_dict
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -529,10 +550,19 @@ class IconServiceEngine(ContextContainer):
                                        prev_block_validators,
                                        context.new_icon_score_mapper,
                                        precommit_flag,
-                                       rc_state_hash)
+                                       rc_state_hash,
+                                       added_transactions,
+                                       main_prep_as_dict)
+        if context.precommitdata_log_flag:
+            Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                        msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
 
-        return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+        return \
+            block_result, \
+            precommit_data.state_root_hash, \
+            precommit_data.added_transactions, \
+            precommit_data.main_prep_as_dict
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
@@ -687,6 +717,7 @@ class IconServiceEngine(ContextContainer):
                                                                                                prev_block_generator,
                                                                                                prev_block_votes)
         context.storage.rc.put_data_directly(bp_data)
+        Logger.info(tag="TERM", msg=f"Put BP directly on start term. BP: {bp_data}")
 
     @classmethod
     def _after_transaction_process(
@@ -1273,7 +1304,7 @@ class IconServiceEngine(ContextContainer):
             return rc_result
 
         # (iscore, block_height, rc_state_hash)
-        iscore, request_block_height, _ = context.storage.rc.get_calc_response_from_rc()
+        iscore, request_block_height, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
         if iscore == -1:
             return rc_result
 
@@ -1287,6 +1318,7 @@ class IconServiceEngine(ContextContainer):
         rc_result['estimatedICX'] = iscore // ISCORE_EXCHANGE_RATE
         rc_result['startBlockHeight'] = start_block
         rc_result['endBlockHeight'] = end_block
+        rc_result['stateHash'] = rc_state_hash
 
         return rc_result
 
@@ -2047,8 +2079,13 @@ class IconServiceEngine(ContextContainer):
                 rc_version: int = max(rc_version, 0)
                 prev_calc_db.close()
 
+                # Process compaction before send the RC DB to reward calculator
+                prev_calc_db_path: str = os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
+                RewardCalcStorage.process_db_compaction(prev_calc_db_path)
+
+                calculate_block_height: int = reader.block.height - 1
                 standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
-                                                                                            reader.block.height,
+                                                                                            calculate_block_height,
                                                                                             rc_version)
                 is_standby_exists: bool = True
             elif not is_current_exists and not is_standby_exists:

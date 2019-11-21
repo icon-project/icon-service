@@ -100,9 +100,11 @@ class PrecommitData(object):
                  term: Optional['Term'],
                  prev_block_generator: Optional['Address'],
                  prev_block_validators: Optional[List['Address']],
-                 score_mapper: Optional['IconScoreMapper'] = None,
-                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE,
-                 rc_state_root_hash: Optional[bytes] = None):
+                 score_mapper: Optional['IconScoreMapper'],
+                 precommit_flag: PrecommitFlag,
+                 rc_state_root_hash: Optional[bytes],
+                 added_transactions: dict,
+                 main_prep_as_dict: Optional[dict]):
         """
 
         :param block_batch: changed states for a block
@@ -129,6 +131,12 @@ class PrecommitData(object):
 
         self.state_root_hash: bytes = self._make_state_root_hash()
 
+        self.added_transactions: dict = added_transactions
+        self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
+
+        # To prevent redundant precommit data logging
+        self.already_exists = False
+
     def __str__(self):
         lines = [
             f"revision: {self.revision}",
@@ -137,9 +145,12 @@ class PrecommitData(object):
             f"rc_state_root_hash: {bytes_to_hex(self.rc_state_root_hash)}",
             f"state_root_hash: {bytes_to_hex(self.state_root_hash)}",
             f"prev_block_generator: {self.prev_block_generator}",
-            f"precommit_flag: {self.precommit_flag}"
+            f"precommit_flag: {self.precommit_flag}",
             "",
-            "block_batch"
+            f"added_transactions: {self.added_transactions}",
+            f"main_prep_as_dict: {self.main_prep_as_dict}",
+            "",
+            "block_batch",
         ]
 
         lines.extend(_print_block_batch(self.block_batch))

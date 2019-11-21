@@ -125,6 +125,20 @@ class TestIISSDecentralized(TestIISSBase):
             self.assertNotEqual(end_block, response["nextPRepTerm"])
             self.assertEqual(response['nextCalculation'], response["nextPRepTerm"])
 
+    def test_overlapped_block(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(Revision.IISS.value)
+        self.init_decentralized()
+
+        block, var1_1, var1_2, var1_3, var1_4 = self.debug_make_and_req_block(tx_list=[])
+        _, var2_1, var2_2, var2_3, var2_4 = self.debug_make_and_req_block(tx_list=[], block=block)
+        self.assertEqual(var1_1, var2_1)
+        self.assertEqual(var1_2, var2_2)
+        self.assertEqual(var1_3, var2_3)
+        self.assertEqual(var1_4, var2_4)
+
     def test_estimate_step(self):
         self.init_decentralized()
 

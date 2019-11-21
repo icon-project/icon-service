@@ -37,7 +37,10 @@ class RewardCalcProxy(object):
     """Communicates with Reward Calculator through UNIX Domain Socket
 
     """
+    _DEFAULT_REWARD_CALCULATOR_PATH = "icon_rc"
+
     def __init__(self,
+                 icon_rc_path: str,
                  ipc_timeout: int,
                  ready_callback: Callable[['ReadyNotification'], Any] = None,
                  calc_done_callback: Callable[['CalculateDoneNotification'], Any] = None):
@@ -54,6 +57,7 @@ class RewardCalcProxy(object):
         self._ready_callback: Optional[Callable] = ready_callback
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
         self._ipc_timeout = ipc_timeout
+        self._icon_rc_path = icon_rc_path
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
@@ -248,6 +252,8 @@ class RewardCalcProxy(object):
         :return: [i-score(int), block_height(int)]
         :exception TimeoutException: The operation has timed-out
         """
+        assert isinstance(address, Address)
+
         Logger.debug(tag=_TAG, msg="query_iscore() start")
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
@@ -415,11 +421,35 @@ class RewardCalcProxy(object):
         iscore_db_path, _ = os.path.split(iiss_db_path)
         iscore_db_path = os.path.join(iscore_db_path, 'rc')
         log_path = os.path.join(log_dir, 'rc.log')
+        reward_calculator_path: str = self._get_reward_calculator_path(self._icon_rc_path)
 
         if self._reward_calc is None:
-            cmd = f'icon_rc -client -monitor -db-count 16 -db {iscore_db_path} -iissdata {iiss_db_path}' \
-                f' -ipc-addr {sock_path} -log-file {log_path}'
-            self._reward_calc = Popen(cmd.split(" "))
+            args = [
+                reward_calculator_path,
+                "-client",
+                "-monitor",
+                "-db-count", "16",
+                "-db", f"{iscore_db_path}",
+                "-iissdata", f"{iiss_db_path}",
+                "-ipc-addr", f"{sock_path}",
+                "-log-file", f"{log_path}",
+            ]
+
+            Logger.info(tag=_TAG, msg=f"cmd={' '.join(args)}")
+            self._reward_calc = Popen(args)
+
+        Logger.debug(tag=_TAG, msg="start_reward_calc() end")
+
+    def _get_reward_calculator_path(self, path: str) -> str:
+        command = self._DEFAULT_REWARD_CALCULATOR_PATH
+
+        if isinstance(path, str):
+            if os.path.isdir(path):
+                return os.path.join(path, command)
+            elif os.path.isfile(path):
+                return path
+
+        return command
 
     def stop_reward_calc(self):
         """ Stop reward calculator process

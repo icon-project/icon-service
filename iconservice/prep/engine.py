@@ -92,10 +92,13 @@ class Engine(EngineBase, IISSEngineListener):
                                    block_validation_penalty_threshold)
 
         self._load_preps(context)
-        self.term: Optional['Term'] = context.storage.prep.get_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
+
+    def load_term(self,
+                  context: 'IconScoreContext'):
+        self.term: Optional['Term'] = context.storage.prep.get_term(context)
 
     def _init_penalty_imposer(self,
                               penalty_grace_period: int,
@@ -869,7 +872,11 @@ class Engine(EngineBase, IISSEngineListener):
         :param updated_accounts:
         return:
         """
-        assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
+        if context.revision <= Revision.DECENTRALIZATION.value:
+            # Although the following statement has a bug,
+            # preserve it for state compatibility
+            # IISS_MAX_DELEGATIONS * 2 + 1 is correct
+            assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
 
         for account in updated_accounts:
             assert isinstance(account, Account)

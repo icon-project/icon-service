@@ -16,11 +16,11 @@
 
 import os
 from collections import namedtuple
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
-from ..reward_calc.msg_data import Header, TxData
-from ...base.exception import DatabaseException
+from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
+from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
     DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG, WAL_LOG_TAG
@@ -30,8 +30,9 @@ from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
+    from ...base.address import Address
     from ...database.wal import IissWAL
-    from ..reward_calc.msg_data import Data
+    from ..reward_calc.msg_data import Data, DelegationInfo
 
 
 RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
@@ -84,8 +85,9 @@ class Storage(object):
         self._path = path
 
         self._db = self.create_current_db(path)
+
         self._db_iiss_tx_index = self._load_last_transaction_index()
-        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index={self._db_iiss_tx_index}")
+        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index on open={self._db_iiss_tx_index}")
 
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
@@ -217,6 +219,8 @@ class Storage(object):
         rc_version, _ = self.get_version_and_revision()
         rc_version: int = max(rc_version, 0)
         self._db.close()
+        # Process compaction before send the RC DB to reward calculator
+        self.process_db_compaction(os.path.join(self._path, self.CURRENT_IISS_DB_NAME))
 
         standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height, rc_version)
         self._db = self.create_current_db(self._path)
@@ -224,8 +228,21 @@ class Storage(object):
         return RewardCalcDBInfo(standby_db_path, block_height)
 
     @classmethod
+    def process_db_compaction(cls, path: str):
+        """
+        There is compatibility issue between C++ levelDB and go levelDB.
+        To solve it, should make DB being compacted before reading (from RC).
+        :param path: DB path to compact
+        :return:
+        """
+        db = KeyValueDatabase.from_path(path)
+        db.close()
+
+    @classmethod
     def create_current_db(cls, rc_data_path: str) -> 'KeyValueDatabase':
         current_db_path = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
+
+        Logger.info(tag=IISS_LOG_TAG, msg=f"Create new current_db")
         return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
 
     @classmethod
@@ -275,3 +292,40 @@ class Storage(object):
                         f"iiss_rc_db={iiss_rc_db_path}")
 
         return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
+
+    def get_total_elected_prep_delegated_snapshot(self) -> int:
+        """
+        total_elected_prep_delegated_snapshot =
+            the delegated amount which the elected P-Reps received at the beginning of this term
+            - the delegated amount which unregistered P-Reps received in this term
+
+        This function is only intended for state backward compatibility
+        and not used any more after revision is set to 7.
+        """
+
+        unreg_preps: Set['Address'] = set()
+        db = self._db.get_sub_db(TxData.PREFIX)
+        for k, v in db.iterator():
+            data: 'TxData' = TxData.from_bytes(v)
+            if data.type == TxType.PREP_UNREGISTER:
+                unreg_preps.add(data.address)
+
+        db = self._db.get_sub_db(PRepsData.PREFIX)
+        preps: Optional[List['DelegationInfo']] = None
+        for k, v in db.iterator():
+            data: 'PRepsData' = PRepsData.from_bytes(k, v)
+            preps = data.prep_list
+            break
+
+        if not preps:
+            raise InternalServiceErrorException(f"No PRepsData in iiss_data")
+
+        ret = 0
+        for info in preps:
+            if info.address not in unreg_preps:
+                ret += info.value
+
+        Logger.info(tag=IISS_LOG_TAG,
+                    msg=f"get_total_elected_prep_delegated_snapshot load: {ret}")
+
+        return ret

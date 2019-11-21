@@ -19,7 +19,10 @@
 from typing import TYPE_CHECKING, List
 from unittest.mock import Mock
 
+import pytest
+
 from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.exception import InvalidParamsException
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -86,7 +89,10 @@ class TestIISSClaim(TestIISSBase):
         iscore = icx * 10 ** 3
         RewardCalcProxy.query_iscore = Mock(return_value=(iscore, block_height))
 
-        # query iscore
+        # query iscore with an invalid address
+        self._query_iscore_with_invalid_params()
+
+        # query iscore with a valid address
         response: dict = self.query_iscore(self._accounts[0])
         expected_response = {
             "blockHeight": block_height,
@@ -115,3 +121,27 @@ class TestIISSClaim(TestIISSBase):
         self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
         self.assertEqual([icx, iscore], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_not_called()
+
+    def _query_iscore_with_invalid_params(self):
+        params = {
+            "version": self._version,
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "queryIScore"
+            }
+        }
+
+        # query iscore without an address
+        with pytest.raises(InvalidParamsException):
+            self.icon_service_engine.query("icx_call", params)
+
+        # query iscore with an empty string as an address
+        params["data"]["params"] = {"address": ""}
+        with pytest.raises(InvalidParamsException):
+            self.icon_service_engine.query("icx_call", params)
+
+        # query iscore with an invalid address
+        params["data"]["params"] = {"address": "hx1234"}
+        with pytest.raises(InvalidParamsException):
+            self.icon_service_engine.query("icx_call", params)

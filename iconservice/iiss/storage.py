@@ -34,8 +34,6 @@ class Storage(StorageBase):
     CALC_END_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cebh'
     CALC_PERIOD_KEY: bytes = PREFIX + b'pk'
 
-    TOTAL_PREP_DELEGATED_KEY: bytes = PREFIX + b'tpd'
-
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(db)
         self._meta_data: Optional['IISSMetaData'] = None

@@ -115,6 +115,7 @@ class Revision(Enum):
     FOUR = auto()
     IISS = auto()
     DECENTRALIZATION = auto()
+    IS_1_5_16 = auto()
 
     LATEST = auto()
 
@@ -162,6 +163,10 @@ class ConfigKey:
     LOG = 'log'
     LOG_FILE_PATH = 'filePath'
     STEP_TRACE_FLAG = 'stepTraceFlag'
+    PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
+
+    #icon rc
+    ICON_RC_DIR_PATH = 'iconRcPath'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
