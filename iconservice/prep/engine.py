@@ -845,7 +845,7 @@ class Engine(EngineBase, IISSEngineListener):
             "sequence": self.term.sequence,
             "startBlockHeight": self.term.start_block_height,
             "endBlockHeight": self.term.end_block_height,
-            "totalSupply": context.total_supply,
+            "totalSupply": self.term.total_supply,
             "totalDelegated": self.term.total_delegated,
             "irep": self.term.irep,
             "preps": preps_data
