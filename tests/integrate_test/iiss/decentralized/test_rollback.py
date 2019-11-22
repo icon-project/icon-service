@@ -20,16 +20,21 @@ from enum import Enum
 from typing import TYPE_CHECKING, List, Dict
 from unittest.mock import Mock
 
+import pytest
+
+from iconservice.base.address import Address
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.icon_constant import ConfigKey, PRepGrade
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from iconservice.base.exception import ScoreNotFoundException
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import icx_to_loop
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
 if TYPE_CHECKING:
-    from iconservice.base.address import Address
     from iconservice.base.block import Block
+    from iconservice.iconscore.icon_score_result import TransactionResult
 
 
 def _check_elected_prep_grades(preps: List[Dict[str, int]],
@@ -116,6 +121,7 @@ class TestRollback(TestIISSBase):
         expected :
             all new preps have maintained until 100 block because it already passed GRACE_PERIOD
         """
+        # Prevent icon_service_engine from sending RollbackRequest to rc
         IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
 
         # Inspect the current term
@@ -134,9 +140,7 @@ class TestRollback(TestIISSBase):
             assert balance == init_balance
 
         # Rollback the state to the previous block height
-        self.icon_service_engine.rollback(prev_block.height, prev_block.hash)
-        IconScoreContext.engine.iiss.rollback_reward_calculator.assert_called_with(
-            prev_block.height, prev_block.hash)
+        self._rollback(prev_block)
 
         # Check if the balances of accounts are reverted
         for account in accounts:
@@ -147,7 +151,233 @@ class TestRollback(TestIISSBase):
         self._check_if_last_block_is_reverted(prev_block)
 
     def test_rollback_score_deploy(self):
-        pass
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        init_balance = icx_to_loop(100)
+        deploy_step_limit = 2 * 10 ** 9
+        sender_account: 'EOAAccount' = self.create_eoa_account()
+        sender_address: 'Address' = sender_account.address
+
+        # Transfer 10 ICX to sender_account
+        self.distribute_icx([sender_account], init_balance=init_balance)
+
+        # Save the balance of sender address
+        balance: int = self.get_balance(sender_address)
+        assert init_balance == balance
+
+        # Save the previous block
+        prev_block: 'Block' = self.icon_service_engine._get_last_block()
+
+        # Deploy a SCORE
+        tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                               score_name="install/sample_score",
+                                               from_=sender_address,
+                                               to_=ZERO_SCORE_ADDRESS,
+                                               step_limit=deploy_step_limit)
+        tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])
+
+        # Skip tx_result[0]. It is the result of a base transaction
+        tx_result: 'TransactionResult' = tx_results[1]
+        score_address: 'Address' = tx_result.score_address
+        assert isinstance(score_address, Address)
+        assert score_address.is_contract
+
+        # Check if the score works well with a query request
+        response = self.query_score(from_=sender_address, to_=score_address, func_name="hello")
+        assert response == "Hello"
+
+        # Check the balance is reduced
+        balance: int = self.get_balance(sender_address)
+        assert init_balance == balance + tx_result.step_price * tx_result.step_used
+
+        # Rollback: Go back to the block where a score has not been deployed yet
+        self._rollback(prev_block)
+
+        # Check if the score deployment is revoked successfully
+        with pytest.raises(ScoreNotFoundException):
+            self.query_score(from_=sender_address, to_=score_address, func_name="hello")
+
+        # Check if the balance of sender address is revoked
+        balance: int = self.get_balance(sender_address)
+        assert init_balance == balance
+
+        # Deploy the same SCORE again
+        tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                               score_name="install/sample_score",
+                                               from_=sender_address,
+                                               to_=ZERO_SCORE_ADDRESS,
+                                               step_limit=deploy_step_limit)
+        tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])
+
+        # Skip tx_result[0]. It is the result of a base transaction
+        tx_result: 'TransactionResult' = tx_results[1]
+        new_score_address = tx_result.score_address
+        assert isinstance(score_address, Address)
+        assert new_score_address.is_contract
+        assert score_address != new_score_address
+
+        # Check if the score works well with a query request
+        response = self.query_score(from_=sender_address, to_=new_score_address, func_name="hello")
+        assert response == "Hello"
+
+    def test_rollback_score_state(self):
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        init_balance = icx_to_loop(100)
+        deploy_step_limit = 2 * 10 ** 9
+        sender_account: 'EOAAccount' = self.create_eoa_account()
+        sender_address: 'Address' = sender_account.address
+        score_value = 1234
+        deploy_params = {"value": hex(score_value)}
+
+        # Transfer 10 ICX to sender_account
+        self.distribute_icx([sender_account], init_balance=init_balance)
+
+        # Save the balance of sender address
+        balance: int = self.get_balance(sender_address)
+        assert init_balance == balance
+
+        # Deploy a SCORE
+        tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
+                                               score_name="install/sample_score",
+                                               from_=sender_address,
+                                               to_=ZERO_SCORE_ADDRESS,
+                                               deploy_params=deploy_params,
+                                               step_limit=deploy_step_limit)
+        tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])
+
+        # Skip tx_result[0]. It is the result of a base transaction
+        tx_result: 'TransactionResult' = tx_results[1]
+        score_address: 'Address' = tx_result.score_address
+        assert isinstance(score_address, Address)
+        assert score_address.is_contract
+
+        # Check if the score works well with a query request
+        response = self.query_score(from_=sender_address, to_=score_address, func_name="get_value")
+        assert response == score_value
+
+        # Check the balance is reduced
+        balance: int = self.get_balance(sender_address)
+        assert init_balance == balance + tx_result.step_price * tx_result.step_used
+
+        # Save the previous block
+        prev_block: 'Block' = self.icon_service_engine._get_last_block()
+
+        # Send a transaction to change the score state
+        old_balance = balance
+        tx_results: List['TransactionResult'] = self.score_call(from_=sender_address,
+                                                                to_=score_address,
+                                                                func_name="increase_value",
+                                                                step_limit=10 ** 8,
+                                                                expected_status=True)
+
+        tx_result: 'TransactionResult' = tx_results[1]
+        assert tx_result.step_used > 0
+        assert tx_result.step_price > 0
+        assert tx_result.to == score_address
+
+        balance: int = self.get_balance(sender_address)
+        assert old_balance == balance + tx_result.step_used * tx_result.step_price
+
+        # Check if the score works well with a query request
+        response = self.query_score(from_=sender_address, to_=score_address, func_name="get_value")
+        assert response == score_value + 1
+
+        # Rollback: Go back to the block where a score has not been deployed yet
+        self._rollback(prev_block)
+
+        # Check if the score state is reverted
+        response = self.query_score(from_=sender_address, to_=score_address, func_name="get_value")
+        assert response == score_value
+
+    def test_rollback_register_prep(self):
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(1)
+        self.distribute_icx(accounts=accounts, init_balance=icx_to_loop(3000))
+
+        # Keep the previous states in order to compare with the rollback result
+        prev_get_preps: dict = self.get_prep_list()
+        prev_block: 'Block' = self.icon_service_engine._get_last_block()
+
+        # Register a new P-Rep
+        transactions = []
+        for i, account in enumerate(accounts):
+            # Register a P-Rep
+            tx = self.create_register_prep_tx(from_=account)
+            transactions.append(tx)
+        self.process_confirm_block_tx(transactions)
+
+        # Check whether a registerPRep tx is done
+        current_get_preps: dict = self.get_prep_list()
+        assert current_get_preps["blockHeight"] == prev_block.height + 1
+        assert len(current_get_preps["preps"]) == len(prev_get_preps["preps"]) + 1
+
+        # Rollback
+        self._rollback(prev_block)
+
+        current_get_preps: dict = self.get_prep_list()
+        assert current_get_preps == prev_get_preps
+
+        self._check_if_last_block_is_reverted(prev_block)
+
+    def test_rollback_set_delegation(self):
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(1)
+        self.distribute_icx(accounts=accounts, init_balance=icx_to_loop(3000))
+        user_account = accounts[0]
+
+        # Keep the previous states in order to compare with the rollback result
+        prev_get_preps: dict = self.get_prep_list()
+        prev_block: 'Block' = self.icon_service_engine._get_last_block()
+
+        # Move 22th P-Rep up to 1st with setDelegation
+        delegating: int = icx_to_loop(1)
+        transactions = []
+        for i, account in enumerate(accounts):
+            # Stake 100 icx
+            tx = self.create_set_stake_tx(from_=user_account, value=icx_to_loop(100))
+            transactions.append(tx)
+
+            # Delegate 1 icx to itself
+            tx = self.create_set_delegation_tx(
+                from_=account,
+                origin_delegations=[
+                    (self._accounts[PREP_MAIN_PREPS - 1], delegating)
+                ]
+            )
+            transactions.append(tx)
+        self.process_confirm_block_tx(transactions)
+
+        # Check whether a setDelegation tx is done
+        current_get_preps: dict = self.get_prep_list()
+        assert current_get_preps["blockHeight"] == prev_block.height + 1
+
+        prev_prep_info: dict = prev_get_preps["preps"][PREP_MAIN_PREPS - 1]
+        current_prep_info: dict = current_get_preps["preps"][0]
+        for field in prev_prep_info:
+            if field == "delegated":
+                assert prev_prep_info[field] == current_prep_info[field] - delegating
+            else:
+                assert prev_prep_info[field] == current_prep_info[field]
+
+        # Rollback
+        self._rollback(prev_block)
+
+        current_get_preps: dict = self.get_prep_list()
+        assert current_get_preps == prev_get_preps
+
+        self._check_if_last_block_is_reverted(prev_block)
+
+    def _rollback(self, block: 'Block'):
+        super().rollback(block.height, block.hash)
+        self._check_if_rollback_reward_calculator_is_called(block)
+        self._check_if_last_block_is_reverted(block)
 
     def _check_if_last_block_is_reverted(self, prev_block: 'Block'):
         """After rollback, last_block should be the same as prev_block
@@ -157,3 +387,8 @@ class TestRollback(TestIISSBase):
         """
         last_block: 'Block' = self.icon_service_engine._get_last_block()
         assert last_block == prev_block
+
+    @staticmethod
+    def _check_if_rollback_reward_calculator_is_called(block: 'Block'):
+        IconScoreContext.engine.iiss.rollback_reward_calculator.assert_called_with(
+            block.height, block.hash)
