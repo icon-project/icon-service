@@ -232,6 +232,7 @@ class TestIntegratePrep(TestIISSBase):
         preps: list = []
         for i in range(IISS_MAX_DELEGATIONS):
             address: 'Address' = self._accounts[i].address
+            expected_params: dict = self.create_register_prep_params(self._accounts[i])
             preps.append(
                 {
                     "status": 0,
@@ -250,9 +251,14 @@ class TestIntegratePrep(TestIISSBase):
                     "penalty": PenaltyReason.NONE.value,
                     "unvalidatedSequenceBlocks": 0,
                     "blockHeight": register_block_height,
-                    "txIndex": i
+                    "txIndex": i,
+                    "email": expected_params["email"],
+                    "website": expected_params["website"],
+                    "details": expected_params["details"],
+                    "p2pEndpoint": expected_params["p2pEndpoint"]
                 }
             )
+
         expected_response: dict = \
             {
                 "blockHeight": self._block_height,

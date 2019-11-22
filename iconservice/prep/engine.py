@@ -804,7 +804,7 @@ class Engine(EngineBase, IISSEngineListener):
 
             for i in range(start_ranking - 1, end_ranking):
                 prep: 'PRep' = preps.get_by_index(i)
-                prep_list.append(prep.to_dict(PRepDictType.ABRIDGED))
+                prep_list.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
