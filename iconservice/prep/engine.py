@@ -15,6 +15,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+
 from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -839,6 +840,9 @@ class Engine(EngineBase, IISSEngineListener):
             #         "p2pEndpoint": prep.p2p_endpoint
             #     }
             # )
+
+        for inactive_prep in self.preps.get_inactive_preps():
+            preps_data.append(inactive_prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
