@@ -876,7 +876,7 @@ class Engine(EngineBase):
             msg=f"_put_preps_for_rc_db() "
                 f"block_height={block_height} "
                 f"total_elected_prep_delegated={term.total_elected_prep_delegated} "
-                f"total_elected_prep_delegated_snapshot={total_elected_prep_delegated}")
+                f"total_elected_prep_delegated_snapshot={term.total_elected_prep_delegated_snapshot}")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
                                                                    total_elected_prep_delegated,

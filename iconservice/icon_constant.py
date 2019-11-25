@@ -342,7 +342,11 @@ class BlockVoteStatus(Enum):
 
 
 class PRepFlag(Flag):
+    """Setting flags to True means that PRep fields specified by the flags has been changed
+
+    """
     NONE = 0
+    STATUS = auto()
     NAME = auto()
     COUNTRY = auto()
     CITY = auto()
@@ -350,6 +354,19 @@ class PRepFlag(Flag):
     WEBSITE = auto()
     DETAILS = auto()
     P2P_ENDPOINT = auto()
+    PENALTY = auto()
+    GRADE = auto()
+    STAKE = auto()
+    DELEGATED = auto()
+    LAST_GENERATE_BLOCK_HEIGHT = auto()
+    TOTAL_BLOCKS = auto()
+    VALIDATED_BLOCKS = auto()
+    UNVALIDATED_SEQUENCE_BLOCKS = auto()
+    IREP = auto()  # irep, irep_block_height
+    IREP_BLOCK_HEIGHT = auto()
+
+    BLOCK_STATISTICS = TOTAL_BLOCKS | VALIDATED_BLOCKS | UNVALIDATED_SEQUENCE_BLOCKS
+    ALL = 0xFFFFFFFF
 
 
 class PRepContainerFlag(Flag):

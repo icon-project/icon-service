@@ -19,6 +19,7 @@ import copy
 from typing import TYPE_CHECKING, List, Iterable, Optional, Dict
 
 from iconcommons.logger import Logger
+
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...icon_constant import PRepStatus, PenaltyReason, TermFlag
@@ -96,6 +97,7 @@ class Term(object):
 
     def freeze(self):
         self._is_frozen: bool = True
+        self._flags = TermFlag.NONE
 
     def _check_access_permission(self):
         if self.is_frozen():
@@ -357,8 +359,8 @@ class Term(object):
         """
 
         # This code is preserved only for state backward compatibility.
-        # After revision 7, B2 reward is not provided to block-validation-penalty
-        # (consecutive 660 blocks validation failure)
+        # After revision 7, B2 reward is not provided to the P-Rep
+        # which got penalized for consecutive 660 blocks validation failure
         if invalid_prep.status != PRepStatus.ACTIVE \
                 or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
             self._total_elected_prep_delegated_snapshot -= delegated
