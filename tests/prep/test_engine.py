@@ -21,7 +21,7 @@ from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
-from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, PRepContainerFlag
+from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatus, PenaltyReason
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
@@ -144,7 +144,6 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_main_prep_unregistration(self):
         context = Mock()
-        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -177,7 +176,6 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_sub_prep_unregistration(self):
         context = Mock()
-        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -212,7 +210,6 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_disqualification(self):
         context = Mock()
-        revision: int = 0
 
         states = [PRepStatus.DISQUALIFIED, PRepStatus.DISQUALIFIED, PRepStatus.ACTIVE]
         penalties = [
@@ -265,7 +262,6 @@ class TestEngine(unittest.TestCase):
 
     def test_update_prep_grades_on_multiple_cases(self):
         context = Mock()
-        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -472,7 +468,6 @@ class TestEngine(unittest.TestCase):
 
         context = Mock()
         context.block.height = expected_block_height
-        revision: int = 0
 
         old_term = self.term
         old_preps = self.preps
@@ -503,7 +498,7 @@ class TestEngine(unittest.TestCase):
             assert new_preps.get_by_address(prep.address) != prep
             assert new_preps.get_by_address(prep.address) == dirty_prep
 
-            new_term.update_preps(revision, [dirty_prep])
+            new_term.update_invalid_elected_preps([dirty_prep])
 
             if dirty_prep.status != PRepStatus.ACTIVE:
                 expected_preps.append(dirty_prep)

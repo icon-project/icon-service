@@ -47,7 +47,7 @@ class PRepContainer(object):
         return self._is_frozen
 
     def is_dirty(self) -> bool:
-        return utils.is_flag_on(self._flags, PRepContainerFlag.DIRTY)
+        return utils.is_all_flag_on(self._flags, PRepContainerFlag.DIRTY)
 
     def size(self, active_prep_only: bool = False) -> int:
         """Returns the number of active P-Reps
@@ -226,8 +226,7 @@ class PRepContainer(object):
         :param mutable:
         :return:
         """
-        is_frozen: bool = False if mutable else True
-        preps = PRepContainer(is_frozen, self._total_prep_delegated)
+        preps = PRepContainer(is_frozen=not mutable, total_prep_delegated=self._total_prep_delegated)
 
         preps._prep_dict.update(self._prep_dict)
         preps._active_prep_list.extend(self._active_prep_list)

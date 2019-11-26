@@ -87,7 +87,7 @@ class Term(object):
         self._flags: 'TermFlag' = TermFlag.NONE
 
     def is_dirty(self):
-        return utils.is_flag_on(self._flags, TermFlag.DIRTY | TermFlag.UPDATE_MAIN_PREPS)
+        return bool(self._flags & (TermFlag.DIRTY | TermFlag.UPDATE_MAIN_PREPS))
 
     def update_main_preps(self):
         self._flags |= TermFlag.UPDATE_MAIN_PREPS
@@ -96,7 +96,7 @@ class Term(object):
         return self._is_frozen
 
     def freeze(self):
-        self._is_frozen: bool = True
+        self._is_frozen = True
         self._flags = TermFlag.NONE
 
     def _check_access_permission(self):
@@ -297,7 +297,7 @@ class Term(object):
 
             raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
 
-        if utils.is_flag_on(self._flags, TermFlag.DIRTY):
+        if utils.is_all_flag_on(self._flags, TermFlag.DIRTY):
             self._generate_root_hash()
 
     def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
@@ -440,7 +440,7 @@ class Term(object):
 
     def copy(self) -> 'Term':
         term = copy.copy(self)
-        term._is_frozen: bool = False
+        term._is_frozen = False
         term._flags = TermFlag.NONE
 
         term._main_preps = list(self._main_preps)

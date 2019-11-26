@@ -253,7 +253,7 @@ class Engine(EngineBase, IISSEngineListener):
         """Update term with invalid elected P-Rep list during this term
         (In-term P-Rep replacement)
 
-        We have to consider 4 cases below:
+        We have to consider 5 cases below:
         1. No invalid elected P-Rep
             - Nothing to do
         2. Only main P-Reps are invalidated
@@ -264,6 +264,9 @@ class Engine(EngineBase, IISSEngineListener):
         4. Both of them are invalidated
             - Send new main P-Rep list to loopchain
             - Save the new term to DB
+        5. p2pEndpoint of a Main P-Rep is updated
+            - Send new main P-Rep list to loopchain
+            - No need to save the new term to DB
 
         :param context:
         :return:
