@@ -18,7 +18,7 @@ from typing import List, Optional
 
 from iconcommons import Logger
 
-from .prep import PRep, PRepFlag, PRepStatus
+from .prep import PRep, PRepFlag, PRepStatus, PenaltyReason
 from .sorted_list import SortedList
 from ... import utils
 from ...base.address import Address
@@ -196,15 +196,11 @@ class PRepContainer(object):
         return self._active_prep_list[start_index:start_index + size]
 
     def get_inactive_preps(self) -> List['PRep']:
-        """Returns inactive P-Reps which status is in UNREGISTERED or DISQUALIFIED
+        """Returns inactive P-Reps including P-Reps receiving a block validation penalty
 
-        :return: inactive P-Rep list sorted by penalty value and delegated amount
+        :return: inactive P-Reps sorted by penalty value and delegated amount
         """
-        inactive_prep_list = []
-        for prep in self._prep_dict.values():
-            if prep not in self._active_prep_list:
-                inactive_prep_list.append(prep)
-
+        inactive_prep_list = [prep for prep in self._prep_dict.values() if self._is_inactive(prep)]
         sorted_inactive_prep_list = sorted(inactive_prep_list, key=lambda x: (x.penalty.value, x.delegated),
                                            reverse=True)
         return sorted_inactive_prep_list
@@ -241,3 +237,12 @@ class PRepContainer(object):
     def _check_access_permission(self):
         if self.is_frozen():
             raise AccessDeniedException("PRepContainer access denied")
+
+    @staticmethod
+    def _is_inactive(prep: 'PRep'):
+        """
+        Return bool value if the P-Rep is inactive including the P-Rep receiving a block validation penalty
+
+        :return: bool
+        """
+        return prep.status != PRepStatus.ACTIVE or prep.penalty == PenaltyReason.BLOCK_VALIDATION
