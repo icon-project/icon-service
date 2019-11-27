@@ -826,14 +826,22 @@ class Engine(EngineBase, IISSEngineListener):
             raise ServiceNotReadyException("Term is not ready")
 
         preps_data = []
+
+        # Collect Main and Sub P-Reps
         for prep_snapshot in self.term.preps:
             prep = self.preps.get_by_address(prep_snapshot.address)
             preps_data.append(prep.to_dict(PRepDictType.FULL))
 
-        sorted_inactive_preps: List['PRep'] = \
-            sorted(self.preps.get_inactive_preps(), key=lambda x: x.name)
-        for inactive_prep in sorted_inactive_preps:
-            preps_data.append(inactive_prep.to_dict(PRepDictType.FULL))
+        # Collect P-Reps which got penalized for consecutive 660 block validation failure
+        def _func(node: 'PRep') -> bool:
+            return node.penalty == PenaltyReason.BLOCK_VALIDATION and node.status == PRepStatus.ACTIVE
+
+        # Sort preps in descending order by delegated
+        preps_on_block_validation_penalty = \
+            sorted(filter(_func, self.preps), key=lambda x: x.order())
+
+        for prep in preps_on_block_validation_penalty:
+            preps_data.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,

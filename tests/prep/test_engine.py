@@ -16,6 +16,7 @@
 import os
 import random
 import unittest
+from typing import List, Dict, Union
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
@@ -339,3 +340,119 @@ class TestEngine(unittest.TestCase):
         assert len(new_term.sub_preps) == self.sub_prep_count - 7
         assert new_preps.size(active_prep_only=True) == old_preps.size(active_prep_only=True) - 9
         assert new_preps.size() == old_preps.size()
+
+    def test_handle_get_prep_term_with_electable_preps(self):
+        block_height = 100
+        params = {}
+        term = self.term
+
+        context = Mock()
+        context.block.height = block_height
+
+        engine = PRepEngine()
+        engine.term = term
+        engine.preps = self.preps
+
+        ret: dict = engine.handle_get_prep_term(context, params)
+
+        assert ret["blockHeight"] == block_height
+        assert ret["sequence"] == term.sequence
+        assert ret["startBlockHeight"] == term.start_block_height
+        assert ret["endBlockHeight"] == term.end_block_height
+        assert ret["totalSupply"] == term.total_supply
+        assert ret["totalDelegated"] == term.total_delegated
+        assert ret["irep"] == term.irep
+
+        # Main P-Reps: 22, Sub P-Reps: 78
+        prep_list: List[Dict[str, Union[int, str, 'Address']]] = ret["preps"]
+        assert len(prep_list) == PREP_MAIN_AND_SUB_PREPS
+
+        for i, prep_snapshot in enumerate(term.preps):
+            prep_item: Dict[str, Union[int, str, 'Address']] = prep_list[i]
+            assert prep_item["address"] == prep_snapshot.address
+
+    def test_handle_get_prep_term_with_penalized_preps(self):
+        block_height = 200
+        sequence = 78
+        period = 43120
+        start_block_height = 200
+        end_block_height = 200 + period - 1
+        irep = icx_to_loop(40000)
+        total_supply = icx_to_loop(800_460_000)
+        total_delegated = icx_to_loop(1000)
+
+        params = {}
+
+        context = Mock()
+        context.block.height = block_height
+
+        main_prep_count = 22
+        elected_prep_count = 100
+        total_prep_count = 106
+
+        term = Term(sequence=sequence,
+                    start_block_height=start_block_height,
+                    period=period,
+                    irep=irep,
+                    total_supply=total_supply,
+                    total_delegated=total_delegated)
+
+        preps = PRepContainer()
+        for i in range(total_prep_count):
+            address = Address.from_prefix_and_int(AddressPrefix.EOA, i)
+            delegated = icx_to_loop(1000 - i)
+            penalty = PenaltyReason.NONE
+            status = PRepStatus.ACTIVE
+
+            if 0 <= i <= 4:
+                # block validation penalty preps: 5
+                penalty: 'PenaltyReason' = PenaltyReason.BLOCK_VALIDATION
+            elif i == 5:
+                # unregistered preps: 1
+                status = PRepStatus.UNREGISTERED
+            elif 6 <= i <= 7:
+                # low productivity preps: 2
+                status = PRepStatus.DISQUALIFIED
+                penalty = PenaltyReason.LOW_PRODUCTIVITY
+            elif 8 <= i <= 10:
+                # disqualified preps: 3
+                status = PRepStatus.DISQUALIFIED
+                penalty = PenaltyReason.PREP_DISQUALIFICATION
+
+            prep = PRep(address, block_height=i, delegated=delegated, penalty=penalty, status=status)
+            prep.freeze()
+            preps.add(prep)
+
+        preps.freeze()
+        assert preps.size(active_prep_only=False) == total_prep_count
+
+        electable_preps = filter(lambda x: x.is_electable(), preps)
+        term.set_preps(electable_preps, main_prep_count=main_prep_count, elected_prep_count=elected_prep_count)
+
+        engine = PRepEngine()
+        engine.term = term
+        engine.preps = preps
+
+        ret: dict = engine.handle_get_prep_term(context, params)
+
+        assert ret["blockHeight"] == block_height
+        assert ret["sequence"] == sequence
+        assert ret["startBlockHeight"] == start_block_height
+        assert ret["endBlockHeight"] == end_block_height
+        assert ret["totalSupply"] == total_supply
+        assert ret["totalDelegated"] == total_delegated
+        assert ret["irep"] == irep
+
+        prep_list: List[Dict[str, Union[int, str, 'Address']]] = ret["preps"]
+        assert len(prep_list) == elected_prep_count
+
+        for i, prep_snapshot in enumerate(term.preps):
+            prep_item: Dict[str, Union[int, str, 'Address']] = prep_list[i]
+            assert prep_item["address"] == prep_snapshot.address
+            assert prep_item["status"] == PRepStatus.ACTIVE.value
+            assert prep_item["penalty"] == PenaltyReason.NONE.value
+
+        for i, prep_item in enumerate(prep_list[-5:]):
+            assert prep_item["address"] == Address.from_prefix_and_int(AddressPrefix.EOA, i)
+            assert prep_item["status"] == PRepStatus.ACTIVE.value
+            assert prep_item["penalty"] == PenaltyReason.BLOCK_VALIDATION.value

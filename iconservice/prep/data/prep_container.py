@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Iterator
+from typing import List, Optional
 
 from iconcommons import Logger
 
-from .prep import PRep, PRepFlag, PRepStatus, PenaltyReason
+from .prep import PRep, PRepFlag, PRepStatus
 from .sorted_list import SortedList
 from ... import utils
 from ...base.address import Address
@@ -195,13 +195,6 @@ class PRepContainer(object):
         """
         return self._active_prep_list[start_index:start_index + size]
 
-    def get_inactive_preps(self) -> Iterator['PRep']:
-        """Returns inactive P-Reps including P-Reps receiving a block validation penalty
-
-        :return: iterator including invalid preps
-        """
-        return filter(self._is_inactive, self._prep_dict.values())
-
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
 
@@ -234,12 +227,3 @@ class PRepContainer(object):
     def _check_access_permission(self):
         if self.is_frozen():
             raise AccessDeniedException("PRepContainer access denied")
-
-    @staticmethod
-    def _is_inactive(prep: 'PRep'):
-        """
-        Return bool value if the P-Rep is inactive including the P-Rep receiving a block validation penalty
-
-        :return: bool
-        """
-        return prep.status != PRepStatus.ACTIVE or prep.penalty == PenaltyReason.BLOCK_VALIDATION

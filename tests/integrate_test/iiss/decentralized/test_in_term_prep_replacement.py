@@ -90,8 +90,10 @@ class TestPreps(TestIISSBase):
         for prep in tmp_preps:
             expected_preps.append(self.get_prep(prep["address"]))
 
-        sorted_inactive_preps = sorted(added_inactive_preps, key=lambda x: x["name"])
-        expected_preps.extend(sorted_inactive_preps)
+        preps_on_block_validation_penalty = \
+            sorted(added_inactive_preps,
+                   key=lambda x: (-x["delegated"], x["blockHeight"], x["txIndex"]))
+        expected_preps.extend(preps_on_block_validation_penalty)
         assert expected_preps == preps
 
     def _make_init_config(self) -> dict:
@@ -294,7 +296,7 @@ class TestPreps(TestIISSBase):
         preps = term_5["preps"]
 
         # checks if adding the unregistered prep on preps of getPRepTerm API (1)
-        self._check_preps_on_get_prep_term([unregistered_prep])
+        self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
         main_preps_5: List['Address'] = _get_main_preps(preps, main_prep_count)
@@ -315,7 +317,7 @@ class TestPreps(TestIISSBase):
         preps = term_6["preps"]
 
         # checks if adding the unregistered prep on preps of getPRepTerm API (2)
-        self._check_preps_on_get_prep_term([unregistered_prep])
+        self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
         main_preps_6: List['Address'] = _get_main_preps(preps, main_prep_count)
@@ -341,7 +343,7 @@ class TestPreps(TestIISSBase):
         preps = term_6["preps"]
 
         # checks if adding the prep receiving a low productivity penalty on preps of getPRepTerm API
-        self._check_preps_on_get_prep_term([prep_on_penalty, unregistered_prep])
+        self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
         main_preps_6: List['Address'] = _get_main_preps(preps, main_prep_count)
@@ -397,7 +399,7 @@ class TestPreps(TestIISSBase):
         preps = term_7_1["preps"]
 
         # checks if adding the prep receiving a disqualification penalty on preps of getPRepTerm API
-        self._check_preps_on_get_prep_term([prep_on_penalty, prep_on_disqualification_penalty, unregistered_prep])
+        self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
         main_preps_7: List['Address'] = _get_main_preps(preps, main_prep_count)
