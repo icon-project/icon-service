@@ -74,7 +74,7 @@ class TestPreps(TestIISSBase):
     LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 80
     PENALTY_GRACE_PERIOD = CALCULATE_PERIOD * 2 + BLOCK_VALIDATION_PENALTY_THRESHOLD
 
-    def _check_preps_on_get_prep_term(self, added_inactive_preps: list):
+    def _check_preps_on_get_prep_term(self, added_inactive_preps: List[Dict[str, str]]):
         """
         Return bool value
         checking if not only main P-Reps and sub ones but input added inactive preps are preps of 'getPRepTerm' API
@@ -89,7 +89,9 @@ class TestPreps(TestIISSBase):
         expected_preps = []
         for prep in tmp_preps:
             expected_preps.append(self.get_prep(prep["address"]))
-        expected_preps.extend(added_inactive_preps)
+
+        sorted_inactive_preps = sorted(added_inactive_preps, key=lambda x: x["name"])
+        expected_preps.extend(sorted_inactive_preps)
         assert expected_preps == preps
 
     def _make_init_config(self) -> dict:
@@ -224,6 +226,7 @@ class TestPreps(TestIISSBase):
         assert term_4["sequence"] == 4
         preps = term_4["preps"]
 
+        # A main P-Rep got penalized for consecutive 660 block validation failure
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
         main_preps_4: List['Address'] = _get_main_preps(preps, main_prep_count)
 
@@ -236,8 +239,8 @@ class TestPreps(TestIISSBase):
         assert prep_on_penalty["penalty"] == PenaltyReason.BLOCK_VALIDATION.value
         assert prep_on_penalty["unvalidatedSequenceBlocks"] == self.BLOCK_VALIDATION_PENALTY_THRESHOLD + 1
         assert prep_on_penalty["totalBlocks"] == \
-               prep_on_penalty["validatedBlocks"] + \
-               prep_on_penalty["unvalidatedSequenceBlocks"]
+            prep_on_penalty["validatedBlocks"] + \
+            prep_on_penalty["unvalidatedSequenceBlocks"]
 
         # checks if adding the prep receiving a block validation penalty on preps of getPRepTerm API
         self._check_preps_on_get_prep_term([prep_on_penalty])
@@ -332,7 +335,7 @@ class TestPreps(TestIISSBase):
         assert prep_on_penalty["unvalidatedSequenceBlocks"] == 2
         assert prep_on_penalty["grade"] == PRepGrade.CANDIDATE.value
         assert prep_on_penalty["validatedBlocks"] * 100 // prep_on_penalty["totalBlocks"] < \
-               self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+            self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD
 
         term_6 = self.get_prep_term()
         preps = term_6["preps"]

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import List, Optional, Iterator
 
 from iconcommons import Logger
 
@@ -195,15 +195,12 @@ class PRepContainer(object):
         """
         return self._active_prep_list[start_index:start_index + size]
 
-    def get_inactive_preps(self) -> List['PRep']:
+    def get_inactive_preps(self) -> Iterator['PRep']:
         """Returns inactive P-Reps including P-Reps receiving a block validation penalty
 
-        :return: inactive P-Reps sorted by penalty value and delegated amount
+        :return: iterator including invalid preps
         """
-        inactive_prep_list = [prep for prep in self._prep_dict.values() if self._is_inactive(prep)]
-        sorted_inactive_prep_list = sorted(inactive_prep_list, key=lambda x: (x.penalty.value, x.delegated),
-                                           reverse=True)
-        return sorted_inactive_prep_list
+        return filter(self._is_inactive, self._prep_dict.values())
 
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list

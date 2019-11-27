@@ -830,18 +830,9 @@ class Engine(EngineBase, IISSEngineListener):
             prep = self.preps.get_by_address(prep_snapshot.address)
             preps_data.append(prep.to_dict(PRepDictType.FULL))
 
-            # preps_data.append(
-            #     {
-            #         "name": prep.name,
-            #         "country": prep.country,
-            #         "city": prep.city,
-            #         "grade": prep.grade.value,
-            #         "address": prep.address,
-            #         "p2pEndpoint": prep.p2p_endpoint
-            #     }
-            # )
-
-        for inactive_prep in self.preps.get_inactive_preps():
+        sorted_inactive_preps: List['PRep'] = \
+            sorted(self.preps.get_inactive_preps(), key=lambda x: x.name)
+        for inactive_prep in sorted_inactive_preps:
             preps_data.append(inactive_prep.to_dict(PRepDictType.FULL))
 
         return {
