@@ -20,9 +20,9 @@ from iconcommons import Logger
 
 from .prep import PRep, PRepFlag, PRepStatus
 from .sorted_list import SortedList
+from ... import utils
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
-from ... import utils
 
 
 class PRepContainer(object):

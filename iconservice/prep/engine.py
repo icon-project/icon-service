@@ -15,6 +15,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+
 from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -825,20 +826,22 @@ class Engine(EngineBase, IISSEngineListener):
             raise ServiceNotReadyException("Term is not ready")
 
         preps_data = []
+
+        # Collect Main and Sub P-Reps
         for prep_snapshot in self.term.preps:
             prep = self.preps.get_by_address(prep_snapshot.address)
             preps_data.append(prep.to_dict(PRepDictType.FULL))
 
-            # preps_data.append(
-            #     {
-            #         "name": prep.name,
-            #         "country": prep.country,
-            #         "city": prep.city,
-            #         "grade": prep.grade.value,
-            #         "address": prep.address,
-            #         "p2pEndpoint": prep.p2p_endpoint
-            #     }
-            # )
+        # Collect P-Reps which got penalized for consecutive 660 block validation failure
+        def _func(node: 'PRep') -> bool:
+            return node.penalty == PenaltyReason.BLOCK_VALIDATION and node.status == PRepStatus.ACTIVE
+
+        # Sort preps in descending order by delegated
+        preps_on_block_validation_penalty = \
+            sorted(filter(_func, self.preps), key=lambda x: x.order())
+
+        for prep in preps_on_block_validation_penalty:
+            preps_data.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
