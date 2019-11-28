@@ -226,7 +226,7 @@ class Engine(EngineBase, IISSEngineListener):
         context.storage.meta.put_last_main_preps(context, main_preps)
 
         # All block validation penalties are released
-        self._release_block_validation_penalty(context)
+        self._reset_block_validation_penalty(context)
 
         # Create a term with context.preps whose grades are up-to-date
         new_term: 'Term' = self._create_next_term(context, self.term)
@@ -348,17 +348,16 @@ class Engine(EngineBase, IISSEngineListener):
 
         Logger.debug(tag=_TAG, msg="_update_prep_grades() end")
 
-    def _release_block_validation_penalty(self, context: 'IconScoreContext'):
-        """Release block validation penalty every term end
+    @classmethod
+    def _reset_block_validation_penalty(cls, context: 'IconScoreContext'):
+        """Reset block validation penalty in the end of every term
 
         :param context:
         :return:
         """
 
-        old_preps = self.preps
-
-        for prep in old_preps:
-            if prep.penalty == PenaltyReason.BLOCK_VALIDATION:
+        for prep in context.preps:
+            if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
                 dirty_prep = context.get_prep(prep.address, mutable=True)
                 dirty_prep.reset_block_validation_penalty()
                 context.put_dirty_prep(dirty_prep)

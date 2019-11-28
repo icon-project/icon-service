@@ -453,10 +453,19 @@ class TestEngine(unittest.TestCase):
             assert prep_item["status"] == PRepStatus.ACTIVE.value
             assert prep_item["penalty"] == PenaltyReason.NONE.value
 
+        # The P-Reps which got penalized for consecutive 660 block validation failure
+        # are located at the end of the P-Rep list
+        prev_delegated = -1
         for i, prep_item in enumerate(prep_list[-5:]):
             assert prep_item["address"] == Address.from_prefix_and_int(AddressPrefix.EOA, i)
             assert prep_item["status"] == PRepStatus.ACTIVE.value
             assert prep_item["penalty"] == PenaltyReason.BLOCK_VALIDATION.value
+
+            delegated: int = prep_item["delegated"]
+            if prev_delegated >= 0:
+                assert prev_delegated >= delegated
+
+            prev_delegated = delegated
 
     def test_handle_get_inactive_preps(self):
         expected_block_height = 1234
@@ -516,3 +525,62 @@ class TestEngine(unittest.TestCase):
         assert len(expected_preps) == len(inactive_preps)
         assert expected_block_height == response["blockHeight"]
         assert expected_total_delegated == response["totalDelegated"]
+
+    def test__reset_block_validation_penalty(self):
+        engine = PRepEngine()
+        engine.term = self.term
+        engine.preps = self.preps
+
+        self.term.freeze()
+        self.preps.freeze()
+
+        assert engine.term.is_frozen()
+        assert engine.preps.is_frozen()
+
+        IconScoreContext.engine = Mock()
+        IconScoreContext.storage = Mock()
+        IconScoreContext.engine.prep = engine
+        context = _create_context()
+
+        assert engine.preps.size(active_prep_only=False) == context.preps.size(active_prep_only=False)
+        for i in range(engine.preps.size(active_prep_only=True)):
+            assert engine.preps.get_by_index(i) == context._preps.get_by_index(i)
+
+        # Impose block validation penalty on 5 Main P-Reps
+        indices = set()
+        for _ in range(5):
+            index = random.randint(0, self.main_prep_count - 1)
+            indices.add(index)
+
+        # Impose the block validation penalty on randomly chosen 5 or less than P-Reps
+        for i in indices:
+            prep = context.preps.get_by_index(i)
+            dirty_prep = context.get_prep(prep.address, mutable=True)
+            assert not dirty_prep.is_frozen()
+
+            dirty_prep.penalty = PenaltyReason.BLOCK_VALIDATION
+            dirty_prep.grade = PRepGrade.CANDIDATE
+
+            context.put_dirty_prep(dirty_prep)
+
+        context.update_dirty_prep_batch()
+
+        for i in indices:
+            prep = context.preps.get_by_index(i)
+            assert prep.is_frozen()
+            assert prep.status == PRepStatus.ACTIVE
+            assert prep.penalty == PenaltyReason.BLOCK_VALIDATION
+            assert prep.grade == PRepGrade.CANDIDATE
+
+        engine._reset_block_validation_penalty(context)
+
+        # The penalties of P-Reps in context should be reset
+        # to PenaltyReason.NONE at the last block of the current term
+        for prep in context.preps:
+            assert prep.status == PRepStatus.ACTIVE
+            assert prep.penalty == PenaltyReason.NONE
+
+        for i in indices:
+            prep = context.preps.get_by_index(i)
+            assert prep.status == PRepStatus.ACTIVE
+            assert prep.penalty == PenaltyReason.NONE
