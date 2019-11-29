@@ -26,7 +26,8 @@ from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatu
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.prep import PRepEngine
-from iconservice.prep.data import PRep, PRepContainer, Term
+from iconservice.prep.data import PRepContainer, Term
+from iconservice.prep.data.prep import PRep, PRepDictType
 from iconservice.utils import icx_to_loop
 
 
@@ -456,3 +457,48 @@ class TestEngine(unittest.TestCase):
             assert prep_item["address"] == Address.from_prefix_and_int(AddressPrefix.EOA, i)
             assert prep_item["status"] == PRepStatus.ACTIVE.value
             assert prep_item["penalty"] == PenaltyReason.BLOCK_VALIDATION.value
+
+    def test_handle_get_inactive_preps(self):
+        context = Mock()
+        revision: int = 0
+
+        old_term = self.term
+        old_preps = self.preps
+        new_term = old_term.copy()
+        new_preps = old_preps.copy(mutable=True)
+        expected_preps = []
+
+        cases = [
+            (PRepStatus.UNREGISTERED, PenaltyReason.NONE),
+            (PRepStatus.DISQUALIFIED, PenaltyReason.PREP_DISQUALIFICATION),
+            (PRepStatus.DISQUALIFIED, PenaltyReason.LOW_PRODUCTIVITY),
+            (PRepStatus.ACTIVE, PenaltyReason.BLOCK_VALIDATION)
+        ]
+        for case in cases:
+            index = random.randint(0, len(new_term.main_preps) - 1)
+            prep = new_preps.get_by_index(index)
+
+            dirty_prep = prep.copy()
+            dirty_prep.status = case[0]
+            dirty_prep.penalty = case[1]
+            new_preps.replace(dirty_prep)
+            assert new_preps.is_dirty()
+            assert old_preps.get_by_address(prep.address) == prep
+            assert new_preps.get_by_address(prep.address) != prep
+            assert new_preps.get_by_address(prep.address) == dirty_prep
+
+            new_term.update_preps(revision, [dirty_prep])
+
+            if dirty_prep.status != PRepStatus.ACTIVE:
+                expected_preps.append(dirty_prep)
+
+        engine = PRepEngine()
+        engine.term = new_term
+        engine.preps = new_preps
+
+        params = {}
+        inactive_preps: list = engine.handle_get_inactive_preps(context, params)["preps"]
+        for prep in expected_preps:
+            prep = prep.to_dict(PRepDictType.FULL)
+            inactive_preps.remove(prep)
+        assert len(inactive_preps) == 0

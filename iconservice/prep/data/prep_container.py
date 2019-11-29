@@ -18,7 +18,7 @@ from typing import List, Optional
 
 from iconcommons import Logger
 
-from .prep import PRep, PRepFlag, PRepStatus
+from .prep import PRep, PRepFlag, PRepStatus, PenaltyReason
 from .sorted_list import SortedList
 from ... import utils
 from ...base.address import Address
@@ -194,6 +194,20 @@ class PRepContainer(object):
         :return: P-Rep list
         """
         return self._active_prep_list[start_index:start_index + size]
+
+    def get_inactive_preps(self) -> List['PRep']:
+        """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+
+        :return: Inactive Prep list
+        """
+
+        # Collect P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+        def _func(node: 'PRep') -> bool:
+            return node.status == PRepStatus.UNREGISTERED \
+                   or node.penalty in (PenaltyReason.LOW_PRODUCTIVITY, PenaltyReason.PREP_DISQUALIFICATION)
+
+        inactive_preps = list(filter(_func, self._prep_dict.values()))
+        return inactive_preps
 
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list

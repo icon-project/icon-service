@@ -68,7 +68,8 @@ class Engine(EngineBase, IISSEngineListener):
             "getMainPReps": self.handle_get_main_preps,
             "getSubPReps": self.handle_get_sub_preps,
             "getPReps": self.handle_get_preps,
-            "getPRepTerm": self.handle_get_prep_term
+            "getPRepTerm": self.handle_get_prep_term,
+            "getInactivePReps": self.handle_get_inactive_preps
         }
 
         self.preps = PRepContainer()
@@ -779,7 +780,8 @@ class Engine(EngineBase, IISSEngineListener):
         }
 
     def handle_get_preps(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns P-Reps ranging in ranking from start_ranking to end_ranking
+        """
+        Returns P-Reps ranging in ranking from start_ranking to end_ranking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
 
@@ -852,6 +854,20 @@ class Engine(EngineBase, IISSEngineListener):
             "totalDelegated": self.term.total_delegated,
             "irep": self.term.irep,
             "preps": preps_data
+        }
+
+    def handle_get_inactive_preps(self, _context: 'IconScoreContext', _param: dict) -> dict:
+        """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+
+        :param _context: IconScoreContext
+        :param _param: None
+        :return: inactive preps
+        """
+        inactive_preps_data = []
+        for prep in self.preps.get_inactive_preps():
+            inactive_preps_data.append(prep.to_dict(PRepDictType.FULL))
+        return {
+            "preps": inactive_preps_data
         }
 
     # IISSEngineListener implementation ---------------------------
