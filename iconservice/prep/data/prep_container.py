@@ -197,14 +197,14 @@ class PRepContainer(object):
 
     def get_inactive_preps(self) -> List['PRep']:
         """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+        This method does not care about the order of P-Rep list
 
         :return: Inactive Prep list
         """
 
         # Collect P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
         def _func(node: 'PRep') -> bool:
-            return node.status == PRepStatus.UNREGISTERED \
-                   or node.penalty in (PenaltyReason.LOW_PRODUCTIVITY, PenaltyReason.PREP_DISQUALIFICATION)
+            return node.status != PRepStatus.ACTIVE
 
         inactive_preps = list(filter(_func, self._prep_dict.values()))
         return inactive_preps

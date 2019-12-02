@@ -856,17 +856,25 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": preps_data
         }
 
-    def handle_get_inactive_preps(self, _context: 'IconScoreContext', _param: dict) -> dict:
+    def handle_get_inactive_preps(self, context: 'IconScoreContext', _param: dict) -> dict:
         """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
 
-        :param _context: IconScoreContext
+        :param context: IconScoreContext
         :param _param: None
         :return: inactive preps
         """
+        sorted_inactive_preps: List['PRep'] = \
+            sorted(self.preps.get_inactive_preps(), key=lambda node: node.order())
+
+        total_delegated = 0
         inactive_preps_data = []
-        for prep in self.preps.get_inactive_preps():
+        for prep in sorted_inactive_preps:
             inactive_preps_data.append(prep.to_dict(PRepDictType.FULL))
+            total_delegated += prep.delegated
+
         return {
+            "blockHeight": context.block.height,
+            "totalDelegated": total_delegated,
             "preps": inactive_preps_data
         }
 
