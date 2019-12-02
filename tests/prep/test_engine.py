@@ -26,7 +26,8 @@ from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatu
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.prep import PRepEngine
-from iconservice.prep.data import PRep, PRepContainer, Term
+from iconservice.prep.data import PRepContainer, Term
+from iconservice.prep.data.prep import PRep, PRepDictType
 from iconservice.utils import icx_to_loop
 
 
@@ -456,3 +457,62 @@ class TestEngine(unittest.TestCase):
             assert prep_item["address"] == Address.from_prefix_and_int(AddressPrefix.EOA, i)
             assert prep_item["status"] == PRepStatus.ACTIVE.value
             assert prep_item["penalty"] == PenaltyReason.BLOCK_VALIDATION.value
+
+    def test_handle_get_inactive_preps(self):
+        expected_block_height = 1234
+
+        context = Mock()
+        context.block.height = expected_block_height
+        revision: int = 0
+
+        old_term = self.term
+        old_preps = self.preps
+        new_term = old_term.copy()
+        new_preps = old_preps.copy(mutable=True)
+        expected_preps = []
+        expected_total_delegated = 0
+
+        cases = (
+            (PRepStatus.UNREGISTERED, PenaltyReason.NONE),
+            (PRepStatus.UNREGISTERED, PenaltyReason.BLOCK_VALIDATION),
+            (PRepStatus.DISQUALIFIED, PenaltyReason.PREP_DISQUALIFICATION),
+            (PRepStatus.DISQUALIFIED, PenaltyReason.LOW_PRODUCTIVITY),
+            (PRepStatus.ACTIVE, PenaltyReason.BLOCK_VALIDATION),
+            (PRepStatus.ACTIVE, PenaltyReason.NONE)
+        )
+
+        for case in cases:
+            index = random.randint(0, len(new_term.main_preps) - 1)
+            prep = new_preps.get_by_index(index)
+
+            dirty_prep = prep.copy()
+            dirty_prep.status = case[0]
+            dirty_prep.penalty = case[1]
+            new_preps.replace(dirty_prep)
+            assert new_preps.is_dirty()
+            assert old_preps.get_by_address(prep.address) == prep
+            assert new_preps.get_by_address(prep.address) != prep
+            assert new_preps.get_by_address(prep.address) == dirty_prep
+
+            new_term.update_preps(revision, [dirty_prep])
+
+            if dirty_prep.status != PRepStatus.ACTIVE:
+                expected_preps.append(dirty_prep)
+                expected_total_delegated += dirty_prep.delegated
+
+        expected_preps = sorted(expected_preps, key=lambda node: node.order())
+
+        engine = PRepEngine()
+        engine.term = new_term
+        engine.preps = new_preps
+
+        params = {}
+        response: dict = engine.handle_get_inactive_preps(context, params)
+        inactive_preps: list = response["preps"]
+        for i, prep in enumerate(expected_preps):
+            expected_prep_data: dict = prep.to_dict(PRepDictType.FULL)
+            assert expected_prep_data == inactive_preps[i]
+
+        assert len(expected_preps) == len(inactive_preps)
+        assert expected_block_height == response["blockHeight"]
+        assert expected_total_delegated == response["totalDelegated"]
