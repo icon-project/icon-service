@@ -186,13 +186,6 @@ class IconScoreContext(object):
     def term(self) -> Optional['Term']:
         return self._term
 
-    def is_term_updated(self) -> bool:
-        """Returns whether info in self._term is changed
-
-        :return:
-        """
-        return self._term and self._term.is_dirty()
-
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
 
@@ -284,7 +277,7 @@ class IconScoreContext(object):
 
         if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) and \
                 self._term.is_main_prep(dirty_prep.address):
-            self._term.update_main_preps()
+            self._term.on_main_prep_p2p_endpoint_updated()
 
         Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
 

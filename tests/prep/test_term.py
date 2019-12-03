@@ -13,16 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import random
 import unittest
-import copy
 from typing import List
 from unittest.mock import Mock
 
+from iconservice import utils
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.icon_constant import (
     PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, TERM_PERIOD,
-    IconScoreContextType, PenaltyReason, PRepStatus
+    IconScoreContextType, PenaltyReason, PRepStatus, TermFlag
 )
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxStorage
@@ -83,6 +84,7 @@ class TestTerm(unittest.TestCase):
                 self.total_elected_prep_delegated += delegated
 
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        assert not self.term.is_dirty()
 
     def test_set_preps(self):
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
@@ -126,12 +128,16 @@ class TestTerm(unittest.TestCase):
             invalid_elected_preps: List['PRep'] = [invalid_main_prep]
 
             term.update_invalid_elected_preps(invalid_elected_preps)
+
             _check_prep_snapshots_in_term(term)
             assert len(term.main_preps) == PREP_MAIN_PREPS
             assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
             assert isinstance(term.root_hash, bytes)
             assert term.root_hash != self.term.root_hash
             assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+            assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
+            assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+            assert term.is_dirty()
 
     def test_update_preps_with_block_validation_penalty(self):
         revision: int = 0
@@ -154,6 +160,9 @@ class TestTerm(unittest.TestCase):
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
         assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+        assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
+        assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+        assert term.is_dirty()
 
     def test_update_preps_with_unregistered_prep(self):
         revision: int = 0
@@ -176,6 +185,9 @@ class TestTerm(unittest.TestCase):
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
         assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+        assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
+        assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+        assert term.is_dirty()
 
     def test_update_preps_with_sub_preps_only(self):
         revision: int = 0
@@ -196,6 +208,10 @@ class TestTerm(unittest.TestCase):
         assert len(term.sub_preps) == 0
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash == self.term.root_hash
+        assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
+        assert not term.flags & TermFlag.MAIN_PREPS
+        assert utils.is_all_flag_on(term.flags, TermFlag.SUB_PREPS)
+        assert term.is_dirty()
 
     def test_update_preps_2(self):
         # Remove all main P-Reps
@@ -220,9 +236,15 @@ class TestTerm(unittest.TestCase):
         assert len(term.sub_preps) == 0
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
+        assert term.flags == term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
+        assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
+        assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+        assert term.is_dirty()
 
     def test_to_list_and_from_list(self):
         self.term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        assert not self.term.is_dirty()
+        assert self.term.flags == TermFlag.NONE
         _check_prep_snapshots_in_term(self.term)
 
         new_term = Term.from_list(self.term.to_list(), self.term.total_elected_prep_delegated_snapshot)
@@ -233,8 +255,21 @@ class TestTerm(unittest.TestCase):
     def test__contain__(self):
         term = self.term
         term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        assert not term.is_dirty()
+        assert term.flags == TermFlag.NONE
+
         _check_prep_snapshots_in_term(term)
 
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS
         assert len(term) == PREP_MAIN_AND_SUB_PREPS
+
+    def test_on_main_prep_p2p_endpoint_updated(self):
+        term = self.term
+        term.set_preps(self.preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
+        assert not term.is_dirty()
+        assert term.flags == TermFlag.NONE
+
+        term.on_main_prep_p2p_endpoint_updated()
+        assert term.is_dirty()
+        assert term.flags == TermFlag.MAIN_PREP_P2P_ENDPOINT

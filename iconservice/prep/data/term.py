@@ -86,11 +86,15 @@ class Term(object):
         self._is_frozen: bool = False
         self._flags: 'TermFlag' = TermFlag.NONE
 
-    def is_dirty(self):
-        return bool(self._flags & (TermFlag.DIRTY | TermFlag.UPDATE_MAIN_PREPS))
+    @property
+    def flags(self) -> 'TermFlag':
+        return self._flags
 
-    def update_main_preps(self):
-        self._flags |= TermFlag.UPDATE_MAIN_PREPS
+    def is_dirty(self):
+        return utils.is_any_flag_on(self._flags, TermFlag.ALL)
+
+    def on_main_prep_p2p_endpoint_updated(self):
+        self._flags |= TermFlag.MAIN_PREP_P2P_ENDPOINT
 
     def is_frozen(self) -> bool:
         return self._is_frozen
@@ -279,6 +283,7 @@ class Term(object):
         self._total_elected_prep_delegated = total_elected_prep_delegated
 
         self._generate_root_hash()
+        self._flags = TermFlag.NONE
 
     def update_invalid_elected_preps(self, invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
@@ -288,17 +293,22 @@ class Term(object):
         :return:
         """
         self._check_access_permission()
+        flags: 'TermFlag' = TermFlag.NONE
 
         for prep in invalid_elected_preps:
             if self._remove_invalid_main_prep(prep) >= 0:
+                flags |= TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
                 continue
             if self._remove_invalid_sub_prep(prep) >= 0:
+                flags |= TermFlag.SUB_PREPS
                 continue
 
             raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
 
-        if utils.is_all_flag_on(self._flags, TermFlag.DIRTY):
+        if utils.is_all_flag_on(flags, TermFlag.MAIN_PREPS):
             self._generate_root_hash()
+
+        self._flags |= flags
 
     def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
@@ -329,7 +339,6 @@ class Term(object):
         self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
         del self._preps_dict[address]
 
-        self._flags |= TermFlag.DIRTY
         return index
 
     def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
@@ -345,8 +354,6 @@ class Term(object):
             invalid_prep_snapshot = self._sub_preps.pop(index)
             self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
             del self._preps_dict[invalid_prep.address]
-
-            self._flags |= TermFlag.DIRTY
 
         return index
 

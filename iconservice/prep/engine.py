@@ -275,13 +275,12 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         context.storage.meta.put_last_main_preps(context, main_preps)
 
-        if context.is_term_updated():
-            new_term = context.term
-        else:
-            new_term = None
+        new_term = context.term
+        if not new_term.is_dirty():
+            return None, None
 
-        if new_term and new_term.is_dirty():
-            main_preps_as_dict: Optional[dict] = \
+        if bool(new_term.flags & (TermFlag.MAIN_PREPS | TermFlag.MAIN_PREP_P2P_ENDPOINT)):
+            main_preps_as_dict = \
                 self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
             main_preps_as_dict = None
