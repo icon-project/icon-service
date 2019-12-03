@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict, Union
+
+from iconservice.base.address import Address
 from iconservice.icon_constant import Revision, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_MIN_IREP, IISS_INITIAL_IREP, PREP_MAIN_AND_SUB_PREPS
+    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -44,7 +47,7 @@ class TestIISSDecentralized2(TestIISSBase):
         minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
         init_balance: int = minimum_delegate_amount_for_decentralization * 2
 
-        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        # distribute icx to PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_SUB_PREPS - 1
         self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
                             init_balance=init_balance)
 
@@ -175,13 +178,19 @@ class TestIISSDecentralized2(TestIISSBase):
         self.make_blocks(self._block_height + 1)
 
         response: dict = self.get_main_prep_list()
-        address = response["preps"][0]["address"]
+        address: 'Address' = response["preps"][0]["address"]
+        assert isinstance(address, Address)
+
+        response: dict = self.get_prep(address)
+        old_p2p_endpoint: str = response["p2pEndpoint"]
+        new_p2p_endpoint: str = "192.168.0.1:7100"
+        assert old_p2p_endpoint != new_p2p_endpoint
 
         self.distribute_icx([address], ICX_IN_LOOP)
 
-        # set prep
+        # set prep 1
         tx: dict = self.create_set_prep_tx(from_=address,
-                                           set_data={"p2pEndpoint": "192.168.0.1:9000"})
+                                           set_data={"p2pEndpoint": new_p2p_endpoint})
 
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertIsNone(main_prep_as_dict)
@@ -189,13 +198,21 @@ class TestIISSDecentralized2(TestIISSBase):
         self.set_revision(Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value)
         self.set_revision(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value)
 
-        endpoint: str = "192.168.0.1:9001"
-        # set prep
+        # set prep 2
+        new_p2p_endpoint = "192.168.0.1:7200"
         tx: dict = self.create_set_prep_tx(from_=address,
-                                           set_data={"p2pEndpoint": endpoint})
+                                           set_data={"p2pEndpoint": new_p2p_endpoint})
 
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
-        self.assertEqual(endpoint, main_prep_as_dict["preps"][0]["p2pEndpoint"])
+        self.assertEqual(new_p2p_endpoint, main_prep_as_dict["preps"][0]["p2pEndpoint"])
+
+        # set prep with the same p2pEndpoint as the old one
+        tx: dict = self.create_set_prep_tx(from_=address,
+                                           set_data={"p2pEndpoint": old_p2p_endpoint})
+
+        # main_prep_as_dict should not be modified
+        _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        assert main_prep_as_dict is None
 
     def test_check_update_endpoint2(self):
         self.update_governance()
@@ -220,15 +237,34 @@ class TestIISSDecentralized2(TestIISSBase):
 
         self.distribute_icx(self._accounts[:main_preps_count], ICX_IN_LOOP)
 
-        endpoint: str = "192.168.0.1:9000"
+        # Change p2pEndpoints of sub P-Reps
         tx_list: list = []
-        for i in range(main_preps_count):
+        start = 100
+        size = 20
+        for i in range(size):
+            new_p2p_endpoint: str = f"192.168.0.{start + i}:7100"
+
             # set prep
             tx: dict = self.create_set_prep_tx(from_=self._accounts[i + main_preps_count],
-                                               set_data={"p2pEndpoint": endpoint})
+                                               set_data={"p2pEndpoint": new_p2p_endpoint})
             tx_list.append(tx)
+
+        # To change the p2pEndpoints of sub P-Reps cannot affect main_prep_as_dict
+        _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list)
+        assert main_prep_as_dict is None
+
         self.process_confirm_block_tx(tx_list)
 
+        # Check if setPRep for some sub P-Reps works well
+        for i in range(size):
+            p2p_endpoint: str = f"192.168.0.{start + i}:7100"
+            account = self._accounts[main_preps_count + i]
+
+            prep_info: Dict[str, Union[str, int]] = self.get_prep(account.address)
+            assert p2p_endpoint == prep_info["p2pEndpoint"]
+
+        # Unregistered main P-Rep is replaced by the first sub P-Rep in descending order by delegated
         tx: dict = self.create_unregister_prep_tx(self._accounts[0])
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
-        self.assertEqual(endpoint, main_prep_as_dict["preps"][0]["p2pEndpoint"])
+
+        assert f"192.168.0.{start}:7100" == main_prep_as_dict["preps"][0]["p2pEndpoint"]

@@ -30,7 +30,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag, TermFlag)
+    Revision, PRepFlag)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -313,10 +313,19 @@ class IconScoreContext(object):
     def put_dirty_prep(self, prep: 'PRep'):
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
 
-        if self._tx_dirty_preps is not None:
-            self._tx_dirty_preps[prep.address] = prep
+        if self._tx_dirty_preps is None:
+            Logger.warning(tag=self.TAG, msg="self._tx_dirty_preps is None")
+            Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+            return
 
-        Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() end")
+        if not prep.is_dirty() and self.revision >= Revision.OPTIMIZE_DIRTY_PREP_UPDATE.value:
+            Logger.info(tag=self.TAG, msg=f"No need to update an unchanged P-Rep: revision={self.revision}")
+            Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+            return
+
+        self._tx_dirty_preps[prep.address] = prep
+
+        Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
 
 class IconScoreContextFactory(object):
