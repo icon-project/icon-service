@@ -19,9 +19,11 @@ from typing import Set, Optional
 
 # noinspection PyPackageRequirements
 import pytest
+
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import AccessDeniedException, InvalidParamsException
-from iconservice.prep.data import PRep, PRepContainer, PRepStatus
+from iconservice.icon_constant import PRepStatus
+from iconservice.prep.data import PRep, PRepContainer
 
 
 def _create_dummy_prep(index: int, status: 'PRepStatus' = PRepStatus.ACTIVE) -> 'PRep':

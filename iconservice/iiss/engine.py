@@ -866,17 +866,17 @@ class Engine(EngineBase):
         else:
             block_height: int = context.block.height
 
-        if revision < Revision.IS_1_5_16.value:
+        if revision < Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated_snapshot
         else:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated
 
         Logger.info(
             tag=cls.TAG,
-            msg=f"put_preps_for_rc_db"
-                f"block_height={block_height}"
-                f"total_elected_prep_delegated={term.total_elected_prep_delegated}"
-                f"total_elected_prep_delegated_snapshot={total_elected_prep_delegated}")
+            msg=f"_put_preps_for_rc_db() "
+                f"block_height={block_height} "
+                f"total_elected_prep_delegated={term.total_elected_prep_delegated} "
+                f"total_elected_prep_delegated_snapshot={term.total_elected_prep_delegated_snapshot}")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
                                                                    total_elected_prep_delegated,

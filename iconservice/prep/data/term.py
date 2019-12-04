@@ -16,24 +16,19 @@
 __all__ = ("Term", "PRepSnapshot")
 
 import copy
-import enum
 from typing import TYPE_CHECKING, List, Iterable, Optional, Dict
 
 from iconcommons.logger import Logger
+
+from ... import utils
 from ...base.exception import AccessDeniedException
-from ...icon_constant import PRepStatus, PenaltyReason
+from ...icon_constant import PRepStatus, PenaltyReason, TermFlag
 from ...utils import bytes_to_hex
 from ...utils.hashing.hash_generator import RootHashGenerator
 
 if TYPE_CHECKING:
     from ...base.address import Address
     from .prep import PRep
-
-
-class _Flag(enum.Flag):
-    NONE = 0
-    DIRTY = enum.auto()
-    FROZEN = enum.auto()
 
 
 class PRepSnapshot(object):
@@ -71,7 +66,6 @@ class Term(object):
                  irep: int,
                  total_supply: int,
                  total_delegated: int):
-        self._flag: _Flag = _Flag.NONE
         self._sequence = sequence
 
         self._start_block_height = start_block_height
@@ -89,15 +83,25 @@ class Term(object):
 
         # made from main P-Rep addresses
         self._merkle_root_hash: Optional[bytes] = None
+        self._is_frozen: bool = False
+        self._flags: 'TermFlag' = TermFlag.NONE
+
+    @property
+    def flags(self) -> 'TermFlag':
+        return self._flags
+
+    def is_dirty(self):
+        return utils.is_any_flag_on(self._flags, TermFlag.ALL)
+
+    def on_main_prep_p2p_endpoint_updated(self):
+        self._flags |= TermFlag.MAIN_PREP_P2P_ENDPOINT
 
     def is_frozen(self) -> bool:
-        return bool(self._flag & _Flag.FROZEN)
-
-    def is_dirty(self) -> bool:
-        return bool(self._flag & _Flag.DIRTY)
+        return self._is_frozen
 
     def freeze(self):
-        self._flag = _Flag.FROZEN
+        self._is_frozen = True
+        self._flags = TermFlag.NONE
 
     def _check_access_permission(self):
         if self.is_frozen():
@@ -143,6 +147,13 @@ class Term(object):
             and self._sub_preps == other._sub_preps \
             and self._preps_dict == other._preps_dict \
             and self._merkle_root_hash == other._merkle_root_hash
+
+    def is_main_prep(self, address: 'Address') -> bool:
+        for prep_snapshot in self._main_preps:
+            if address == prep_snapshot.address:
+                return True
+
+        return False
 
     @property
     def sequence(self) -> int:
@@ -272,29 +283,34 @@ class Term(object):
         self._total_elected_prep_delegated = total_elected_prep_delegated
 
         self._generate_root_hash()
+        self._flags = TermFlag.NONE
 
-    def update_preps(self, revision: int, invalid_elected_preps: Iterable['PRep']):
+    def update_invalid_elected_preps(self, invalid_elected_preps: Iterable['PRep']):
         """Update main and sub P-Reps with invalid elected P-Reps
 
-        :param revision:
         :param invalid_elected_preps:
             elected P-Reps that cannot keep governance during this term as their penalties
         :return:
         """
         self._check_access_permission()
+        flags: 'TermFlag' = TermFlag.NONE
 
         for prep in invalid_elected_preps:
-            if self._remove_invalid_main_prep(revision, prep) >= 0:
+            if self._remove_invalid_main_prep(prep) >= 0:
+                flags |= TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
                 continue
-            if self._remove_invalid_sub_prep(revision, prep) >= 0:
+            if self._remove_invalid_sub_prep(prep) >= 0:
+                flags |= TermFlag.SUB_PREPS
                 continue
 
             raise AssertionError(f"{prep.address} not in elected P-Reps: {self}")
 
-        if self.is_dirty():
+        if utils.is_all_flag_on(flags, TermFlag.MAIN_PREPS):
             self._generate_root_hash()
 
-    def _remove_invalid_main_prep(self, revision: int, invalid_prep: 'PRep') -> int:
+        self._flags |= flags
+
+    def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
 
         :param invalid_prep: an invalid main P-Rep
@@ -320,13 +336,12 @@ class Term(object):
                 msg=f"Replace a main P-Rep: "
                     f"index={index} {address} -> {self._main_preps[index].address}")
 
-        self._reduce_total_elected_prep_delegated(revision, invalid_prep, invalid_prep_snapshot.delegated)
+        self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
         del self._preps_dict[address]
 
-        self._flag |= _Flag.DIRTY
         return index
 
-    def _remove_invalid_sub_prep(self, revision: int, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
         """Remove an invalid sub P-Rep from self._sub_preps
 
         :param invalid_prep: an invalid sub P-Rep
@@ -337,14 +352,12 @@ class Term(object):
 
         if index >= 0:
             invalid_prep_snapshot = self._sub_preps.pop(index)
-            self._reduce_total_elected_prep_delegated(revision, invalid_prep, invalid_prep_snapshot.delegated)
+            self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
             del self._preps_dict[invalid_prep.address]
-
-            self._flag |= _Flag.DIRTY
 
         return index
 
-    def _reduce_total_elected_prep_delegated(self, revision: int, invalid_prep: 'PRep', delegated: int):
+    def _reduce_total_elected_prep_delegated(self, invalid_prep: 'PRep', delegated: int):
         """Reduce total_elected_prep_delegated by the delegated amount of the given invalid P-Rep
 
         :param invalid_prep:
@@ -353,8 +366,8 @@ class Term(object):
         """
 
         # This code is preserved only for state backward compatibility.
-        # After revision 7, B2 reward is not provided to block-validation-penalty
-        # (consecutive 660 blocks validation failure)
+        # After revision 7, B2 reward is not provided to the P-Rep
+        # which got penalized for consecutive 660 blocks validation failure
         if invalid_prep.status != PRepStatus.ACTIVE \
                 or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
             self._total_elected_prep_delegated_snapshot -= delegated
@@ -434,7 +447,8 @@ class Term(object):
 
     def copy(self) -> 'Term':
         term = copy.copy(self)
-        term._flag = _Flag.NONE
+        term._is_frozen = False
+        term._flags = TermFlag.NONE
 
         term._main_preps = list(self._main_preps)
         term._sub_preps = list(self._sub_preps)

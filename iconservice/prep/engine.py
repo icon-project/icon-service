@@ -27,7 +27,7 @@ from ..base.exception import InvalidParamsException, MethodNotFoundException, Se
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
-    PenaltyReason
+    PenaltyReason, TermFlag
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -253,7 +253,7 @@ class Engine(EngineBase, IISSEngineListener):
         """Update term with invalid elected P-Rep list during this term
         (In-term P-Rep replacement)
 
-        We have to consider 4 cases below:
+        We have to consider 5 cases below:
         1. No invalid elected P-Rep
             - Nothing to do
         2. Only main P-Reps are invalidated
@@ -264,6 +264,9 @@ class Engine(EngineBase, IISSEngineListener):
         4. Both of them are invalidated
             - Send new main P-Rep list to loopchain
             - Save the new term to DB
+        5. p2pEndpoint of a Main P-Rep is updated
+            - Send new main P-Rep list to loopchain
+            - No need to save the new term to DB
 
         :param context:
         :return:
@@ -272,19 +275,14 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         context.storage.meta.put_last_main_preps(context, main_preps)
 
-        if not context.is_term_updated():
-            # No elected P-Rep is disqualified during this term
+        new_term = context.term
+        if not new_term.is_dirty():
             return None, None
 
-        new_term = context.term
-        assert new_term.is_dirty()
-
-        if self.term.root_hash != new_term.root_hash:
-            # Case 2 or 4: Some main P-Reps are replaced or removed
-            main_preps_as_dict: Optional[dict] = \
+        if bool(new_term.flags & (TermFlag.MAIN_PREPS | TermFlag.MAIN_PREP_P2P_ENDPOINT)):
+            main_preps_as_dict = \
                 self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
-            # Case 3: Only sub P-Reps are invalidated
             main_preps_as_dict = None
 
         return main_preps_as_dict, new_term
