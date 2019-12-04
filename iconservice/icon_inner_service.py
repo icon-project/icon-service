@@ -367,6 +367,8 @@ class IconScoreInnerTask(object):
 
         Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"rollback() end: {response}")
 
+        return response
+
     def _rollback(self, request: dict) -> dict:
         Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"_rollback() start: {request}")
 
