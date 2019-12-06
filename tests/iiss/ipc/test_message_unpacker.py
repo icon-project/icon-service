@@ -109,6 +109,14 @@ class TestMessageUnpacker(unittest.TestCase):
                     int_to_bytes(iscore),
                     state_hash
                 )
+            ),
+            (
+                MessageType.INIT,
+                msg_id,
+                (
+                    success,
+                    block_height
+                )
             )
         ]
 
@@ -154,6 +162,11 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertTrue(calculate_done_notification.success)
         self.assertEqual(block_height, calculate_done_notification.block_height)
         self.assertEqual(state_hash, calculate_done_notification.state_hash)
+
+        init_response = next(it)
+        self.assertIsInstance(init_response, InitResponse)
+        self.assertEqual(success, init_response.success)
+        self.assertEqual(block_height, init_response.block_height)
 
         with self.assertRaises(StopIteration):
             next(it)

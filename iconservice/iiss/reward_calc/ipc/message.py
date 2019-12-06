@@ -54,6 +54,8 @@ class MessageType(IntEnum):
     COMMIT_CLAIM = 5
     QUERY_CALCULATE_STATUS = 6
     QUERY_CALCULATE_RESULT = 7
+    ROLLBACK = 8
+    INIT = 9
     READY = 100
     CALCULATE_DONE = 101
 
@@ -445,6 +447,43 @@ class CommitBlockResponse(Response):
         block_hash: bytes = payload[2]
 
         return CommitBlockResponse(msg_id, success, block_height, block_hash)
+
+
+class InitRequest(Request):
+    def __init__(self, block_height: int):
+        super().__init__(MessageType.INIT)
+
+        self.block_height = block_height
+
+    def __str__(self):
+        return f"{self.msg_type.name}({self.msg_id}, {self.block_height})"
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id, self.block_height
+
+
+class InitResponse(Response):
+    MSG_TYPE = MessageType.INIT
+
+    def __init__(self, msg_id: int, success: bool, block_height: int):
+        super().__init__()
+
+        self.msg_id: int = msg_id
+        self.success: bool = success
+        self.block_height: int = block_height
+
+    def __str__(self):
+        return f"INIT({self.msg_id}, {self.success}, {self.block_height})"
+
+    @staticmethod
+    def from_list(items: list) -> 'InitResponse':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        success: bool = payload[0]
+        block_height: int = payload[1]
+
+        return InitResponse(msg_id, success, block_height)
 
 
 class ReadyNotification(Response):
