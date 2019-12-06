@@ -114,7 +114,19 @@ class Engine(EngineBase):
 
     @staticmethod
     def ready_callback(cb_data: 'ReadyNotification'):
-        Logger.debug(tag=_TAG, msg=f"ready callback called with {cb_data}")
+        Logger.debug(tag=_TAG, msg=f"ready_callback() start: {cb_data}")
+        Logger.debug(tag=_TAG, msg="ready_callback() end")
+
+    def init_reward_calculator(self, block: 'Block'):
+        """Send a INIT request to RC to synchronize the block state with RC
+
+        """
+        Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() start")
+
+        success, block_height = self._reward_calc_proxy.init_reward_calculator(block.height)
+        Logger.info(tag=_TAG, msg=f"success={success} block_height={block_height} last_block={block}")
+
+        Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() end")
 
     def get_ready_future(self):
         return self._reward_calc_proxy.get_ready_future()

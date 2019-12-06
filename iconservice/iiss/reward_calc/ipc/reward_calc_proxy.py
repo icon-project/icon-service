@@ -426,6 +426,34 @@ class RewardCalcProxy(object):
 
         return future.result()
 
+    def init_reward_calculator(self, block_height: int) -> int:
+        Logger.debug(tag=_TAG, msg=f"init_reward_calculator() start: block_height={block_height}")
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._init_reward_calculator(block_height), self._loop)
+
+        try:
+            response: InitResponse = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("query_calculate_result message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg="query_calculate_result() end")
+
+        return response.success
+
+    async def _init_reward_calculator(self, block_height: int):
+        Logger.debug(tag=_TAG, msg=f"init_reward_calculator() start: block_height={block_height}")
+
+        request = InitRequest(block_height)
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="init_reward_calculator() end")
+
+        return future.result()
+
     def ready_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"ready_handler() start {response}")
 

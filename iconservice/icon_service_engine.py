@@ -2129,13 +2129,17 @@ class IconServiceEngine(ContextContainer):
         """
         Logger.debug(tag=self.TAG, msg="hello() start")
 
+        iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
+
+        iiss_engine.init_reward_calculator(self._get_last_block())
+
         if isinstance(self._wal_reader, WriteAheadLogReader):
             wal_state = WALState(self._wal_reader.state)
 
             # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
             # send COMMIT_BLOCK to rc prior to invoking a block
             if not (wal_state & WALState.SEND_COMMIT_BLOCK):
-                IconScoreContext.engine.iiss.send_commit(
+                iiss_engine.send_commit(
                     self._wal_reader.block.height, self._wal_reader.instant_block_hash)
 
             # No need to use
