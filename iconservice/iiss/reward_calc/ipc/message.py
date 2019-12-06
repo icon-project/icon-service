@@ -489,15 +489,16 @@ class InitResponse(Response):
 class ReadyNotification(Response):
     MSG_TYPE = MessageType.READY
 
-    def __init__(self, msg_id: int, version: int, block_height: int):
+    def __init__(self, msg_id: int, version: int, block_height: int, block_hash: bytes):
         super().__init__()
 
         self.msg_id = msg_id
         self.version = version
         self.block_height = block_height
+        self.block_hash = block_hash
 
     def __str__(self):
-        return f"READY({self.msg_id}, {self.version}, {self.block_height})"
+        return f"READY({self.msg_id}, {self.version}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
     @staticmethod
     def from_list(items: list) -> 'ReadyNotification':
@@ -506,8 +507,9 @@ class ReadyNotification(Response):
 
         version: int = payload[0]
         block_height: int = payload[1]
+        block_hash: bytes = payload[2]
 
-        return ReadyNotification(msg_id, version, block_height)
+        return ReadyNotification(msg_id, version, block_height, block_hash)
 
 
 class CalculateDoneNotification(Response):

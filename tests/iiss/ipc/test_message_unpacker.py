@@ -96,7 +96,8 @@ class TestMessageUnpacker(unittest.TestCase):
                 msg_id,
                 (
                     version,
-                    block_height
+                    block_height,
+                    block_hash
                 )
 
             ),
@@ -156,6 +157,7 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertIsInstance(ready_notification, ReadyNotification)
         self.assertEqual(version, ready_notification.version)
         self.assertEqual(block_height, ready_notification.block_height)
+        self.assertEqual(block_hash, ready_notification.block_hash)
 
         calculate_done_notification = next(it)
         self.assertIsInstance(calculate_done_notification, CalculateDoneNotification)
