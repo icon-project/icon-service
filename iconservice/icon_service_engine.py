@@ -2131,7 +2131,7 @@ class IconServiceEngine(ContextContainer):
 
         iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
 
-        iiss_engine.init_reward_calculator(self._get_last_block())
+        last_block: 'Block' = self._get_last_block()
 
         if isinstance(self._wal_reader, WriteAheadLogReader):
             wal_state = WALState(self._wal_reader.state)
@@ -2142,8 +2142,12 @@ class IconServiceEngine(ContextContainer):
                 iiss_engine.send_commit(
                     self._wal_reader.block.height, self._wal_reader.instant_block_hash)
 
+            assert last_block == self._wal_reader.block
+
             # No need to use
             self._wal_reader = None
+
+        # iiss_engine.init_reward_calculator(last_block)
 
         Logger.debug(tag=self.TAG, msg="hello() end")
 

@@ -121,7 +121,7 @@ class Engine(EngineBase):
         """Send a INIT request to RC to synchronize the block state with RC
 
         """
-        Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() start")
+        Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() start: block={block}")
 
         success, block_height = self._reward_calc_proxy.init_reward_calculator(block.height)
         Logger.info(tag=_TAG, msg=f"success={success} block_height={block_height} last_block={block}")
