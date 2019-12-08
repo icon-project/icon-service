@@ -21,9 +21,9 @@ from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
 
+from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
-from iconcommons import IconConfig
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM

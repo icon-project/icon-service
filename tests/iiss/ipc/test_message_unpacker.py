@@ -32,6 +32,8 @@ class TestMessageUnpacker(unittest.TestCase):
         block_height: int = 100
         state_hash: bytes = hashlib.sha3_256(b'').digest()
         block_hash: bytes = hashlib.sha3_256(b'block_hash').digest()
+        tx_index: int = 1
+        tx_hash: bytes = hashlib.sha3_256(b"tx_hash").digest()
         address = Address.from_data(AddressPrefix.EOA, b'')
         iscore: int = 5000
         success: bool = True
@@ -71,6 +73,8 @@ class TestMessageUnpacker(unittest.TestCase):
                     address.to_bytes_including_prefix(),
                     block_height,
                     block_hash,
+                    tx_index,
+                    tx_hash,
                     int_to_bytes(iscore)
                 )
             ),
@@ -92,7 +96,8 @@ class TestMessageUnpacker(unittest.TestCase):
                 msg_id,
                 (
                     version,
-                    block_height
+                    block_height,
+                    block_hash
                 )
 
             ),
@@ -104,6 +109,14 @@ class TestMessageUnpacker(unittest.TestCase):
                     block_height,
                     int_to_bytes(iscore),
                     state_hash
+                )
+            ),
+            (
+                MessageType.INIT,
+                msg_id,
+                (
+                    success,
+                    block_height
                 )
             )
         ]
@@ -129,6 +142,8 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertIsInstance(claim_response, ClaimResponse)
         self.assertEqual(iscore, claim_response.iscore)
         self.assertEqual(block_height, claim_response.block_height)
+        self.assertEqual(tx_index, claim_response.tx_index)
+        self.assertEqual(tx_hash, claim_response.tx_hash)
 
         commit_block_response = next(it)
         self.assertIsInstance(commit_block_response, CommitBlockResponse)
@@ -142,12 +157,18 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertIsInstance(ready_notification, ReadyNotification)
         self.assertEqual(version, ready_notification.version)
         self.assertEqual(block_height, ready_notification.block_height)
+        self.assertEqual(block_hash, ready_notification.block_hash)
 
         calculate_done_notification = next(it)
         self.assertIsInstance(calculate_done_notification, CalculateDoneNotification)
         self.assertTrue(calculate_done_notification.success)
         self.assertEqual(block_height, calculate_done_notification.block_height)
         self.assertEqual(state_hash, calculate_done_notification.state_hash)
+
+        init_response = next(it)
+        self.assertIsInstance(init_response, InitResponse)
+        self.assertEqual(success, init_response.success)
+        self.assertEqual(block_height, init_response.block_height)
 
         with self.assertRaises(StopIteration):
             next(it)
