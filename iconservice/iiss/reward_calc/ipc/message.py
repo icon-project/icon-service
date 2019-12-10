@@ -513,7 +513,7 @@ class RollbackResponse(Response):
         self.block_hash: bytes = block_hash
 
     def __str__(self):
-        return f"ROLLBACK({self.msg_id}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
+        return f"ROLLBACK({self.msg_id}, {self.success}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
     @staticmethod
     def from_list(items: list) -> 'RollbackResponse':

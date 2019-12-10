@@ -915,15 +915,15 @@ class Engine(EngineBase):
                     msg=f"rollback_reward_calculator() start: "
                         f"height={block_height} hash={bytes_to_hex(block_hash)}")
 
-        _status, _height, _hash = self._reward_calc_proxy.rollback(block_height, block_hash)
+        _success, _height, _hash = self._reward_calc_proxy.rollback(block_height, block_hash)
         Logger.info(tag=ROLLBACK_LOG_TAG,
                     msg=f"RewardCalculator response: "
-                        f"status={_status} height={_height} hash={bytes_to_hex(_hash)}")
+                        f"success={_success} height={_height} hash={bytes_to_hex(_hash)}")
 
-        if _status and _height == block_height and _hash == block_hash:
-            Logger.info(tag=ROLLBACK_LOG_TAG,
-                        msg=f"rollback_reward_calculator() end: "
-                            f"height={block_height} hash={bytes_to_hex(block_hash)}")
+        # Reward calculator rollback succeeded
+        if _success and _height == block_height and _hash == block_hash:
+            Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback_reward_calculator() end")
+            return
 
         raise InternalServiceErrorException("Failed to rollback RewardCalculator")
 
