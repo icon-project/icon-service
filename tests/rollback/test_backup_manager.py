@@ -20,9 +20,9 @@ import unittest
 from collections import OrderedDict
 
 from iconservice.base.block import Block
-from iconservice.database.backup_manager import BackupManager
+from iconservice.rollback.backup_manager import BackupManager
 from iconservice.database.db import KeyValueDatabase
-from iconservice.database.rollback_manager import RollbackManager
+from iconservice.rollback.rollback_manager import RollbackManager
 from iconservice.database.wal import WriteAheadLogReader, WALDBType
 from iconservice.icon_constant import Revision
 from iconservice.iiss.reward_calc.storage import Storage as RewardCalcStorage

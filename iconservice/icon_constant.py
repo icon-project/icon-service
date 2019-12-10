@@ -183,6 +183,9 @@ class ConfigKey:
     LOW_PRODUCTIVITY_PENALTY_THRESHOLD = "lowProductivityPenaltyThreshold"
     BLOCK_VALIDATION_PENALTY_THRESHOLD = "blockValidationPenaltyThreshold"
 
+    # The maximum number of backup files for rollback
+    BACKUP_FILES = "backupFiles"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1
@@ -300,6 +303,8 @@ BLOCK_VALIDATION_PENALTY_THRESHOLD = 660    # Unit: Blocks
 BASE_TRANSACTION_VERSION = 3
 
 PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
+
+BACKUP_FILES = 10
 
 
 class RCStatus(IntEnum):

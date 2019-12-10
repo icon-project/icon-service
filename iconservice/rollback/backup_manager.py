@@ -19,25 +19,17 @@ from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
 
-from .wal import WriteAheadLogWriter
-from ..database.db import KeyValueDatabase
-from ..icon_constant import ROLLBACK_LOG_TAG
+from iconservice.database.db import KeyValueDatabase
+from iconservice.database.wal import WriteAheadLogWriter
+from iconservice.icon_constant import ROLLBACK_LOG_TAG
+from iconservice.rollback import get_backup_filename
 
 if TYPE_CHECKING:
-    from .wal import IissWAL
-    from ..base.block import Block
-    from ..database.batch import BlockBatch
+    from iconservice.database.wal import IissWAL
+    from iconservice.base.block import Block
+    from iconservice.database.batch import BlockBatch
 
 TAG = ROLLBACK_LOG_TAG
-
-
-def get_backup_filename(block_height: int) -> str:
-    """
-
-    :param block_height: the height of the block where we want to go back
-    :return:
-    """
-    return f"block-{block_height}.bak"
 
 
 class WALBackupState(Flag):
@@ -98,8 +90,6 @@ class BackupManager(object):
         path: str = self._get_backup_file_path(prev_block.height)
         Logger.info(tag=TAG, msg=f"backup_file_path={path}")
 
-        self._clear_backup_files()
-
         writer = WriteAheadLogWriter(
             revision, max_log_count=2, block=prev_block, instant_block_hash=instant_block_hash)
         writer.open(path)
@@ -113,27 +103,6 @@ class BackupManager(object):
         writer.close()
 
         Logger.debug(tag=TAG, msg="backup() end")
-
-    def _clear_backup_files(self):
-        try:
-            with os.scandir(self._backup_root_path) as it:
-                for entry in it:
-                    if entry.is_file() \
-                            and entry.name.startswith("block-") \
-                            and entry.name.endswith(".bak"):
-                        path = os.path.join(self._backup_root_path, entry.name)
-                        self._remove_backup_file(path)
-        except BaseException as e:
-            Logger.info(tag=TAG, msg=str(e))
-
-    @classmethod
-    def _remove_backup_file(cls, path: str):
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            pass
-        except BaseException as e:
-            Logger.debug(tag=TAG, msg=str(e))
 
     @classmethod
     def _backup_rc_db(cls, writer: 'WriteAheadLogWriter', db: 'KeyValueDatabase', iiss_wal: 'IissWAL'):

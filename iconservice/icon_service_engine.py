@@ -19,8 +19,9 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
 
-from iconservice.database.backup_manager import BackupManager
-from iconservice.database.rollback_manager import RollbackManager
+from iconservice.rollback.backup_cleaner import BackupCleaner
+from iconservice.rollback.backup_manager import BackupManager
+from iconservice.rollback.rollback_manager import RollbackManager
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -41,7 +42,8 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG
+)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
@@ -103,6 +105,7 @@ class IconServiceEngine(ContextContainer):
         self._rc_data_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
         self._backup_manager: Optional[BackupManager] = None
+        self._backup_cleaner: Optional[BackupCleaner] = None
         self._conf: Optional[Dict[str, Union[str, int]]] = None
 
         # JSON-RPC handlers
@@ -152,6 +155,7 @@ class IconServiceEngine(ContextContainer):
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
         self._backup_manager = BackupManager(backup_root_path, rc_data_path)
+        self._backup_cleaner = BackupCleaner(backup_root_path, conf[ConfigKey.BACKUP_FILES])
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
@@ -173,6 +177,9 @@ class IconServiceEngine(ContextContainer):
         # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._init_last_block_info(context)
+
+        # Clean up stale backup files
+        self._backup_cleaner.run(context.block.height)
 
         # set revision (if governance SCORE does not exist, remain revision to default).
         try:
@@ -1843,6 +1850,9 @@ class IconServiceEngine(ContextContainer):
             iiss_wal=iiss_wal,
             is_calc_period_start_block=is_calc_period_start_block,
             instant_block_hash=instant_block_hash)
+
+        # Clean up stale backup files
+        self._backup_cleaner.run(context.block.height)
 
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \

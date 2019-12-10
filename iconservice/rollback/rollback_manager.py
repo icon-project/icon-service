@@ -20,15 +20,15 @@ from typing import TYPE_CHECKING, Tuple
 from iconcommons.logger import Logger
 
 from .backup_manager import WALBackupState, get_backup_filename
-from .db import KeyValueDatabase
-from .wal import WriteAheadLogReader, WALDBType
-from ..base.exception import DatabaseException
-from ..icon_constant import ROLLBACK_LOG_TAG
-from ..iiss.reward_calc import RewardCalcStorage
-from ..iiss.reward_calc.msg_data import make_block_produce_info_key
+from iconservice.database.db import KeyValueDatabase
+from iconservice.database.wal import WriteAheadLogReader, WALDBType
+from iconservice.base.exception import DatabaseException
+from iconservice.icon_constant import ROLLBACK_LOG_TAG
+from iconservice.iiss.reward_calc import RewardCalcStorage
+from iconservice.iiss.reward_calc.msg_data import make_block_produce_info_key
 
 if TYPE_CHECKING:
-    from .db import KeyValueDatabase
+    from iconservice.database.db import KeyValueDatabase
 
 
 TAG = ROLLBACK_LOG_TAG
