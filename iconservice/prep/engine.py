@@ -181,8 +181,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         self.preps = self._load_preps(context)
         self.term = context.storage.prep.get_term(context)
-
-        Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end: {self.term}")
 
     def on_block_invoked(
             self,
@@ -244,6 +243,8 @@ class Engine(EngineBase, IISSEngineListener):
         new_term: 'Term' = self._create_next_term(context, self.term)
         main_preps_as_dict: dict = \
             self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
+
+        Logger.debug(tag=_TAG, msg=f"{new_term}")
 
         return main_preps_as_dict, new_term
 

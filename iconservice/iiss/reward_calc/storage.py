@@ -341,13 +341,11 @@ class Storage(object):
             preps = data.prep_list
             break
 
-        if not preps:
-            raise InternalServiceErrorException(f"No PRepsData in iiss_data")
-
         ret = 0
-        for info in preps:
-            if info.address not in unreg_preps:
-                ret += info.value
+        if preps:
+            for info in preps:
+                if info.address not in unreg_preps:
+                    ret += info.value
 
         Logger.info(tag=IISS_LOG_TAG,
                     msg=f"get_total_elected_prep_delegated_snapshot load: {ret}")
