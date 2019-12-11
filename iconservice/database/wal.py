@@ -71,6 +71,9 @@ class WALState(Flag):
     # Send CALCULATE message to rc
     SEND_CALCULATE = auto()
 
+    # Means All flags are on
+    ALL = 0xFFFFFFFF
+
 
 def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> Optional[bytes]:
     if not isinstance(tx_batch_value, TransactionBatchValue):

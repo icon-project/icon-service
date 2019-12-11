@@ -19,13 +19,13 @@ from typing import TYPE_CHECKING, Tuple
 
 from iconcommons.logger import Logger
 
-from .backup_manager import WALBackupState, get_backup_filename
+from iconservice.base.exception import DatabaseException
 from iconservice.database.db import KeyValueDatabase
 from iconservice.database.wal import WriteAheadLogReader, WALDBType
-from iconservice.base.exception import DatabaseException
 from iconservice.icon_constant import ROLLBACK_LOG_TAG
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.msg_data import make_block_produce_info_key
+from .backup_manager import WALBackupState, get_backup_filename
 
 if TYPE_CHECKING:
     from iconservice.database.db import KeyValueDatabase
@@ -35,11 +35,15 @@ TAG = ROLLBACK_LOG_TAG
 
 
 class RollbackManager(object):
+    """Rollback the current state to the one block previous one with a backup file
+
+    """
+
     def __init__(self, backup_root_path: str, rc_data_path: str):
         self._backup_root_path = backup_root_path
         self._rc_data_path = rc_data_path
 
-    def run(self, icx_db: 'KeyValueDatabase', block_height: int = -1) -> Tuple[int, bool]:
+    def run(self, icx_db: 'KeyValueDatabase', block_height: int) -> Tuple[int, bool]:
         """Rollback to the previous block state
 
         Called on self.open()
@@ -59,14 +63,14 @@ class RollbackManager(object):
             Logger.info(tag=TAG, msg=f"backup state file not found: {path}")
             return -1, False
 
-        block_height = -1
-        is_calc_period_end_block = False
         reader = WriteAheadLogReader()
 
         try:
             reader.open(path)
             is_calc_period_end_block = \
                 bool(WALBackupState(reader.state) & WALBackupState.CALC_PERIOD_END_BLOCK)
+
+            assert reader.block.height == block_height
 
             if reader.log_count == 2:
                 self._rollback_rc_db(reader, is_calc_period_end_block)
@@ -75,6 +79,7 @@ class RollbackManager(object):
 
         except BaseException as e:
             Logger.debug(tag=TAG, msg=str(e))
+            raise e
         finally:
             reader.close()
 
@@ -157,18 +162,6 @@ class RollbackManager(object):
     @classmethod
     def _rollback_state_db(cls, reader: 'WriteAheadLogReader', icx_db: 'KeyValueDatabase'):
         icx_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
-
-    def _clear_backup_files(self):
-        try:
-            with os.scandir(self._backup_root_path) as it:
-                for entry in it:
-                    if entry.is_file() \
-                            and entry.name.startswith("block-") \
-                            and entry.name.endswith(".bak"):
-                        path = os.path.join(self._backup_root_path, entry.name)
-                        self._remove_backup_file(path)
-        except BaseException as e:
-            Logger.info(tag=TAG, msg=str(e))
 
     @classmethod
     def _remove_backup_file(cls, path: str):

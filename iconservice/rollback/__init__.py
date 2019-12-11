@@ -16,6 +16,8 @@
 
 __all__ = "get_backup_filename"
 
+import os
+
 
 def get_backup_filename(block_height: int) -> str:
     """
@@ -24,3 +26,25 @@ def get_backup_filename(block_height: int) -> str:
     :return:
     """
     return f"block-{block_height}.bak"
+
+
+def check_backup_exists(backup_root_path: str, current_block_height: int, rollback_block_height: int) -> bool:
+    """Check if backup files for rollback exist
+
+    :param backup_root_path: the directory where backup files are located
+    :param current_block_height: current state before rollback
+    :param rollback_block_height: final state after rollback
+    :return: True(exist) False(not exist)
+    """
+    if current_block_height < 1 or \
+            rollback_block_height < 0 or \
+            rollback_block_height > current_block_height:
+        return False
+
+    for block_height in range(current_block_height - 1, rollback_block_height - 1, -1):
+        filename = get_backup_filename(block_height)
+        path = os.path.join(backup_root_path, filename)
+        if not os.path.isfile(path):
+            return False
+
+    return True

@@ -22,6 +22,7 @@ from iconcommons.logger import Logger
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
 from iconservice.rollback.rollback_manager import RollbackManager
+from iconservice.rollback import check_backup_exists
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -2003,24 +2004,24 @@ class IconServiceEngine(ContextContainer):
         Logger.warning(tag=self.TAG, msg="remove_precommit_state() end")
 
     def rollback(self, block_height: int, block_hash: bytes) -> dict:
-        """Rollback the current confirmed states to the old one indicated by block_height
+        """Rollback the current confirmed state to the old one indicated by block_height
 
-        :param block_height:
-        :param block_hash:
+        :param block_height: final block height after rollback
+        :param block_hash: final block hash after rollback
         :return:
         """
-        Logger.warning(tag=ROLLBACK_LOG_TAG,
-                       msg=f"rollback() start: height={block_height} hash={bytes_to_hex(block_hash)}")
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"rollback() start: height={block_height} hash={bytes_to_hex(block_hash)}")
 
         last_block: 'Block' = self._get_last_block()
         Logger.info(tag=self.TAG, msg=f"last_block={last_block}")
 
-        # If rollback is impossible for the current status,
+        # If rollback is not possible for the current state,
         # self._is_rollback_needed() should raise an InternalServiceErrorException
         try:
             if self._is_rollback_needed(last_block, block_height, block_hash):
                 context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
-                self._rollback(context, block_height, block_hash)
+                self._rollback(context, last_block, block_height, block_hash)
         except BaseException as e:
             Logger.error(tag=ROLLBACK_LOG_TAG, msg=str(e))
             raise InternalServiceErrorException(
@@ -2031,19 +2032,20 @@ class IconServiceEngine(ContextContainer):
             ConstantKeys.BLOCK_HASH: block_hash
         }
 
-        Logger.warning(tag=ROLLBACK_LOG_TAG,
-                       msg=f"rollback() end: height={block_height}, hash={bytes_to_hex(block_hash)}")
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end")
 
         return response
 
-    @classmethod
-    def _is_rollback_needed(cls, last_block: 'Block', block_height: int, block_hash: bytes) -> bool:
+    def _is_rollback_needed(self, last_block: 'Block', block_height: int, block_hash: bytes) -> bool:
         """Check if rollback is needed
         """
-        if block_height == last_block.height - 1:
-            return True
         if block_height == last_block.height and block_hash == last_block.hash:
+            # No need to rollback
             return False
+
+        if check_backup_exists(self._backup_root_path, last_block.height, block_height):
+            # There are enough backup files to rollback
+            return True
 
         raise InternalServiceErrorException(
             f"Failed to rollback: "
@@ -2051,7 +2053,7 @@ class IconServiceEngine(ContextContainer):
             f"hash={bytes_to_hex(block_hash)} "
             f"last_block={last_block}")
 
-    def _rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+    def _rollback(self, context: 'IconScoreContext', last_block: 'Block', block_height: int, block_hash: bytes):
         # Close storage
         IconScoreContext.storage.rc.close()
 
@@ -2060,7 +2062,8 @@ class IconServiceEngine(ContextContainer):
 
         # Rollback state_db and rc_data_db to those of a given block_height
         rollback_manager = RollbackManager(self._backup_root_path, self._rc_data_path)
-        rollback_manager.run(self._icx_context_db.key_value_db, block_height)
+        for height in range(last_block.height - 1, block_height - 1, -1):
+            rollback_manager.run(self._icx_context_db.key_value_db, height)
 
         # Clear all iconscores and reload builtin scores only
         builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
