@@ -78,7 +78,7 @@ class RollbackManager(object):
         finally:
             reader.close()
 
-        # Remove backup file after rollback is done
+        # Remove the backup file after rollback is done
         self._remove_backup_file(path)
 
         Logger.info(tag=TAG, msg=f"rollback() end: return={block_height}, {is_calc_period_end_block}")
@@ -103,6 +103,8 @@ class RollbackManager(object):
         :param is_calc_period_end_block:
         :return:
         """
+        Logger.debug(tag=TAG, msg=f"_rollback_rc_db() start: is_end_block={is_calc_period_end_block}")
+
         if is_calc_period_end_block:
             Logger.info(tag=TAG, msg=f"BH-{reader.block.height} is a calc period end block")
             self._rollback_rc_db_on_end_block(reader)
@@ -111,12 +113,15 @@ class RollbackManager(object):
             db.write_batch(reader.get_iterator(WALDBType.RC.value))
             db.close()
 
+        Logger.debug(tag=TAG, msg=f"_rollback_rc_db() end")
+
     def _rollback_rc_db_on_end_block(self, reader: 'WriteAheadLogReader'):
         """
 
         :param reader:
         :return:
         """
+        Logger.debug(tag=TAG, msg=f"_rollback_rc_db_on_end_block() start")
 
         current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = \
             RewardCalcStorage.scan_rc_db(self._rc_data_path)
@@ -130,16 +135,24 @@ class RollbackManager(object):
             if iiss_rc_db_exists:
                 # Remove the next calc_period current_rc_db and rename iiss_rc_db to current_rc_db
                 shutil.rmtree(current_rc_db_path)
-                os.rename(iiss_rc_db_path, current_rc_db_path)
+                self._rename_rc_db(iiss_rc_db_path, current_rc_db_path)
         else:
             if iiss_rc_db_exists:
                 # iiss_rc_db -> current_rc_db
-                os.rename(iiss_rc_db_path, current_rc_db_path)
+                self._rename_rc_db(iiss_rc_db_path, current_rc_db_path)
             else:
                 # If both current_rc_db and iiss_rc_db do not exist, raise error
                 raise DatabaseException(f"RC DB not found")
 
         self._remove_block_produce_info(current_rc_db_path, reader.block.height)
+
+        Logger.debug(tag=TAG, msg=f"_rollback_rc_db_on_end_block() end")
+
+    @classmethod
+    def _rename_rc_db(cls, src_path: str, dst_path: str):
+        Logger.info(tag=TAG, msg=f"_rename_rc_db() start: src={src_path} dst={dst_path}")
+        os.rename(src_path, dst_path)
+        Logger.info(tag=TAG, msg=f"_rename_rc_db() end")
 
     @classmethod
     def _rollback_state_db(cls, reader: 'WriteAheadLogReader', icx_db: 'KeyValueDatabase'):
@@ -174,8 +187,13 @@ class RollbackManager(object):
         :param block_height:
         :return:
         """
+        Logger.debug(tag=TAG,
+                     msg=f"_remove_block_produce_info() start: db_path={db_path} block_height={block_height}")
+
         key: bytes = make_block_produce_info_key(block_height)
 
         db = KeyValueDatabase.from_path(db_path, create_if_missing=False)
         db.delete(key)
         db.close()
+
+        Logger.debug(tag=TAG, msg="_remove_block_produce_info() end")
