@@ -14,18 +14,17 @@
 # limitations under the License.
 
 import os
-import shutil
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 from iconcommons.logger import Logger
 
-from iconservice.base.exception import DatabaseException
-from iconservice.database.db import KeyValueDatabase
-from iconservice.database.wal import WriteAheadLogReader, WALDBType
-from iconservice.icon_constant import ROLLBACK_LOG_TAG
-from iconservice.iiss.reward_calc import RewardCalcStorage
-from iconservice.iiss.reward_calc.msg_data import make_block_produce_info_key
-from .backup_manager import WALBackupState, get_backup_filename
+from .backup_manager import get_backup_filename
+from ..base.exception import InvalidParamsException, InternalServiceErrorException
+from ..database.db import KeyValueDatabase
+from ..database.wal import WriteAheadLogReader, WALDBType
+from ..icon_constant import ROLLBACK_LOG_TAG
+from ..iiss.reward_calc import RewardCalcStorage
+from ..iiss.reward_calc.msg_data import make_block_produce_info_key
 
 if TYPE_CHECKING:
     from iconservice.database.db import KeyValueDatabase
@@ -37,58 +36,85 @@ TAG = ROLLBACK_LOG_TAG
 class RollbackManager(object):
     """Rollback the current state to the one block previous one with a backup file
 
+    Assume that the rollback of Reward Calculator has been already done
+    Related databases: state_db, iiss_db
     """
 
-    def __init__(self, backup_root_path: str, rc_data_path: str):
+    def __init__(self, backup_root_path: str, rc_data_path: str, state_db: 'KeyValueDatabase'):
         self._backup_root_path = backup_root_path
         self._rc_data_path = rc_data_path
+        self._state_db = state_db
 
-    def run(self, icx_db: 'KeyValueDatabase', block_height: int) -> Tuple[int, bool]:
+    def run(self, current_block_height: int, rollback_block_height: int, start_block_height_in_term: int):
         """Rollback to the previous block state
 
-        Called on self.open()
-
-        :param icx_db: state db
-        :param block_height: the height of block to rollback to
-        :return: the height of block after rollback, is_calc_period_end_block
+        :param current_block_height:
+        :param rollback_block_height: the height of block to rollback to
+        :param start_block_height_in_term:
         """
-        Logger.info(tag=TAG, msg=f"rollback() start: BH={block_height}")
+        Logger.info(tag=TAG, msg=f"run() start: "
+                                 f"current_block_height={current_block_height} "
+                                 f"rollback_block_height={rollback_block_height}")
 
-        if block_height < 0:
-            Logger.debug(tag=TAG, msg="rollback() end")
-            return -1, False
+        self._validate_block_heights(current_block_height, rollback_block_height)
 
-        path: str = self._get_backup_file_path(block_height)
-        if not os.path.isfile(path):
-            Logger.info(tag=TAG, msg=f"backup state file not found: {path}")
-            return -1, False
-
+        # Check whether a term change exists between current_block_height -1 and rollback_block_height, inclusive
+        term_change_exists = rollback_block_height < start_block_height_in_term
+        end_calc_block_height = start_block_height_in_term - 1
         reader = WriteAheadLogReader()
+        state_db_batch = {}
+        iiss_db_batch = {}
 
-        try:
+        for block_height in range(current_block_height - 1, rollback_block_height - 1, -1):
+            # Make backup file with a given block_height
+            path: str = self._get_backup_file_path(block_height)
+            if not os.path.isfile(path):
+                raise InternalServiceErrorException(f"Backup file not found: {path}")
+
             reader.open(path)
-            is_calc_period_end_block = \
-                bool(WALBackupState(reader.state) & WALBackupState.CALC_PERIOD_END_BLOCK)
 
-            assert reader.block.height == block_height
+            # Merge backup data into state_db_batch
+            self._write_batch(reader.get_iterator(WALDBType.STATE.value), state_db_batch)
 
-            if reader.log_count == 2:
-                self._rollback_rc_db(reader, is_calc_period_end_block)
-                self._rollback_state_db(reader, icx_db)
-                block_height = reader.block.height
+            # Merge backup data into iiss_db_batch
+            if not (term_change_exists and block_height > end_calc_block_height):
+                self._write_batch(reader.get_iterator(WALDBType.RC.value), iiss_db_batch)
 
-        except BaseException as e:
-            Logger.debug(tag=TAG, msg=str(e))
-            raise e
-        finally:
             reader.close()
 
-        # Remove the backup file after rollback is done
-        self._remove_backup_file(path)
+        # If a term change is detected during rollback, handle the exceptions below
+        if term_change_exists:
+            self._remove_block_produce_info(iiss_db_batch, end_calc_block_height)
+            self._rename_iiss_db(end_calc_block_height)
 
-        Logger.info(tag=TAG, msg=f"rollback() end: return={block_height}, {is_calc_period_end_block}")
+        # Commit write_batch to db
+        self._commit_batch(state_db_batch, self._state_db)
+        iiss_db = RewardCalcStorage.create_current_db(self._rc_data_path)
+        self._commit_batch(iiss_db_batch, iiss_db)
+        iiss_db.close()
 
-        return block_height, is_calc_period_end_block
+        Logger.info(tag=TAG, msg="run() end")
+
+    @staticmethod
+    def _validate_block_heights(current_block_height: int, rollback_block_height: int):
+        if current_block_height < 0:
+            raise InvalidParamsException(f"Invalid currentBlockHeight: {current_block_height}")
+
+        if rollback_block_height < 0:
+            raise InvalidParamsException(f"Invalid rollbackBlockHeight: {rollback_block_height}")
+
+        if current_block_height <= rollback_block_height:
+            raise InvalidParamsException(
+                f"currentBlockHeight({current_block_height}) <= rollbackBlockHeight({rollback_block_height}")
+
+    @staticmethod
+    def _write_batch(it: Iterable[Tuple[bytes, Optional[bytes]]], batch: dict):
+        for key, value in it:
+            batch[key] = value
+
+    @staticmethod
+    def _commit_batch(batch: dict, db: 'KeyValueDatabase'):
+        db.write_batch(batch.items())
 
     def _get_backup_file_path(self, block_height: int) -> str:
         """
@@ -101,68 +127,6 @@ class RollbackManager(object):
         filename = get_backup_filename(block_height)
         return os.path.join(self._backup_root_path, filename)
 
-    def _rollback_rc_db(self, reader: 'WriteAheadLogReader', is_calc_period_end_block: bool):
-        """Rollback the state of rc_db to the previous one
-
-        :param reader:
-        :param is_calc_period_end_block:
-        :return:
-        """
-        Logger.debug(tag=TAG, msg=f"_rollback_rc_db() start: is_end_block={is_calc_period_end_block}")
-
-        if is_calc_period_end_block:
-            Logger.info(tag=TAG, msg=f"BH-{reader.block.height} is a calc period end block")
-            self._rollback_rc_db_on_end_block(reader)
-        else:
-            db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(self._rc_data_path)
-            db.write_batch(reader.get_iterator(WALDBType.RC.value))
-            db.close()
-
-        Logger.debug(tag=TAG, msg=f"_rollback_rc_db() end")
-
-    def _rollback_rc_db_on_end_block(self, reader: 'WriteAheadLogReader'):
-        """
-
-        :param reader:
-        :return:
-        """
-        Logger.debug(tag=TAG, msg=f"_rollback_rc_db_on_end_block() start")
-
-        current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = \
-            RewardCalcStorage.scan_rc_db(self._rc_data_path)
-        # Assume that standby_rc_db does not exist
-        assert standby_rc_db_path == ""
-
-        current_rc_db_exists = len(current_rc_db_path) > 0
-        iiss_rc_db_exists = len(iiss_rc_db_path) > 0
-
-        if current_rc_db_exists:
-            if iiss_rc_db_exists:
-                # Remove the next calc_period current_rc_db and rename iiss_rc_db to current_rc_db
-                shutil.rmtree(current_rc_db_path)
-                self._rename_rc_db(iiss_rc_db_path, current_rc_db_path)
-        else:
-            if iiss_rc_db_exists:
-                # iiss_rc_db -> current_rc_db
-                self._rename_rc_db(iiss_rc_db_path, current_rc_db_path)
-            else:
-                # If both current_rc_db and iiss_rc_db do not exist, raise error
-                raise DatabaseException(f"RC DB not found")
-
-        self._remove_block_produce_info(current_rc_db_path, reader.block.height)
-
-        Logger.debug(tag=TAG, msg=f"_rollback_rc_db_on_end_block() end")
-
-    @classmethod
-    def _rename_rc_db(cls, src_path: str, dst_path: str):
-        Logger.info(tag=TAG, msg=f"_rename_rc_db() start: src={src_path} dst={dst_path}")
-        os.rename(src_path, dst_path)
-        Logger.info(tag=TAG, msg=f"_rename_rc_db() end")
-
-    @classmethod
-    def _rollback_state_db(cls, reader: 'WriteAheadLogReader', icx_db: 'KeyValueDatabase'):
-        icx_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
-
     @classmethod
     def _remove_backup_file(cls, path: str):
         try:
@@ -172,21 +136,26 @@ class RollbackManager(object):
         except BaseException as e:
             Logger.debug(tag=TAG, msg=str(e))
 
+    def _rename_iiss_db(self, end_calc_block_height: int):
+        src_path = os.path.join(
+            self._rc_data_path, f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}{end_calc_block_height}")
+        dst_path = os.path.join(self._rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
+
+        os.rename(src_path, dst_path)
+
     @classmethod
-    def _remove_block_produce_info(cls, db_path: str, block_height: int):
+    def _remove_block_produce_info(cls, iiss_db_batch: dict, block_height: int):
         """Remove block_produce_info of calc_period_end_block from current_db
 
-        :param db_path:
-        :param block_height:
+        :param iiss_db_batch:
+        :param block_height: the end block of the previous term
         :return:
         """
         Logger.debug(tag=TAG,
-                     msg=f"_remove_block_produce_info() start: db_path={db_path} block_height={block_height}")
+                     msg=f"_remove_block_produce_info() start: block_height={block_height}")
 
+        # Remove the end calc block from iiss_db
         key: bytes = make_block_produce_info_key(block_height)
-
-        db = KeyValueDatabase.from_path(db_path, create_if_missing=False)
-        db.delete(key)
-        db.close()
+        iiss_db_batch[key] = None
 
         Logger.debug(tag=TAG, msg="_remove_block_produce_info() end")

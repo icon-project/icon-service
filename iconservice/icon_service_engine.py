@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
 
+from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
 from iconservice.rollback.rollback_manager import RollbackManager
-from iconservice.rollback import check_backup_exists
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -2053,17 +2053,28 @@ class IconServiceEngine(ContextContainer):
             f"hash={bytes_to_hex(block_hash)} "
             f"last_block={last_block}")
 
-    def _rollback(self, context: 'IconScoreContext', last_block: 'Block', block_height: int, block_hash: bytes):
+    def _rollback(self, context: 'IconScoreContext',
+                  last_block: 'Block', rollback_block_height: int, rollback_block_hash: bytes):
+        """
+
+        :param context:
+        :param last_block:
+        :param rollback_block_height: final block_height after rollback
+        :param rollback_block_hash: final block hash after rollback
+        """
         # Close storage
         IconScoreContext.storage.rc.close()
 
         # Rollback the state of reward_calculator prior to iconservice
-        IconScoreContext.engine.iiss.rollback_reward_calculator(block_height, block_hash)
+        IconScoreContext.engine.iiss.rollback_reward_calculator(rollback_block_height, rollback_block_hash)
 
         # Rollback state_db and rc_data_db to those of a given block_height
-        rollback_manager = RollbackManager(self._backup_root_path, self._rc_data_path)
-        for height in range(last_block.height - 1, block_height - 1, -1):
-            rollback_manager.run(self._icx_context_db.key_value_db, height)
+        rollback_manager = RollbackManager(
+            self._backup_root_path, self._rc_data_path, self._icx_context_db.key_value_db)
+        rollback_manager.run(
+            current_block_height=last_block.height,
+            rollback_block_height=rollback_block_height,
+            start_block_height_in_term=IconScoreContext.engine.prep.term.start_block_height)
 
         # Clear all iconscores and reload builtin scores only
         builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
@@ -2082,7 +2093,7 @@ class IconServiceEngine(ContextContainer):
             IconScoreContext.storage.rc,
         ]
         for storage in storages:
-            storage.rollback(context, block_height, block_hash)
+            storage.rollback(context, rollback_block_height, rollback_block_hash)
 
         # Rollback engines to block_height
         engines = [
@@ -2094,7 +2105,7 @@ class IconServiceEngine(ContextContainer):
             IconScoreContext.engine.issue,
         ]
         for engine in engines:
-            engine.rollback(context, block_height, block_hash)
+            engine.rollback(context, rollback_block_height, rollback_block_hash)
 
         self._init_last_block_info(context)
 

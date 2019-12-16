@@ -71,7 +71,8 @@ class TestBackupManager(unittest.TestCase):
 
         self.rollback_manager = RollbackManager(
             backup_root_path=backup_root_path,
-            rc_data_path=rc_data_path
+            rc_data_path=rc_data_path,
+            state_db=icx_db
         )
 
         self.state_db_root_path = state_db_root_path
@@ -185,8 +186,12 @@ class TestBackupManager(unittest.TestCase):
 
     def _rollback_with_rollback_manager(self, last_block: 'Block'):
         rollback_manager = self.rollback_manager
+        current_block_height = last_block.height + 1
+        rollback_block_height = last_block.height
 
-        block_height, is_calc_end_block_height = \
-            rollback_manager.run(self.state_db, last_block.height)
-        assert block_height == last_block.height
-        assert not is_calc_end_block_height
+        # One block rollback
+        ret = rollback_manager.run(
+            current_block_height,
+            rollback_block_height,
+            start_block_height_in_term=rollback_block_height - 1)
+        assert ret is None
