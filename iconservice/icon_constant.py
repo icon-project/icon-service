@@ -121,7 +121,6 @@ class Revision(Enum):
 RC_DB_VERSION_0 = 0
 RC_DB_VERSION_2 = 2
 
-
 # The case that version is updated but not revision, set the version to the current revision
 # The case that both version and revision is updated, add revision field to the version table
 # The case that only revision is changed, do not update this table
@@ -252,7 +251,8 @@ PREP_METHOD_TABLE = [
     "getMainPReps",
     "getSubPReps",
     "getPReps",
-    "getPRepTerm"
+    "getPRepTerm",
+    "getInactivePReps"
 ]
 
 DEBUG_METHOD_TABLE = [
@@ -292,8 +292,8 @@ ISCORE_EXCHANGE_RATE = 1_000
 
 PENALTY_GRACE_PERIOD = IISS_DAY_BLOCK * 2
 
-LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 85     # Unit: Percent
-BLOCK_VALIDATION_PENALTY_THRESHOLD = 660    # Unit: Blocks
+LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 85  # Unit: Percent
+BLOCK_VALIDATION_PENALTY_THRESHOLD = 660  # Unit: Blocks
 
 BASE_TRANSACTION_VERSION = 3
 
