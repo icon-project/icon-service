@@ -17,6 +17,7 @@
 import os
 import shutil
 from enum import IntFlag, auto
+from typing import TYPE_CHECKING
 
 from iconservice.database.db import KeyValueDatabase
 from iconservice.database.wal import WriteAheadLogWriter, StateWAL, IissWAL, WALState
@@ -29,6 +30,9 @@ from iconservice.iiss.reward_calc.msg_data import PRepsData, TxData, \
 from iconservice.precommit_data_manager import PrecommitData
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
+
+if TYPE_CHECKING:
+    from iconservice.base.block import Block
 
 
 class RCDataCheckFlag(IntFlag):
@@ -97,8 +101,8 @@ class TestRecoverUsingWAL(TestIISSBase):
         iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
         return wal_writer, state_wal, iiss_wal
 
-    def _write_batch_to_wal(self,
-                            wal_writer: 'WriteAheadLogWriter',
+    @staticmethod
+    def _write_batch_to_wal(wal_writer: 'WriteAheadLogWriter',
                             state_wal: 'StateWAL',
                             iiss_wal: 'IissWAL',
                             is_calc_period_start_block: bool):
@@ -109,10 +113,10 @@ class TestRecoverUsingWAL(TestIISSBase):
         wal_writer.write_walogable(state_wal)
         wal_writer.flush()
 
-    def _get_last_block_from_icon_service(self) -> 'Block':
+    def _get_last_block_from_icon_service(self) -> int:
         return self.icon_service_engine._get_last_block().height
 
-    def _get_commit_context(self, block: 'block'):
+    def _get_commit_context(self, block: 'Block'):
         return self.icon_service_engine._context_factory.create(IconScoreContextType.DIRECT, block)
 
     def _close_and_reopen_iconservice(self):
@@ -132,9 +136,9 @@ class TestRecoverUsingWAL(TestIISSBase):
         # Check if rc db is updated
         rc_data_path: str = os.path.join(self._state_db_root_path, IISS_DB)
         # Get_last_rc_db: str = TestRCDatabase.get_last_rc_db_data(rc_data_path)
-        cuerent_rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, "current_db"))
+        current_rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, "current_db"))
         rc_data_flag = RCDataCheckFlag(0)
-        for rc_data in cuerent_rc_db.iterator():
+        for rc_data in current_rc_db.iterator():
             if rc_data[0][:2] == PRepsData.PREFIX:
                 pr: 'PRepsData' = PRepsData.from_bytes(rc_data[0], rc_data[1])
                 if pr.block_height == block_height:
@@ -164,8 +168,11 @@ class TestRecoverUsingWAL(TestIISSBase):
 
         if is_calc_period_start_block:
             self.assertEqual(RCDataCheckFlag.ALL_ON_START, rc_data_flag)
-            self.assertTrue(os.path.exists(os.path.join(rc_data_path,
-                                                        f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}{block_height - 1}_2")))
+            self.assertTrue(
+                os.path.isdir(
+                    os.path.join(rc_data_path, f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}{block_height - 1}")
+                )
+            )
         else:
             self.assertEqual(RCDataCheckFlag.ALL_ON_CALC, rc_data_flag)
 
@@ -208,6 +215,7 @@ class TestRecoverUsingWAL(TestIISSBase):
         context: 'IconScoreContext' = self._get_commit_context(precommit_data.block)
         wal_writer, state_wal, iiss_wal = self._get_wal_writer(precommit_data, is_start_block)
         self._write_batch_to_wal(wal_writer, state_wal, iiss_wal, is_start_block)
+        wal_writer.close()
 
         # write rc data to rc db
         # do not write state of wal (which means overwriting the rc data to db)
@@ -231,6 +239,7 @@ class TestRecoverUsingWAL(TestIISSBase):
         # write rc data to rc db
         self.icon_service_engine._process_iiss_commit(context, precommit_data, iiss_wal, is_start_block)
         wal_writer.write_state(WALState.WRITE_RC_DB.value, add=True)
+        wal_writer.close()
 
         self._close_and_reopen_iconservice()
 
@@ -246,6 +255,7 @@ class TestRecoverUsingWAL(TestIISSBase):
         precommit_data: 'PrecommitData' = self._get_precommit_data_after_invoke()
         wal_writer, state_wal, iiss_wal = self._get_wal_writer(precommit_data, is_start_block)
         self._write_batch_to_wal(wal_writer, state_wal, iiss_wal, is_start_block)
+        wal_writer.close()
 
         # remove all iiss_db
         self._remove_all_iiss_db_before_reopen()
@@ -259,13 +269,13 @@ class TestRecoverUsingWAL(TestIISSBase):
         self.make_blocks_to_end_calculation()
         is_start_block: bool = True
         last_block_before_close: int = self._get_last_block_from_icon_service()
-        rc_version: int = 2
 
         precommit_data: 'PrecommitData' = self._get_precommit_data_after_invoke()
         wal_writer, state_wal, iiss_wal = self._get_wal_writer(precommit_data, is_start_block)
         self._write_batch_to_wal(wal_writer, state_wal, iiss_wal, is_start_block)
+        wal_writer.close()
         # Change the current_db to standby_db
-        RewardCalcStorage.rename_current_db_to_standby_db(self.rc_data_path, last_block_before_close, rc_version)
+        RewardCalcStorage.rename_current_db_to_standby_db(self.rc_data_path, last_block_before_close)
 
         # Remove all iiss_db
         self._remove_all_iiss_db_before_reopen()
@@ -279,13 +289,13 @@ class TestRecoverUsingWAL(TestIISSBase):
         self.make_blocks_to_end_calculation()
         is_start_block: bool = True
         last_block_before_close: int = self._get_last_block_from_icon_service()
-        rc_version: int = 2
 
         precommit_data: 'PrecommitData' = self._get_precommit_data_after_invoke()
         wal_writer, state_wal, iiss_wal = self._get_wal_writer(precommit_data, is_start_block)
         self._write_batch_to_wal(wal_writer, state_wal, iiss_wal, is_start_block)
+        wal_writer.close()
         # Change the current_db to standby_db
-        RewardCalcStorage.rename_current_db_to_standby_db(self.rc_data_path, last_block_before_close, rc_version)
+        RewardCalcStorage.rename_current_db_to_standby_db(self.rc_data_path, last_block_before_close)
         RewardCalcStorage.create_current_db(self.rc_data_path)
 
         # Remove all iiss_db
@@ -300,7 +310,6 @@ class TestRecoverUsingWAL(TestIISSBase):
         self.make_blocks_to_end_calculation()
         is_start_block: bool = True
         last_block_before_close: int = self._get_last_block_from_icon_service()
-        rc_version: int = 2
 
         precommit_data: 'PrecommitData' = self._get_precommit_data_after_invoke()
         context: 'IconScoreContext' = self._get_commit_context(precommit_data.block)
@@ -319,6 +328,7 @@ class TestRecoverUsingWAL(TestIISSBase):
         self.icon_service_engine._process_state_commit(context, precommit_data, state_wal)
         wal_writer.write_state(WALState.WRITE_STATE_DB.value, add=True)
         wal_writer.flush()
+        wal_writer.close()
 
         # Remove all iiss_db
         self._remove_all_iiss_db_before_reopen()

@@ -62,7 +62,7 @@ from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
-from .iiss.reward_calc.storage import RewardCalcDBInfo, get_version_and_revision
+from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -2209,20 +2209,13 @@ class IconServiceEngine(ContextContainer):
 
             # If only current_db exists, replace current_db to standby_rc_db
             if is_current_exists and not is_standby_exists and not is_iiss_exists:
-                # Get revision from the RC DB
-                prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-                rc_version, revision = get_version_and_revision(prev_calc_db)
-                rc_version: int = max(rc_version, 0)
-                prev_calc_db.close()
-
                 # Process compaction before send the RC DB to reward calculator
                 prev_calc_db_path: str = os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
                 RewardCalcStorage.process_db_compaction(prev_calc_db_path)
 
                 calculate_block_height: int = reader.block.height - 1
-                standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
-                                                                                            calculate_block_height,
-                                                                                            rc_version)
+                standby_rc_db_path: str = \
+                    RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path, calculate_block_height)
                 is_standby_exists: bool = True
             elif not is_current_exists and not is_standby_exists:
                 # No matter iiss_db exists or not, If both current_db and standby_db do not exist, raise error

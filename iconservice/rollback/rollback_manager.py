@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import shutil
 from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 from iconcommons.logger import Logger
@@ -137,11 +138,19 @@ class RollbackManager(object):
             Logger.debug(tag=TAG, msg=str(e))
 
     def _rename_iiss_db(self, end_calc_block_height: int):
+        Logger.debug(tag=TAG, msg=f"_rename_iiss_db() start: end_calc_block_height={end_calc_block_height}")
+
         src_path = os.path.join(
             self._rc_data_path, f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}{end_calc_block_height}")
         dst_path = os.path.join(self._rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
+        Logger.info(tag=TAG, msg=f"rename_iiss_db: src_path={src_path} dst_path={dst_path}")
 
+        # Remove a new current_db
+        shutil.rmtree(dst_path, ignore_errors=True)
+        # Rename iiss_rc_db_{BH} to current_db
         os.rename(src_path, dst_path)
+
+        Logger.debug(tag=TAG, msg="_rename_iiss_db() end")
 
     @classmethod
     def _remove_block_produce_info(cls, iiss_db_batch: dict, block_height: int):
