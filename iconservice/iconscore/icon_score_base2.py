@@ -329,7 +329,6 @@ def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
     context = ContextContainer._get_context()
     assert context
 
-    # TODO: Fix an error on unittest first before removing the commit below (goldworm)
     term = context.term
     if term is None:
         return [], -1

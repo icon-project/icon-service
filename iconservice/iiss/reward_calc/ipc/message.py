@@ -25,7 +25,17 @@ from iconservice.utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 _next_msg_id: int = 1
 
 
-def _get_next_id() -> int:
+def reset_next_msg_id(msg_id: int):
+    """Only used for unittest
+
+    :param msg_id:
+    :return:
+    """
+    global _next_msg_id
+    _next_msg_id = msg_id
+
+
+def _get_next_msg_id() -> int:
     global _next_msg_id
 
     msg_id: int = _next_msg_id
@@ -44,6 +54,8 @@ class MessageType(IntEnum):
     COMMIT_CLAIM = 5
     QUERY_CALCULATE_STATUS = 6
     QUERY_CALCULATE_RESULT = 7
+    ROLLBACK = 8
+    INIT = 9
     READY = 100
     CALCULATE_DONE = 101
 
@@ -51,7 +63,7 @@ class MessageType(IntEnum):
 class Request(metaclass=ABCMeta):
     def __init__(self, msg_type: 'MessageType'):
         self.msg_type = msg_type
-        self.msg_id = _get_next_id()
+        self.msg_id = _get_next_msg_id()
 
     @abstractmethod
     def _to_list(self) -> tuple:
@@ -111,38 +123,55 @@ class VersionResponse(Response):
 
 
 class ClaimRequest(Request):
-    def __init__(self, address: 'Address', block_height: int, block_hash: bytes):
+    def __init__(self, address: 'Address', block_height: int, block_hash: bytes, tx_index: int, tx_hash: bytes):
         super().__init__(MessageType.CLAIM)
 
         self.address = address
         self.block_height = block_height
         self.block_hash = block_hash
+        self.tx_index = tx_index
+        self.tx_hash = tx_hash
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id,\
-               (self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
+               (
+                   self.address.to_bytes_including_prefix(),
+                   self.block_height, self.block_hash,
+                   self.tx_index, self.tx_hash
+               )
 
     def __str__(self) -> str:
-        return f"{self.msg_type.name}({self.msg_id}, " \
-            f"{self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
+        return \
+            f"{self.msg_type.name}({self.msg_id}, " \
+            f"{self.address}, " \
+            f"{self.block_height}, {bytes_to_hex(self.block_hash)}), " \
+            f"{self.tx_index}, {bytes_to_hex(self.tx_hash)}"
 
 
 class ClaimResponse(Response):
     MSG_TYPE = MessageType.CLAIM
 
     def __init__(self, msg_id: int, address: 'Address',
-                 block_height: int, block_hash: bytes, iscore: int):
+                 block_height: int, block_hash: bytes,
+                 tx_index: int, tx_hash: bytes,
+                 iscore: int):
         super().__init__()
 
         self.msg_id = msg_id
         self.address: 'Address' = address
         self.block_height: int = block_height
         self.block_hash: bytes = block_hash
+        self.tx_index: int = tx_index
+        self.tx_hash: bytes = tx_hash
         self.iscore: int = iscore
 
     def __str__(self) -> str:
-        return f"CLAIM({self.msg_id}, " \
-            f"{self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)}, {self.iscore})"
+        return \
+            f"CLAIM({self.msg_id}, " \
+            f"{self.address}, " \
+            f"{self.block_height}, {bytes_to_hex(self.block_hash)}, " \
+            f"{self.tx_index}, {bytes_to_hex(self.tx_hash)}, " \
+            f"{self.iscore})"
 
     @staticmethod
     def from_list(items: list) -> 'ClaimResponse':
@@ -152,30 +181,51 @@ class ClaimResponse(Response):
         address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, payload[0])
         block_height: int = payload[1]
         block_hash: bytes = payload[2]
-        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[3])
+        tx_index: int = payload[3]
+        tx_hash: bytes = payload[4]
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[5])
 
-        return ClaimResponse(msg_id, address, block_height, block_hash, iscore)
+        return ClaimResponse(msg_id, address, block_height, block_hash, tx_index, tx_hash, iscore)
 
 
 class CommitClaimRequest(Request):
     """Send the result of claimIScore tx to reward calculator
         No response for CommitClaimRequest
     """
-    def __init__(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+    def __init__(self, success: bool, address: 'Address',
+                 block_height: int, block_hash: bytes,
+                 tx_index: int, tx_hash: bytes):
         super().__init__(MessageType.COMMIT_CLAIM)
 
         self.success = success
         self.address = address
         self.block_height = block_height
         self.block_hash = block_hash
+        self.tx_index = tx_index
+        self.tx_hash = tx_hash
 
     def _to_list(self) -> tuple:
-        return self.msg_type, self.msg_id,\
-               (self.success, self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
+        return self.msg_type, self.msg_id, \
+               (
+                   self.success,
+                   self.address.to_bytes_including_prefix(),
+                   self.block_height,
+                   self.block_hash,
+                   self.tx_index,
+                   self.tx_hash
+               )
 
     def __str__(self) -> str:
-        return f"{self.msg_type.name}" \
-                f"({self.msg_id}, {self.success}, {self.address}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
+        return \
+            f"{self.msg_type.name}(" \
+            f"{self.msg_id}, " \
+            f"{self.success}, " \
+            f"{self.address}, " \
+            f"{self.block_height}, " \
+            f"{bytes_to_hex(self.block_hash)}, " \
+            f"{self.tx_index}, " \
+            f"{bytes_to_hex(self.tx_hash)}" \
+            f")"
 
 
 class CommitClaimResponse(Response):
@@ -399,18 +449,56 @@ class CommitBlockResponse(Response):
         return CommitBlockResponse(msg_id, success, block_height, block_hash)
 
 
+class InitRequest(Request):
+    def __init__(self, block_height: int):
+        super().__init__(MessageType.INIT)
+
+        self.block_height = block_height
+
+    def __str__(self):
+        return f"{self.msg_type.name}({self.msg_id}, {self.block_height})"
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id, self.block_height
+
+
+class InitResponse(Response):
+    MSG_TYPE = MessageType.INIT
+
+    def __init__(self, msg_id: int, success: bool, block_height: int):
+        super().__init__()
+
+        self.msg_id: int = msg_id
+        self.success: bool = success
+        self.block_height: int = block_height
+
+    def __str__(self):
+        return f"INIT({self.msg_id}, {self.success}, {self.block_height})"
+
+    @staticmethod
+    def from_list(items: list) -> 'InitResponse':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        success: bool = payload[0]
+        block_height: int = payload[1]
+
+        return InitResponse(msg_id, success, block_height)
+
+
 class ReadyNotification(Response):
     MSG_TYPE = MessageType.READY
 
-    def __init__(self, msg_id: int, version: int, block_height: int):
+    def __init__(self, msg_id: int, version: int, block_height: int, block_hash: bytes):
         super().__init__()
 
         self.msg_id = msg_id
         self.version = version
         self.block_height = block_height
+        self.block_hash = block_hash
 
     def __str__(self):
-        return f"READY({self.msg_id}, {self.version}, {self.block_height})"
+        return f"READY({self.msg_id}, {self.version}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
 
     @staticmethod
     def from_list(items: list) -> 'ReadyNotification':
@@ -419,8 +507,9 @@ class ReadyNotification(Response):
 
         version: int = payload[0]
         block_height: int = payload[1]
+        block_hash: bytes = payload[2]
 
-        return ReadyNotification(msg_id, version, block_height)
+        return ReadyNotification(msg_id, version, block_height, block_hash)
 
 
 class CalculateDoneNotification(Response):
@@ -453,8 +542,13 @@ class CalculateDoneNotification(Response):
 
 
 class NoneRequest(Request):
+    """This request is used to stop ipc channel on iconservice stopping
+    """
     def __init__(self):
         super().__init__(MessageType.NONE)
+
+    def __str__(self):
+        return f"NONE_REQUEST({self.msg_id})"
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id
@@ -466,6 +560,9 @@ class NoneResponse(Response):
     def __init__(self, msg_id: int):
         super().__init__()
         self.msg_id = msg_id
+
+    def __str__(self):
+        return f"NONE_RESPONSE({self.msg_id})"
 
     @staticmethod
     def from_list(items: list) -> 'NoneResponse':

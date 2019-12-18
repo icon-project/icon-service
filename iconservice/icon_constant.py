@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique, IntEnum, Enum, auto
+from enum import IntFlag, unique, IntEnum, Enum, auto, Flag
 
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
@@ -104,20 +104,18 @@ BASE_TRANSACTION_INDEX = 0
 
 
 class Revision(Enum):
-    def _generate_next_value_(self, start, count, last_values):
-        if self != 'LATEST':
-            return start + count + 1
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    IISS = 5
+    DECENTRALIZATION = 6
+    FIX_TOTAL_ELECTED_PREP_DELEGATED = 7
 
-        return last_values[-1]
+    # Revision 8
+    REALTIME_P2P_ENDPOINT_UPDATE = 8
+    OPTIMIZE_DIRTY_PREP_UPDATE = 8
 
-    TWO = auto()
-    THREE = auto()
-    FOUR = auto()
-    IISS = auto()
-    DECENTRALIZATION = auto()
-    IS_1_5_16 = auto()
-
-    LATEST = auto()
+    LATEST = 8
 
 
 RC_DB_VERSION_0 = 0
@@ -165,7 +163,7 @@ class ConfigKey:
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
-    #icon rc
+    # Reward calculator executable path
     ICON_RC_DIR_PATH = 'iconRcPath'
 
     # IISS meta data
@@ -344,3 +342,45 @@ class BlockVoteStatus(Enum):
     NONE = 0
     TRUE = 1
     FALSE = 2
+
+
+class PRepFlag(Flag):
+    """Setting flags to True means that PRep fields specified by the flags has been changed
+
+    """
+    NONE = 0
+    STATUS = auto()
+    NAME = auto()
+    COUNTRY = auto()
+    CITY = auto()
+    EMAIL = auto()
+    WEBSITE = auto()
+    DETAILS = auto()
+    P2P_ENDPOINT = auto()
+    PENALTY = auto()
+    GRADE = auto()
+    STAKE = auto()
+    DELEGATED = auto()
+    LAST_GENERATE_BLOCK_HEIGHT = auto()
+    TOTAL_BLOCKS = auto()
+    VALIDATED_BLOCKS = auto()
+    UNVALIDATED_SEQUENCE_BLOCKS = auto()
+    IREP = auto()  # irep, irep_block_height
+    IREP_BLOCK_HEIGHT = auto()
+
+    BLOCK_STATISTICS = TOTAL_BLOCKS | VALIDATED_BLOCKS | UNVALIDATED_SEQUENCE_BLOCKS
+    ALL = 0xFFFFFFFF
+
+
+class PRepContainerFlag(Flag):
+    NONE = 0
+    DIRTY = auto()
+
+
+class TermFlag(Flag):
+    NONE = 0
+    MAIN_PREPS = auto()
+    SUB_PREPS = auto()
+    MAIN_PREP_P2P_ENDPOINT = auto()
+
+    ALL = 0xFFFFFFFF

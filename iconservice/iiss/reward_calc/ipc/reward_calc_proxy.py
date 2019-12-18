@@ -19,16 +19,20 @@ import asyncio
 import concurrent.futures
 import os
 from subprocess import Popen
-from typing import Optional, Callable, Any, Tuple
+from typing import TYPE_CHECKING, Optional, Callable, Any, Tuple
 
 from iconcommons.logger import Logger
-from iconservice.icon_constant import RCStatus
+
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
 from ....base.address import Address
 from ....base.exception import TimeoutException
+from ....icon_constant import RCStatus
 from ....utils import bytes_to_hex
+
+if TYPE_CHECKING:
+    from .message import ReadyNotification, CalculateDoneNotification, NoneResponse
 
 _TAG = "RCP"
 
@@ -77,25 +81,37 @@ class RewardCalcProxy(object):
 
     def start(self):
         Logger.debug(tag=_TAG, msg="start() end")
+
         self._ipc_server.start()
+
         Logger.debug(tag=_TAG, msg="start() end")
 
     def stop(self):
         Logger.debug(tag=_TAG, msg="stop() start")
+
+        self._stop_message_queue()
         self._ipc_server.stop()
+
         Logger.debug(tag=_TAG, msg="stop() end")
 
     def close(self):
         Logger.debug(tag=_TAG, msg="close() start")
 
         self._ipc_server.close()
+        self.stop_reward_calc()
 
         self._message_queue = None
         self._loop = None
 
-        self.stop_reward_calc()
-
         Logger.debug(tag=_TAG, msg="close() end")
+
+    def _stop_message_queue(self):
+        Logger.info(tag=_TAG, msg="_stop_message_queue() start")
+
+        request = NoneRequest()
+        self._message_queue.put(request)
+
+        Logger.info(tag=_TAG, msg="_stop_message_queue() end")
 
     def is_reward_calculator_ready(self) -> bool:
         return self._ready_future.done()
@@ -163,7 +179,8 @@ class RewardCalcProxy(object):
         return future.result()
 
     def claim_iscore(self, address: 'Address',
-                     block_height: int, block_hash: bytes) -> Tuple[int, int]:
+                     block_height: int, block_hash: bytes,
+                     tx_index: int, tx_hash: bytes) -> Tuple[int, int]:
         """Claim IScore of a given address
 
         It is called on invoke thread
@@ -171,6 +188,8 @@ class RewardCalcProxy(object):
         :param address: the address to claim
         :param block_height: the height of block which contains this claim tx
         :param block_hash: the hash of block which contains this claim tx
+        :param tx_index: the index of claimIScore transaction which is contained in a block
+        :param tx_hash: the hash of claimIScore transaction
         :return: [i-score(int), block_height(int)]
         :exception TimeoutException: The operation has timed-out
         """
@@ -181,7 +200,7 @@ class RewardCalcProxy(object):
         )
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._claim_iscore(address, block_height, block_hash), self._loop)
+            self._claim_iscore(address, block_height, block_hash, tx_index, tx_hash), self._loop)
 
         try:
             response: 'ClaimResponse' = future.result(self._ipc_timeout)
@@ -194,12 +213,18 @@ class RewardCalcProxy(object):
         return response.iscore, response.block_height
 
     async def _claim_iscore(self, address: 'Address',
-                            block_height: int, block_hash: bytes) -> int:
+                            block_height: int, block_hash: bytes,
+                            tx_index: int, tx_hash: bytes) -> 'ClaimResponse':
         Logger.debug(
             tag=_TAG,
-            msg=f"_claim_iscore() start: address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
+            msg=f"_claim_iscore() start: "
+                f"address={address} "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)} "
+                f"tx_index={tx_index} "
+                f"tx_hash={bytes_to_hex(tx_hash)}"
         )
-        request = ClaimRequest(address, block_height, block_hash)
+        request = ClaimRequest(address, block_height, block_hash, tx_index, tx_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
         await future
@@ -208,15 +233,24 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def commit_claim(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+    def commit_claim(self, success: bool, address: 'Address',
+                     block_height: int, block_hash: bytes,
+                     tx_index: int, tx_hash: bytes):
         Logger.debug(
             tag=_TAG,
             msg=f"commit_claim() start: "
-                f"success({success}) address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
+                f"success={success} "
+                f"address={address} "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)} "
+                f"tx_index={tx_index} "
+                f"tx_hash={bytes_to_hex(tx_hash)}"
         )
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._commit_claim(success, address, block_height, block_hash), self._loop)
+            self._commit_claim(success, address, block_height, block_hash, tx_index, tx_hash),
+            self._loop
+        )
 
         try:
             future.result(self._ipc_timeout)
@@ -227,14 +261,21 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="commit_claim() end")
 
-    async def _commit_claim(self, success: bool, address: 'Address', block_height: int, block_hash: bytes):
+    async def _commit_claim(self, success: bool, address: 'Address',
+                            block_height: int, block_hash: bytes,
+                            tx_index: int, tx_hash: bytes) -> 'CommitClaimResponse':
         Logger.debug(
             tag=_TAG,
             msg=f"_commit_claim() start: "
-                f"success({success} address({address}) block_height({block_height}) block_hash({block_hash.hex()})"
+                f"success={success} "
+                f"address={address} "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)} "
+                f"tx_index={tx_index} "
+                f"tx_hash={bytes_to_hex(tx_hash)}"
         )
 
-        request = CommitClaimRequest(success, address, block_height, block_hash)
+        request = CommitClaimRequest(success, address, block_height, block_hash, tx_index, tx_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
         await future
@@ -382,6 +423,34 @@ class RewardCalcProxy(object):
         await future
 
         Logger.debug(tag=_TAG, msg="_commit_block() end")
+
+        return future.result()
+
+    def init_reward_calculator(self, block_height: int) -> int:
+        Logger.debug(tag=_TAG, msg=f"init_reward_calculator() start: block_height={block_height}")
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._init_reward_calculator(block_height), self._loop)
+
+        try:
+            response: InitResponse = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("query_calculate_result message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg="query_calculate_result() end")
+
+        return response.success
+
+    async def _init_reward_calculator(self, block_height: int):
+        Logger.debug(tag=_TAG, msg=f"init_reward_calculator() start: block_height={block_height}")
+
+        request = InitRequest(block_height)
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="init_reward_calculator() end")
 
         return future.result()
 

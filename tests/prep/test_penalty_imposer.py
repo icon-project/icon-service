@@ -176,3 +176,28 @@ class TestPenaltyImposer(unittest.TestCase):
             context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
         on_penalty_imposed.assert_called_with(
             self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY)
+
+    def test_block_validation_and_low_productivity_penalty(self):
+        # Success case: when prep get block validation and low productivity penalty at the same time,
+        # should impose low productivity penalty
+        penalty_grace_period = 43120 * 2
+        block_validation_penalty_threshold = 660
+        low_productivity_penalty_threshold = 85
+
+        total_blocks = penalty_grace_period + 1
+        unvalidated_sequence_blocks = block_validation_penalty_threshold
+        validated_blocks = penalty_grace_period * low_productivity_penalty_threshold // 100
+
+        prep = create_prep(total_blocks, validated_blocks, unvalidated_sequence_blocks)
+
+        on_penalty_imposed = MagicMock()
+        penalty_imposer = PenaltyImposer(
+            penalty_grace_period=penalty_grace_period,
+            low_productivity_penalty_threshold=low_productivity_penalty_threshold,
+            block_validation_penalty_threshold=block_validation_penalty_threshold
+        )
+        actual_reason: 'PenaltyReason' = penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
+        on_penalty_imposed.assert_called_with(
+            self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY)
+        self.assertEqual(PenaltyReason.LOW_PRODUCTIVITY, actual_reason)

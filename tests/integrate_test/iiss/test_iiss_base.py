@@ -23,6 +23,8 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ConfigKey, Revision, PREP_MAIN_PREPS, \
     PREP_MAIN_AND_SUB_PREPS
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.prep.data import Term
 from iconservice.utils import icx_to_loop
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
 
@@ -583,3 +585,6 @@ class TestIISSBase(TestIntegrateBase):
                                                        value=balance - fee)
                 tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
+
+    def get_debug_term(self) -> 'Term':
+        return IconScoreContext.engine.prep.term

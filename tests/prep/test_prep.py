@@ -20,6 +20,7 @@ import pytest
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import AccessDeniedException
 from iconservice.icon_constant import IISS_INITIAL_IREP, PenaltyReason, Revision
+from iconservice.icon_constant import PRepStatus, PRepFlag, PRepGrade
 from iconservice.prep.data.prep import PRep, PRepDictType
 
 NAME = "banana"
@@ -38,7 +39,7 @@ TX_INDEX = 0
 TOTAL_BLOCKS = 0
 VALIDATED_BLOCKS = 0
 IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
-PENALTY = PenaltyReason.BLOCK_VALIDATION
+PENALTY = PenaltyReason.NONE
 UNVALIDATED_SEQUENCE_BLOCKS = 10
 
 
@@ -94,19 +95,36 @@ def test_freeze(prep):
     fixed_name = "orange"
     prep.set(name=fixed_name)
     assert prep.name == fixed_name
+    assert prep.is_dirty()
+    assert prep.is_flags_on(PRepFlag.NAME)
 
     prep.freeze()
     assert prep.is_frozen()
+    assert not prep.is_dirty()
 
     with pytest.raises(AccessDeniedException):
         prep.set(name="candy")
     assert prep.name == fixed_name
+    assert not prep.is_dirty()
+    assert not prep.is_flags_on(PRepFlag.NAME)
 
     with pytest.raises(AccessDeniedException):
         prep.set_irep(10_000, 777)
 
     with pytest.raises(AccessDeniedException):
         prep.update_block_statistics(is_validator=True)
+
+
+def test_set_irep(prep):
+    assert not prep.is_flags_on(PRepFlag.IREP)
+
+    prep.set_irep(10_001, 1000)
+    assert prep.is_flags_on(PRepFlag.IREP )
+    assert prep.is_dirty()
+
+    prep.freeze()
+    assert not prep.is_flags_on(PRepFlag.IREP)
+    assert not prep.is_dirty()
 
 
 def test_set_ok(prep):
@@ -128,6 +146,8 @@ def test_set_ok(prep):
     assert prep.website == kwargs["website"]
     assert prep.details == kwargs["details"]
     assert prep.p2p_endpoint == kwargs["p2p_endpoint"]
+
+    assert prep.is_dirty()
 
 
 def test_set_error(prep):
@@ -218,16 +238,26 @@ def test_update_block_statistics(prep):
     assert prep.total_blocks == 0
     assert prep.validated_blocks == 0
     assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+    assert not prep.is_flags_on(PRepFlag.BLOCK_STATISTICS)
+    assert not prep.is_dirty()
 
     prep.update_block_statistics(is_validator=False)
     assert prep.total_blocks == 1
     assert prep.validated_blocks == 0
     assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS + 1
+    assert prep.is_flags_on(PRepFlag.TOTAL_BLOCKS | PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS)
+    assert prep.is_dirty()
 
     prep.update_block_statistics(is_validator=True)
     assert prep.total_blocks == 2
     assert prep.validated_blocks == 1
     assert prep.unvalidated_sequence_blocks == 0
+    assert prep.is_flags_on(PRepFlag.BLOCK_STATISTICS)
+    assert prep.is_dirty()
+
+    prep.freeze()
+    assert not prep.is_flags_on(PRepFlag.BLOCK_STATISTICS)
+    assert not prep.is_dirty()
 
 
 def test_reset_block_validation_penalty(prep):
@@ -239,13 +269,19 @@ def test_reset_block_validation_penalty(prep):
     assert prep.total_blocks == size
     assert prep.validated_blocks == 0
     assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS + size
+    assert prep.is_flags_on(PRepFlag.TOTAL_BLOCKS | PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS)
+    assert prep.is_dirty()
 
     prep.penalty = PenaltyReason.BLOCK_VALIDATION
     assert prep.penalty == PenaltyReason.BLOCK_VALIDATION
+    assert prep.is_flags_on(PRepFlag.PENALTY)
+    assert prep.is_dirty()
 
     prep.reset_block_validation_penalty()
     assert prep.penalty == PenaltyReason.NONE
     assert prep.unvalidated_sequence_blocks == 0
+    assert prep.is_flags_on(PRepFlag.PENALTY)
+    assert prep.is_dirty()
 
 
 def test_to_dict_with_full(prep):
@@ -303,3 +339,34 @@ def test_to_dict_with_abridged(prep):
     # version, email, website, details and p2pEndpoint are not included
     # SIZE(20) - 5(version, email, website, details, p2pEndpoint) + 2(stake, delegated)
     assert len(info) == PRep.Index.SIZE - 3
+
+
+def test_setter(prep):
+    data = {
+        "status": (PRepStatus.UNREGISTERED, PRepFlag.STATUS),
+        "name": ("orange", PRepFlag.NAME),
+        "country": ("USA", PRepFlag.COUNTRY),
+        "city": ("New York", PRepFlag.CITY),
+        "email": ("orange@example.com", PRepFlag.EMAIL),
+        "website": ("https://orange.example.com/", PRepFlag.WEBSITE),
+        "details": ("https://orange.example.com/details.json", PRepFlag.DETAILS),
+        "p2p_endpoint": ("orange.example.com:7100", PRepFlag.P2P_ENDPOINT),
+        "penalty": (PenaltyReason.LOW_PRODUCTIVITY, PRepFlag.PENALTY),
+        "grade": (PRepGrade.MAIN, PRepFlag.GRADE),
+        "stake": (STAKE + 1, PRepFlag.STAKE),
+        "delegated": (DELEGATED + 1, PRepFlag.DELEGATED),
+        "last_generate_block_height": (LAST_GENERATE_BLOCK_HEIGHT + 1, PRepFlag.LAST_GENERATE_BLOCK_HEIGHT)
+    }
+
+    for key in data:
+        new_value = data[key][0]
+        flag: 'PRepFlag' = data[key][1]
+
+        # If new value is the same as the old one, flag should not be set
+        old_value = getattr(prep, key)
+        setattr(prep, key, old_value)
+        assert not prep.is_flags_on(flag)
+
+        # If new value is different from the old one, flag should be set
+        setattr(prep, key, new_value)
+        assert prep.is_flags_on(flag)

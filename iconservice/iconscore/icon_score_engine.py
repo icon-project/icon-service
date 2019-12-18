@@ -111,7 +111,10 @@ class IconScoreEngine(object):
         context.current_address: 'Address' = icon_score_address
 
         score_func = getattr(icon_score, ATTR_SCORE_CALL)
-        return score_func(func_name=func_name, kw_params=converted_params)
+        ret = score_func(func_name=func_name, kw_params=converted_params)
+
+        # No problem even though ret is None
+        return deepcopy(ret)
 
     @staticmethod
     def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:

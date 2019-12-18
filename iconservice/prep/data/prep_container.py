@@ -18,11 +18,12 @@ from typing import List, Optional
 
 from iconcommons import Logger
 
-from .prep import PRep, PRepFlag, PRepStatus
+from .prep import PRep, PRepStatus
 from .sorted_list import SortedList
+from ... import utils
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
-from ... import utils
+from ...icon_constant import PRepContainerFlag
 
 
 class PRepContainer(object):
@@ -33,25 +34,20 @@ class PRepContainer(object):
     """
     _TAG = "PREP"
 
-    def __init__(self, flags: PRepFlag = PRepFlag.NONE, total_prep_delegated: int = 0):
-        self._flags: 'PRepFlag' = flags
+    def __init__(self, is_frozen: bool = False, total_prep_delegated: int = 0):
+        self._is_frozen: bool = is_frozen
         # Total amount of delegated which all active P-Reps have
         self._total_prep_delegated: int = total_prep_delegated
         # Active P-Rep list ordered by delegated amount
         self._active_prep_list = SortedList()
         self._prep_dict = {}
+        self._flags: 'PRepContainerFlag' = PRepContainerFlag.NONE
 
     def is_frozen(self) -> bool:
-        return bool(self._flags & PRepFlag.FROZEN)
+        return self._is_frozen
 
     def is_dirty(self) -> bool:
-        return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
-
-    def _set_dirty(self, on: bool):
-        self._flags |= utils.set_flag(self._flags, PRepFlag.DIRTY, on)
-
-    def is_flag_on(self, flags: 'PRepFlag') -> bool:
-        return (self._flags & flags) == flags
+        return utils.is_all_flag_on(self._flags, PRepContainerFlag.DIRTY)
 
     def size(self, active_prep_only: bool = False) -> int:
         """Returns the number of active P-Reps
@@ -85,7 +81,7 @@ class PRepContainer(object):
             if not prep.is_frozen():
                 prep.freeze()
 
-        self._flags |= PRepFlag.FROZEN
+        self._is_frozen: bool = True
 
     def add(self, prep: 'PRep'):
         self._check_access_permission()
@@ -94,7 +90,7 @@ class PRepContainer(object):
             raise InvalidParamsException("P-Rep already exists")
 
         self._add(prep)
-        self._set_dirty(True)
+        self._flags |= PRepContainerFlag.DIRTY
 
     def _add(self, prep: 'PRep'):
 
@@ -117,7 +113,7 @@ class PRepContainer(object):
 
         prep: Optional['PRep'] = self._remove(address)
         if prep is not None:
-            self._set_dirty(True)
+            self._flags |= PRepContainerFlag.DIRTY
 
         return prep
 
@@ -147,7 +143,7 @@ class PRepContainer(object):
 
         self._remove(new_prep.address)
         self._add(new_prep)
-        self._set_dirty(True)
+        self._flags |= PRepContainerFlag.DIRTY
 
         return old_prep
 
@@ -195,6 +191,20 @@ class PRepContainer(object):
         """
         return self._active_prep_list[start_index:start_index + size]
 
+    def get_inactive_preps(self) -> List['PRep']:
+        """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+        This method does not care about the order of P-Rep list
+
+        :return: Inactive Prep list
+        """
+
+        # Collect P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+        def _func(node: 'PRep') -> bool:
+            return node.status != PRepStatus.ACTIVE
+
+        inactive_preps = list(filter(_func, self._prep_dict.values()))
+        return inactive_preps
+
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
 
@@ -216,8 +226,7 @@ class PRepContainer(object):
         :param mutable:
         :return:
         """
-        flags: 'PRepFlag' = PRepFlag.NONE if mutable else PRepFlag.FROZEN
-        preps = PRepContainer(flags, self._total_prep_delegated)
+        preps = PRepContainer(is_frozen=not mutable, total_prep_delegated=self._total_prep_delegated)
 
         preps._prep_dict.update(self._prep_dict)
         preps._active_prep_list.extend(self._active_prep_list)

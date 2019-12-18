@@ -20,7 +20,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
-from iconservice.icx.issue.regulator import Regulator
+
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -29,8 +29,9 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
-    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-)
+    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    Revision, PRepFlag)
+from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -185,13 +186,6 @@ class IconScoreContext(object):
     def term(self) -> Optional['Term']:
         return self._term
 
-    def is_term_updated(self) -> bool:
-        """Returns whether info in self._term is changed
-
-        :return:
-        """
-        return self._term and self._term.is_dirty()
-
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
 
@@ -231,7 +225,7 @@ class IconScoreContext(object):
         self.rc_tx_batch.clear()
 
     def update_dirty_prep_batch(self):
-        """Update context.preps when a tx is done
+        """Apply updated P-Rep data to context.preps every time when a tx is done
 
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
@@ -239,6 +233,9 @@ class IconScoreContext(object):
             # If dirty_prep is an invalid elected P-Rep,
             # we should update P-Reps in this term
             self._update_elected_preps_in_term(dirty_prep)
+
+            if self.revision >= Revision.REALTIME_P2P_ENDPOINT_UPDATE.value:
+                self._update_main_preps_in_term(dirty_prep)
 
             self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
@@ -266,9 +263,23 @@ class IconScoreContext(object):
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
 
-        self._term.update_preps(self.revision, [dirty_prep])
+        self._term.update_invalid_elected_preps([dirty_prep])
 
         Logger.info(tag=self.TAG, msg=f"Invalid main and sub prep: {dirty_prep}")
+
+    def _update_main_preps_in_term(self, dirty_prep: 'PRep'):
+        """
+
+        :param dirty_prep: dirty prep
+        """
+        if self._term is None:
+            return
+
+        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) and \
+                self._term.is_main_prep(dirty_prep.address):
+            self._term.on_main_prep_p2p_endpoint_updated()
+
+        Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
 
     def clear_batch(self):
         if self.tx_batch:
@@ -295,10 +306,19 @@ class IconScoreContext(object):
     def put_dirty_prep(self, prep: 'PRep'):
         Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
 
-        if self._tx_dirty_preps is not None:
-            self._tx_dirty_preps[prep.address] = prep
+        if self._tx_dirty_preps is None:
+            Logger.warning(tag=self.TAG, msg="self._tx_dirty_preps is None")
+            Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+            return
 
-        Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() end")
+        if not prep.is_dirty() and self.revision >= Revision.OPTIMIZE_DIRTY_PREP_UPDATE.value:
+            Logger.info(tag=self.TAG, msg=f"No need to update an unchanged P-Rep: revision={self.revision}")
+            Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+            return
+
+        self._tx_dirty_preps[prep.address] = prep
+
+        Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
 
 class IconScoreContextFactory(object):

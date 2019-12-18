@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2019 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,26 +14,19 @@
 # limitations under the License.
 
 import copy
-from enum import auto, Flag, IntEnum, Enum
+from enum import auto, IntEnum, Enum
 from typing import TYPE_CHECKING, Tuple, Any
 
 import iso3166
 
 from .sorted_list import Sortable
-from ... import utils
 from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, Revision
+from ...icon_constant import PRepGrade, PRepStatus, PenaltyReason, Revision, PRepFlag
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
-
-
-class PRepFlag(Flag):
-    NONE = 0
-    DIRTY = auto()
-    FROZEN = auto()
 
 
 class PRepDictType(Enum):
@@ -140,14 +134,14 @@ class PRep(Sortable):
         self._grade: 'PRepGrade' = grade
 
         # registration info
-        self.name: str = name
+        self._name: str = name
         self._country: 'iso3166.Country' = self._get_country(country)
-        self.city: str = city
-        self.email: str = email
-        self.website: str = website
-        self.details: str = details
+        self._city: str = city
+        self._email: str = email
+        self._website: str = website
+        self._details: str = details
         # information required for PRep Consensus
-        self.p2p_endpoint: str = p2p_endpoint
+        self._p2p_endpoint: str = p2p_endpoint
         # Governance Variables
         self._irep: int = irep
         self._irep_block_height: int = irep_block_height
@@ -164,18 +158,21 @@ class PRep(Sortable):
         self._validated_blocks: int = validated_blocks
         self._unvalidated_sequence_blocks: int = unvalidated_sequence_blocks
 
-        # This field is used to save delegated amount at the beginning of a term
-        # DO NOT STORE THIS TO DB
-        self._voting_power: int = -1
+        self._is_frozen: bool = False
 
-        # DO NOT STORE IT TO DB (MEMORY ONLY)
-        self.extension: Any = None
+    def is_flags_on(self, flags: 'PRepFlag') -> bool:
+        return (self._flags & flags) == flags
 
     def is_dirty(self) -> bool:
-        return utils.is_flag_on(self._flags, PRepFlag.DIRTY)
+        """It returns True if any PRepFlag is True
 
-    def _set_dirty(self, on: bool):
-        self._flags = utils.set_flag(self._flags, PRepFlag.DIRTY, on)
+        :return:
+        """
+        return bool(self._flags & PRepFlag.ALL)
+
+    @property
+    def flags(self) -> 'PRepFlag':
+        return self._flags
 
     @property
     def status(self) -> 'PRepStatus':
@@ -183,12 +180,77 @@ class PRep(Sortable):
 
     @status.setter
     def status(self, value: 'PRepStatus'):
-        self._status = value
-        self._set_dirty(True)
+        self._set_property(name="_status", new_value=value, flags=PRepFlag.STATUS)
 
     @property
     def penalty(self) -> 'PenaltyReason':
         return self._penalty
+
+    @penalty.setter
+    def penalty(self, value: 'PenaltyReason'):
+        self._set_property(name="_penalty", new_value=value, flags=PRepFlag.PENALTY)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._set_property(name="_name", new_value=value, flags=PRepFlag.NAME)
+
+    @property
+    def country(self) -> str:
+        return self._country.alpha3
+
+    @country.setter
+    def country(self, alpha3_country_code: str):
+        value = self._get_country(alpha3_country_code)
+        self._set_property(name="_country", new_value=value, flags=PRepFlag.COUNTRY)
+
+    @classmethod
+    def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
+        return iso3166.countries_by_alpha3.get(
+            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
+
+    @property
+    def city(self) -> str:
+        return self._city
+
+    @city.setter
+    def city(self, value: str):
+        self._set_property(name="_city", new_value=value, flags=PRepFlag.CITY)
+
+    @property
+    def email(self) -> str:
+        return self._email
+
+    @email.setter
+    def email(self, value: str):
+        self._set_property(name="_email", new_value=value, flags=PRepFlag.EMAIL)
+
+    @property
+    def website(self) -> str:
+        return self._website
+
+    @website.setter
+    def website(self, value: str):
+        self._set_property(name="_website", new_value=value, flags=PRepFlag.WEBSITE)
+
+    @property
+    def details(self) -> str:
+        return self._details
+
+    @details.setter
+    def details(self, value: str):
+        self._set_property(name="_details", new_value=value, flags=PRepFlag.DETAILS)
+
+    @property
+    def p2p_endpoint(self) -> str:
+        return self._p2p_endpoint
+
+    @p2p_endpoint.setter
+    def p2p_endpoint(self, value: str):
+        self._set_property(name="_p2p_endpoint", new_value=value, flags=PRepFlag.P2P_ENDPOINT)
 
     def is_suspended(self) -> bool:
         """The suspended P-Rep cannot serve as Main P-Rep during this term
@@ -204,11 +266,6 @@ class PRep(Sortable):
         """
         return self._status == PRepStatus.ACTIVE and self._penalty == PenaltyReason.NONE
 
-    @penalty.setter
-    def penalty(self, value: 'PenaltyReason'):
-        self._penalty = value
-        self._set_dirty(True)
-
     @property
     def grade(self) -> 'PRepGrade':
         """The grade of P-Rep
@@ -222,22 +279,7 @@ class PRep(Sortable):
 
     @grade.setter
     def grade(self, value: 'PRepGrade'):
-        self._grade = value
-        self._set_dirty(True)
-
-    @property
-    def country(self) -> str:
-        return self._country.alpha3
-
-    @country.setter
-    def country(self, alpha3_country_code: str):
-        self._country = self._get_country(alpha3_country_code)
-        self._set_dirty(True)
-
-    @classmethod
-    def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
-        return iso3166.countries_by_alpha3.get(
-            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
+        self._set_property(name="_grade", new_value=value, flags=PRepFlag.GRADE)
 
     def update_block_statistics(self, is_validator: bool):
         """Update the block validation statistics of P-Rep
@@ -246,15 +288,17 @@ class PRep(Sortable):
         """
         self._check_access_permission()
 
-        self._total_blocks += 1
+        self._set_property("_total_blocks", self._total_blocks + 1, PRepFlag.TOTAL_BLOCKS, False)
 
         if is_validator:
-            self._validated_blocks += 1
-            self._unvalidated_sequence_blocks = 0
+            self._set_property("_validated_blocks", self._validated_blocks + 1, PRepFlag.VALIDATED_BLOCKS, False)
+            self._set_property("_unvalidated_sequence_blocks", 0, PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS, False)
         else:
-            self._unvalidated_sequence_blocks += 1
-
-        self._set_dirty(True)
+            self._set_property(
+                "_unvalidated_sequence_blocks",
+                self._unvalidated_sequence_blocks + 1,
+                PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS,
+                False)
 
     def reset_block_validation_penalty(self):
         """Reset block validation penalty and
@@ -262,8 +306,9 @@ class PRep(Sortable):
 
         :return:
         """
-        self._penalty = PenaltyReason.NONE
-        self._unvalidated_sequence_blocks = 0
+        self._check_access_permission()
+        self._set_property("_penalty", PenaltyReason.NONE, PRepFlag.PENALTY, False)
+        self._set_property("_unvalidated_sequence_blocks", 0, PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS, False)
 
     @property
     def total_blocks(self) -> int:
@@ -304,8 +349,7 @@ class PRep(Sortable):
         :return:
         """
         assert value >= 0
-        self._check_access_permission()
-        self._stake = value
+        self._set_property(name="_stake", new_value=value, flags=PRepFlag.STAKE)
 
     @property
     def delegated(self) -> int:
@@ -319,8 +363,7 @@ class PRep(Sortable):
         :return:
         """
         assert value >= 0
-        self._check_access_permission()
-        self._delegated = value
+        self._set_property(name="_delegated", new_value=value, flags=PRepFlag.DELEGATED)
 
     @property
     def irep(self) -> int:
@@ -337,8 +380,9 @@ class PRep(Sortable):
     @last_generate_block_height.setter
     def last_generate_block_height(self, value: int):
         assert value >= 0
-        self._last_generate_block_height = value
-        self._set_dirty(True)
+        self._set_property(name="_last_generate_block_height",
+                           new_value=value,
+                           flags=PRepFlag.LAST_GENERATE_BLOCK_HEIGHT)
 
     @property
     def block_height(self) -> int:
@@ -353,14 +397,13 @@ class PRep(Sortable):
         return cls.PREFIX + address.to_bytes_including_prefix()
 
     def is_frozen(self) -> bool:
-        return bool(self._flags & PRepFlag.FROZEN)
+        return self._is_frozen
 
     def freeze(self):
         """Make all member variables immutable
-
-        :return:
         """
-        self._flags |= PRepFlag.FROZEN
+        self._is_frozen = True
+        self._flags = PRepFlag.NONE
 
     def set(self,
             *,
@@ -398,8 +441,6 @@ class PRep(Sortable):
             if value is not None:
                 setattr(self, key, value)
 
-        self._set_dirty(True)
-
     def set_irep(self, irep: int, block_height: int):
         """Set incentive rep
 
@@ -409,9 +450,8 @@ class PRep(Sortable):
         """
         self._check_access_permission()
 
-        self._irep = irep
-        self._irep_block_height = block_height
-        self._set_dirty(True)
+        self._set_property("_irep", irep, PRepFlag.IREP, False)
+        self._set_property("_irep_block_height", block_height, PRepFlag.IREP_BLOCK_HEIGHT, False)
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()
@@ -562,13 +602,12 @@ class PRep(Sortable):
 
     def __str__(self) -> str:
         info: dict = self.to_dict(PRepDictType.FULL)
-        info["votingPower"] = self._voting_power
-
         return str(info)
 
-    def copy(self, flags: 'PRepFlag' = PRepFlag.NONE) -> 'PRep':
+    def copy(self) -> 'PRep':
         prep = copy.copy(self)
-        prep._flags = flags
+        prep._is_frozen = False
+        prep._flags = PRepFlag.NONE
 
         return prep
 
@@ -576,15 +615,11 @@ class PRep(Sortable):
         if self.is_frozen():
             raise AccessDeniedException("P-Rep access denied")
 
-    @property
-    def voting_power(self):
-        return self._voting_power
+    def _set_property(self, name: str, new_value: Any, flags: 'PRepFlag', check_permission: bool = True):
+        if check_permission:
+            self._check_access_permission()
 
-    @voting_power.setter
-    def voting_power(self, value: int):
-        """This field is used for saving voting power which is fixed at the beginning of a term
-        USE IT ONLY IN Term class
-
-        :return:
-        """
-        self._voting_power = value
+        old_value = getattr(self, name)
+        if old_value != new_value:
+            setattr(self, name, new_value)
+            self._flags |= flags

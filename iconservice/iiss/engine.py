@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from ..icx import IcxStorage
     from ..prep.data import Term
     from ..base.block import Block
+    from ..base.transaction import Transaction
 
 _TAG = IISS_LOG_TAG
 
@@ -113,7 +114,19 @@ class Engine(EngineBase):
 
     @staticmethod
     def ready_callback(cb_data: 'ReadyNotification'):
-        Logger.debug(tag=_TAG, msg=f"ready callback called with {cb_data}")
+        Logger.debug(tag=_TAG, msg=f"ready_callback() start: {cb_data}")
+        Logger.debug(tag=_TAG, msg="ready_callback() end")
+
+    def init_reward_calculator(self, block: 'Block'):
+        """Send a INIT request to RC to synchronize the block state with RC
+
+        """
+        Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() start: block={block}")
+
+        success, block_height = self._reward_calc_proxy.init_reward_calculator(block.height)
+        Logger.info(tag=_TAG, msg=f"success={success} block_height={block_height} last_block={block}")
+
+        Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() end")
 
     def get_ready_future(self):
         return self._reward_calc_proxy.get_ready_future()
@@ -622,10 +635,11 @@ class Engine(EngineBase):
     def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
+        tx: 'Transaction' = context.tx
 
         if context.type == IconScoreContextType.INVOKE and self._check_claim_tx(context):
             iscore, block_height = self._reward_calc_proxy.claim_iscore(
-                address, block.height, block.hash)
+                address, block.height, block.hash, tx.index, tx.hash)
         else:
             # For debug_estimateStep request
             iscore, block_height = 0, 0
@@ -635,6 +649,7 @@ class Engine(EngineBase):
     def _commit_claim(self, context: 'IconScoreContext', iscore: int):
         address: 'Address' = context.tx.origin
         block: 'Block' = context.block
+        tx: 'Transaction' = context.tx
         success = True
 
         try:
@@ -654,7 +669,7 @@ class Engine(EngineBase):
             success = False
             raise e
         finally:
-            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash)
+            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash, tx.index, tx.hash)
 
     def handle_query_iscore(self,
                             _context: 'IconScoreContext',
@@ -866,17 +881,17 @@ class Engine(EngineBase):
         else:
             block_height: int = context.block.height
 
-        if revision < Revision.IS_1_5_16.value:
+        if revision < Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated_snapshot
         else:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated
 
         Logger.info(
             tag=cls.TAG,
-            msg=f"put_preps_for_rc_db"
-                f"block_height={block_height}"
-                f"total_elected_prep_delegated={term.total_elected_prep_delegated}"
-                f"total_elected_prep_delegated_snapshot={total_elected_prep_delegated}")
+            msg=f"_put_preps_for_rc_db() "
+                f"block_height={block_height} "
+                f"total_elected_prep_delegated={term.total_elected_prep_delegated} "
+                f"total_elected_prep_delegated_snapshot={term.total_elected_prep_delegated_snapshot}")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
                                                                    total_elected_prep_delegated,

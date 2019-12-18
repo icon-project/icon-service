@@ -16,14 +16,14 @@
 
 """IconServiceEngine testcase
 """
-from copy import deepcopy
+import copy
 from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
 
+from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
-from iconcommons import IconConfig
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
@@ -77,7 +77,7 @@ class TestIntegrateBase(TestCase):
         self._block_height = -1
         self._prev_block_hash = None
 
-        config = IconConfig("", deepcopy(default_icon_config))
+        config = IconConfig("", copy.deepcopy(default_icon_config))
 
         config.load()
         config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
@@ -230,6 +230,9 @@ class TestIntegrateBase(TestCase):
                                  prev_block_validators: Optional[List['Address']] = None,
                                  prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
                                  block: 'Block' = None) -> tuple:
+
+        # Prevent a base transaction from being added to the original tx_list
+        tx_list = copy.copy(tx_list)
 
         if block is None:
             block_height: int = self._block_height + 1
@@ -628,7 +631,7 @@ class TestIntegrateBase(TestCase):
 
     @staticmethod
     def _convert_tx_for_estimating_step_from_origin_tx(tx: dict):
-        tx = deepcopy(tx)
+        tx = copy.deepcopy(tx)
         tx["method"] = "debug_estimateStep"
         del tx["params"]["nonce"]
         del tx["params"]["stepLimit"]

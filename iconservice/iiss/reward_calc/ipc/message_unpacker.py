@@ -29,6 +29,7 @@ class MessageUnpacker(object):
             MessageType.COMMIT_CLAIM: CommitClaimResponse,
             MessageType.QUERY_CALCULATE_STATUS: QueryCalculateStatusResponse,
             MessageType.QUERY_CALCULATE_RESULT: QueryCalculateResultResponse,
+            MessageType.INIT: InitResponse,
             MessageType.READY: ReadyNotification,
             MessageType.CALCULATE_DONE: CalculateDoneNotification
         }

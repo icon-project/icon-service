@@ -15,6 +15,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+
 from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -26,7 +27,7 @@ from ..base.exception import InvalidParamsException, MethodNotFoundException, Se
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
-    PenaltyReason
+    PenaltyReason, TermFlag
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -67,7 +68,8 @@ class Engine(EngineBase, IISSEngineListener):
             "getMainPReps": self.handle_get_main_preps,
             "getSubPReps": self.handle_get_sub_preps,
             "getPReps": self.handle_get_preps,
-            "getPRepTerm": self.handle_get_prep_term
+            "getPRepTerm": self.handle_get_prep_term,
+            "getInactivePReps": self.handle_get_inactive_preps
         }
 
         self.preps = PRepContainer()
@@ -224,7 +226,7 @@ class Engine(EngineBase, IISSEngineListener):
         context.storage.meta.put_last_main_preps(context, main_preps)
 
         # All block validation penalties are released
-        self._release_block_validation_penalty(context)
+        self._reset_block_validation_penalty(context)
 
         # Create a term with context.preps whose grades are up-to-date
         new_term: 'Term' = self._create_next_term(context, self.term)
@@ -251,7 +253,7 @@ class Engine(EngineBase, IISSEngineListener):
         """Update term with invalid elected P-Rep list during this term
         (In-term P-Rep replacement)
 
-        We have to consider 4 cases below:
+        We have to consider 5 cases below:
         1. No invalid elected P-Rep
             - Nothing to do
         2. Only main P-Reps are invalidated
@@ -262,6 +264,9 @@ class Engine(EngineBase, IISSEngineListener):
         4. Both of them are invalidated
             - Send new main P-Rep list to loopchain
             - Save the new term to DB
+        5. p2pEndpoint of a Main P-Rep is updated
+            - Send new main P-Rep list to loopchain
+            - No need to save the new term to DB
 
         :param context:
         :return:
@@ -270,19 +275,14 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         context.storage.meta.put_last_main_preps(context, main_preps)
 
-        if not context.is_term_updated():
-            # No elected P-Rep is disqualified during this term
+        new_term = context.term
+        if not new_term.is_dirty():
             return None, None
 
-        new_term = context.term
-        assert new_term.is_dirty()
-
-        if self.term.root_hash != new_term.root_hash:
-            # Case 2 or 4: Some main P-Reps are replaced or removed
-            main_preps_as_dict: Optional[dict] = \
+        if bool(new_term.flags & (TermFlag.MAIN_PREPS | TermFlag.MAIN_PREP_P2P_ENDPOINT)):
+            main_preps_as_dict = \
                 self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
-            # Case 3: Only sub P-Reps are invalidated
             main_preps_as_dict = None
 
         return main_preps_as_dict, new_term
@@ -346,17 +346,16 @@ class Engine(EngineBase, IISSEngineListener):
 
         Logger.debug(tag=_TAG, msg="_update_prep_grades() end")
 
-    def _release_block_validation_penalty(self, context: 'IconScoreContext'):
-        """Release block validation penalty every term end
+    @classmethod
+    def _reset_block_validation_penalty(cls, context: 'IconScoreContext'):
+        """Reset block validation penalty in the end of every term
 
         :param context:
         :return:
         """
 
-        old_preps = self.preps
-
-        for prep in old_preps:
-            if prep.penalty == PenaltyReason.BLOCK_VALIDATION:
+        for prep in context.preps:
+            if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
                 dirty_prep = context.get_prep(prep.address, mutable=True)
                 dirty_prep.reset_block_validation_penalty()
                 context.put_dirty_prep(dirty_prep)
@@ -778,7 +777,8 @@ class Engine(EngineBase, IISSEngineListener):
         }
 
     def handle_get_preps(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns P-Reps ranging in ranking from start_ranking to end_ranking
+        """
+        Returns P-Reps ranging in ranking from start_ranking to end_ranking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
 
@@ -804,7 +804,7 @@ class Engine(EngineBase, IISSEngineListener):
 
             for i in range(start_ranking - 1, end_ranking):
                 prep: 'PRep' = preps.get_by_index(i)
-                prep_list.append(prep.to_dict(PRepDictType.ABRIDGED))
+                prep_list.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
@@ -825,30 +825,54 @@ class Engine(EngineBase, IISSEngineListener):
             raise ServiceNotReadyException("Term is not ready")
 
         preps_data = []
+
+        # Collect Main and Sub P-Reps
         for prep_snapshot in self.term.preps:
             prep = self.preps.get_by_address(prep_snapshot.address)
             preps_data.append(prep.to_dict(PRepDictType.FULL))
 
-            # preps_data.append(
-            #     {
-            #         "name": prep.name,
-            #         "country": prep.country,
-            #         "city": prep.city,
-            #         "grade": prep.grade.value,
-            #         "address": prep.address,
-            #         "p2pEndpoint": prep.p2p_endpoint
-            #     }
-            # )
+        # Collect P-Reps which got penalized for consecutive 660 block validation failure
+        def _func(node: 'PRep') -> bool:
+            return node.penalty == PenaltyReason.BLOCK_VALIDATION and node.status == PRepStatus.ACTIVE
+
+        # Sort preps in descending order by delegated
+        preps_on_block_validation_penalty = \
+            sorted(filter(_func, self.preps), key=lambda x: x.order())
+
+        for prep in preps_on_block_validation_penalty:
+            preps_data.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
             "sequence": self.term.sequence,
             "startBlockHeight": self.term.start_block_height,
             "endBlockHeight": self.term.end_block_height,
-            "totalSupply": context.total_supply,
+            "totalSupply": self.term.total_supply,
             "totalDelegated": self.term.total_delegated,
             "irep": self.term.irep,
             "preps": preps_data
+        }
+
+    def handle_get_inactive_preps(self, context: 'IconScoreContext', _param: dict) -> dict:
+        """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
+
+        :param context: IconScoreContext
+        :param _param: None
+        :return: inactive preps
+        """
+        sorted_inactive_preps: List['PRep'] = \
+            sorted(self.preps.get_inactive_preps(), key=lambda node: node.order())
+
+        total_delegated = 0
+        inactive_preps_data = []
+        for prep in sorted_inactive_preps:
+            inactive_preps_data.append(prep.to_dict(PRepDictType.FULL))
+            total_delegated += prep.delegated
+
+        return {
+            "blockHeight": context.block.height,
+            "totalDelegated": total_delegated,
+            "preps": inactive_preps_data
         }
 
     # IISSEngineListener implementation ---------------------------
