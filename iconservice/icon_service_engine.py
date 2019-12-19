@@ -2037,6 +2037,8 @@ class IconServiceEngine(ContextContainer):
                 context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
                 self._rollback(context, block_height, block_hash, term_start_block_height)
 
+                self._remove_rollback_metadata()
+
         except BaseException as e:
             Logger.error(tag=ROLLBACK_LOG_TAG, msg=str(e))
             raise InternalServiceErrorException(
@@ -2176,19 +2178,19 @@ class IconServiceEngine(ContextContainer):
                 buf: bytes = f.read()
                 metadata = RollbackMetadata.from_bytes(buf)
         except:
-            Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"_recover_rollback() end: incomplete RollbackMetadata")
-            # os.remove(path)
-            return
+            Logger.info(tag=ROLLBACK_LOG_TAG, msg="_recover_rollback() end: incomplete RollbackMetadata")
+            metadata = None
 
-        # Resume the previous rollback
-        context = self._context_factory.create(IconScoreContextType.DIRECT, block=metadata.last_block)
-        self._rollback(context, metadata.block_height, metadata.block_hash, metadata.term_start_block_height)
+        if metadata:
+            # Resume the previous rollback
+            context = self._context_factory.create(IconScoreContextType.DIRECT, block=metadata.last_block)
+            self._rollback(context, metadata.block_height, metadata.block_hash, metadata.term_start_block_height)
 
-        # Clear backup files used for rollback (Optional)
+            # Clear backup files used for rollback (Optional)
 
         # Remove "ROLLBACK" file
         # No "ROLLBACK" file means that there is no incomplete rollback
-        os.remove(path)
+        self._remove_rollback_metadata()
 
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rollback() end")
 
@@ -2307,6 +2309,18 @@ class IconServiceEngine(ContextContainer):
 
     def _get_rollback_metadata_path(self) -> str:
         return os.path.join(self._state_db_root_path, self.ROLLBACK_METADATA_FILE)
+
+    def _remove_rollback_metadata(self):
+        Logger.debug(tag=ROLLBACK_LOG_TAG, msg="_remove_rollback_metadata() start")
+
+        try:
+            path = self._get_rollback_metadata_path()
+            os.remove(path)
+            Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"Remove {path}")
+        except:
+            Logger.error(tag=ROLLBACK_LOG_TAG, msg=f"Failed to remove {path}")
+
+        Logger.debug(tag=ROLLBACK_LOG_TAG, msg="_remove_rollback_metadata() end")
 
     def hello(self) -> dict:
         """If state_db and rc_db are recovered, send COMMIT_BLOCK message to reward calculator
