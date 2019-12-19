@@ -77,6 +77,7 @@ class TestRollback(TestIISSBase):
     BLOCK_VALIDATION_PENALTY_THRESHOLD = 10
     LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 80
     PENALTY_GRACE_PERIOD = CALCULATE_PERIOD * 2 + BLOCK_VALIDATION_PENALTY_THRESHOLD
+    BACKUP_FILES = CALCULATE_PERIOD
 
     def _make_init_config(self) -> dict:
         return {
@@ -93,7 +94,8 @@ class TestRollback(TestIISSBase):
             ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD: self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
             ConfigKey.PREP_MAIN_PREPS: self.MAIN_PREP_COUNT,
             ConfigKey.PREP_MAIN_AND_SUB_PREPS: self.ELECTED_PREP_COUNT,
-            ConfigKey.PENALTY_GRACE_PERIOD: self.PENALTY_GRACE_PERIOD
+            ConfigKey.PENALTY_GRACE_PERIOD: self.PENALTY_GRACE_PERIOD,
+            ConfigKey.BACKUP_FILES: self.BACKUP_FILES
         }
 
     def setUp(self):
@@ -427,6 +429,58 @@ class TestRollback(TestIISSBase):
 
         # Check the last block
         self._check_if_last_block_is_reverted(prev_block)
+
+    def test_rollback_with_term_change(self):
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        main_prep_count = PREP_MAIN_PREPS
+        elected_prep_count = PREP_MAIN_AND_SUB_PREPS
+        calculate_period = self.CALCULATE_PERIOD
+
+        # Inspect the current term
+        term_2 = self.get_prep_term()
+        assert term_2["sequence"] == 2
+        preps = term_2["preps"]
+        term_start_block_height = term_2["startBlockHeight"]
+        term_end_block_height = term_2["endBlockHeight"]
+
+        _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
+        main_preps: List['Address'] = _get_main_preps(preps, main_prep_count)
+
+        rollback_block: 'Block' = self.icon_service_engine._get_last_block()
+        assert rollback_block.height == term_start_block_height
+
+        # Transfer 3000 icx to new 10 accounts
+        init_balance = icx_to_loop(3000)
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(10)
+        self.distribute_icx(accounts=accounts, init_balance=init_balance)
+
+        for account in accounts:
+            balance: int = self.get_balance(account.address)
+            assert balance == init_balance
+
+        count = term_end_block_height - self.get_last_block().height + 1
+        self.make_empty_blocks(
+            count=count,
+            prev_block_generator=main_preps[0],
+            prev_block_validators=[address for address in main_preps[1:]]
+        )
+
+        # TERM-3: Nothing
+        term_3: dict = self.get_prep_term()
+        assert term_3["sequence"] == 3
+        assert term_3["startBlockHeight"] == self.get_last_block().height
+
+        self._rollback(rollback_block)
+
+        term: dict = self.get_prep_term()
+        assert term == term_2
+
+        # Check if the balances of accounts are reverted
+        for account in accounts:
+            balance: int = self.get_balance(account.address)
+            assert balance == 0
 
     def _rollback(self, block: 'Block'):
         super().rollback(block.height, block.hash)
