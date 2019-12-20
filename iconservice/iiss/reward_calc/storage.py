@@ -143,8 +143,8 @@ class Storage(object):
             Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
 
     @classmethod
-    def get_standby_rc_db_name(cls, block_height: int, rc_version: int) -> str:
-        return f"{cls.STANDBY_IISS_DB_NAME_PREFIX}{block_height}_{rc_version}"
+    def get_standby_rc_db_name(cls, block_height: int) -> str:
+        return f"{cls.STANDBY_IISS_DB_NAME_PREFIX}{block_height}"
 
     def put_data_directly(self, iiss_data: 'Data', tx_index: Optional[int] = None):
         if isinstance(iiss_data, TxData):
@@ -230,7 +230,7 @@ class Storage(object):
 
     def replace_db(self, block_height: int) -> 'RewardCalcDBInfo':
         """
-        1. Rename current_db to standby_db_{block_height}_{rc_version}
+        1. Rename current_db to standby_db_{block_height}
         2. Create a new current_db for the next calculation period
 
         :param block_height: End block height of the current calc period
@@ -240,13 +240,11 @@ class Storage(object):
         # rename current db -> standby db
         assert block_height > 0
 
-        rc_version, _ = self.get_version_and_revision()
-        rc_version: int = max(rc_version, 0)
         self._db.close()
         # Process compaction before send the RC DB to reward calculator
         self.process_db_compaction(os.path.join(self._path, self.CURRENT_IISS_DB_NAME))
 
-        standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height, rc_version)
+        standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height)
         self._db = self.create_current_db(self._path)
 
         return RewardCalcDBInfo(standby_db_path, block_height)
@@ -270,9 +268,9 @@ class Storage(object):
         return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
 
     @classmethod
-    def rename_current_db_to_standby_db(cls, rc_data_path: str, block_height: int, rc_version: int) -> str:
+    def rename_current_db_to_standby_db(cls, rc_data_path: str, block_height: int) -> str:
         current_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
-        standby_db_name: str = cls.get_standby_rc_db_name(block_height, rc_version)
+        standby_db_name: str = cls.get_standby_rc_db_name(block_height)
         standby_db_path: str = os.path.join(rc_data_path, standby_db_name)
 
         cls._rename_db(current_db_path, standby_db_path)

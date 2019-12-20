@@ -186,12 +186,12 @@ class TestBackupManager(unittest.TestCase):
 
     def _rollback_with_rollback_manager(self, last_block: 'Block'):
         rollback_manager = self.rollback_manager
-        current_block_height = last_block.height + 1
+        last_block_height = last_block.height + 1
         rollback_block_height = last_block.height
 
         # One block rollback
         ret = rollback_manager.run(
-            current_block_height,
+            last_block_height,
             rollback_block_height,
-            start_block_height_in_term=rollback_block_height - 1)
+            term_start_block_height=rollback_block_height - 1)
         assert ret is None

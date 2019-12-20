@@ -29,8 +29,9 @@ from iconservice.utils import icx_to_loop
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
 
 if TYPE_CHECKING:
-    from tests.integrate_test.test_integrate_base import EOAAccount
+    from iconservice.base.block import Block
     from iconservice.iconscore.icon_score_result import TransactionResult
+    from tests.integrate_test.test_integrate_base import EOAAccount
 
 
 class TestIISSBase(TestIntegrateBase):
@@ -586,5 +587,9 @@ class TestIISSBase(TestIntegrateBase):
                 tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
-    def get_debug_term(self) -> 'Term':
+    @staticmethod
+    def get_debug_term() -> 'Term':
         return IconScoreContext.engine.prep.term
+
+    def get_last_block(self) -> 'Block':
+        return self.icon_service_engine._get_last_block()
