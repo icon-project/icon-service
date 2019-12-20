@@ -67,8 +67,8 @@ class Storage(object):
     """
 
     CURRENT_IISS_DB_NAME = "current_db"
-    STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db_"
-    IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
+    STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db"
+    IISS_RC_DB_NAME_PREFIX = "iiss_rc_db"
 
     KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
     KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
@@ -144,7 +144,15 @@ class Storage(object):
 
     @classmethod
     def get_standby_rc_db_name(cls, block_height: int) -> str:
-        return f"{cls.STANDBY_IISS_DB_NAME_PREFIX}{block_height}"
+        return cls._get_db_name(cls.STANDBY_IISS_DB_NAME_PREFIX, block_height)
+
+    @classmethod
+    def get_iiss_rc_db_name(cls, block_height: int) -> str:
+        return cls._get_db_name(cls.IISS_RC_DB_NAME_PREFIX, block_height)
+
+    @classmethod
+    def _get_db_name(cls, prefix: str, block_height: int) -> str:
+        return f"{prefix}_{block_height}"
 
     def put_data_directly(self, iiss_data: 'Data', tx_index: Optional[int] = None):
         if isinstance(iiss_data, TxData):

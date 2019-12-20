@@ -170,7 +170,7 @@ class TestRecoverUsingWAL(TestIISSBase):
             self.assertEqual(RCDataCheckFlag.ALL_ON_START, rc_data_flag)
             self.assertTrue(
                 os.path.isdir(
-                    os.path.join(rc_data_path, f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}{block_height - 1}")
+                    os.path.join(rc_data_path, f"{RewardCalcStorage.IISS_RC_DB_NAME_PREFIX}_{block_height - 1}")
                 )
             )
         else:
