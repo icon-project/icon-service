@@ -15,6 +15,7 @@
 
 import os
 from copy import deepcopy
+from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
@@ -34,7 +35,7 @@ from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
 from .database.factory import ContextDatabaseFactory
-from .database.wal import WriteAheadLogReader
+from .database.wal import WriteAheadLogReader, WALDBType
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
@@ -68,11 +69,11 @@ from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
+from .rollback.metadata import Metadata as RollbackMetadata
 from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
-from .rollback.metadata import Metadata as RollbackMetadata
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -2256,40 +2257,47 @@ class IconServiceEngine(ContextContainer):
 
         # If WAL file is made at the start block of calc period
         if is_calc_period_start_block:
-            current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
-            is_current_exists: bool = len(current_rc_db_path) > 0
-            is_standby_exists: bool = len(standby_rc_db_path) > 0
-            is_iiss_exists: bool = len(iiss_rc_db_path) > 0
-            Logger.info(tag=WAL_LOG_TAG,
-                        msg=f"current_exists={is_current_exists}, "
-                            f"is_standby_exists={is_standby_exists}, "
-                            f"is_iiss_exists={is_iiss_exists}")
-
-            # If only current_db exists, replace current_db to standby_rc_db
-            if is_current_exists and not is_standby_exists and not is_iiss_exists:
-                # Process compaction before send the RC DB to reward calculator
-                prev_calc_db_path: str = os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
-                RewardCalcStorage.process_db_compaction(prev_calc_db_path)
-
-                calculate_block_height: int = reader.block.height - 1
-                standby_rc_db_path: str = \
-                    RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path, calculate_block_height)
-                is_standby_exists: bool = True
-            elif not is_current_exists and not is_standby_exists:
-                # No matter iiss_db exists or not, If both current_db and standby_db do not exist, raise error
-                raise DatabaseException(f"RC related DB not exists")
-
-            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-            if is_standby_exists:
-                RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
-        else:
-            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            cls._recover_rc_db_on_calc_start_block(rc_data_path, reader.block)
 
         # Write data to "current_db"
-        current_db.write_batch(reader.get_iterator(0))
+        current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+        current_db.write_batch(reader.get_iterator(WALDBType.RC.value))
         current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
+
+    @classmethod
+    def _recover_rc_db_on_calc_start_block(cls, rc_data_path: str, block: 'Block'):
+        class DBType(IntEnum):
+            CURRENT = 0
+            STANDBY = 1
+            IISS = 2
+
+        calc_end_block_height = block.height - 1
+
+        items = (
+            [RewardCalcStorage.CURRENT_IISS_DB_NAME, False],
+            [RewardCalcStorage.get_standby_rc_db_name(calc_end_block_height), False],
+            [RewardCalcStorage.get_iiss_rc_db_name(calc_end_block_height), False]
+        )
+
+        for item in items:
+            item[0]: str = os.path.join(rc_data_path, item[0])
+            item[1]: bool = os.path.isdir(item[0])
+
+        if items[DBType.IISS][1]:
+            # Do nothing
+            pass
+        elif items[DBType.STANDBY][1]:
+            # Rename standby_rc_db to iiss_rc_db
+            os.rename(items[DBType.STANDBY][0], items[DBType.IISS][0])
+        elif items[DBType.CURRENT][1]:
+            # Compact current_db and rename current_db to iiss_rc_db
+            path: str = items[DBType.CURRENT][0]
+            RewardCalcStorage.process_db_compaction(path)
+            os.rename(path, items[DBType.IISS][0])
+        else:
+            raise DatabaseException("IISS-related DB not found")
 
     def _recover_state_db(self, reader: 'WriteAheadLogReader'):
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_state_db() start: reader={reader}")
@@ -2299,7 +2307,7 @@ class IconServiceEngine(ContextContainer):
             Logger.info(tag=WAL_LOG_TAG, msg="state_db has already been up-to-date")
             return
 
-        ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
+        ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
         Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: count={ret}")
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_state_db() end")
@@ -2313,8 +2321,8 @@ class IconServiceEngine(ContextContainer):
     def _remove_rollback_metadata(self):
         Logger.debug(tag=ROLLBACK_LOG_TAG, msg="_remove_rollback_metadata() start")
 
+        path = self._get_rollback_metadata_path()
         try:
-            path = self._get_rollback_metadata_path()
             os.remove(path)
             Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"Remove {path}")
         except:

@@ -295,34 +295,6 @@ class Storage(object):
 
         return iiss_db_path
 
-    @classmethod
-    def scan_rc_db(cls, rc_data_path: str) -> Tuple[str, str, str]:
-        """Scan directories that are managed by RewardCalcStorage
-
-        :param rc_data_path: the parent directory of rc_dbs
-        :return: current_rc_db_exists(bool), standby_rc_db_path, iiss_rc_db_path
-        """
-        current_rc_db_path: str = ""
-        standby_rc_db_path: str = ""
-        iiss_rc_db_path: str = ""
-
-        with os.scandir(rc_data_path) as it:
-            for entry in it:
-                if entry.is_dir():
-                    if entry.name == cls.CURRENT_IISS_DB_NAME:
-                        current_rc_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
-                    elif entry.name.startswith(cls.STANDBY_IISS_DB_NAME_PREFIX):
-                        standby_rc_db_path: str = os.path.join(rc_data_path, entry.name)
-                    elif entry.name.startswith(cls.IISS_RC_DB_NAME_PREFIX):
-                        iiss_rc_db_path: str = os.path.join(rc_data_path, entry.name)
-
-        Logger.info(tag=WAL_LOG_TAG,
-                    msg=f"current_rc_db={current_rc_db_path}, "
-                        f"standby_rc_db={standby_rc_db_path}, "
-                        f"iiss_rc_db={iiss_rc_db_path}")
-
-        return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
-
     def get_total_elected_prep_delegated_snapshot(self) -> int:
         """
         total_elected_prep_delegated_snapshot =
