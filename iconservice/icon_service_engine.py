@@ -2029,10 +2029,9 @@ class IconServiceEngine(ContextContainer):
 
                 # Record rollback metadata
                 path = self._get_rollback_metadata_path()
-                with open(path, "wb") as f:
-                    metadata = RollbackMetadata(
-                        block_height, block_hash, term_start_block_height, last_block)
-                    f.write(metadata.to_bytes())
+                metadata = RollbackMetadata(
+                    block_height, block_hash, term_start_block_height, last_block)
+                metadata.save(path)
 
                 # Do rollback
                 context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
@@ -2084,9 +2083,6 @@ class IconServiceEngine(ContextContainer):
         # Close storage
         IconScoreContext.storage.rc.close()
 
-        # Rollback the state of reward_calculator prior to iconservice
-        IconScoreContext.engine.iiss.rollback_reward_calculator(rollback_block_height, rollback_block_hash)
-
         # Rollback state_db and rc_data_db to those of a given block_height
         rollback_manager = RollbackManager(
             self._backup_root_path, self._rc_data_path, self._icx_context_db.key_value_db)
@@ -2094,6 +2090,9 @@ class IconServiceEngine(ContextContainer):
             last_block_height=context.block.height,
             rollback_block_height=rollback_block_height,
             term_start_block_height=term_start_block_height)
+
+        # Rollback the state of reward_calculator prior to iconservice
+        IconScoreContext.engine.iiss.rollback_reward_calculator(rollback_block_height, rollback_block_hash)
 
         # Clear all iconscores and reload builtin scores only
         builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
@@ -2126,6 +2125,7 @@ class IconServiceEngine(ContextContainer):
         for engine in engines:
             engine.rollback(context, rollback_block_height, rollback_block_hash)
 
+        # Reset last_block
         self._init_last_block_info(context)
 
     def clear_context_stack(self):
@@ -2167,31 +2167,18 @@ class IconServiceEngine(ContextContainer):
     def _recover_rollback(self):
         Logger.debug(tag=ROLLBACK_LOG_TAG, msg=f"_recover_rollback() start")
 
-        # Check if RollbackMetadata file exists
+        # Load RollbackMetadata from a file
         path = self._get_rollback_metadata_path()
-        if not os.path.isfile(path):
-            Logger.debug(tag=ROLLBACK_LOG_TAG, msg=f"_recover_rollback() end: {path} not found")
-            return
-
-        try:
-            # Load RollbackMetadata from a file
-            with open(path, "rb") as f:
-                buf: bytes = f.read()
-                metadata = RollbackMetadata.from_bytes(buf)
-        except:
-            Logger.info(tag=ROLLBACK_LOG_TAG, msg="_recover_rollback() end: incomplete RollbackMetadata")
-            metadata = None
+        metadata: Optional['RollbackMetadata'] = RollbackMetadata.load(path)
 
         if metadata:
-            # Resume the previous rollback
-            context = self._context_factory.create(IconScoreContextType.DIRECT, block=metadata.last_block)
-            self._rollback(context, metadata.block_height, metadata.block_hash, metadata.term_start_block_height)
-
-            # Clear backup files used for rollback (Optional)
-
-        # Remove "ROLLBACK" file
-        # No "ROLLBACK" file means that there is no incomplete rollback
-        self._remove_rollback_metadata()
+            # Resume the previous rollback for the databases managed by iconservice
+            rollback_manager = RollbackManager(
+                self._backup_root_path, self._rc_data_path, self._icx_context_db.key_value_db)
+            rollback_manager.run(
+                last_block_height=metadata.last_block.height,
+                rollback_block_height=metadata.block_height,
+                term_start_block_height=metadata.term_start_block_height)
 
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rollback() end")
 
@@ -2339,26 +2326,56 @@ class IconServiceEngine(ContextContainer):
         """
         Logger.debug(tag=self.TAG, msg="hello() start")
 
-        iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
-
-        last_block: 'Block' = self._get_last_block()
-
-        if isinstance(self._wal_reader, WriteAheadLogReader):
-            wal_state = WALState(self._wal_reader.state)
-
-            # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
-            # send COMMIT_BLOCK to rc prior to invoking a block
-            if not (wal_state & WALState.SEND_COMMIT_BLOCK):
-                iiss_engine.send_commit(
-                    self._wal_reader.block.height, self._wal_reader.instant_block_hash)
-
-            assert last_block == self._wal_reader.block
-
-            # No need to use
-            self._wal_reader = None
-
-        # iiss_engine.init_reward_calculator(last_block)
+        self._finish_to_recover_commit()
+        self._finish_to_recover_rollback()
 
         Logger.debug(tag=self.TAG, msg="hello() end")
 
         return {}
+
+    def _finish_to_recover_commit(self):
+        """Finish to recover WAL by sending COMMIT_BLOCK message to reward calculator
+        """
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() start")
+
+        if not isinstance(self._wal_reader, WriteAheadLogReader):
+            Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() end")
+            return
+
+        iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
+        last_block: 'Block' = self._get_last_block()
+
+        wal_state = WALState(self._wal_reader.state)
+
+        # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
+        # send COMMIT_BLOCK to rc prior to invoking a block
+        if not (wal_state & WALState.SEND_COMMIT_BLOCK):
+            iiss_engine.send_commit(
+                self._wal_reader.block.height, self._wal_reader.instant_block_hash)
+
+        assert last_block == self._wal_reader.block
+
+        # No need to use
+        self._wal_reader = None
+
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() end")
+
+    def _finish_to_recover_rollback(self):
+        """Finish to recover rollback by sending ROLLBACK message to reward calculator
+        """
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() start")
+
+        # Get ROLLBACK_METADATA file path
+        path = self._get_rollback_metadata_path()
+
+        # Load RollbackMetadata from a file
+        metadata: Optional[RollbackMetadata] = RollbackMetadata.load(path)
+
+        if metadata:
+            # Request reward calculator to rollback its state
+            IconScoreContext.engine.iiss.rollback_reward_calculator(metadata.block_height, metadata.block_hash)
+
+            # Remove ROLLBACK_METADATA file when the rollback is done.
+            self._remove_rollback_metadata()
+
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() end")

@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-import unittest
 import os
+import random
 import time
-from iconservice.rollback.metadata import Metadata
+import unittest
+from typing import Optional
+
 from iconservice.base.block import Block
+from iconservice.rollback.metadata import Metadata
 
 
 class TestMetadata(unittest.TestCase):
@@ -67,3 +69,16 @@ class TestMetadata(unittest.TestCase):
         assert metadata2.block_hash == self.block_hash
         assert metadata2.term_start_block_height == self.term_start_block_height
         assert metadata2.last_block == self.last_block
+
+    def test_load(self):
+        path = "./ROLLBACK_METADATA"
+        metadata: Optional['Metadata'] = Metadata.load(path)
+        assert metadata is None
+
+        self.metadata.save(path)
+
+        metadata = Metadata.load(path)
+        assert metadata == self.metadata
+        assert id(metadata) != id(self.metadata)
+
+        os.remove(path)

@@ -13,10 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = "Metadata"
+
+from typing import Optional
+
+from iconcommons.logger import Logger
+
 from ..base.block import Block
+from ..icon_constant import ROLLBACK_LOG_TAG
 from ..icon_constant import Revision
-from ..utils.msgpack_for_db import MsgPackForDB
 from ..utils import bytes_to_hex
+from ..utils.msgpack_for_db import MsgPackForDB
+
+TAG = ROLLBACK_LOG_TAG
 
 
 class Metadata(object):
@@ -89,3 +98,25 @@ class Metadata(object):
         ]
 
         return MsgPackForDB.dumps(data)
+
+    @classmethod
+    def load(cls, path: str) -> Optional['Metadata']:
+        Logger.debug(tag=TAG, msg=f"from_path() start: {path}")
+
+        metadata = None
+
+        try:
+            with open(path, "rb") as f:
+                buf: bytes = f.read()
+                metadata = Metadata.from_bytes(buf)
+        except FileNotFoundError:
+            Logger.debug(tag=TAG, msg=f"File not found: {path}")
+        except BaseException as e:
+            Logger.info(tag=TAG, msg=f"Unexpected error: {str(e)}")
+
+        Logger.debug(tag=TAG, msg=f"from_path() end: metadata={metadata}")
+        return metadata
+
+    def save(self, path: str):
+        with open(path, "wb") as f:
+            f.write(self.to_bytes())
