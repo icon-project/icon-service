@@ -70,10 +70,11 @@ class Metadata(object):
                and self._last_block == other.last_block
 
     def __str__(self):
-        return f"RollbackMetadata: block_height={self._block_height} " \
+        return f"rollback.Metadata(" \
+               f"block_height={self._block_height} " \
                f"block_hash={bytes_to_hex(self._block_hash)} " \
                f"term_start_block_height={self._term_start_block_height} " \
-               f"last_block={self._last_block}"
+               f"last_block={self._last_block})"
 
     @classmethod
     def from_bytes(cls, buf: bytes) -> 'Metadata':
@@ -101,7 +102,7 @@ class Metadata(object):
 
     @classmethod
     def load(cls, path: str) -> Optional['Metadata']:
-        Logger.debug(tag=TAG, msg=f"from_path() start: {path}")
+        Logger.debug(tag=TAG, msg=f"load() start: {path}")
 
         metadata = None
 
@@ -114,9 +115,13 @@ class Metadata(object):
         except BaseException as e:
             Logger.info(tag=TAG, msg=f"Unexpected error: {str(e)}")
 
-        Logger.debug(tag=TAG, msg=f"from_path() end: metadata={metadata}")
+        Logger.debug(tag=TAG, msg=f"load() end: metadata={metadata}")
         return metadata
 
     def save(self, path: str):
+        Logger.debug(tag=TAG, msg=f"save() start: {path}")
+
         with open(path, "wb") as f:
             f.write(self.to_bytes())
+
+        Logger.debug(tag=TAG, msg=f"save() end")
