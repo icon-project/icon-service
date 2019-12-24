@@ -63,6 +63,7 @@ from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
+from .iiss.reward_calc.storage import IissDBNameRefactor
 from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .inner_call import inner_call
 from .meta import MetaDBStorage
@@ -182,6 +183,9 @@ class IconServiceEngine(ContextContainer):
         # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._init_last_block_info(context)
+
+        # Remove revision from iiss_rc_db name
+        IissDBNameRefactor.run(self._rc_data_path)
 
         # Clean up stale backup files
         self._backup_cleaner.run(context.block.height)

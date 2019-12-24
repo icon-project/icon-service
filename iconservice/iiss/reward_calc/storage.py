@@ -25,7 +25,7 @@ from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
     DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0,
-    IISS_LOG_TAG, WAL_LOG_TAG, ROLLBACK_LOG_TAG
+    IISS_LOG_TAG, ROLLBACK_LOG_TAG
 )
 from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
@@ -329,3 +329,56 @@ class Storage(object):
                     msg=f"get_total_elected_prep_delegated_snapshot load: {ret}")
 
         return ret
+
+
+class IissDBNameRefactor(object):
+    """Change iiss_db name: remove revision from iiss_db name
+
+    """
+    _DB_NAME_PREFIX = Storage.IISS_RC_DB_NAME_PREFIX
+
+    @classmethod
+    def run(cls, rc_data_path: str) -> int:
+        ret = 0
+
+        with os.scandir(rc_data_path) as it:
+            for entry in it:
+                if entry.is_dir() and entry.name.startswith(cls._DB_NAME_PREFIX):
+                    new_name: str = cls._get_db_name_without_revision(entry.name)
+                    if not new_name:
+                        Logger.info(
+                            tag=IISS_LOG_TAG,
+                            msg=f"Refactoring iiss_db name has been already done: old={entry.name} "
+                                f"rc_data_path={rc_data_path}")
+                        break
+
+                    cls._change_db_name(rc_data_path, entry.name, new_name)
+                    ret += 1
+
+        return ret
+
+    @classmethod
+    def _change_db_name(cls, rc_data_path: str, old_name: str, new_name: str):
+        if old_name == new_name:
+            return
+
+        src_path: str = os.path.join(rc_data_path, old_name)
+        dst_path: str = os.path.join(rc_data_path, new_name)
+
+        try:
+            os.rename(src_path, dst_path)
+            Logger.info(tag=IISS_LOG_TAG, msg=f"Renaming iiss_db_name succeeded: old={old_name} new={new_name}")
+        except BaseException as e:
+            Logger.error(tag=IISS_LOG_TAG,
+                         msg=f"Failed to rename iiss_db_name: old={old_name} new={new_name} "
+                             f"path={rc_data_path} exception={str(e)}")
+
+    @classmethod
+    def _get_db_name_without_revision(cls, name: str) -> Optional[str]:
+        # items[0]: block_height, items[1]: revision
+        items: List[str] = name[len(cls._DB_NAME_PREFIX) + 1:].split("_")
+        if len(items) == 1:
+            # No need to rename
+            return None
+
+        return f"{cls._DB_NAME_PREFIX}_{items[0]}"
