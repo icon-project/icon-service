@@ -157,10 +157,12 @@ class RollbackManager(object):
         dst_path = os.path.join(self._rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
         Logger.info(tag=TAG, msg=f"rename_iiss_db: src_path={src_path} dst_path={dst_path}")
 
-        # Remove a new current_db
-        shutil.rmtree(dst_path, ignore_errors=True)
-        # Rename iiss_rc_db_{BH} to current_db
-        os.rename(src_path, dst_path)
+        # Consider the case that renaming iiss_db to current_db has been already done
+        if os.path.isdir(src_path):
+            # Remove a new current_db
+            shutil.rmtree(dst_path, ignore_errors=True)
+            # Rename iiss_rc_db_{BH} to current_db
+            os.rename(src_path, dst_path)
 
         Logger.debug(tag=TAG, msg="_rename_iiss_db_to_current_db() end")
 
