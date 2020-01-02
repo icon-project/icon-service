@@ -22,10 +22,10 @@ class TestFunctions(unittest.TestCase):
     def test_get_backup_filename(self):
         heights = [0, 1, 123456789, 1234567890]
         expected_filenames = [
-            "block-0000000000.bak",
-            "block-0000000001.bak",
-            "block-0123456789.bak",
-            "block-1234567890.bak",
+            "0000000000.bak",
+            "0000000001.bak",
+            "0123456789.bak",
+            "1234567890.bak",
         ]
 
         for i in range(len(heights)):
