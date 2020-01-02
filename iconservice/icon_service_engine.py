@@ -188,7 +188,7 @@ class IconServiceEngine(ContextContainer):
         IissDBNameRefactor.run(self._rc_data_path)
 
         # Clean up stale backup files
-        self._backup_cleaner.run(context.block.height)
+        self._backup_cleaner.run_on_init(context.block.height)
 
         # set revision (if governance SCORE does not exist, remain revision to default).
         try:
@@ -1860,8 +1860,8 @@ class IconServiceEngine(ContextContainer):
             is_calc_period_start_block=is_calc_period_start_block,
             instant_block_hash=instant_block_hash)
 
-        # Clean up stale backup files
-        self._backup_cleaner.run(context.block.height)
+        # Clean up the oldest backup file
+        self._backup_cleaner.run_on_commit(context.block.height)
 
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \
@@ -2381,5 +2381,10 @@ class IconServiceEngine(ContextContainer):
 
             # Remove ROLLBACK_METADATA file when the rollback is done.
             self._remove_rollback_metadata()
+
+            # Remove obsolete block backup files used for rollback
+            self._backup_cleaner.run(
+                start_block_height=metadata.block_height + 1,
+                end_block_height=metadata.last_block.height - 1)
 
         Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() end")
