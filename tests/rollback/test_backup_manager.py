@@ -20,12 +20,13 @@ import unittest
 from collections import OrderedDict
 
 from iconservice.base.block import Block
-from iconservice.rollback.backup_manager import BackupManager
 from iconservice.database.db import KeyValueDatabase
-from iconservice.rollback.rollback_manager import RollbackManager
 from iconservice.database.wal import WriteAheadLogReader, WALDBType
 from iconservice.icon_constant import Revision
 from iconservice.iiss.reward_calc.storage import Storage as RewardCalcStorage
+from iconservice.rollback import get_backup_filename
+from iconservice.rollback.backup_manager import BackupManager
+from iconservice.rollback.rollback_manager import RollbackManager
 
 
 def _create_dummy_data(count: int) -> OrderedDict:
@@ -165,7 +166,8 @@ class TestBackupManager(unittest.TestCase):
         assert len(rc_batch) == count
 
     def _rollback(self, last_block: 'Block'):
-        backup_path = os.path.join(self.backup_root_path, f"block-{last_block.height}.bak")
+        filename: str = get_backup_filename(last_block.height)
+        backup_path = os.path.join(self.backup_root_path, filename)
 
         reader = WriteAheadLogReader()
         reader.open(backup_path)

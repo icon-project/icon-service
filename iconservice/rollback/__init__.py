@@ -25,7 +25,7 @@ def get_backup_filename(block_height: int) -> str:
     :param block_height: the height of the block where we want to go back
     :return:
     """
-    return f"block-{block_height}.bak"
+    return f"block-{block_height:010d}.bak"
 
 
 def check_backup_exists(backup_root_path: str, current_block_height: int, rollback_block_height: int) -> bool:
