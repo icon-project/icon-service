@@ -20,12 +20,13 @@ import unittest
 from collections import OrderedDict
 
 from iconservice.base.block import Block
-from iconservice.rollback.backup_manager import BackupManager
 from iconservice.database.db import KeyValueDatabase
-from iconservice.rollback.rollback_manager import RollbackManager
 from iconservice.database.wal import WriteAheadLogReader, WALDBType
 from iconservice.icon_constant import Revision
 from iconservice.iiss.reward_calc.storage import Storage as RewardCalcStorage
+from iconservice.rollback import get_backup_filename
+from iconservice.rollback.backup_manager import BackupManager
+from iconservice.rollback.rollback_manager import RollbackManager
 
 
 def _create_dummy_data(count: int) -> OrderedDict:
@@ -71,7 +72,8 @@ class TestBackupManager(unittest.TestCase):
 
         self.rollback_manager = RollbackManager(
             backup_root_path=backup_root_path,
-            rc_data_path=rc_data_path
+            rc_data_path=rc_data_path,
+            state_db=icx_db
         )
 
         self.state_db_root_path = state_db_root_path
@@ -164,7 +166,8 @@ class TestBackupManager(unittest.TestCase):
         assert len(rc_batch) == count
 
     def _rollback(self, last_block: 'Block'):
-        backup_path = os.path.join(self.backup_root_path, f"block-{last_block.height}.bak")
+        filename: str = get_backup_filename(last_block.height)
+        backup_path = os.path.join(self.backup_root_path, filename)
 
         reader = WriteAheadLogReader()
         reader.open(backup_path)
@@ -185,8 +188,12 @@ class TestBackupManager(unittest.TestCase):
 
     def _rollback_with_rollback_manager(self, last_block: 'Block'):
         rollback_manager = self.rollback_manager
+        last_block_height = last_block.height + 1
+        rollback_block_height = last_block.height
 
-        block_height, is_calc_end_block_height = \
-            rollback_manager.run(self.state_db, last_block.height)
-        assert block_height == last_block.height
-        assert not is_calc_end_block_height
+        # One block rollback
+        ret = rollback_manager.run(
+            last_block_height,
+            rollback_block_height,
+            term_start_block_height=rollback_block_height - 1)
+        assert ret is None

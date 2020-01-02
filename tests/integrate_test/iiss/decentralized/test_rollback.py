@@ -77,6 +77,7 @@ class TestRollback(TestIISSBase):
     BLOCK_VALIDATION_PENALTY_THRESHOLD = 10
     LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 80
     PENALTY_GRACE_PERIOD = CALCULATE_PERIOD * 2 + BLOCK_VALIDATION_PENALTY_THRESHOLD
+    BACKUP_FILES = CALCULATE_PERIOD
 
     def _make_init_config(self) -> dict:
         return {
@@ -93,7 +94,8 @@ class TestRollback(TestIISSBase):
             ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD: self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
             ConfigKey.PREP_MAIN_PREPS: self.MAIN_PREP_COUNT,
             ConfigKey.PREP_MAIN_AND_SUB_PREPS: self.ELECTED_PREP_COUNT,
-            ConfigKey.PENALTY_GRACE_PERIOD: self.PENALTY_GRACE_PERIOD
+            ConfigKey.PENALTY_GRACE_PERIOD: self.PENALTY_GRACE_PERIOD,
+            ConfigKey.BACKUP_FILES: self.BACKUP_FILES
         }
 
     def setUp(self):
@@ -115,12 +117,6 @@ class TestRollback(TestIISSBase):
         self.assertEqual(expected_response, response)
 
     def test_rollback_icx_transfer(self):
-        """
-        scenario 1
-            when it starts new preps on new term, normal case, while 100 block.
-        expected :
-            all new preps have maintained until 100 block because it already passed GRACE_PERIOD
-        """
         # Prevent icon_service_engine from sending RollbackRequest to rc
         IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
 
@@ -373,6 +369,118 @@ class TestRollback(TestIISSBase):
         assert current_get_preps == prev_get_preps
 
         self._check_if_last_block_is_reverted(prev_block)
+
+    def test_rollback_multi_blocks(self):
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        # Inspect the current term
+        response = self.get_prep_term()
+        assert response["sequence"] == 2
+
+        prev_block: 'Block' = self.icon_service_engine._get_last_block()
+
+        # Transfer 3000 icx to new 10 accounts
+        init_balance = icx_to_loop(3000)
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(10)
+        self.distribute_icx(accounts=accounts, init_balance=init_balance)
+
+        for account in accounts:
+            balance: int = self.get_balance(account.address)
+            assert balance == init_balance
+
+        # accounts[0] transfers 10 ICX to receiver
+        sender: EOAAccount = accounts[0]
+        receiver: EOAAccount = self.create_eoa_account()
+        value = icx_to_loop(10)
+        tx = self.create_transfer_icx_tx(from_=sender.address,
+                                         to_=receiver.address,
+                                         value=value)
+
+        # 2 == Base TX + ICX transfer TX
+        tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])
+        assert len(tx_results) == 2
+
+        # ICX transfer TX success check
+        tx_result: 'TransactionResult' = tx_results[1]
+        assert tx_results[0].status == 1
+
+        # Sender balance check
+        sender_balance: int = self.get_balance(sender.address)
+        assert sender_balance == init_balance - value - tx_result.step_price * tx_result.step_used
+
+        # Receiver balance check
+        receiver_balance: int = self.get_balance(receiver.address)
+        assert receiver_balance == value
+
+        # Rollback the state to the previous block height
+        block: 'Block' = self.icon_service_engine._get_last_block()
+        assert prev_block.height == block.height - 2
+        self._rollback(prev_block)
+
+        # Check if the balances of accounts are reverted
+        for account in accounts:
+            balance: int = self.get_balance(account.address)
+            assert balance == 0
+
+        # Check if the balance of receiver is reverted to 0
+        receiver_balance: int = self.get_balance(receiver.address)
+        assert receiver_balance == 0
+
+        # Check the last block
+        self._check_if_last_block_is_reverted(prev_block)
+
+    def test_rollback_with_term_change(self):
+        # Prevent icon_service_engine from sending RollbackRequest to rc
+        IconScoreContext.engine.iiss.rollback_reward_calculator = Mock()
+
+        main_prep_count = PREP_MAIN_PREPS
+        elected_prep_count = PREP_MAIN_AND_SUB_PREPS
+        calculate_period = self.CALCULATE_PERIOD
+
+        # Inspect the current term
+        term_2 = self.get_prep_term()
+        assert term_2["sequence"] == 2
+        preps = term_2["preps"]
+        term_start_block_height = term_2["startBlockHeight"]
+        term_end_block_height = term_2["endBlockHeight"]
+
+        _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
+        main_preps: List['Address'] = _get_main_preps(preps, main_prep_count)
+
+        rollback_block: 'Block' = self.icon_service_engine._get_last_block()
+        assert rollback_block.height == term_start_block_height
+
+        # Transfer 3000 icx to new 10 accounts
+        init_balance = icx_to_loop(3000)
+        accounts: List['EOAAccount'] = self.create_eoa_accounts(10)
+        self.distribute_icx(accounts=accounts, init_balance=init_balance)
+
+        for account in accounts:
+            balance: int = self.get_balance(account.address)
+            assert balance == init_balance
+
+        count = term_end_block_height - self.get_last_block().height + 1
+        self.make_empty_blocks(
+            count=count,
+            prev_block_generator=main_preps[0],
+            prev_block_validators=[address for address in main_preps[1:]]
+        )
+
+        # TERM-3: Nothing
+        term_3: dict = self.get_prep_term()
+        assert term_3["sequence"] == 3
+        assert term_3["startBlockHeight"] == self.get_last_block().height
+
+        self._rollback(rollback_block)
+
+        term: dict = self.get_prep_term()
+        assert term == term_2
+
+        # Check if the balances of accounts are reverted
+        for account in accounts:
+            balance: int = self.get_balance(account.address)
+            assert balance == 0
 
     def _rollback(self, block: 'Block'):
         super().rollback(block.height, block.hash)
