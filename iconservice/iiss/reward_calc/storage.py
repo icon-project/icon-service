@@ -19,14 +19,17 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
+
 from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
 from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
-    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0, IISS_LOG_TAG, WAL_LOG_TAG
+    DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0,
+    IISS_LOG_TAG, ROLLBACK_LOG_TAG
 )
 from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
+from ...utils import bytes_to_hex
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -64,8 +67,8 @@ class Storage(object):
     """
 
     CURRENT_IISS_DB_NAME = "current_db"
-    STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db_"
-    IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
+    STANDBY_IISS_DB_NAME_PREFIX = "standby_rc_db"
+    IISS_RC_DB_NAME_PREFIX = "iiss_rc_db"
 
     KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
     KEY_FOR_CALC_RESPONSE_FROM_RC = b'calc_response_from_rc'
@@ -91,6 +94,27 @@ class Storage(object):
 
         # todo: check side effect of WAL
         self._supplement_db(context, revision)
+
+    def rollback(self, _context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"rollback() start: block_height={block_height} block_hash={bytes_to_hex(block_hash)}")
+
+        if self._db is not None:
+            raise InternalServiceErrorException("current_db has been opened on rollback")
+
+        if not os.path.exists(self._path):
+            raise DatabaseException(f"Invalid IISS DB path: {self._path}")
+
+        self._db = self.create_current_db(self._path)
+
+        self._db_iiss_tx_index = self._load_last_transaction_index()
+        Logger.info(tag=IISS_LOG_TAG, msg=f"last_transaction_index on open={self._db_iiss_tx_index}")
+
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
+
+    @property
+    def key_value_db(self) -> 'KeyValueDatabase':
+        return self._db
 
     def _supplement_db(self, context: 'IconScoreContext', revision: int):
         # Supplement db which is made by previous icon service version (as there is no version, revision and header)
@@ -119,8 +143,16 @@ class Storage(object):
             Logger.debug(tag=IISS_LOG_TAG, msg=f"No header data. Put Header to db on open: {str(header)}")
 
     @classmethod
-    def get_standby_rc_db_name(cls, block_height: int, rc_version: int) -> str:
-        return f"{cls.STANDBY_IISS_DB_NAME_PREFIX}{block_height}_{rc_version}"
+    def get_standby_rc_db_name(cls, block_height: int) -> str:
+        return cls._get_db_name(cls.STANDBY_IISS_DB_NAME_PREFIX, block_height)
+
+    @classmethod
+    def get_iiss_rc_db_name(cls, block_height: int) -> str:
+        return cls._get_db_name(cls.IISS_RC_DB_NAME_PREFIX, block_height)
+
+    @classmethod
+    def _get_db_name(cls, prefix: str, block_height: int) -> str:
+        return f"{prefix}_{block_height}"
 
     def put_data_directly(self, iiss_data: 'Data', tx_index: Optional[int] = None):
         if isinstance(iiss_data, TxData):
@@ -206,7 +238,7 @@ class Storage(object):
 
     def replace_db(self, block_height: int) -> 'RewardCalcDBInfo':
         """
-        1. Rename current_db to standby_db_{block_height}_{rc_version}
+        1. Rename current_db to standby_db_{block_height}
         2. Create a new current_db for the next calculation period
 
         :param block_height: End block height of the current calc period
@@ -216,13 +248,11 @@ class Storage(object):
         # rename current db -> standby db
         assert block_height > 0
 
-        rc_version, _ = self.get_version_and_revision()
-        rc_version: int = max(rc_version, 0)
         self._db.close()
         # Process compaction before send the RC DB to reward calculator
         self.process_db_compaction(os.path.join(self._path, self.CURRENT_IISS_DB_NAME))
 
-        standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height, rc_version)
+        standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height)
         self._db = self.create_current_db(self._path)
 
         return RewardCalcDBInfo(standby_db_path, block_height)
@@ -246,9 +276,9 @@ class Storage(object):
         return KeyValueDatabase.from_path(current_db_path, create_if_missing=True)
 
     @classmethod
-    def rename_current_db_to_standby_db(cls, rc_data_path: str, block_height: int, rc_version: int) -> str:
+    def rename_current_db_to_standby_db(cls, rc_data_path: str, block_height: int) -> str:
         current_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
-        standby_db_name: str = cls.get_standby_rc_db_name(block_height, rc_version)
+        standby_db_name: str = cls.get_standby_rc_db_name(block_height)
         standby_db_path: str = os.path.join(rc_data_path, standby_db_name)
 
         cls._rename_db(current_db_path, standby_db_path)
@@ -264,34 +294,6 @@ class Storage(object):
         cls._rename_db(standby_db_path, iiss_db_path)
 
         return iiss_db_path
-
-    @classmethod
-    def scan_rc_db(cls, rc_data_path: str) -> Tuple[str, str, str]:
-        """Scan directories that are managed by RewardCalcStorage
-
-        :param rc_data_path: the parent directory of rc_dbs
-        :return: current_rc_db_exists(bool), standby_rc_db_path, iiss_rc_db_path
-        """
-        current_rc_db_path: str = ""
-        standby_rc_db_path: str = ""
-        iiss_rc_db_path: str = ""
-
-        with os.scandir(rc_data_path) as it:
-            for entry in it:
-                if entry.is_dir():
-                    if entry.name == cls.CURRENT_IISS_DB_NAME:
-                        current_rc_db_path: str = os.path.join(rc_data_path, cls.CURRENT_IISS_DB_NAME)
-                    elif entry.name.startswith(cls.STANDBY_IISS_DB_NAME_PREFIX):
-                        standby_rc_db_path: str = os.path.join(rc_data_path, entry.name)
-                    elif entry.name.startswith(cls.IISS_RC_DB_NAME_PREFIX):
-                        iiss_rc_db_path: str = os.path.join(rc_data_path, entry.name)
-
-        Logger.info(tag=WAL_LOG_TAG,
-                    msg=f"current_rc_db={current_rc_db_path}, "
-                        f"standby_rc_db={standby_rc_db_path}, "
-                        f"iiss_rc_db={iiss_rc_db_path}")
-
-        return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
 
     def get_total_elected_prep_delegated_snapshot(self) -> int:
         """
@@ -317,15 +319,66 @@ class Storage(object):
             preps = data.prep_list
             break
 
-        if not preps:
-            raise InternalServiceErrorException(f"No PRepsData in iiss_data")
-
         ret = 0
-        for info in preps:
-            if info.address not in unreg_preps:
-                ret += info.value
+        if preps:
+            for info in preps:
+                if info.address not in unreg_preps:
+                    ret += info.value
 
         Logger.info(tag=IISS_LOG_TAG,
                     msg=f"get_total_elected_prep_delegated_snapshot load: {ret}")
 
         return ret
+
+
+class IissDBNameRefactor(object):
+    """Change iiss_db name: remove revision from iiss_db name
+
+    """
+    _DB_NAME_PREFIX = Storage.IISS_RC_DB_NAME_PREFIX
+
+    @classmethod
+    def run(cls, rc_data_path: str) -> int:
+        ret = 0
+
+        with os.scandir(rc_data_path) as it:
+            for entry in it:
+                if entry.is_dir() and entry.name.startswith(cls._DB_NAME_PREFIX):
+                    new_name: str = cls._get_db_name_without_revision(entry.name)
+                    if not new_name:
+                        Logger.info(
+                            tag=IISS_LOG_TAG,
+                            msg=f"Refactoring iiss_db name has been already done: old={entry.name} "
+                                f"rc_data_path={rc_data_path}")
+                        break
+
+                    cls._change_db_name(rc_data_path, entry.name, new_name)
+                    ret += 1
+
+        return ret
+
+    @classmethod
+    def _change_db_name(cls, rc_data_path: str, old_name: str, new_name: str):
+        if old_name == new_name:
+            return
+
+        src_path: str = os.path.join(rc_data_path, old_name)
+        dst_path: str = os.path.join(rc_data_path, new_name)
+
+        try:
+            os.rename(src_path, dst_path)
+            Logger.info(tag=IISS_LOG_TAG, msg=f"Renaming iiss_db_name succeeded: old={old_name} new={new_name}")
+        except BaseException as e:
+            Logger.error(tag=IISS_LOG_TAG,
+                         msg=f"Failed to rename iiss_db_name: old={old_name} new={new_name} "
+                             f"path={rc_data_path} exception={str(e)}")
+
+    @classmethod
+    def _get_db_name_without_revision(cls, name: str) -> Optional[str]:
+        # items[0]: block_height, items[1]: revision
+        items: List[str] = name[len(cls._DB_NAME_PREFIX) + 1:].split("_")
+        if len(items) == 1:
+            # No need to rename
+            return None
+
+        return f"{cls._DB_NAME_PREFIX}_{items[0]}"

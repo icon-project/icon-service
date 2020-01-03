@@ -46,7 +46,7 @@ class Storage(StorageBase):
         if value is None:
             return -1, -1
         data: list = MsgPackForDB.loads(value)
-        version = data[0]
+        _version = data[0]
         return data[1], data[2]
 
     def put_last_term_info(self,
@@ -62,7 +62,7 @@ class Storage(StorageBase):
         if value is None:
             return -1, -1
         data: list = MsgPackForDB.loads(value)
-        version = data[0]
+        _version = data[0]
         return data[1], data[2]
 
     def put_last_main_preps(self,
@@ -77,5 +77,5 @@ class Storage(StorageBase):
         if value is None:
             return []
         data: list = MsgPackForDB.loads(value)
-        version = data[0]
+        _version = data[0]
         return data[1]

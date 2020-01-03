@@ -40,11 +40,11 @@ class TestRCDatabase(TestIISSBase):
     def get_last_rc_db_data(rc_data_path):
         return sorted([dir_name for dir_name in os.listdir(rc_data_path)
                        if dir_name.startswith(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX)],
-                      key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX):]),
+                      key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX)+1:]),
                       reverse=True)[0]
 
-    def _check_the_name_of_rc_db(self, actual_rc_db_name: str, version: int = 0):
-        expected_last_rc_db_name: str = Storage.IISS_RC_DB_NAME_PREFIX + str(self._block_height - 1) + '_' + str(version)
+    def _check_the_name_of_rc_db(self, actual_rc_db_name: str):
+        expected_last_rc_db_name: str = f"{Storage.IISS_RC_DB_NAME_PREFIX}_{self._block_height - 1}"
         self.assertEqual(expected_last_rc_db_name, actual_rc_db_name)
 
     def test_all_rc_db_data_block_height(self):
@@ -59,7 +59,7 @@ class TestRCDatabase(TestIISSBase):
         self.make_blocks(self._block_height + 1)
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         expected_version: int = 0
-        self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
+        self._check_the_name_of_rc_db(get_last_rc_db)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         expected_rc_db_data_count: int = 1
@@ -164,7 +164,7 @@ class TestRCDatabase(TestIISSBase):
                          prev_block_validators=main_preps_address[1:])
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
         expected_version: int = 0
-        self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
+        self._check_the_name_of_rc_db(get_last_rc_db)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
         self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
@@ -207,8 +207,7 @@ class TestRCDatabase(TestIISSBase):
                          prev_block_validators=main_preps_address[1:])
         expected_pr_block_height: int = expected_gv_block_height
         get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        expected_version: int = 2
-        self._check_the_name_of_rc_db(get_last_rc_db, expected_version)
+        self._check_the_name_of_rc_db(get_last_rc_db)
         rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
 
         expected_bp_block_height: int = expected_gv_block_height + 1

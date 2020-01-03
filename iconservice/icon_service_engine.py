@@ -15,21 +15,27 @@
 
 import os
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Any, Optional, Tuple
+from enum import IntEnum
+from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
+
+from iconservice.rollback import check_backup_exists
+from iconservice.rollback.backup_cleaner import BackupCleaner
+from iconservice.rollback.backup_manager import BackupManager
+from iconservice.rollback.rollback_manager import RollbackManager
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException,
-    DatabaseException)
+    MethodNotFoundException, InternalServiceErrorException, DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
+from .base.type_converter_templates import ConstantKeys
 from .database.factory import ContextDatabaseFactory
-from .database.wal import WriteAheadLogReader
+from .database.wal import WriteAheadLogReader, WALDBType
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
@@ -38,7 +44,8 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG)
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG
+)
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer, IconScoreContextFactory
@@ -56,12 +63,14 @@ from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
-from .iiss.reward_calc.storage import RewardCalcDBInfo, get_version_and_revision
+from .iiss.reward_calc.storage import IissDBNameRefactor
+from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .inner_call import inner_call
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
+from .rollback.metadata import Metadata as RollbackMetadata
 from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
@@ -85,6 +94,7 @@ class IconServiceEngine(ContextContainer):
     """
     TAG = "ISE"
     WAL_FILE = "block.wal"
+    ROLLBACK_METADATA_FILE = "ROLLBACK_METADATA"
 
     def __init__(self):
         """Constructor
@@ -96,7 +106,12 @@ class IconServiceEngine(ContextContainer):
         self._deposit_handler = None
         self._context_factory = None
         self._state_db_root_path: Optional[str] = None
+        self._backup_root_path: Optional[str] = None
+        self._rc_data_path: Optional[str] = None
         self._wal_reader: Optional['WriteAheadLogReader'] = None
+        self._backup_manager: Optional[BackupManager] = None
+        self._backup_cleaner: Optional[BackupCleaner] = None
+        self._conf: Optional[Dict[str, Union[str, int]]] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -125,14 +140,18 @@ class IconServiceEngine(ContextContainer):
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
         log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
+        backup_root_path: str = os.path.join(state_db_root_path, "backup")
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
         os.makedirs(rc_data_path, exist_ok=True)
+        os.makedirs(backup_root_path, exist_ok=True)
 
         # Share one context db with all SCORE
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
         self._state_db_root_path = state_db_root_path
+        self._rc_data_path = rc_data_path
+        self._backup_root_path = backup_root_path
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._step_counter_factory = IconScoreStepCounterFactory()
@@ -140,6 +159,8 @@ class IconServiceEngine(ContextContainer):
 
         self._deposit_handler = DepositHandler()
         self._icon_pre_validator = IconPreValidator()
+        self._backup_manager = BackupManager(backup_root_path, rc_data_path)
+        self._backup_cleaner = BackupCleaner(backup_root_path, conf[ConfigKey.BACKUP_FILES])
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
@@ -156,11 +177,18 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.precommitdata_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
         self._init_component_context()
 
+        # Recover incomplete state on wal and rollback process
         self._recover_dbs(rc_data_path)
 
         # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._init_last_block_info(context)
+
+        # Remove revision from iiss_rc_db name
+        IissDBNameRefactor.run(self._rc_data_path)
+
+        # Clean up stale backup files
+        self._backup_cleaner.run_on_init(context.block.height)
 
         # set revision (if governance SCORE does not exist, remain revision to default).
         try:
@@ -183,11 +211,12 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IPC_TIMEOUT],
                                      conf[ConfigKey.ICON_RC_DIR_PATH])
 
-        self._post_open_component_context(context)
-
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
+
+        # DO NOT change the values in conf
+        self._conf = conf
 
     def _init_component_context(self):
         engine: 'ContextEngine' = ContextEngine(deploy=DeployEngine(),
@@ -230,6 +259,15 @@ class IconServiceEngine(ContextContainer):
                                 block_validation_penalty_threshold: int,
                                 ipc_timeout: int,
                                 icon_rc_path: str):
+        # storages MUST be prepared prior to engines because engines use them on open()
+        IconScoreContext.storage.deploy.open(context)
+        IconScoreContext.storage.fee.open(context)
+        IconScoreContext.storage.icx.open(context)
+        IconScoreContext.storage.iiss.open(context, iiss_meta_data, calc_period)
+        IconScoreContext.storage.prep.open(context, prep_reg_fee)
+        IconScoreContext.storage.issue.open(context)
+        IconScoreContext.storage.meta.open(context)
+        IconScoreContext.storage.rc.open(context, rc_data_path)
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -247,18 +285,6 @@ class IconServiceEngine(ContextContainer):
                                           low_productivity_penalty_threshold,
                                           block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
-
-        IconScoreContext.storage.deploy.open(context)
-        IconScoreContext.storage.fee.open(context)
-        IconScoreContext.storage.icx.open(context)
-        IconScoreContext.storage.iiss.open(context,
-                                           iiss_meta_data,
-                                           calc_period)
-        IconScoreContext.storage.prep.open(context,
-                                           prep_reg_fee)
-        IconScoreContext.storage.issue.open(context)
-        IconScoreContext.storage.meta.open(context)
-        IconScoreContext.storage.rc.open(context, rc_data_path)
 
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
@@ -279,10 +305,6 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.rc.close()
 
     @classmethod
-    def _post_open_component_context(cls, context: 'IconScoreContext'):
-        IconScoreContext.engine.prep.load_term(context)
-
-    @classmethod
     def get_ready_future(cls):
         return IconScoreContext.engine.iiss.get_ready_future()
 
@@ -301,6 +323,8 @@ class IconServiceEngine(ContextContainer):
         return make_flag
 
     def _load_builtin_scores(self, context: 'IconScoreContext', builtin_score_owner: 'Address'):
+        context.icon_score_mapper.clear()
+
         current_address: 'Address' = context.current_address
         context.current_address = GOVERNANCE_SCORE_ADDRESS
 
@@ -1825,6 +1849,20 @@ class IconServiceEngine(ContextContainer):
             self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
         wal_writer.flush()
 
+        # Backup the previous block state
+        self._backup_manager.run(
+            icx_db=self._icx_context_db.key_value_db,
+            rc_db=context.storage.rc.key_value_db,
+            revision=context.revision,
+            prev_block=self._get_last_block(),
+            block_batch=precommit_data.block_batch,
+            iiss_wal=iiss_wal,
+            is_calc_period_start_block=is_calc_period_start_block,
+            instant_block_hash=instant_block_hash)
+
+        # Clean up the oldest backup file
+        self._backup_cleaner.run_on_commit(context.block.height)
+
         # Write iiss_wal to rc_db
         standby_db_info: Optional['RewardCalcDBInfo'] = \
             self._process_iiss_commit(context, precommit_data, iiss_wal, is_calc_period_start_block)
@@ -1960,18 +1998,139 @@ class IconServiceEngine(ContextContainer):
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
             wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
 
-    def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
+    def remove_precommit_state(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         :param block_height: height of block which is needed to be removed from the pre-commit data manager
         :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
-        Logger.warning(tag=self.TAG, msg=f"rollback() start: height={block_height}")
+        Logger.warning(tag=self.TAG, msg=f"remove_precommit_state() start: height={block_height}")
 
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
-        self._precommit_data_manager.rollback(instant_block_hash)
+        self._precommit_data_manager.remove_precommit_state(instant_block_hash)
 
-        Logger.warning(tag=self.TAG, msg="rollback() end")
+        Logger.warning(tag=self.TAG, msg="remove_precommit_state() end")
+
+    def rollback(self, block_height: int, block_hash: bytes) -> dict:
+        """Rollback the current confirmed state to the old one indicated by block_height
+
+        :param block_height: final block height after rollback
+        :param block_hash: final block hash after rollback
+        :return:
+        """
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"rollback() start: height={block_height} hash={bytes_to_hex(block_hash)}")
+
+        last_block: 'Block' = self._get_last_block()
+        Logger.info(tag=self.TAG, msg=f"last_block={last_block}")
+
+        # If rollback is not possible for the current state,
+        # self._is_rollback_needed() should raise an InternalServiceErrorException
+        try:
+            if self._is_rollback_needed(last_block, block_height, block_hash):
+                # Get the start block height of this term
+                term_start_block_height: int = IconScoreContext.engine.prep.term.start_block_height
+
+                # Record rollback metadata
+                path = self._get_rollback_metadata_path()
+                metadata = RollbackMetadata(
+                    block_height, block_hash, term_start_block_height, last_block)
+                metadata.save(path)
+
+                # Do rollback
+                context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
+                self._rollback(context, block_height, block_hash, term_start_block_height)
+
+                self._remove_rollback_metadata()
+
+        except BaseException as e:
+            Logger.error(tag=ROLLBACK_LOG_TAG, msg=str(e))
+            raise InternalServiceErrorException(
+                f"Failed to rollback: {last_block.height} -> {block_height}")
+
+        response = {
+            ConstantKeys.BLOCK_HEIGHT: block_height,
+            ConstantKeys.BLOCK_HASH: block_hash
+        }
+
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end")
+
+        return response
+
+    def _is_rollback_needed(self, last_block: 'Block', block_height: int, block_hash: bytes) -> bool:
+        """Check if rollback is needed
+        """
+        if block_height == last_block.height and block_hash == last_block.hash:
+            # No need to rollback
+            return False
+
+        if check_backup_exists(self._backup_root_path, last_block.height, block_height):
+            # There are enough backup files to rollback
+            return True
+
+        raise InternalServiceErrorException(
+            f"Failed to rollback: "
+            f"height={block_height} "
+            f"hash={bytes_to_hex(block_hash)} "
+            f"last_block={last_block}")
+
+    def _rollback(self, context: 'IconScoreContext',
+                  rollback_block_height: int,
+                  rollback_block_hash: bytes,
+                  term_start_block_height: int):
+        """
+
+        :param context:
+        :param rollback_block_height: final block_height after rollback
+        :param rollback_block_hash: final block hash after rollback
+        """
+        # Close storage
+        IconScoreContext.storage.rc.close()
+
+        # Rollback state_db and rc_data_db to those of a given block_height
+        rollback_manager = RollbackManager(
+            self._backup_root_path, self._rc_data_path, self._icx_context_db.key_value_db)
+        rollback_manager.run(
+            last_block_height=context.block.height,
+            rollback_block_height=rollback_block_height,
+            term_start_block_height=term_start_block_height)
+
+        # Rollback the state of reward_calculator prior to iconservice
+        IconScoreContext.engine.iiss.rollback_reward_calculator(rollback_block_height, rollback_block_hash)
+
+        # Clear all iconscores and reload builtin scores only
+        builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
+        self._load_builtin_scores(context, builtin_score_owner)
+        self._init_global_value_by_governance_score(context)
+
+        # Rollback storages
+        storages = [
+            IconScoreContext.storage.deploy,
+            IconScoreContext.storage.fee,
+            IconScoreContext.storage.icx,
+            IconScoreContext.storage.iiss,
+            IconScoreContext.storage.prep,
+            IconScoreContext.storage.issue,
+            IconScoreContext.storage.meta,
+            IconScoreContext.storage.rc,
+        ]
+        for storage in storages:
+            storage.rollback(context, rollback_block_height, rollback_block_hash)
+
+        # Rollback engines to block_height
+        engines = [
+            IconScoreContext.engine.deploy,
+            IconScoreContext.engine.fee,
+            IconScoreContext.engine.icx,
+            IconScoreContext.engine.iiss,
+            IconScoreContext.engine.prep,
+            IconScoreContext.engine.issue,
+        ]
+        for engine in engines:
+            engine.rollback(context, rollback_block_height, rollback_block_hash)
+
+        # Reset last_block
+        self._init_last_block_info(context)
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks
@@ -2001,16 +2160,43 @@ class IconServiceEngine(ContextContainer):
         return inner_call(context, request)
 
     def _recover_dbs(self, rc_data_path: str):
+        """
+        CAUTION: last_block_info is not ready at this moment
+
+        """
+
+        self._recover_commit(rc_data_path)
+        self._recover_rollback()
+
+    def _recover_rollback(self):
+        Logger.debug(tag=ROLLBACK_LOG_TAG, msg=f"_recover_rollback() start")
+
+        # Load RollbackMetadata from a file
+        path = self._get_rollback_metadata_path()
+        metadata: Optional['RollbackMetadata'] = RollbackMetadata.load(path)
+
+        if metadata:
+            # Resume the previous rollback for the databases managed by iconservice
+            rollback_manager = RollbackManager(
+                self._backup_root_path, self._rc_data_path, self._icx_context_db.key_value_db)
+            rollback_manager.run(
+                last_block_height=metadata.last_block.height,
+                rollback_block_height=metadata.block_height,
+                term_start_block_height=metadata.term_start_block_height)
+
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_rollback() end")
+
+    def _recover_commit(self, rc_data_path: str):
         """Recover iiss_db and state_db with a wal file
 
         :param rc_data_path: The directory where iiss_dbs are contained
         """
 
-        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() start: rc_data_path={rc_data_path}")
+        Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_commit() start: rc_data_path={rc_data_path}")
 
         path: str = self._get_write_ahead_log_path()
         if not os.path.isfile(path):
-            Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_dbs() end: No WAL file {path}")
+            Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_commit() end: No WAL file {path}")
             return
 
         self._wal_reader = None
@@ -2037,7 +2223,7 @@ class IconServiceEngine(ContextContainer):
         except BaseException as e:
             Logger.error(tag=WAL_LOG_TAG, msg=str(e))
 
-        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_dbs() end")
+        Logger.debug(tag=WAL_LOG_TAG, msg="_recover_commit() end")
 
     @staticmethod
     def _is_need_to_recover_rc_db(wal_state: 'WALState', is_calc_period_start_block: bool) -> bool:
@@ -2062,47 +2248,47 @@ class IconServiceEngine(ContextContainer):
 
         # If WAL file is made at the start block of calc period
         if is_calc_period_start_block:
-            current_rc_db_path, standby_rc_db_path, iiss_rc_db_path = RewardCalcStorage.scan_rc_db(rc_data_path)
-            is_current_exists: bool = len(current_rc_db_path) > 0
-            is_standby_exists: bool = len(standby_rc_db_path) > 0
-            is_iiss_exists: bool = len(iiss_rc_db_path) > 0
-            Logger.info(tag=WAL_LOG_TAG,
-                        msg=f"current_exists={is_current_exists}, "
-                            f"is_standby_exists={is_standby_exists}, "
-                            f"is_iiss_exists={is_iiss_exists}")
-
-            # If only current_db exists, replace current_db to standby_rc_db
-            if is_current_exists and not is_standby_exists and not is_iiss_exists:
-                # Get revision from the RC DB
-                prev_calc_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-                rc_version, revision = get_version_and_revision(prev_calc_db)
-                rc_version: int = max(rc_version, 0)
-                prev_calc_db.close()
-
-                # Process compaction before send the RC DB to reward calculator
-                prev_calc_db_path: str = os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
-                RewardCalcStorage.process_db_compaction(prev_calc_db_path)
-
-                calculate_block_height: int = reader.block.height - 1
-                standby_rc_db_path: str = RewardCalcStorage.rename_current_db_to_standby_db(rc_data_path,
-                                                                                            calculate_block_height,
-                                                                                            rc_version)
-                is_standby_exists: bool = True
-            elif not is_current_exists and not is_standby_exists:
-                # No matter iiss_db exists or not, If both current_db and standby_db do not exist, raise error
-                raise DatabaseException(f"RC related DB not exists")
-
-            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
-            if is_standby_exists:
-                RewardCalcStorage.rename_standby_db_to_iiss_db(standby_rc_db_path)
-        else:
-            current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+            cls._recover_rc_db_on_calc_start_block(rc_data_path, reader.block)
 
         # Write data to "current_db"
-        current_db.write_batch(reader.get_iterator(0))
+        current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
+        current_db.write_batch(reader.get_iterator(WALDBType.RC.value))
         current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
+
+    @classmethod
+    def _recover_rc_db_on_calc_start_block(cls, rc_data_path: str, block: 'Block'):
+        class DBType(IntEnum):
+            CURRENT = 0
+            STANDBY = 1
+            IISS = 2
+
+        calc_end_block_height = block.height - 1
+
+        items = (
+            [RewardCalcStorage.CURRENT_IISS_DB_NAME, False],
+            [RewardCalcStorage.get_standby_rc_db_name(calc_end_block_height), False],
+            [RewardCalcStorage.get_iiss_rc_db_name(calc_end_block_height), False]
+        )
+
+        for item in items:
+            item[0]: str = os.path.join(rc_data_path, item[0])
+            item[1]: bool = os.path.isdir(item[0])
+
+        if items[DBType.IISS][1]:
+            # Do nothing
+            pass
+        elif items[DBType.STANDBY][1]:
+            # Rename standby_rc_db to iiss_rc_db
+            os.rename(items[DBType.STANDBY][0], items[DBType.IISS][0])
+        elif items[DBType.CURRENT][1]:
+            # Compact current_db and rename current_db to iiss_rc_db
+            path: str = items[DBType.CURRENT][0]
+            RewardCalcStorage.process_db_compaction(path)
+            os.rename(path, items[DBType.IISS][0])
+        else:
+            raise DatabaseException("IISS-related DB not found")
 
     def _recover_state_db(self, reader: 'WriteAheadLogReader'):
         Logger.debug(tag=WAL_LOG_TAG, msg=f"_recover_state_db() start: reader={reader}")
@@ -2112,13 +2298,28 @@ class IconServiceEngine(ContextContainer):
             Logger.info(tag=WAL_LOG_TAG, msg="state_db has already been up-to-date")
             return
 
-        ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(1))
+        ret: int = self._icx_context_db.key_value_db.write_batch(reader.get_iterator(WALDBType.STATE.value))
         Logger.info(tag=WAL_LOG_TAG, msg=f"state_db has been updated with wal file: count={ret}")
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_state_db() end")
 
     def _get_write_ahead_log_path(self) -> str:
         return os.path.join(self._state_db_root_path, self.WAL_FILE)
+
+    def _get_rollback_metadata_path(self) -> str:
+        return os.path.join(self._state_db_root_path, self.ROLLBACK_METADATA_FILE)
+
+    def _remove_rollback_metadata(self):
+        Logger.debug(tag=ROLLBACK_LOG_TAG, msg="_remove_rollback_metadata() start")
+
+        path = self._get_rollback_metadata_path()
+        try:
+            os.remove(path)
+            Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"Remove {path}")
+        except:
+            Logger.error(tag=ROLLBACK_LOG_TAG, msg=f"Failed to remove {path}")
+
+        Logger.debug(tag=ROLLBACK_LOG_TAG, msg="_remove_rollback_metadata() end")
 
     def hello(self) -> dict:
         """If state_db and rc_db are recovered, send COMMIT_BLOCK message to reward calculator
@@ -2129,26 +2330,61 @@ class IconServiceEngine(ContextContainer):
         """
         Logger.debug(tag=self.TAG, msg="hello() start")
 
-        iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
-
-        last_block: 'Block' = self._get_last_block()
-
-        if isinstance(self._wal_reader, WriteAheadLogReader):
-            wal_state = WALState(self._wal_reader.state)
-
-            # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
-            # send COMMIT_BLOCK to rc prior to invoking a block
-            if not (wal_state & WALState.SEND_COMMIT_BLOCK):
-                iiss_engine.send_commit(
-                    self._wal_reader.block.height, self._wal_reader.instant_block_hash)
-
-            assert last_block == self._wal_reader.block
-
-            # No need to use
-            self._wal_reader = None
-
-        # iiss_engine.init_reward_calculator(last_block)
+        self._finish_to_recover_commit()
+        self._finish_to_recover_rollback()
 
         Logger.debug(tag=self.TAG, msg="hello() end")
 
         return {}
+
+    def _finish_to_recover_commit(self):
+        """Finish to recover WAL by sending COMMIT_BLOCK message to reward calculator
+        """
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() start")
+
+        if not isinstance(self._wal_reader, WriteAheadLogReader):
+            Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() end")
+            return
+
+        iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
+        last_block: 'Block' = self._get_last_block()
+
+        wal_state = WALState(self._wal_reader.state)
+
+        # If only writing rc_db is done on commit without sending COMMIT_BLOCK to rc,
+        # send COMMIT_BLOCK to rc prior to invoking a block
+        if not (wal_state & WALState.SEND_COMMIT_BLOCK):
+            iiss_engine.send_commit(
+                self._wal_reader.block.height, self._wal_reader.instant_block_hash)
+
+        assert last_block == self._wal_reader.block
+
+        # No need to use
+        self._wal_reader = None
+
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() end")
+
+    def _finish_to_recover_rollback(self):
+        """Finish to recover rollback by sending ROLLBACK message to reward calculator
+        """
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() start")
+
+        # Get ROLLBACK_METADATA file path
+        path = self._get_rollback_metadata_path()
+
+        # Load RollbackMetadata from a file
+        metadata: Optional[RollbackMetadata] = RollbackMetadata.load(path)
+
+        if metadata:
+            # Request reward calculator to rollback its state
+            IconScoreContext.engine.iiss.rollback_reward_calculator(metadata.block_height, metadata.block_hash)
+
+            # Remove ROLLBACK_METADATA file when the rollback is done.
+            self._remove_rollback_metadata()
+
+            # Remove obsolete block backup files used for rollback
+            self._backup_cleaner.run(
+                start_block_height=metadata.block_height + 1,
+                end_block_height=metadata.last_block.height - 1)
+
+        Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() end")

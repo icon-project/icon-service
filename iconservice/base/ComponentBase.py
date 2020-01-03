@@ -33,6 +33,9 @@ class EngineBase(ABC):
     def close(self):
         pass
 
+    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        pass
+
 
 class StorageBase(ABC):
 
@@ -54,3 +57,6 @@ class StorageBase(ABC):
         if self._db:
             self._db.close(context)
             self._db = None
+
+    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        pass

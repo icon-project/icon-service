@@ -108,6 +108,9 @@ class TestIntegrateBase(TestCase):
         response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
         self._calculate_done_callback(response)
 
+    def _calculate_done_callback(self, response: 'CalculateDoneNotification'):
+        pass
+
     @classmethod
     def _mock_ipc(cls, mock_calculate: callable = mock_calculate):
         RewardCalcProxy.open = Mock()
@@ -291,7 +294,21 @@ class TestIntegrateBase(TestCase):
         self._prev_block_hash = block.hash
 
     def _remove_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.rollback(block.height, block.hash)
+        """Revoke to commit the precommit data to db
+
+        """
+        self.icon_service_engine.remove_precommit_state(block.height, block.hash)
+
+    def rollback(self, block_height: int = -1, block_hash: Optional[bytes] = None):
+        """Rollback the current state to the old one indicated by a given block
+
+        :param block_height: the final block height after rollback
+        :param block_hash: the final block hash after rollback
+        """
+        self.icon_service_engine.rollback(block_height, block_hash)
+
+        self._block_height = block_height
+        self._prev_block_hash = block_hash
 
     def _query(self, request: dict, method: str = 'icx_call') -> Any:
         response = self.icon_service_engine.query(method, request)
@@ -877,13 +894,13 @@ class TestIntegrateBase(TestCase):
         }
         return self._query(query_request)
 
-    @staticmethod
-    def create_eoa_accounts(count: int) -> List['EOAAccount']:
-        accounts: list = []
-        wallets: List['KeyWallet'] = [KeyWallet.create() for _ in range(count)]
-        for wallet in wallets:
-            accounts.append(EOAAccount(wallet))
-        return accounts
+    @classmethod
+    def create_eoa_account(cls) -> 'EOAAccount':
+        return EOAAccount(KeyWallet.create())
+
+    @classmethod
+    def create_eoa_accounts(cls, count: int) -> List['EOAAccount']:
+        return [cls.create_eoa_account() for _ in range(count)]
 
 
 class EOAAccount:

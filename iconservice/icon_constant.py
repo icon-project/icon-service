@@ -26,6 +26,8 @@ ICON_INNER_LOG_TAG = f'IconInnerService'
 IISS_LOG_TAG = "IISS"
 STEP_LOG_TAG = "STEP"
 WAL_LOG_TAG = "WAL"
+ROLLBACK_LOG_TAG = "ROLLBACK"
+BACKUP_LOG_TAG = "BACKUP"
 
 JSONRPC_VERSION = '2.0'
 CHARSET_ENCODING = 'utf-8'
@@ -180,6 +182,9 @@ class ConfigKey:
     LOW_PRODUCTIVITY_PENALTY_THRESHOLD = "lowProductivityPenaltyThreshold"
     BLOCK_VALIDATION_PENALTY_THRESHOLD = "blockValidationPenaltyThreshold"
 
+    # The maximum number of backup files for rollback
+    BACKUP_FILES = "backupFiles"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1
@@ -298,6 +303,8 @@ BLOCK_VALIDATION_PENALTY_THRESHOLD = 660  # Unit: Blocks
 BASE_TRANSACTION_VERSION = 3
 
 PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
+
+BACKUP_FILES = 10
 
 
 class RCStatus(IntEnum):

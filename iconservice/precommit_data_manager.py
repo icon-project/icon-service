@@ -214,7 +214,7 @@ class PrecommitDataManager(object):
         # Clear remaining precommit data which have the same block height
         self._precommit_data_mapper.clear()
 
-    def rollback(self, instant_block_hash: bytes):
+    def remove_precommit_state(self, instant_block_hash: bytes):
         if instant_block_hash in self._precommit_data_mapper:
             del self._precommit_data_mapper[instant_block_hash]
 
