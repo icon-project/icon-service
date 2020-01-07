@@ -352,15 +352,59 @@ class Engine(EngineBase, IISSEngineListener):
         :param context:
         :return:
         """
-        old_preps = self.preps
 
+        for prep in context.preps:
+            if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
+                Logger.error(f"1 context.preps block height: {context.block.height}")
+                Logger.error(f"1 context.preps address: {prep.address}")
+                Logger.error(f"1 context.preps delegation: {prep.delegated}")
+                Logger.error(f"1 context.preps status: {prep.status}")
+                Logger.error(f"1 context.preps reason: {prep.penalty}")
+            elif prep.penalty == PenaltyReason.BLOCK_VALIDATION:
+                Logger.error(f"2 context.preps block height: {context.block.height}")
+                Logger.error(f"2 context.preps address: {prep.address}")
+                Logger.error(f"2 context.preps delegation: {prep.delegated}")
+                Logger.error(f"2 context.preps status: {prep.status}")
+                Logger.error(f"2 context.preps reason: {prep.penalty}")
+
+        old_preps = self.preps
         for prep in old_preps:
             if prep.penalty == PenaltyReason.BLOCK_VALIDATION:
                 dirty_prep = context.get_prep(prep.address, mutable=True)
+                Logger.error(f"3 dirty_prep block height: {context.block.height}")
+                Logger.error(f"3 dirty_prep address: {dirty_prep.address}")
+                Logger.error(f"3 dirty_prep delegation: {dirty_prep.delegated}")
+                Logger.error(f"3 dirty_prep status: {dirty_prep.status}")
+                Logger.error(f"3 dirty_prep reason: {dirty_prep.penalty}")
                 dirty_prep.reset_block_validation_penalty()
                 context.put_dirty_prep(dirty_prep)
+            elif prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
+                Logger.error(f"4 dirty_prep block height: {context.block.height}")
+                Logger.error(f"4 dirty_prep address: {prep.address}")
+                Logger.error(f"4 dirty_prep delegation: {prep.delegated}")
+                Logger.error(f"4 dirty_prep status: {prep.status}")
+                Logger.error(f"4 dirty_prep reason: {prep.penalty}")
 
-        context.update_dirty_prep_batch()
+            context.update_dirty_prep_batch()
+
+        # for prep in context.preps:
+        #     if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
+        #         Logger.error(f"{prep.address}")
+        #         # dirty_prep = context.get_prep(prep.address, mutable=True)
+        #         # dirty_prep.reset_block_validation_penalty()
+        #         # context.put_dirty_prep(dirty_prep)
+        #     # context.update_dirty_prep_batch()
+        #
+        # # if context.block.height <= 100000000000:
+        # #     for prep in context.preps:
+        # #         if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
+        # #             dirty_prep = context.get_prep(prep.address, mutable=True)
+        # #             dirty_prep.reset_block_validation_penalty()
+        # #             context.put_dirty_prep(dirty_prep)
+        # #
+        # #     context.update_dirty_prep_batch()
+        # # else:
+        # #
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
