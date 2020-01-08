@@ -102,6 +102,7 @@ class PRepContainer(object):
             # Update self._total_prep_delegated
             self._total_prep_delegated += prep.delegated
             assert self._total_prep_delegated >= 0
+            Logger.error(f"mycom22 add address: {prep.address}, {prep.delegated}, {self._total_prep_delegated}")
 
     def remove(self, address: 'Address') -> Optional['PRep']:
         """Remove a prep indicated by address from self._active_prep_list and self._prep_dict
@@ -123,6 +124,7 @@ class PRepContainer(object):
             if prep.status == PRepStatus.ACTIVE:
                 self._active_prep_list.remove(prep)
                 self._total_prep_delegated -= prep.delegated
+                Logger.error(f"mycom22 remove address: {prep.address}, {prep.delegated}, {self._total_prep_delegated}")
 
             del self._prep_dict[address]
 

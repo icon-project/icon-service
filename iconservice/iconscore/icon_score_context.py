@@ -260,6 +260,7 @@ class IconScoreContext(object):
         if dirty_prep.address not in self._term:
             return
 
+        Logger.error(f"mycom22 update_elected_prep_in_term: {dirty_prep.address}, {dirty_prep.delegated}")
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
 

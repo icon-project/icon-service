@@ -353,87 +353,47 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
 
+        data1 = []
+        data2 = []
+        data3 = []
+        data4 = []
+        total1 = 0
+        total2 = 0
+        total3 = 0
+        total4 = 0
+
         for prep in context.preps:
             if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
-                Logger.error(f"1 preps block height: {context.block.height}")
-                Logger.error(f"1 preps address: {prep.address}")
-                Logger.error(f"1 preps delegation: {prep.delegated}")
-                Logger.error(f"1 preps status: {prep.status}")
-                Logger.error(f"1 preps reason: {prep.penalty}")
-            elif prep.penalty == PenaltyReason.BLOCK_VALIDATION:
-                Logger.error(f"2 preps block height: {context.block.height}")
-                Logger.error(f"2 preps address: {prep.address}")
-                Logger.error(f"2 preps delegation: {prep.delegated}")
-                Logger.error(f"2 preps status: {prep.status}")
-                Logger.error(f"2 preps reason: {prep.penalty}")
-            else:
-                Logger.error(f"3 preps block height: {context.block.height}")
-                Logger.error(f"3 preps address: {prep.address}")
-                Logger.error(f"3 preps delegation: {prep.delegated}")
-                Logger.error(f"3 preps status: {prep.status}")
-                Logger.error(f"3 preps reason: {prep.penalty}")
+                # master
+                data1.append((prep.address, prep.delegated))
+                total1 += prep.delegated
+            data3.append((prep.address, prep.delegated))
+            total3 += prep.delegated
 
         old_preps = self.preps
         for prep in old_preps:
             if prep.penalty == PenaltyReason.BLOCK_VALIDATION:
+                # 1.5.18
                 dirty_prep = context.get_prep(prep.address, mutable=True)
-                Logger.error(f"4 preps block height: {context.block.height}")
-                Logger.error(f"4 preps address: {dirty_prep.address}")
-                Logger.error(f"4 preps delegation: {dirty_prep.delegated}")
-                Logger.error(f"4 preps status: {dirty_prep.status}")
-                Logger.error(f"4 preps reason: {dirty_prep.penalty}")
-                Logger.error(f"5 preps block height: {context.block.height}")
-                Logger.error(f"5 preps address: {prep.address}")
-                Logger.error(f"5 preps delegation: {prep.delegated}")
-                Logger.error(f"5 preps status: {prep.status}")
-                Logger.error(f"5 preps reason: {prep.penalty}")
+
+                data2.append((prep.address, prep.delegated))
+                total2 += dirty_prep.delegated
+
                 dirty_prep.reset_block_validation_penalty()
                 context.put_dirty_prep(dirty_prep)
-            elif prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
-                dirty_prep = context.get_prep(prep.address, mutable=True)
-                Logger.error(f"6 preps block height: {context.block.height}")
-                Logger.error(f"6 preps address: {dirty_prep.address}")
-                Logger.error(f"6 preps delegation: {dirty_prep.delegated}")
-                Logger.error(f"6 preps status: {dirty_prep.status}")
-                Logger.error(f"6 preps reason: {dirty_prep.penalty}")
-                Logger.error(f"7 preps block height: {context.block.height}")
-                Logger.error(f"7 preps address: {prep.address}")
-                Logger.error(f"7 preps delegation: {prep.delegated}")
-                Logger.error(f"7 preps status: {prep.status}")
-                Logger.error(f"7 preps reason: {prep.penalty}")
-            else:
-                dirty_prep = context.get_prep(prep.address, mutable=True)
-                Logger.error(f"8 preps block height: {context.block.height}")
-                Logger.error(f"8 preps address: {dirty_prep.address}")
-                Logger.error(f"8 preps delegation: {dirty_prep.delegated}")
-                Logger.error(f"8 preps status: {dirty_prep.status}")
-                Logger.error(f"8 preps reason: {dirty_prep.penalty}")
-                Logger.error(f"9 preps block height: {context.block.height}")
-                Logger.error(f"9 preps address: {prep.address}")
-                Logger.error(f"9 preps delegation: {prep.delegated}")
-                Logger.error(f"9 preps status: {prep.status}")
-                Logger.error(f"9 preps reason: {prep.penalty}")
 
-            context.update_dirty_prep_batch()
+            data4.append((prep.address, prep.delegated))
+            total4 += prep.delegated
 
-        # for prep in context.preps:
-        #     if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
-        #         Logger.error(f"{prep.address}")
-        #         # dirty_prep = context.get_prep(prep.address, mutable=True)
-        #         # dirty_prep.reset_block_validation_penalty()
-        #         # context.put_dirty_prep(dirty_prep)
-        #     # context.update_dirty_prep_batch()
-        #
-        # # if context.block.height <= 100000000000:
-        # #     for prep in context.preps:
-        # #         if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
-        # #             dirty_prep = context.get_prep(prep.address, mutable=True)
-        # #             dirty_prep.reset_block_validation_penalty()
-        # #             context.put_dirty_prep(dirty_prep)
-        # #
-        # #     context.update_dirty_prep_batch()
-        # # else:
-        # #
+        context.update_dirty_prep_batch()
+
+        Logger.error(f"data1: {data1}")
+        Logger.error(f"data2: {data2}")
+        Logger.error(f"total1 : {total1}, total2 : {total2}")
+
+        Logger.error(f"data3: {data3}")
+        Logger.error(f"data4: {data4}")
+        Logger.error(f"total3 : {total3}, total4 : {total4}")
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
@@ -583,6 +543,9 @@ class Engine(EngineBase, IISSEngineListener):
             context.preps.total_delegated
         )
 
+        Logger.error(f"mycom22 create_next_term term {term}")
+        for prep in new_preps:
+            Logger.error(f"mycom22 create_next_term prep {prep}")
         term.set_preps(new_preps, context.main_prep_count, context.main_and_sub_prep_count)
 
         return term
