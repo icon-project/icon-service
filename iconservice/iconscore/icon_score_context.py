@@ -24,7 +24,7 @@ from iconcommons.logger import Logger
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
-from ..base.exception import FatalException
+from ..base.exception import FatalException, AccessDeniedException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
@@ -186,6 +186,27 @@ class IconScoreContext(object):
     def term(self) -> Optional['Term']:
         return self._term
 
+    def duplicate_preps(self) -> Optional['PRepContainer']:
+        """Duplicate self._preps on demand for performance
+
+        If self._preps is mutable, it is reused.
+        self._preps are frozen when finishing to invoke a block
+        """
+        Logger.debug(tag=self.TAG, msg="duplicated_preps() start")
+
+        if self.type != IconScoreContextType.INVOKE:
+            raise AccessDeniedException(f"Method not allowed: context={self.type.name}")
+
+        if self._preps is not None and self._preps.is_frozen():
+            old_preps = self._preps
+            self._preps = self._preps.copy(mutable=True)
+            Logger.debug(tag=self.TAG,
+                         msg=f"self._preps is duplicated: old={id(old_preps)} new={id(self._preps)}")
+
+        Logger.debug(tag=self.TAG, msg="duplicated_preps() end")
+
+        return self._preps
+
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
 
@@ -253,13 +274,7 @@ class IconScoreContext(object):
         :param dirty_prep: changed P-Rep instance
         :return:
         """
-        assert self.type == IconScoreContextType.INVOKE
-
-        if self._preps.is_frozen():
-            # Copy self._preps on demand for performance
-            # The copied self._preps is not frozen before calling self._preps.freeze()
-            self._preps = self._preps.copy(mutable=True)
-
+        self.duplicate_preps()
         self._preps.replace(dirty_prep)
 
     def _update_elected_preps_in_term(self, dirty_prep: 'PRep'):

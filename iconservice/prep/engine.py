@@ -208,6 +208,7 @@ class Engine(EngineBase, IISSEngineListener):
             main_prep_as_dict, new_term = None, None
 
         if new_term:
+            context.duplicate_preps()
             self._update_prep_grades(context, context.preps, self.term, new_term)
             context.storage.prep.put_term(context, new_term)
 
@@ -352,6 +353,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep = prep.copy()
             prep.grade = grades[_NEW]
             new_preps.replace(prep)
+            context.put_dirty_prep(prep)
             context.storage.prep.put_prep(context, prep)
 
             Logger.info(tag=_TAG,
