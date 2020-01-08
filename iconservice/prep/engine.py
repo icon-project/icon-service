@@ -365,8 +365,13 @@ class Engine(EngineBase, IISSEngineListener):
         for prep in context.preps:
             if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
                 # master
-                data1.append((prep.address, prep.delegated))
-                total1 += prep.delegated
+                dirty_prep = context.get_prep(prep.address, mutable=True)
+                data1.append((prep.address, dirty_prep.delegated))
+                total1 += dirty_prep.delegated
+
+                dirty_prep.reset_block_validation_penalty()
+                context.put_dirty_prep(dirty_prep)
+
             data3.append((prep.address, prep.delegated))
             total3 += prep.delegated
 
@@ -376,11 +381,8 @@ class Engine(EngineBase, IISSEngineListener):
                 # 1.5.18
                 dirty_prep = context.get_prep(prep.address, mutable=True)
 
-                data2.append((prep.address, prep.delegated))
+                data2.append((dirty_prep.address, dirty_prep.delegated))
                 total2 += dirty_prep.delegated
-
-                dirty_prep.reset_block_validation_penalty()
-                context.put_dirty_prep(dirty_prep)
 
             data4.append((prep.address, prep.delegated))
             total4 += prep.delegated
