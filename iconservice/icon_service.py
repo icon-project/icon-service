@@ -84,9 +84,6 @@ class IconService(object):
             Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
             Logger.error(e, ICON_EXCEPTION_LOG_TAG)
             self._inner_service.clean_close()
-        finally:
-            Logger.debug("icon service will be closed while open the icon service engine. "
-                         "check if the config is valid")
 
         loop.create_task(_serve())
         loop.add_signal_handler(signal.SIGINT, self.close)

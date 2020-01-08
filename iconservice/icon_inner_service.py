@@ -461,6 +461,8 @@ class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
         Logger.error("MQ Connection reconnect. [Service]")
 
     def clean_close(self):
+        Logger.debug(tag=_TAG, msg="icon service will be closed while open the icon service engine. "
+                                   "check if the config is valid")
         self._task._close()
 
 
