@@ -237,12 +237,30 @@ class IconScoreContext(object):
             if self.revision >= Revision.REALTIME_P2P_ENDPOINT_UPDATE.value:
                 self._update_main_preps_in_term(dirty_prep)
 
-            self._preps.replace(dirty_prep)
+            self._replace_prep(dirty_prep)
+
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
             dirty_prep.freeze()
 
         self._tx_dirty_preps.clear()
+
+    def _replace_prep(self, dirty_prep: 'PRep'):
+        """Replace a changed P-Rep instance with the old one in self._preps
+
+        Assume that this method should be called on invoke process
+
+        :param dirty_prep: changed P-Rep instance
+        :return:
+        """
+        assert self.type == IconScoreContextType.INVOKE
+
+        if self._preps.is_frozen():
+            # Copy self._preps on demand for performance
+            # The copied self._preps is not frozen before calling self._preps.freeze()
+            self._preps = self._preps.copy(mutable=True)
+
+        self._preps.replace(dirty_prep)
 
     def _update_elected_preps_in_term(self, dirty_prep: 'PRep'):
         """Collect main and sub preps which cannot serve as a main and sub prep
@@ -355,12 +373,13 @@ class IconScoreContextFactory(object):
             context.tx_batch = TransactionBatch()
             context.new_icon_score_mapper = IconScoreMapper()
 
-            # For PRep management
-            context._preps = context.engine.prep.preps.copy(mutable=True)
+            # For P-Rep management
             context._tx_dirty_preps = OrderedDict()
             if context.engine.prep.term:
                 context._term = context.engine.prep.term.copy()
         else:
             # Readonly
-            context._preps = context.engine.prep.preps
             context._term = context.engine.prep.term
+
+        # context.engine.prep.preps is a readonly instance
+        context._preps = context.engine.prep.preps

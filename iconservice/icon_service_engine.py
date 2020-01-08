@@ -104,7 +104,7 @@ class IconServiceEngine(ContextContainer):
         self._step_counter_factory = None
         self._icon_pre_validator = None
         self._deposit_handler = None
-        self._context_factory = None
+        self._context_factory: Optional['IconScoreContextFactory'] = None
         self._state_db_root_path: Optional[str] = None
         self._backup_root_path: Optional[str] = None
         self._rc_data_path: Optional[str] = None
