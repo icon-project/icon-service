@@ -34,7 +34,6 @@ if TYPE_CHECKING:
     from ...database.wal import IissWAL
     from ..reward_calc.msg_data import Data, DelegationInfo
 
-
 RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
 
 
@@ -258,7 +257,7 @@ class Storage(object):
     @classmethod
     def rename_standby_db_to_iiss_db(cls, standby_db_path: str) -> str:
         # After change the db name, reward calc manage this db (icon service does not have a authority)
-        iiss_db_path: str = cls.IISS_RC_DB_NAME_PREFIX.\
+        iiss_db_path: str = cls.IISS_RC_DB_NAME_PREFIX. \
             join(standby_db_path.rsplit(cls.STANDBY_IISS_DB_NAME_PREFIX, 1))
 
         cls._rename_db(standby_db_path, iiss_db_path)
@@ -288,8 +287,8 @@ class Storage(object):
 
         Logger.info(tag=WAL_LOG_TAG,
                     msg=f"current_rc_db={current_rc_db_path}, "
-                        f"standby_rc_db={standby_rc_db_path}, "
-                        f"iiss_rc_db={iiss_rc_db_path}")
+                    f"standby_rc_db={standby_rc_db_path}, "
+                    f"iiss_rc_db={iiss_rc_db_path}")
 
         return current_rc_db_path, standby_rc_db_path, iiss_rc_db_path
 
@@ -309,6 +308,7 @@ class Storage(object):
             data: 'TxData' = TxData.from_bytes(v)
             if data.type == TxType.PREP_UNREGISTER:
                 unreg_preps.add(data.address)
+                Logger.error(f"mycom22 get_snapshot unreg_prep {data.address}")
 
         db = self._db.get_sub_db(PRepsData.PREFIX)
         preps: Optional[List['DelegationInfo']] = None
@@ -322,10 +322,13 @@ class Storage(object):
 
         ret = 0
         for info in preps:
+            Logger.error(f"mycom22 get_snapshot preps {info.address}, {info.value}")
             if info.address not in unreg_preps:
                 ret += info.value
+            else:
+                Logger.error(f"mycom22 get_snapshot in unreg_preps {info.address}, {info.value}")
 
-        Logger.info(tag=IISS_LOG_TAG,
-                    msg=f"get_total_elected_prep_delegated_snapshot load: {ret}")
+        Logger.error(tag=IISS_LOG_TAG,
+                     msg=f"mycom22 get_total_elected_prep_delegated_snapshot load: {ret}")
 
         return ret
