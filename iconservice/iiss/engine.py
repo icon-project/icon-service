@@ -881,6 +881,8 @@ class Engine(EngineBase):
         else:
             block_height: int = context.block.height
 
+        Logger.error(f"mycom22 _put_preps_to_rc_db all: {context.block.height}, {context.term}, {context.engine.prep.term}")
+
         if revision < Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value:
             total_elected_prep_delegated: int = term.total_elected_prep_delegated_snapshot
         else:
@@ -888,10 +890,12 @@ class Engine(EngineBase):
 
         Logger.info(
             tag=cls.TAG,
-            msg=f"_put_preps_for_rc_db() "
+            msg=f"mycom22 _put_preps_for_rc_db() "
                 f"block_height={block_height} "
                 f"total_elected_prep_delegated={term.total_elected_prep_delegated} "
                 f"total_elected_prep_delegated_snapshot={term.total_elected_prep_delegated_snapshot}")
+
+        Logger.error(f"mycom22 total_elected_prep_delegated: {revision}, {total_elected_prep_delegated}")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
                                                                    total_elected_prep_delegated,

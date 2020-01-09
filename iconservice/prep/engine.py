@@ -225,11 +225,14 @@ class Engine(EngineBase, IISSEngineListener):
 
         context.storage.meta.put_last_main_preps(context, main_preps)
 
+        Logger.error(f"mycom22 _on_term_ended {context.block.height}, old {context.term}")
         # All block validation penalties are released
         self._reset_block_validation_penalty(context)
 
         # Create a term with context.preps whose grades are up-to-date
         new_term: 'Term' = self._create_next_term(context, self.term)
+        Logger.error(f"mycom22 _on_term_ended {context.block.height}, new {new_term}")
+
         main_preps_as_dict: dict = \
             self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
 
@@ -346,21 +349,33 @@ class Engine(EngineBase, IISSEngineListener):
 
         Logger.debug(tag=_TAG, msg="_update_prep_grades() end")
 
-    @classmethod
-    def _reset_block_validation_penalty(cls, context: 'IconScoreContext'):
+    def _reset_block_validation_penalty(self, context: 'IconScoreContext'):
         """Reset block validation penalty in the end of every term
 
         :param context:
         :return:
         """
 
-        for prep in context.preps:
-            if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
+        # 1.5.18
+        old_preps = self.preps
+        for prep in old_preps:
+            if prep.penalty == PenaltyReason.BLOCK_VALIDATION:
                 dirty_prep = context.get_prep(prep.address, mutable=True)
                 dirty_prep.reset_block_validation_penalty()
                 context.put_dirty_prep(dirty_prep)
 
         context.update_dirty_prep_batch()
+
+        # # master
+        # for prep in context.preps:
+        #     if prep.penalty == PenaltyReason.BLOCK_VALIDATION and prep.status == PRepStatus.ACTIVE:
+        #         dirty_prep = context.get_prep(prep.address, mutable=True)
+        #         dirty_prep.reset_block_validation_penalty()
+        #         context.put_dirty_prep(dirty_prep)
+        #
+        # context.update_dirty_prep_batch()
+
+        Logger.error(f"mycom22 {context.term}")
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):

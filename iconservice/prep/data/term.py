@@ -51,6 +51,9 @@ class PRepSnapshot(object):
         return self.address == other.address \
                and self.delegated == other.delegated
 
+    def __str__(self):
+        return f"{self._address}, {self._delegated}"
+
 
 class Term(object):
     """Manages P-Rep Term information
@@ -121,7 +124,8 @@ class Term(object):
             f"total_delegated={self._total_delegated} " \
             f"total_elected_prep_delegated={self._total_elected_prep_delegated} " \
             f"_total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot} " \
-            f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
+            f"root_hash={bytes_to_hex(self._merkle_root_hash)}" \
+            f"list={self.to_list()}"
 
     def __contains__(self, address: 'Address') -> bool:
         return address in self._preps_dict
@@ -272,6 +276,8 @@ class Term(object):
             snapshot = PRepSnapshot(prep.address, prep.delegated)
             total_elected_prep_delegated += prep.delegated
 
+            Logger.error(f"mycom22 set_preps {prep.address}, {prep.delegated}, {total_elected_prep_delegated}")
+
             if len(self._main_preps) < main_prep_count:
                 self._main_preps.append(snapshot)
             else:
@@ -281,6 +287,9 @@ class Term(object):
 
         self._total_elected_prep_delegated_snapshot = total_elected_prep_delegated
         self._total_elected_prep_delegated = total_elected_prep_delegated
+
+        Logger.error(f"mycom22 set_preps self.snapshot {self._total_elected_prep_delegated_snapshot}")
+        Logger.error(f"mycom22 set_preps self.delegated {self._total_elected_prep_delegated}")
 
         self._generate_root_hash()
         self._flags = TermFlag.NONE
@@ -372,13 +381,15 @@ class Term(object):
                 or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
             self._total_elected_prep_delegated_snapshot -= delegated
             Logger.info(tag=self.TAG,
-                        msg="total_elected_prep_delegated_snapshot is changed: "
+                        msg="mycom22 total_elected_prep_delegated_snapshot is changed: "
+                            f"address={invalid_prep.address}"
                             f"delta={-delegated} "
                             f"total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot}")
 
         self._total_elected_prep_delegated -= delegated
         Logger.info(tag=self.TAG,
-                    msg="total_elected_prep_delegated is changed: "
+                    msg="mycom22 total_elected_prep_delegated is changed: "
+                        f"address={invalid_prep.address}"
                         f"delta={-delegated} "
                         f"total_elected_prep_delegated={self._total_elected_prep_delegated}")
 
@@ -427,6 +438,9 @@ class Term(object):
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
         term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
+
+        Logger.error(f"mycom22 from_list self.snapshot {term._total_elected_prep_delegated_snapshot}")
+        Logger.error(f"mycom22 from_list self.delegated {term._total_elected_prep_delegated}")
 
         term._generate_root_hash()
 
