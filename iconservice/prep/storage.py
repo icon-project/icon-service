@@ -102,4 +102,6 @@ class Storage(StorageBase):
             total_elected_prep_delegated_snapshot: int = \
                 context.storage.rc.get_total_elected_prep_delegated_snapshot()
             data: list = MsgPackForDB.loads(value)
-            return Term.from_list(data, total_elected_prep_delegated_snapshot)
+            return Term.from_list(data,
+                                  context.block.height,
+                                  total_elected_prep_delegated_snapshot)
