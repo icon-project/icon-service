@@ -399,7 +399,9 @@ class Term(object):
             RootHashGenerator.generate_root_hash(values=_gen(self._main_preps), do_hash=True)
 
     @classmethod
-    def from_list(cls, data: List, total_elected_prep_delegated_from_rc: int) -> 'Term':
+    def from_list(cls, data: List,
+                  block_height: int,
+                  total_elected_prep_delegated_from_rc: int) -> 'Term':
         assert data[0] == cls._VERSION
         sequence: int = data[1]
         start_block_height: int = data[2]
@@ -426,6 +428,11 @@ class Term(object):
             total_elected_prep_delegated += delegated
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
+
+        if block_height == start_block_height - 1 or total_elected_prep_delegated_from_rc <= 0:
+            # In the case of the first term (prevote -> decentralization),
+            # total_elected_prep_delegated_from_rc can be 0.
+            total_elected_prep_delegated_from_rc = total_elected_prep_delegated
         term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
 
         term._generate_root_hash()
