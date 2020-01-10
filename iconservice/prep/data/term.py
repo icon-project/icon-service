@@ -93,7 +93,8 @@ class Term(object):
     def is_dirty(self):
         return utils.is_any_flag_on(self._flags, TermFlag.ALL)
 
-    def on_main_prep_p2p_endpoint_updated(self):
+    def on_main_prep_p2p_endpoint_changed(self):
+        self._check_access_permission()
         self._flags |= TermFlag.MAIN_PREP_P2P_ENDPOINT
 
     def is_frozen(self) -> bool:
@@ -124,6 +125,11 @@ class Term(object):
             f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
 
     def __contains__(self, address: 'Address') -> bool:
+        """Check whether the given address is an elected P-Rep
+
+        :param address: P-Rep address
+        :return: True(elected P-Rep), False(non-elected P-Rep)
+        """
         return address in self._preps_dict
 
     def __len__(self) -> int:
@@ -192,15 +198,6 @@ class Term(object):
         """Total amount of delegation which all active P-Reps got when this term is started
         """
         return self._total_delegated
-
-    # @total_delegated.setter
-    # def total_delegated(self, value: int):
-    #     """Called on PRepEngine._on_term_updated()
-    #
-    #     :param value:
-    #     :return:
-    #     """
-    #     self._total_delegated = value
 
     @property
     def total_elected_prep_delegated(self) -> int:

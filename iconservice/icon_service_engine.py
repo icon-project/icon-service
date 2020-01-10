@@ -782,9 +782,6 @@ class IconServiceEngine(ContextContainer):
 
         if main_prep_as_dict is not None:
             Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")
-        context.preps.freeze()
-        if context.term:
-            context.term.freeze()
 
         return main_prep_as_dict, term, rc_state_hash
 
