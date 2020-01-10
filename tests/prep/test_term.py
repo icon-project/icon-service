@@ -247,7 +247,7 @@ class TestTerm(unittest.TestCase):
         assert self.term.flags == TermFlag.NONE
         _check_prep_snapshots_in_term(self.term)
 
-        new_term = Term.from_list(self.term.to_list(), self.term.total_elected_prep_delegated_snapshot)
+        new_term = Term.from_list(self.term.to_list(), 0, self.term.total_elected_prep_delegated_snapshot)
         _check_prep_snapshots_in_term(new_term)
 
         assert self.term == new_term
