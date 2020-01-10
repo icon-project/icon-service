@@ -137,6 +137,12 @@ class PrecommitData(object):
         # To prevent redundant precommit data logging
         self.already_exists = False
 
+        # Make preps and term immutable
+        if preps:
+            preps.freeze()
+        if term:
+            term.freeze()
+
     def __str__(self):
         lines = [
             f"revision: {self.revision}",
