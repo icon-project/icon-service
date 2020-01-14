@@ -386,7 +386,10 @@ class Governance(IconSystemScoreBase):
         deploy_score_addr = tx_params.score_address
         deploy_info = self.get_deploy_info(deploy_score_addr)
         if txHash != deploy_info.next_tx_hash:
-            revert('Invalid txHash: mismatch')
+            if txHash == deploy_info.current_tx_hash:
+                revert('Invalid txHash: already accepted')
+            else:
+                revert('Invalid txHash: mismatch')
 
         next_audit_tx_hash = self._audit_status[txHash]
         if next_audit_tx_hash:

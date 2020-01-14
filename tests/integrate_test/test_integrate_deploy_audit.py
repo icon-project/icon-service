@@ -58,7 +58,6 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
                       value: int,
                       expected_status: bool = True,
                       to_: Optional['Address'] = ZERO_SCORE_ADDRESS) -> List['TransactionResult']:
-
         return self.deploy_score(score_root="sample_deploy_scores",
                                  score_name=score_path,
                                  from_=self._accounts[0],
@@ -66,8 +65,8 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
                                  expected_status=expected_status,
                                  to_=to_)
 
-    def _update_governance_score(self):
-        tx_results: List['TransactionResult'] = self.update_governance()
+    def _update_governance_score(self, version: str = "latest_version"):
+        tx_results: List['TransactionResult'] = self.update_governance(version=version)
         self.accept_score(tx_results[0].tx_hash)
 
     def test_governance_call_about_add_auditor_already_auditor(self):
@@ -708,6 +707,75 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         # Fix
         # 6. accept SCORE : tx_hash4
         self.accept_score(tx_hash4)
+
+    def test_normal_score_fail4_fix_update_governance_1_0_0(self):
+        self._update_governance_score("1_0_0")
+
+        # 1. deploy (wait audit)
+        tx_results: List['TransactionResult'] = self._deploy_score("install/sample_score", 1)
+        score_addr1: 'Address' = tx_results[0].score_address
+        tx_hash1: bytes = tx_results[0].tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accept SCORE : tx_hash1
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash1)
+        tx_hash2: bytes = tx_results[0].tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. update (wait audit)
+        tx_results: List['TransactionResult'] = self._deploy_score("update/sample_score",
+                                                                   2,
+                                                                   to_=score_addr1)
+        tx_hash3: bytes = tx_results[0].tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash3}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 4. overwrite
+        tx_results: List['TransactionResult'] = self._deploy_score("update/sample_score",
+                                                                   3,
+                                                                   to_=score_addr1)
+        tx_hash4: bytes = tx_results[0].tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash4}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 6. accept SCORE : tx_hash1
+        # Already Accepted
+        tx_results: List['TransactionResult'] = self.accept_score(tx_hash1, expected_status=False)
+        self.assertEqual(tx_results[0].failure.message, "Invalid txHash: already accepted")
 
     # call acceptScore with the already rejected deploy txHash
     def test_normal_score_fail5(self):
