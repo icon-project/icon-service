@@ -81,6 +81,7 @@ class PRepContainer(object):
             if not prep.is_frozen():
                 prep.freeze()
 
+        self._flags = PRepContainerFlag.NONE
         self._is_frozen: bool = True
 
     def add(self, prep: 'PRep'):
