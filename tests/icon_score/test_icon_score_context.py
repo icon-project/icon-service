@@ -39,6 +39,8 @@ class TestIconScoreContext(unittest.TestCase):
         preps = utils.create_dummy_preps(
             size=self.ELECTED_PREPS + 10, main_preps=self.MAIN_PREPS, elected_preps=self.ELECTED_PREPS)
         preps.freeze()
+        assert preps.is_frozen()
+        assert not preps.is_dirty()
 
         term = Term(sequence=0,
                     start_block_height=100,
@@ -48,6 +50,8 @@ class TestIconScoreContext(unittest.TestCase):
                     total_delegated=preps.total_delegated)
         term.set_preps(preps, self.MAIN_PREPS, self.ELECTED_PREPS)
         term.freeze()
+        assert term.is_frozen()
+        assert not term.is_dirty()
 
         prep_engine = PRepEngine()
         prep_engine.preps = preps
