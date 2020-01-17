@@ -62,7 +62,8 @@ from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
-from .iiss.reward_calc import RewardCalcStorage, RewardCalcDataCreator
+from .iiss.reward_calc import RewardCalcStorage
+from .iiss.reward_calc.msg_data import make_block_produce_info_key
 from .iiss.reward_calc.storage import IissDBNameRefactor
 from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .inner_call import inner_call
@@ -75,6 +76,7 @@ from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
+from .database.db import KeyValueDatabase
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -82,8 +84,6 @@ if TYPE_CHECKING:
     from iconcommons.icon_config import IconConfig
     from .prep.data import Term
     from .iiss.storage import RewardRate
-    from .database.db import KeyValueDatabase
-    from .iiss.reward_calc.msg_data import BlockProduceInfoData
 
 _TAG = "ISE"
 
@@ -684,10 +684,6 @@ class IconServiceEngine(ContextContainer):
                         msg=f"The first block of decentralization: {context.block}")
             return
 
-        self._put_block_produce_info_on_start_calc(context,
-                                                   prev_block_generator,
-                                                   prev_block_votes)
-
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
 
@@ -725,24 +721,6 @@ class IconServiceEngine(ContextContainer):
             tx_hash: bytes = base_transaction["params"]["txHash"]
             added_transactions[tx_hash.hex()] = tx_params_to_added
             tx_requests.insert(0, base_transaction)
-
-    @classmethod
-    def _put_block_produce_info_on_start_calc(cls,
-                                              context: 'IconScoreContext',
-                                              prev_block_generator: Optional['Address'] = None,
-                                              prev_block_votes: Optional[List[Tuple['Address', bool]]] = None):
-        if prev_block_generator is None or prev_block_votes is None:
-            return
-
-        start = context.engine.iiss.get_start_block_of_calc(context)
-        if start != context.block.height:
-            return
-        prev_block_height: int = context.block.height - 1
-        bp_data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
-                                                                                               prev_block_generator,
-                                                                                               prev_block_votes)
-        context.storage.rc.put_data_directly(bp_data)
-        Logger.info(tag="TERM", msg=f"Put BP directly on start term. BP: {bp_data}")
 
     @classmethod
     def _after_transaction_process(
@@ -1971,6 +1949,16 @@ class IconServiceEngine(ContextContainer):
 
         context.engine.prep.commit(context, precommit_data)
         context.storage.rc.commit(iiss_wal)
+
+        if is_calc_period_start_block:
+            calculate_block_height: int = context.block.height - 1
+            bp_key: bytes = make_block_produce_info_key(calculate_block_height)
+            standby_db: 'KeyValueDatabase' = KeyValueDatabase.from_path(standby_db_info.path)
+            RewardCalcStorage.move_data_from_new_db_to_old_db(bp_key,
+                                                              context.storage.rc.key_value_db,
+                                                              standby_db)
+            standby_db.close()
+            RewardCalcStorage.process_db_compaction(standby_db_info.path)
         return standby_db_info
 
     @staticmethod
@@ -2243,18 +2231,28 @@ class IconServiceEngine(ContextContainer):
             return
 
         # If WAL file is made at the start block of calc period
-        if is_calc_period_start_block:
-            cls._recover_rc_db_on_calc_start_block(rc_data_path, reader.block)
+        cls._rename_rc_db_on_calc_start_block(rc_data_path, reader.block)
 
         # Write data to "current_db"
         current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
         current_db.write_batch(reader.get_iterator(WALDBType.RC.value))
+
+        if is_calc_period_start_block:
+            end_block_height: int = reader.block.height - 1
+            bp_key: bytes = make_block_produce_info_key(end_block_height)
+            iiss_db_path: str = RewardCalcStorage.get_iiss_rc_db_name(end_block_height)
+            iiss_db: 'KeyValueDatabase' = KeyValueDatabase.from_path(iiss_db_path)
+            RewardCalcStorage.move_data_from_new_db_to_old_db(bp_key,
+                                                              current_db,
+                                                              iiss_db)
+            iiss_db.close()
+            RewardCalcStorage.process_db_compaction(iiss_db_path)
         current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
 
     @classmethod
-    def _recover_rc_db_on_calc_start_block(cls, rc_data_path: str, block: 'Block'):
+    def _rename_rc_db_on_calc_start_block(cls, rc_data_path: str, block: 'Block'):
         class DBType(IntEnum):
             CURRENT = 0
             STANDBY = 1
@@ -2281,7 +2279,6 @@ class IconServiceEngine(ContextContainer):
         elif items[DBType.CURRENT][1]:
             # Compact current_db and rename current_db to iiss_rc_db
             path: str = items[DBType.CURRENT][0]
-            RewardCalcStorage.process_db_compaction(path)
             os.rename(path, items[DBType.IISS][0])
         else:
             raise DatabaseException("IISS-related DB not found")
