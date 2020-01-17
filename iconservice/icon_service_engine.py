@@ -2231,7 +2231,8 @@ class IconServiceEngine(ContextContainer):
             return
 
         # If WAL file is made at the start block of calc period
-        cls._rename_rc_db_on_calc_start_block(rc_data_path, reader.block)
+        if is_calc_period_start_block:
+            cls._rename_rc_db_on_calc_start_block(rc_data_path, reader.block)
 
         # Write data to "current_db"
         current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
