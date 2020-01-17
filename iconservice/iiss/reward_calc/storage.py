@@ -249,13 +249,20 @@ class Storage(object):
         assert block_height > 0
 
         self._db.close()
-        # Process compaction before send the RC DB to reward calculator
-        self.process_db_compaction(os.path.join(self._path, self.CURRENT_IISS_DB_NAME))
 
         standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height)
         self._db = self.create_current_db(self._path)
 
         return RewardCalcDBInfo(standby_db_path, block_height)
+
+    @classmethod
+    def move_data_from_new_db_to_old_db(cls, key: bytes, new: 'KeyValueDatabase', old: 'KeyValueDatabase'):
+        value: Optional[bytes] = new.get(key)
+        if value is None:
+            return
+
+        new.delete(key)
+        old.put(key, value)
 
     @classmethod
     def process_db_compaction(cls, path: str):
