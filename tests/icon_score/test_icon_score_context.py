@@ -83,7 +83,7 @@ class TestIconScoreContext(unittest.TestCase):
         block = utils.create_dummy_block()
         context: 'IconScoreContext' = self.context_factory.create(IconScoreContextType.INVOKE, block)
         context.revision = Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
-        assert isinstance(context.preps, PRepContainer)
+        self._check_initial_context(context)
 
         # Case 1: the p2p_endpoint of a main P-Rep is changed
         index = random.randint(0, self.MAIN_PREPS - 1)
@@ -96,19 +96,21 @@ class TestIconScoreContext(unittest.TestCase):
 
         context.update_dirty_prep_batch()
 
+        # Check whether set TermFlag.MAIN_PREP_P2P_ENDPOINT to context.term.flags
+        # No change in main and sub P-Rep list of term
         assert id(context.term) != id(old_term)
         assert not context.term.is_frozen()
         assert context.term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
-        assert len(context.term.main_preps) == len(old_term.main_preps)
+        assert context.term.main_preps == old_term.main_preps
         assert context.term.sub_preps == old_term.sub_preps
 
-        # Check for preps attributes
+        # Check for context.preps attributes
         assert id(context.preps) != id(old_preps)
         assert not context.preps.is_frozen()
         assert context.preps.is_dirty()
         assert context.preps.get_by_index(index) == dirty_prep
 
-        # Check for the changed P-Rep
+        # Check the changed P-Rep
         old_prep = old_preps.get_by_index(index)
         new_prep = context.preps.get_by_index(index)
 
@@ -123,12 +125,9 @@ class TestIconScoreContext(unittest.TestCase):
         block = utils.create_dummy_block()
         context: 'IconScoreContext' = self.context_factory.create(IconScoreContextType.INVOKE, block)
         context.revision = Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
-        assert isinstance(context.preps, PRepContainer)
+        self._check_initial_context(context)
 
-        assert id(context.preps) == id(old_preps)
-        assert id(context.term) == id(old_term)
-
-        # Case the p2p_endpoint of a sub P-Rep is changed
+        # the p2p_endpoint of a sub P-Rep is changed
         sub_index = random.randint(self.MAIN_PREPS, self.ELECTED_PREPS - 1)
         dirty_sub_prep: 'PRep' = old_preps.get_by_index(sub_index).copy()
         dirty_sub_prep.set(p2p_endpoint=f"new_address_{sub_index}:1234")
@@ -137,6 +136,7 @@ class TestIconScoreContext(unittest.TestCase):
         assert dirty_sub_prep.grade == PRepGrade.SUB
         context.put_dirty_prep(dirty_sub_prep)
 
+        # the p2p_endpoint of a P-Rep candidate is changed
         candidate_index = random.randint(self.ELECTED_PREPS, old_preps.size(active_prep_only=True) - 1)
         dirty_prep_candidate: 'PRep' = old_preps.get_by_index(candidate_index).copy()
         dirty_prep_candidate.set(p2p_endpoint=f"new_address_{candidate_index}:1234")
@@ -148,11 +148,10 @@ class TestIconScoreContext(unittest.TestCase):
         context.update_dirty_prep_batch()
 
         # Check for term attributes
-        assert id(context.term) != id(old_term)
-        assert not context.term.is_frozen()
-        assert not context.term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
-        assert len(context.term.main_preps) == len(old_term.main_preps)
-        assert context.term.sub_preps == old_term.sub_preps
+        # No change to term
+        assert id(context.term) == id(old_term)
+        assert context.term.is_frozen()
+        assert not context.term.is_dirty()
 
         # Check for preps attributes
         assert id(context.preps) != id(old_preps)
@@ -165,9 +164,7 @@ class TestIconScoreContext(unittest.TestCase):
         block = utils.create_dummy_block()
         context: 'IconScoreContext' = self.context_factory.create(IconScoreContextType.INVOKE, block)
         context.revision = Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
-        assert isinstance(context.preps, PRepContainer)
-        assert context.preps.is_frozen()
-        assert context.term.is_frozen()
+        self._check_initial_context(context)
 
         penalties = [
             PenaltyReason.LOW_PRODUCTIVITY,
@@ -230,9 +227,7 @@ class TestIconScoreContext(unittest.TestCase):
             block = utils.create_dummy_block()
             context: 'IconScoreContext' = self.context_factory.create(IconScoreContextType.INVOKE, block)
             context.revision = Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
-            assert isinstance(context.preps, PRepContainer)
-            assert context.preps.is_frozen()
-            assert context.term.is_frozen()
+            self._check_initial_context(context)
 
             prep: 'PRep' = context.preps.get_by_index(index)
             assert prep.grade == grade
@@ -273,9 +268,7 @@ class TestIconScoreContext(unittest.TestCase):
             block = utils.create_dummy_block()
             context: 'IconScoreContext' = self.context_factory.create(IconScoreContextType.INVOKE, block)
             context.revision = Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
-            assert isinstance(context.preps, PRepContainer)
-            assert context.preps.is_frozen()
-            assert context.term.is_frozen()
+            self._check_initial_context(context)
 
             old_active_prep_count: int = context.preps.size(active_prep_only=True)
             old_total_prep_count: int = context.preps.size(active_prep_only=False)  # active + inactive
@@ -320,3 +313,15 @@ class TestIconScoreContext(unittest.TestCase):
             # The number of active P-Reps will be decreased by one compared to the previous one
             assert context.preps.size(active_prep_only=True) == old_active_prep_count - 1
             assert context.preps.size(active_prep_only=False) == old_total_prep_count
+
+    @staticmethod
+    def _check_initial_context(context: 'IconScoreContext'):
+        assert context.revision >= Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
+
+        assert isinstance(context.preps, PRepContainer)
+        assert not context.preps.is_frozen()
+        assert not context.preps.is_dirty()
+
+        assert isinstance(context.term, Term)
+        assert context.term.is_frozen()
+        assert not context.term.is_dirty()

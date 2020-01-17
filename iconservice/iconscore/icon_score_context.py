@@ -230,8 +230,7 @@ class IconScoreContext(object):
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
         for dirty_prep in self._tx_dirty_preps.values():
-            # if dirty_prep is an elected P-Rep(=main or sub P-Rep) in the current term
-            if self._term is not None and dirty_prep.address in self._term:
+            if self._term is not None:
                 self._update_term(dirty_prep)
 
             self._preps.replace(dirty_prep)
@@ -257,7 +256,9 @@ class IconScoreContext(object):
         :param dirty_prep:
         :return:
         """
-        self._duplicate_term()
+        # If dirty_prep address is not contained in term, no need to update self._term
+        if dirty_prep.address not in self._term:
+            return
 
         if dirty_prep.is_electable():
             self._change_main_prep_p2p_endpoint(dirty_prep)
@@ -272,9 +273,14 @@ class IconScoreContext(object):
         if self.revision < Revision.REALTIME_P2P_ENDPOINT_UPDATE.value:
             return
 
-        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) and \
-                self._term.is_main_prep(dirty_prep.address):
-            self._term.on_main_prep_p2p_endpoint_changed()
+        if not self._term.is_main_prep(dirty_prep.address):
+            return
+
+        if not dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
+            return
+
+        self._duplicate_term()
+        self._term.on_main_prep_p2p_endpoint_changed()
 
         Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
 
@@ -283,6 +289,8 @@ class IconScoreContext(object):
 
         :param dirty_prep: dirty prep
         """
+        self._duplicate_term()
+
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
 
