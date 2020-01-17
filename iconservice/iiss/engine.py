@@ -731,11 +731,10 @@ class Engine(EngineBase):
         if not context.is_decentralized():
             return rc_state_hash
 
-        if start != context.block.height:
-            self.put_block_produce_info_to_rc_db(context,
-                                                 context.rc_block_batch,
-                                                 prev_block_generator,
-                                                 prev_block_votes)
+        self.put_block_produce_info_to_rc_db(context,
+                                             context.rc_block_batch,
+                                             prev_block_generator,
+                                             prev_block_votes)
 
         start_term_block: int = context.engine.prep.term.start_block_height
         # New P-Rep Term is started
