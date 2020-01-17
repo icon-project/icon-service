@@ -1941,24 +1941,20 @@ class IconServiceEngine(ContextContainer):
         """
         assert precommit_data.revision >= Revision.IISS.value
         assert isinstance(iiss_wal, IissWAL)
-
+        calc_end_block_height: int = -1
         standby_db_info: Optional['RewardCalcDBInfo'] = None
+
         if is_calc_period_start_block:
-            calculate_block_height: int = context.block.height - 1
-            standby_db_info: 'RewardCalcDBInfo' = context.storage.rc.replace_db(calculate_block_height)
+            calc_end_block_height: int = context.block.height - 1
+            standby_db_info: 'RewardCalcDBInfo' = context.storage.rc.replace_db(calc_end_block_height)
 
         context.engine.prep.commit(context, precommit_data)
         context.storage.rc.commit(iiss_wal)
 
         if is_calc_period_start_block:
-            calculate_block_height: int = context.block.height - 1
-            bp_key: bytes = make_block_produce_info_key(calculate_block_height)
-            standby_db: 'KeyValueDatabase' = KeyValueDatabase.from_path(standby_db_info.path)
-            RewardCalcStorage.move_data_from_new_db_to_old_db(bp_key,
-                                                              context.storage.rc.key_value_db,
-                                                              standby_db)
-            standby_db.close()
-            RewardCalcStorage.process_db_compaction(standby_db_info.path)
+            RewardCalcStorage.finalize_iiss_db(calc_end_block_height,
+                                               context.storage.rc.key_value_db,
+                                               standby_db_info.path)
         return standby_db_info
 
     @staticmethod
@@ -2238,15 +2234,9 @@ class IconServiceEngine(ContextContainer):
         current_db.write_batch(reader.get_iterator(WALDBType.RC.value))
 
         if is_calc_period_start_block:
-            end_block_height: int = reader.block.height - 1
-            bp_key: bytes = make_block_produce_info_key(end_block_height)
-            iiss_db_path: str = RewardCalcStorage.get_iiss_rc_db_name(end_block_height)
-            iiss_db: 'KeyValueDatabase' = KeyValueDatabase.from_path(iiss_db_path)
-            RewardCalcStorage.move_data_from_new_db_to_old_db(bp_key,
-                                                              current_db,
-                                                              iiss_db)
-            iiss_db.close()
-            RewardCalcStorage.process_db_compaction(iiss_db_path)
+            calc_end_block_height: int = reader.block.height - 1
+            iiss_db_path: str = RewardCalcStorage.get_iiss_rc_db_name(calc_end_block_height)
+            RewardCalcStorage.finalize_iiss_db(calc_end_block_height, current_db, iiss_db_path)
         current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
