@@ -469,7 +469,7 @@ class TestRCDatabase(TestIISSBase):
         # ################## term 0 start #####################
         self.set_revision(Revision.IISS.value)
         self.make_blocks(self._block_height + 1)
-        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
+        last_iiss_db: str = self.get_last_rc_db_data(rc_data_path)
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
@@ -521,8 +521,8 @@ class TestRCDatabase(TestIISSBase):
                          prev_block_generator=main_preps_address[0],
                          prev_block_validators=main_preps_address[1:])
 
-        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
+        last_iiss_db: str = self.get_last_rc_db_data(rc_data_path)
+        iiss_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, last_iiss_db))
 
         self.set_revision(Revision.DECENTRALIZATION.value)
         expected_hd_block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
@@ -535,27 +535,31 @@ class TestRCDatabase(TestIISSBase):
         # make 2 blocks which has different
         tx1 = self.create_transfer_icx_tx(self._admin, self._genesis, 0)
         tx2 = self.create_transfer_icx_tx(self._admin, self._genesis, 1)
-        expected_validator_1 = [main_preps_address[1]]
+        # Invoke block_1
+        validator_1 = [main_preps_address[1]]
         block_1, hash_list_1 = self.make_and_req_block([tx1],
                                                        prev_block_generator=main_preps_address[0],
-                                                       prev_block_validators=expected_validator_1)
-        expected_validator_2 = [main_preps_address[2]]
+                                                       prev_block_validators=validator_1)
+        # Invoke block_2
+        validator_2 = [main_preps_address[2]]
         block_2, hash_list_2 = self.make_and_req_block([tx2],
                                                        prev_block_generator=main_preps_address[0],
-                                                       prev_block_validators=expected_validator_2)
+                                                       prev_block_validators=validator_2)
 
+        # Commit block_1
         self._write_precommit_state(block_1)
-        get_last_rc_db: str = self.get_last_rc_db_data(rc_data_path)
-        self._check_the_name_of_rc_db(get_last_rc_db)
-        rc_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, get_last_rc_db))
-        self.assertIsNotNone(rc_db.get(Header.PREFIX))
+
+        # Check the latest iiss db and current db
+        last_iiss_db: str = self.get_last_rc_db_data(rc_data_path)
+        iiss_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, last_iiss_db))
+
         calc_end_block: int = block_1.height - 1
-        for rc_data in rc_db.iterator():
+        for rc_data in iiss_db.iterator():
             if rc_data[0][:2] == BlockProduceInfoData.PREFIX and \
                     int.from_bytes(rc_data[0][2:], 'big') == calc_end_block:
                 bp = BlockProduceInfoData.from_bytes(rc_data[0], rc_data[1])
-                self.assertEqual(expected_validator_1, bp.block_validator_list)
-                self.assertNotEqual(expected_validator_2, bp.block_validator_list)
+                self.assertEqual(validator_1, bp.block_validator_list)
+                self.assertNotEqual(validator_2, bp.block_validator_list)
 
         current_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME))
         for rc_data in current_db.iterator():
