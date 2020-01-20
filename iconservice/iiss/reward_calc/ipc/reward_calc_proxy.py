@@ -37,6 +37,23 @@ if TYPE_CHECKING:
 _TAG = "RCP"
 
 
+class RewardCalcBlock(object):
+    """Stores the latest commit status of reward calculator
+    """
+
+    def __init__(self, block_height: int, block_hash: bytes):
+        self._block_height = block_height
+        self._block_hash = block_hash
+
+    @property
+    def block_height(self) -> int:
+        return self._block_height
+
+    @property
+    def block_hash(self) -> bytes:
+        return self._block_hash
+
+
 class RewardCalcProxy(object):
     """Communicates with Reward Calculator through UNIX Domain Socket
 
@@ -62,6 +79,7 @@ class RewardCalcProxy(object):
         self._calculate_done_callback: Optional[Callable] = calc_done_callback
         self._ipc_timeout = ipc_timeout
         self._icon_rc_path = icon_rc_path
+        self._rc_block: Optional[RewardCalcBlock] = None
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
@@ -102,6 +120,7 @@ class RewardCalcProxy(object):
 
         self._message_queue = None
         self._loop = None
+        self._rc_block = None
 
         Logger.debug(tag=_TAG, msg="close() end")
 
@@ -132,7 +151,7 @@ class RewardCalcProxy(object):
 
         return response.version
 
-    async def _get_version(self):
+    async def _get_version(self) -> 'VersionResponse':
         Logger.debug(tag=_TAG, msg="_get_version() start")
 
         request = VersionRequest()
@@ -166,7 +185,7 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg=f"calculate() end: {response}")
         return response.status
 
-    async def _calculate(self, db_path: str, block_height: int):
+    async def _calculate(self, db_path: str, block_height: int) -> 'CalculateResponse':
         Logger.debug(tag=_TAG, msg="_calculate() start")
 
         request = CalculateRequest(db_path, block_height)
@@ -284,7 +303,7 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def query_iscore(self, address: 'Address') -> tuple:
+    def query_iscore(self, address: 'Address') -> Tuple[int, int]:
         """Returns the I-Score of a given address
 
         It should be called on query thread
@@ -310,7 +329,7 @@ class RewardCalcProxy(object):
 
         return response.iscore, response.block_height
 
-    async def _query_iscore(self, address: 'Address') -> list:
+    async def _query_iscore(self, address: 'Address') -> 'QueryResponse':
         """
 
         :param address:
@@ -343,7 +362,7 @@ class RewardCalcProxy(object):
 
         return response.status, response.block_height
 
-    async def _query_calculate_status(self) -> list:
+    async def _query_calculate_status(self) -> 'QueryCalculateStatusResponse':
         Logger.debug(tag=_TAG, msg="_query_calculate_status() start")
 
         request = QueryCalculateStatusRequest()
@@ -371,7 +390,7 @@ class RewardCalcProxy(object):
 
         return response.status, response.block_height, response.iscore, response.state_hash
 
-    async def _query_calculate_result(self, block_height) -> list:
+    async def _query_calculate_result(self, block_height) -> 'QueryCalculateResultResponse':
         Logger.debug(tag=_TAG, msg="_query_calculate_result() start")
 
         request = QueryCalculateResultRequest(block_height)
@@ -414,7 +433,7 @@ class RewardCalcProxy(object):
 
         return response.success, response.block_height, response.block_hash
 
-    async def _commit_block(self, success: bool, block_height: int, block_hash: bytes) -> list:
+    async def _commit_block(self, success: bool, block_height: int, block_hash: bytes) -> 'CommitBlockResponse':
         Logger.debug(tag=_TAG, msg="_commit_block() start")
 
         request = CommitBlockRequest(success, block_height, block_hash)
@@ -454,13 +473,54 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def ready_handler(self, response: 'Response'):
+    def rollback(self, block_height: int, block_hash: bytes) -> Tuple[bool, int, bytes]:
+        """Request reward calculator to rollback the DB of the reward calculator to the specific block height.
+
+        Reward calculator DOES NOT process other messages while processing ROLLBACK message
+
+        :param block_height:
+        :param block_hash:
+        :return:
+        """
+
+        Logger.debug(
+            tag=_TAG,
+            msg=f"rollback() start: block_height={block_height}, block_hash={bytes_to_hex(block_hash)}"
+        )
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._rollback(block_height, block_hash), self._loop)
+
+        try:
+            response: 'RollbackResponse' = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("rollback message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg=f"rollback() end. response: {response}")
+
+        return response.success, response.block_height, response.block_hash
+
+    async def _rollback(self, block_height: int, block_hash: bytes) -> 'RollbackResponse':
+        Logger.debug(tag=_TAG, msg="_rollback() start")
+
+        request = RollbackRequest(block_height, block_hash)
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="_rollback() end")
+
+        return future.result()
+
+    def ready_handler(self, response: 'ReadyNotification'):
         Logger.debug(tag=_TAG, msg=f"ready_handler() start {response}")
 
         if self._ready_callback is not None:
             self._ready_callback(response)
 
         self._ready_future.set_result(RCStatus.READY)
+        self._rc_block = RewardCalcBlock(response.block_height, response.block_height)
 
     def get_ready_future(self):
         return self._ready_future
@@ -530,3 +590,9 @@ class RewardCalcProxy(object):
         if self._reward_calc is not None:
             self._reward_calc.kill()
             self._reward_calc = None
+
+    def get_commit_block(self) -> Optional[Tuple[int, bytes]]:
+        if self._rc_block is None:
+            return None
+
+        return self._rc_block.block_height, self._rc_block.block_hash

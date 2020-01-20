@@ -19,6 +19,7 @@ from enum import IntEnum, IntFlag
 from typing import TYPE_CHECKING, Optional, Union
 
 from iconcommons import Logger
+
 from .coin_part import CoinPart, CoinPartFlag, CoinPartType
 from .delegation_part import DelegationPart
 from .icx_account import Account
@@ -26,7 +27,8 @@ from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 from ..base.block import Block, EMPTY_BLOCK
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG
+from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
@@ -68,12 +70,22 @@ class Storage(StorageBase):
         super().__init__(db)
         self._db = db
         self._last_block = EMPTY_BLOCK
-        self._genesis: 'Address' = None
-        self._fee_treasury: 'Address' = None
+        self._genesis: Optional['Address'] = None
+        self._fee_treasury: Optional['Address'] = None
 
     def open(self, context: 'IconScoreContext'):
         self._load_special_address(context, self._GENESIS_DB_KEY)
         self._load_special_address(context, self._TREASURY_DB_KEY)
+
+    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+        Logger.info(tag=ROLLBACK_LOG_TAG,
+                    msg=f"rollback() start: block_height={block_height} block_hash={bytes_to_hex(block_hash)}")
+
+        self._load_special_address(context, self._GENESIS_DB_KEY)
+        self._load_special_address(context, self._TREASURY_DB_KEY)
+        self.load_last_block_info(context)
+
+        Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
 
     @property
     def last_block(self) -> 'Block':

@@ -276,7 +276,7 @@ class QueryCalculateStatusResponse(Response):
         payload: list = items[2]
 
         status: int = payload[0]
-        block_height: int = payload[2]
+        block_height: int = payload[1]
 
         return QueryCalculateStatusResponse(msg_id, status, block_height)
 
@@ -484,6 +484,47 @@ class InitResponse(Response):
         block_height: int = payload[1]
 
         return InitResponse(msg_id, success, block_height)
+
+
+class RollbackRequest(Request):
+    def __init__(self, block_height: int, block_hash: bytes):
+        super().__init__(MessageType.ROLLBACK)
+
+        self.block_height = block_height
+        self.block_hash = block_hash
+
+    def __str__(self):
+        return f"{self.msg_type.name}({self.msg_id}, " \
+               f"{self.block_height}, {bytes_to_hex(self.block_hash)})"
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id, (self.block_height, self.block_hash)
+
+
+class RollbackResponse(Response):
+    MSG_TYPE = MessageType.ROLLBACK
+
+    def __init__(self, msg_id: int, success: bool, block_height: int, block_hash: bytes):
+        super().__init__()
+
+        self.msg_id: int = msg_id
+        self.success: bool = success
+        self.block_height: int = block_height
+        self.block_hash: bytes = block_hash
+
+    def __str__(self):
+        return f"ROLLBACK({self.msg_id}, {self.success}, {self.block_height}, {bytes_to_hex(self.block_hash)})"
+
+    @staticmethod
+    def from_list(items: list) -> 'RollbackResponse':
+        msg_id: int = items[1]
+        payload: list = items[2]
+
+        success: bool = payload[0]
+        block_height: int = payload[1]
+        block_hash: bytes = payload[2]
+
+        return RollbackResponse(msg_id, success, block_height, block_hash)
 
 
 class ReadyNotification(Response):

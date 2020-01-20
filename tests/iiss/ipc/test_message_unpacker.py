@@ -92,6 +92,24 @@ class TestMessageUnpacker(unittest.TestCase):
                 msg_id
             ),
             (
+                MessageType.QUERY_CALCULATE_STATUS,
+                msg_id,
+                (
+                    status,
+                    block_height
+                )
+            ),
+            (
+                MessageType.QUERY_CALCULATE_RESULT,
+                msg_id,
+                (
+                    status,
+                    block_height,
+                    int_to_bytes(iscore),
+                    state_hash
+                )
+            ),
+            (
                 MessageType.READY,
                 msg_id,
                 (
@@ -99,7 +117,6 @@ class TestMessageUnpacker(unittest.TestCase):
                     block_height,
                     block_hash
                 )
-
             ),
             (
                 MessageType.CALCULATE_DONE,
@@ -112,6 +129,15 @@ class TestMessageUnpacker(unittest.TestCase):
                 )
             ),
             (
+                MessageType.ROLLBACK,
+                msg_id,
+                (
+                    success,
+                    block_height,
+                    block_hash
+                )
+            ),
+            (
                 MessageType.INIT,
                 msg_id,
                 (
@@ -119,7 +145,7 @@ class TestMessageUnpacker(unittest.TestCase):
                     block_height
                 )
             )
-        ]
+    ]
 
         for message in messages:
             data: bytes = msgpack.packb(message)
@@ -153,6 +179,17 @@ class TestMessageUnpacker(unittest.TestCase):
         commit_claim_response = next(it)
         self.assertIsInstance(commit_claim_response, CommitClaimResponse)
 
+        query_calculate_status = next(it)
+        self.assertIsInstance(query_calculate_status, QueryCalculateStatusResponse)
+        self.assertEqual(status, query_calculate_status.status)
+        self.assertEqual(block_height, query_calculate_status.block_height)
+
+        query_calculate_result = next(it)
+        self.assertIsInstance(query_calculate_result, QueryCalculateResultResponse)
+        self.assertEqual(status, query_calculate_result.status)
+        self.assertEqual(block_height, query_calculate_result.block_height)
+        self.assertEqual(state_hash, query_calculate_result.state_hash)
+
         ready_notification = next(it)
         self.assertIsInstance(ready_notification, ReadyNotification)
         self.assertEqual(version, ready_notification.version)
@@ -164,6 +201,12 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertTrue(calculate_done_notification.success)
         self.assertEqual(block_height, calculate_done_notification.block_height)
         self.assertEqual(state_hash, calculate_done_notification.state_hash)
+
+        rollback_response = next(it)
+        self.assertIsInstance(rollback_response, RollbackResponse)
+        self.assertTrue(rollback_response.success)
+        self.assertEqual(block_height, rollback_response.block_height)
+        self.assertEqual(block_hash, rollback_response.block_hash)
 
         init_response = next(it)
         self.assertIsInstance(init_response, InitResponse)
@@ -180,7 +223,8 @@ class TestMessageUnpacker(unittest.TestCase):
         expected = [
             version_response, calculate_response, query_response,
             claim_response, commit_block_response, commit_claim_response,
-            ready_notification, calculate_done_notification
+            query_calculate_status, query_calculate_result,
+            ready_notification, calculate_done_notification, rollback_response
         ]
         for expected_response, response in zip(expected, self.unpacker):
             self.assertEqual(expected_response.MSG_TYPE, response.MSG_TYPE)

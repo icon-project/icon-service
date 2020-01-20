@@ -46,7 +46,7 @@ def byte_length_of_int(n: int):
 
 
 def bytes_to_hex(data: Optional[bytes], prefix: str = "0x") -> str:
-    if data is None:
+    if not isinstance(data, bytes):
         return "None"
 
     return f"{prefix}{data.hex()}"

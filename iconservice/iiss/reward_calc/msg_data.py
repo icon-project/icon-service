@@ -171,6 +171,10 @@ class GovernanceVariable(Data):
         return info
 
 
+def make_block_produce_info_key(block_height: int) -> bytes:
+    return BlockProduceInfoData.PREFIX + block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
+
+
 class BlockProduceInfoData(Data):
     PREFIX = b'BP'
 
@@ -183,8 +187,7 @@ class BlockProduceInfoData(Data):
         self.block_validator_list: Optional[List['Address']] = None
 
     def make_key(self) -> bytes:
-        block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return self.PREFIX + block_height
+        return make_block_produce_info_key(self.block_height)
 
     def make_value(self) -> bytes:
         data = [
