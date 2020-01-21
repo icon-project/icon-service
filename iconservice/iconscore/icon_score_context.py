@@ -240,16 +240,6 @@ class IconScoreContext(object):
 
         self._tx_dirty_preps.clear()
 
-    def _replace_prep(self, dirty_prep: 'PRep'):
-        """Replace the old P-Rep instance in self._preps with a new one(=dirty prep)
-
-        Assume that this method should be called on invoke process
-
-        :param dirty_prep: changed P-Rep instance
-        :return:
-        """
-        self._preps.replace(dirty_prep)
-
     def _update_term(self, dirty_prep: 'PRep'):
         """Update term info with dirty_prep
 
