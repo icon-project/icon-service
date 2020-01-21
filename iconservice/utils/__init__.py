@@ -20,12 +20,14 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import hashlib
+import json
 import re
 from collections import namedtuple
 from enum import Flag
 from typing import Any, Union, Optional
 
 from iconcommons import Logger
+
 from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG, ICX_IN_LOOP
 
 
@@ -131,3 +133,14 @@ ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc")
 def print_log_with_level(log_level: str, msg: str, tag: str = ICON_SERVICE_LOG_TAG):
     logging_function = getattr(Logger, log_level)
     logging_function(msg, tag)
+
+
+class InvokeResultJSONEncoder(json.JSONEncoder):
+    """Used on calling json.dumps()
+
+    """
+    def default(self, obj):
+        if isinstance(obj, bytes):
+            return bytes_to_hex(obj)
+
+        return json.JSONEncoder.default(self, obj)

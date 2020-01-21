@@ -15,10 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import os
 import unittest
 
-from iconservice.icon_constant import PenaltyReason
-from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes
+from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes, InvokeResultJSONEncoder
 from iconservice.utils.hashing.hash_generator import RootHashGenerator
 from tests import create_address
 
@@ -75,6 +76,22 @@ class TestUtils(unittest.TestCase):
         data2: bytes = create_address().to_bytes_including_prefix()
         data: bytes = RootHashGenerator.generate_root_hash([data1, data2], do_hash=True)
         self.assertIsInstance(data, bytes)
+
+    def test_invoke_result_json_encoder(self):
+        value: bytes = os.urandom(32)
+        results = {"value": value}
+        text: str = json.dumps(results, cls=InvokeResultJSONEncoder, separators=(',', ':'))
+        assert text == f'{{"value":"0x{value.hex()}"}}'
+
+        value: int = 1234
+        results = {"value": value}
+        text: str = json.dumps(results, cls=InvokeResultJSONEncoder, separators=(',', ':'))
+        assert text == f'{{"value":{value}}}'
+
+        value: str = "hello world"
+        results = {"value": value}
+        text: str = json.dumps(results, cls=InvokeResultJSONEncoder, separators=(',', ':'))
+        assert text == f'{{"value":"{value}"}}'
 
 
 if __name__ == '__main__':
