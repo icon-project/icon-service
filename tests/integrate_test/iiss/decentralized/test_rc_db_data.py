@@ -398,7 +398,7 @@ class TestRCDatabase(TestIISSBase):
             if rc_data[0][:2] == PRepsData.PREFIX:
                 preps: 'PRepsData' = PRepsData.from_bytes(rc_data[0], rc_data[1])
                 self.assertEqual(expected_prep_block, preps.block_height)
-                prep_addresses: list = [del_info.address for del_info in preps.prep_list]
+                prep_addresses: list = [delegation_info.address for delegation_info in preps.prep_list]
                 if expected_gv_block == expected_prep_block:
                     # In case of term change
                     expected_prep_address = main_preps_address

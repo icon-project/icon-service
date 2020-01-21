@@ -24,7 +24,7 @@ from iconcommons.logger import Logger
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
-from ..base.exception import FatalException
+from ..base.exception import FatalException, AccessDeniedException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
@@ -230,12 +230,8 @@ class IconScoreContext(object):
         Caution: call update_dirty_prep_batch before update_state_db_batch()
         """
         for dirty_prep in self._tx_dirty_preps.values():
-            # If dirty_prep is an invalid elected P-Rep,
-            # we should update P-Reps in this term
-            self._update_elected_preps_in_term(dirty_prep)
-
-            if self.revision >= Revision.REALTIME_P2P_ENDPOINT_UPDATE.value:
-                self._update_main_preps_in_term(dirty_prep)
+            if self._term is not None:
+                self._update_term(dirty_prep)
 
             self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
@@ -244,21 +240,46 @@ class IconScoreContext(object):
 
         self._tx_dirty_preps.clear()
 
-    def _update_elected_preps_in_term(self, dirty_prep: 'PRep'):
-        """Collect main and sub preps which cannot serve as a main and sub prep
-        to update the current term at the end of invoke
+    def _update_term(self, dirty_prep: 'PRep'):
+        """Update term info with dirty_prep
 
-        :param dirty_prep: dirty prep
+        :param dirty_prep:
+        :return:
         """
-        if self._term is None:
+        # If dirty_prep address is not contained in term, no need to update self._term
+        if dirty_prep.address not in self._term:
             return
 
         if dirty_prep.is_electable():
+            self._change_main_prep_p2p_endpoint(dirty_prep)
+        else:
+            self._remove_invalid_elected_prep_from_term(dirty_prep)
+
+    def _change_main_prep_p2p_endpoint(self, dirty_prep: 'PRep'):
+        """Notify the term that p2p_endpoint of a main P-Rep is changed
+
+        :param dirty_prep: dirty prep
+        """
+        if self.revision < Revision.REALTIME_P2P_ENDPOINT_UPDATE.value:
             return
 
-        # If dirty_prep is not in term, no need to update elected P-Reps
-        if dirty_prep.address not in self._term:
+        if not self._term.is_main_prep(dirty_prep.address):
             return
+
+        if not dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
+            return
+
+        self._duplicate_term()
+        self._term.on_main_prep_p2p_endpoint_changed()
+
+        Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
+
+    def _remove_invalid_elected_prep_from_term(self, dirty_prep: 'PRep'):
+        """Remove an invalidated elected P-Rep from the current term
+
+        :param dirty_prep: dirty prep
+        """
+        self._duplicate_term()
 
         # Just in case, reset the P-Rep grade one to CANDIDATE
         dirty_prep.grade = PRepGrade.CANDIDATE
@@ -267,19 +288,14 @@ class IconScoreContext(object):
 
         Logger.info(tag=self.TAG, msg=f"Invalid main and sub prep: {dirty_prep}")
 
-    def _update_main_preps_in_term(self, dirty_prep: 'PRep'):
-        """
+    def _duplicate_term(self) -> Optional['Term']:
+        if self.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            raise AccessDeniedException(f"Method not allowed: context={self.type.name}")
 
-        :param dirty_prep: dirty prep
-        """
-        if self._term is None:
-            return
+        if self._term is not None and self._term.is_frozen():
+            self._term = self._term.copy()
 
-        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) and \
-                self._term.is_main_prep(dirty_prep.address):
-            self._term.on_main_prep_p2p_endpoint_updated()
-
-        Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
+        return self._term
 
     def clear_batch(self):
         if self.tx_batch:
@@ -358,9 +374,8 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
-            if context.engine.prep.term:
-                context._term = context.engine.prep.term.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
-            context._term = context.engine.prep.term
+
+        context._term = context.engine.prep.term

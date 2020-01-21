@@ -270,6 +270,6 @@ class TestTerm(unittest.TestCase):
         assert not term.is_dirty()
         assert term.flags == TermFlag.NONE
 
-        term.on_main_prep_p2p_endpoint_updated()
+        term.on_main_prep_p2p_endpoint_changed()
         assert term.is_dirty()
         assert term.flags == TermFlag.MAIN_PREP_P2P_ENDPOINT
