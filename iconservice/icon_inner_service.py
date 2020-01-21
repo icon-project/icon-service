@@ -39,7 +39,7 @@ THREAD_QUERY = 'query'
 THREAD_VALIDATE = 'validate'
 
 
-_TAG = "IIS"
+_TAG = ICON_INNER_LOG_TAG
 
 
 class IconScoreInnerTask(object):
@@ -55,8 +55,9 @@ class IconScoreInnerTask(object):
                              THREAD_VALIDATE: ThreadPoolExecutor(1)}
 
     def _open(self):
-        Logger.info("icon_score_service open", ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg="_open() start")
         self._icon_service_engine.open(self._conf)
+        Logger.info(tag=_TAG, msg="_open() end")
 
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
@@ -66,13 +67,13 @@ class IconScoreInnerTask(object):
             raise ServiceNotReadyException("Reward Calculator is not ready")
 
     @staticmethod
-    def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
+    def _log_exception(e: BaseException, tag: str) -> None:
         Logger.exception(str(e), tag)
         Logger.error(str(e), tag)
 
     @message_queue_task
     async def hello(self):
-        Logger.info('hello() start', ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg='hello() start')
 
         ready_future = self._icon_service_engine.get_ready_future()
         await ready_future
@@ -83,7 +84,7 @@ class IconScoreInnerTask(object):
         else:
             ret = self._hello()
 
-        Logger.info('hello() end', ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg='hello() end')
 
         return ret
 
@@ -109,17 +110,20 @@ class IconScoreInnerTask(object):
         Logger.info(tag=_TAG, msg="close() end")
 
     @message_queue_task
-    async def invoke(self, request: dict):
-        Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
+    async def invoke(self, request: dict) -> dict:
+        Logger.debug(tag=_TAG, msg=f'invoke() start')
 
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
-                                              self._invoke, request)
+            ret: dict = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
+                                                   self._invoke, request)
         else:
-            return self._invoke(request)
+            ret: dict = self._invoke(request)
+
+        Logger.debug(tag=_TAG, msg=f'invoke() end')
+        return ret
 
     def _invoke(self, request: dict):
         """Process transactions in a block
@@ -127,6 +131,7 @@ class IconScoreInnerTask(object):
         :param request:
         :return:
         """
+        Logger.info(tag=_TAG, msg=f'INVOKE Request: {request}')
 
         response = None
         try:
@@ -166,7 +171,6 @@ class IconScoreInnerTask(object):
             if main_prep_as_dict:
                 results["prep"] = main_prep_as_dict
 
-            Logger.info(f'invoke origin response with {results}', ICON_INNER_LOG_TAG)
             response = MakeResponse.make_response(results)
         except FatalException as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
@@ -184,11 +188,13 @@ class IconScoreInnerTask(object):
         finally:
             if self._icon_service_engine:
                 self._icon_service_engine.clear_context_stack()
+
+            Logger.info(tag=_TAG, msg=f'INVOKE Response: {response}')
             return response
 
     @message_queue_task
     async def query(self, request: dict):
-        Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
+        # Logger.debug(tag=_TAG, msg=f'query request with {request}')
 
         self._check_icon_service_ready()
 
@@ -225,13 +231,13 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.debug(f'query response with {response}', ICON_INNER_LOG_TAG)
+            # Logger.debug(tag=_TAG, msg=f'query response with {response}')
             self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
     async def call(self, request: dict):
-        Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg=f'call request with {request}')
 
         self._check_icon_service_ready()
 
@@ -260,12 +266,12 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'call response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(tag=_TAG, msg=f'call response with {response}')
             return response
 
     @message_queue_task
     async def write_precommit_state(self, request: dict):
-        Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg=f'write_precommit_state request with {request}')
 
         self._check_icon_service_ready()
 
@@ -308,12 +314,12 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(tag=_TAG, msg=f'write_precommit_state response with {response}')
             return response
 
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
-        Logger.info(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(tag=_TAG, msg=f'remove_precommit_state request with {request}')
 
         self._check_icon_service_ready()
 
@@ -344,7 +350,7 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(tag=_TAG, msg=f'remove_precommit_state response with {response}')
             return response
 
     @message_queue_task
@@ -355,7 +361,7 @@ class IconScoreInnerTask(object):
         :return:
         """
 
-        Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"rollback() start: {request}")
+        Logger.info(tag=_TAG, msg=f"rollback() start: {request}")
 
         self._check_icon_service_ready()
 
@@ -365,12 +371,12 @@ class IconScoreInnerTask(object):
         else:
             response = self._rollback(request)
 
-        Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"rollback() end: {response}")
+        Logger.info(tag=_TAG, msg=f"rollback() end: {response}")
 
         return response
 
     def _rollback(self, request: dict) -> dict:
-        Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"_rollback() start: {request}")
+        Logger.info(tag=_TAG, msg=f"_rollback() start: {request}")
 
         response = {}
         try:
@@ -391,12 +397,12 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.info(tag=ICON_INNER_LOG_TAG, msg=f"_rollback() end: {response}")
+            Logger.info(tag=_TAG, msg=f"_rollback() end: {response}")
             return response
 
     @message_queue_task
     async def validate_transaction(self, request: dict):
-        Logger.debug(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
+        # Logger.debug(tag=_TAG, msg=f'pre_validate_check request with {request}')
 
         self._check_icon_service_ready()
 
@@ -424,7 +430,7 @@ class IconScoreInnerTask(object):
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
-            Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            # Logger.debug(tag=_TAG, msg=f'pre_validate_check response with {response}')
             self._icon_service_engine.clear_context_stack()
             return response
 
