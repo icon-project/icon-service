@@ -278,7 +278,6 @@ class Storage(object):
         prev_db.close()
         cls._process_db_compaction(prev_db_path)
 
-
     @classmethod
     def _move_data_from_current_db_to_prev_db(cls,
                                               key: bytes,
