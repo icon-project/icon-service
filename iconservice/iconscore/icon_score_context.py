@@ -191,7 +191,7 @@ class IconScoreContext(object):
 
     def is_the_first_block_on_decentralization(self) -> bool:
         term = self.engine.prep.term
-        return term.sequence == 0 and self.block.height == term.start_block_height
+        return term and term.sequence == 0 and self.block.height == term.start_block_height
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')

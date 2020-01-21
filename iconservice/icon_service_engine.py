@@ -34,6 +34,7 @@ from .base.exception import (
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
+from .database.db import KeyValueDatabase
 from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader, WALDBType
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
@@ -63,7 +64,6 @@ from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
-from .iiss.reward_calc.msg_data import make_block_produce_info_key
 from .iiss.reward_calc.storage import IissDBNameRefactor
 from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .inner_call import inner_call
@@ -76,7 +76,6 @@ from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
-from .database.db import KeyValueDatabase
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -2238,10 +2237,12 @@ class IconServiceEngine(ContextContainer):
         current_db: 'KeyValueDatabase' = RewardCalcStorage.create_current_db(rc_data_path)
         current_db.write_batch(reader.get_iterator(WALDBType.RC.value))
 
+        # If the block to recover is the start block of this term
         if is_calc_period_start_block:
             calc_end_block_height: int = reader.block.height - 1
-            iiss_db_path: str = RewardCalcStorage.get_iiss_rc_db_name(calc_end_block_height)
-            RewardCalcStorage.finalize_iiss_db(calc_end_block_height, current_db, iiss_db_path)
+            iiss_rc_db_name: str = RewardCalcStorage.get_iiss_rc_db_name(calc_end_block_height)
+            iiss_rc_db_path: str = os.path.join(rc_data_path, iiss_rc_db_name)
+            RewardCalcStorage.finalize_iiss_db(calc_end_block_height, current_db, iiss_rc_db_path)
         current_db.close()
 
         Logger.debug(tag=WAL_LOG_TAG, msg="_recover_rc_db() end")
@@ -2272,7 +2273,7 @@ class IconServiceEngine(ContextContainer):
             # Rename standby_rc_db to iiss_rc_db
             os.rename(items[DBType.STANDBY][0], items[DBType.IISS][0])
         elif items[DBType.CURRENT][1]:
-            # Compact current_db and rename current_db to iiss_rc_db
+            # Rename current_db to iiss_rc_db
             path: str = items[DBType.CURRENT][0]
             os.rename(path, items[DBType.IISS][0])
         else:

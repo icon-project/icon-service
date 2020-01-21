@@ -521,9 +521,6 @@ class TestRCDatabase(TestIISSBase):
                          prev_block_generator=main_preps_address[0],
                          prev_block_validators=main_preps_address[1:])
 
-        last_iiss_db: str = self.get_last_rc_db_data(rc_data_path)
-        iiss_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, last_iiss_db))
-
         self.set_revision(Revision.DECENTRALIZATION.value)
         expected_hd_block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
                                                                             prev_block_validators=main_preps_address[
@@ -532,7 +529,7 @@ class TestRCDatabase(TestIISSBase):
         # ################## term 2 Start #####################
         self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
                                             prev_block_validators=main_preps_address[1:])
-        # make 2 blocks which has different
+        # make 2 different blocks which have the same block height
         tx1 = self.create_transfer_icx_tx(self._admin, self._genesis, 0)
         tx2 = self.create_transfer_icx_tx(self._admin, self._genesis, 1)
         # Invoke block_1
@@ -545,6 +542,10 @@ class TestRCDatabase(TestIISSBase):
         block_2, hash_list_2 = self.make_and_req_block([tx2],
                                                        prev_block_generator=main_preps_address[0],
                                                        prev_block_validators=validator_2)
+
+        assert block_1.height == block_2.height
+        assert block_1.hash != block_2.hash
+        assert block_1.prev_hash == block_2.prev_hash
 
         # Commit block_1
         self._write_precommit_state(block_1)
@@ -568,3 +569,5 @@ class TestRCDatabase(TestIISSBase):
                 self.assertEqual(calc_end_block, gv.block_height)
             if rc_data[0][:2] == BlockProduceInfoData.PREFIX:
                 raise AssertionError
+
+        iiss_db.close()
