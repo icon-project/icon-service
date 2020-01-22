@@ -19,7 +19,7 @@ import json
 import os
 import unittest
 
-from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes, InvokeResultJSONEncoder
+from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes, BytesToHexJSONEncoder
 from iconservice.utils.hashing.hash_generator import RootHashGenerator
 from tests import create_address
 
@@ -80,18 +80,21 @@ class TestUtils(unittest.TestCase):
     def test_invoke_result_json_encoder(self):
         value: bytes = os.urandom(32)
         results = {"value": value}
-        text: str = json.dumps(results, cls=InvokeResultJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(results, cls=BytesToHexJSONEncoder, separators=(',', ':'))
         assert text == f'{{"value":"0x{value.hex()}"}}'
 
         value: int = 1234
         results = {"value": value}
-        text: str = json.dumps(results, cls=InvokeResultJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(results, cls=BytesToHexJSONEncoder, separators=(',', ':'))
         assert text == f'{{"value":{value}}}'
 
         value: str = "hello world"
         results = {"value": value}
-        text: str = json.dumps(results, cls=InvokeResultJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(results, cls=BytesToHexJSONEncoder, separators=(',', ':'))
         assert text == f'{{"value":"{value}"}}'
+
+        text: str = json.dumps(None, cls=BytesToHexJSONEncoder, separators=(',', ':'))
+        assert text == "null"
 
 
 if __name__ == '__main__':

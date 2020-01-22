@@ -29,7 +29,7 @@ from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
     EnableThreadFlag, ENABLE_THREAD_FLAG
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.utils import check_error_response, to_camel_case, InvokeResultJSONEncoder
+from iconservice.utils import check_error_response, to_camel_case, BytesToHexJSONEncoder
 
 if TYPE_CHECKING:
     from earlgrey import RobustConnection
@@ -132,13 +132,14 @@ class IconScoreInnerTask(object):
         :param request:
         :return:
         """
+
         Logger.info(tag=_TAG, msg=f'INVOKE Request: {request}')
 
-        response = None
         try:
             params = TypeConverter.convert(request, ParamType.INVOKE)
             converted_block_params = params['block']
             block = Block.from_dict(converted_block_params)
+            Logger.info(tag=_TAG, msg=f'INVOKE BH: {block.height}')
 
             converted_tx_requests = params['transactions']
 
@@ -190,8 +191,8 @@ class IconScoreInnerTask(object):
             if self._icon_service_engine:
                 self._icon_service_engine.clear_context_stack()
 
-            Logger.info(tag=_TAG, msg=f'INVOKE Response: {json.dumps(response, cls=InvokeResultJSONEncoder)}')
-            return response
+        Logger.info(tag=_TAG, msg=f'INVOKE Response: {json.dumps(response, cls=BytesToHexJSONEncoder)}')
+        return response
 
     @message_queue_task
     async def query(self, request: dict):

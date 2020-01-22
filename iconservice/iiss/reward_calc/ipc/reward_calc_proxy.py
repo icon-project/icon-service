@@ -434,14 +434,14 @@ class RewardCalcProxy(object):
         return response.success, response.block_height, response.block_hash
 
     async def _commit_block(self, success: bool, block_height: int, block_hash: bytes) -> 'CommitBlockResponse':
-        Logger.debug(tag=_TAG, msg="_commit_block() start")
+        # Logger.debug(tag=_TAG, msg="_commit_block() start")
 
         request = CommitBlockRequest(success, block_height, block_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
         await future
 
-        Logger.debug(tag=_TAG, msg="_commit_block() end")
+        # Logger.debug(tag=_TAG, msg="_commit_block() end")
 
         return future.result()
 

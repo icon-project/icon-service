@@ -135,8 +135,8 @@ def print_log_with_level(log_level: str, msg: str, tag: str = ICON_SERVICE_LOG_T
     logging_function(msg, tag)
 
 
-class InvokeResultJSONEncoder(json.JSONEncoder):
-    """Used on calling json.dumps()
+class BytesToHexJSONEncoder(json.JSONEncoder):
+    """Used to make logging message more readable
 
     """
     def default(self, obj):
