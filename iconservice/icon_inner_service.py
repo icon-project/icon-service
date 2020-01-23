@@ -26,8 +26,7 @@ from iconservice.base.exception import ExceptionCode, IconServiceBaseException, 
     FatalException, ServiceNotReadyException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
-    EnableThreadFlag, ENABLE_THREAD_FLAG
+from iconservice.icon_constant import EnableThreadFlag, ENABLE_THREAD_FLAG
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case, BytesToHexJSONEncoder, bytes_to_hex
 
@@ -39,7 +38,7 @@ THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
 THREAD_VALIDATE = 'validate'
 
-_TAG = ICON_INNER_LOG_TAG
+_TAG = "MQ"
 
 
 class IconScoreInnerTask(object):
@@ -176,17 +175,17 @@ class IconScoreInnerTask(object):
 
             response = MakeResponse.make_response(results)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
             self._close()
         except InvalidBaseTransactionException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             if self._icon_service_engine:
@@ -221,13 +220,13 @@ class IconScoreInnerTask(object):
                 value = str(value)
             response = MakeResponse.make_response(value)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
 
         self._icon_service_engine.clear_context_stack()
@@ -256,13 +255,13 @@ class IconScoreInnerTask(object):
             if isinstance(response, Address):
                 response = str(response)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
 
         return response
@@ -307,14 +306,14 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.commit(block_height, instant_block_hash, block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
             self._close()
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
 
         Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE Response: {response}')
@@ -349,14 +348,14 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.remove_precommit_state(block_height, instant_block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
             self._close()
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
 
         Logger.info(tag=_TAG, msg=f'REMOVE_PRECOMMIT_STATE Response: {response}')
@@ -396,14 +395,14 @@ class IconScoreInnerTask(object):
             response: dict = self._icon_service_engine.rollback(block_height, block_hash)
             response = MakeResponse.make_response(response)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
             self._close()
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except BaseException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
 
         Logger.info(tag=_TAG, msg=f"ROLLBACK Response: {response}")
@@ -426,13 +425,13 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.validate_transaction(converted_request)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
 
         self._icon_service_engine.clear_context_stack()

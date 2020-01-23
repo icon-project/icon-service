@@ -41,7 +41,7 @@ from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
-    ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
+    ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG
@@ -85,6 +85,8 @@ if TYPE_CHECKING:
     from .database.db import KeyValueDatabase
     from .iiss.reward_calc.msg_data import BlockProduceInfoData
 
+_TAG = "ISE"
+
 
 class IconServiceEngine(ContextContainer):
     """The entry of all icon service related components
@@ -92,7 +94,6 @@ class IconServiceEngine(ContextContainer):
     It MUST NOT have any loopchain dependencies.
     It is contained in IconInnerService.
     """
-    TAG = "ISE"
     WAL_FILE = "block.wal"
     ROLLBACK_METADATA_FILE = "ROLLBACK_METADATA"
 
@@ -476,11 +477,11 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
             if not precommit_data.already_exists:
-                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                Logger.info(tag=_TAG,
                             msg=f"Block result already exists: \n{precommit_data}")
                 precommit_data.already_exists = True
             else:
-                Logger.info(tag=ICON_SERVICE_LOG_TAG,
+                Logger.info(tag=_TAG,
                             msg=f"Block result already exists: \n"
                                 f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
 
@@ -548,7 +549,7 @@ class IconServiceEngine(ContextContainer):
             precommit_flag |= PrecommitFlag.IISS_CALC
             if check_decentralization_condition(context):
                 precommit_flag |= PrecommitFlag.DECENTRALIZATION
-                Logger.info(tag=self.TAG,
+                Logger.info(tag=_TAG,
                             msg=f"Decentralization condition is met: {context.block}")
 
                 # When decentralization begins,
@@ -578,7 +579,7 @@ class IconServiceEngine(ContextContainer):
                                        added_transactions,
                                        main_prep_as_dict)
         if context.precommitdata_log_flag:
-            Logger.info(tag=ICON_SERVICE_LOG_TAG,
+            Logger.info(tag=_TAG,
                         msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
 
@@ -679,7 +680,7 @@ class IconServiceEngine(ContextContainer):
 
         # Skip the first block after decentralization
         if context.is_the_first_block_on_decentralization():
-            Logger.info(tag=self.TAG,
+            Logger.info(tag=_TAG,
                         msg=f"The first block of decentralization: {context.block}")
             return
 
@@ -801,7 +802,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if prev_block_generator is None or prev_block_votes is None:
-            Logger.warning(tag=cls.TAG, msg=f"No block validators: block={context.block}")
+            Logger.warning(tag=_TAG, msg=f"No block validators: block={context.block}")
             return
 
         validators: List[Tuple['Address', int]] = [[prev_block_generator, BlockVoteStatus.TRUE.value]]
@@ -1332,7 +1333,7 @@ class IconServiceEngine(ContextContainer):
         if request_block_height != end_block:
             Logger.warning(f"Response block height is not matched to the request: "
                            f"response block height:{request_block_height} "
-                           f"request block height:{end_block}", ICON_SERVICE_LOG_TAG)
+                           f"request block height:{end_block}", _TAG)
             return rc_result
 
         rc_result['iscore'] = iscore
@@ -1634,7 +1635,7 @@ class IconServiceEngine(ContextContainer):
                 message = e.message
             else:
                 message = str(e)
-            Logger.exception(message, ICON_SERVICE_LOG_TAG)
+            Logger.exception(message, _TAG)
             step_used_details = {from_: 0, to: 0}
 
         # final step_used and step_price
@@ -1717,15 +1718,15 @@ class IconServiceEngine(ContextContainer):
         try:
             if isinstance(e, IconServiceBaseException):
                 if e.code >= ExceptionCode.SCORE_ERROR or isinstance(e, IconScoreException):
-                    Logger.warning(e.message, ICON_SERVICE_LOG_TAG)
+                    Logger.warning(e.message, _TAG)
                 else:
-                    Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+                    Logger.exception(e.message, _TAG)
 
                 code = int(e.code)
                 message = str(e.message)
             else:
-                Logger.exception(str(e), ICON_SERVICE_LOG_TAG)
-                Logger.error(str(e), ICON_SERVICE_LOG_TAG)
+                Logger.exception(str(e), _TAG)
+                Logger.error(str(e), _TAG)
 
                 code: int = ExceptionCode.SYSTEM_ERROR.value
                 message = str(e)
@@ -1878,7 +1879,7 @@ class IconServiceEngine(ContextContainer):
         try:
             os.remove(self._get_write_ahead_log_path())
         except BaseException as e:
-            Logger.error(tag=self.TAG, msg=str(e))
+            Logger.error(tag=_TAG, msg=str(e))
 
     def _process_wal(self, context: 'IconScoreContext',
                      precommit_data: 'PrecommitData',
@@ -1902,7 +1903,7 @@ class IconServiceEngine(ContextContainer):
         revision: int = precommit_data.rc_db_revision if is_calc_period_start_block else -1
 
         tx_index: int = context.storage.rc.get_tx_index(is_calc_period_start_block)
-        Logger.info(tag=self.TAG, msg=f"tx_index={tx_index}")
+        Logger.info(tag=_TAG, msg=f"tx_index={tx_index}")
         iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
         wal_writer: 'WriteAheadLogWriter' = \
@@ -2001,12 +2002,12 @@ class IconServiceEngine(ContextContainer):
         :param block_height: height of block which is needed to be removed from the pre-commit data manager
         :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
-        Logger.warning(tag=self.TAG, msg=f"remove_precommit_state() start: height={block_height}")
+        Logger.warning(tag=_TAG, msg=f"remove_precommit_state() start: height={block_height}")
 
         self._precommit_data_manager.validate_precommit_block(instant_block_hash)
         self._precommit_data_manager.remove_precommit_state(instant_block_hash)
 
-        Logger.warning(tag=self.TAG, msg="remove_precommit_state() end")
+        Logger.warning(tag=_TAG, msg="remove_precommit_state() end")
 
     def rollback(self, block_height: int, block_hash: bytes) -> dict:
         """Rollback the current confirmed state to the old one indicated by block_height
@@ -2019,7 +2020,7 @@ class IconServiceEngine(ContextContainer):
                     msg=f"rollback() start: height={block_height} hash={bytes_to_hex(block_hash)}")
 
         last_block: 'Block' = self._get_last_block()
-        Logger.info(tag=self.TAG, msg=f"last_block={last_block}")
+        Logger.info(tag=_TAG, msg=f"last_block={last_block}")
 
         # If rollback is not possible for the current state,
         # self._is_rollback_needed() should raise an InternalServiceErrorException
@@ -2136,9 +2137,7 @@ class IconServiceEngine(ContextContainer):
         assert stack_size == 0
 
         if stack_size > 0:
-            Logger.error(
-                f'IconScoreContext leak is detected: {stack_size}',
-                ICON_SERVICE_LOG_TAG)
+            Logger.error(f'IconScoreContext leak is detected: {stack_size}', _TAG)
 
         self._clear_context()
 
@@ -2325,22 +2324,22 @@ class IconServiceEngine(ContextContainer):
 
         :return:
         """
-        Logger.debug(tag=self.TAG, msg="hello() start")
+        Logger.debug(tag=_TAG, msg="hello() start")
 
         self._finish_to_recover_commit()
         self._finish_to_recover_rollback()
 
-        Logger.debug(tag=self.TAG, msg="hello() end")
+        Logger.debug(tag=_TAG, msg="hello() end")
 
         return {}
 
     def _finish_to_recover_commit(self):
         """Finish to recover WAL by sending COMMIT_BLOCK message to reward calculator
         """
-        Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() start")
+        Logger.debug(tag=_TAG, msg="_finish_to_recover_commit() start")
 
         if not isinstance(self._wal_reader, WriteAheadLogReader):
-            Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() end")
+            Logger.debug(tag=_TAG, msg="_finish_to_recover_commit() end")
             return
 
         iiss_engine: 'IISSEngine' = IconScoreContext.engine.iiss
@@ -2359,12 +2358,12 @@ class IconServiceEngine(ContextContainer):
         # No need to use
         self._wal_reader = None
 
-        Logger.debug(tag=self.TAG, msg="_finish_to_recover_commit() end")
+        Logger.debug(tag=_TAG, msg="_finish_to_recover_commit() end")
 
     def _finish_to_recover_rollback(self):
         """Finish to recover rollback by sending ROLLBACK message to reward calculator
         """
-        Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() start")
+        Logger.debug(tag=_TAG, msg="_finish_to_recover_rollback() start")
 
         # Get ROLLBACK_METADATA file path
         path = self._get_rollback_metadata_path()
@@ -2384,4 +2383,4 @@ class IconServiceEngine(ContextContainer):
                 start_block_height=metadata.block_height + 1,
                 end_block_height=metadata.last_block.height - 1)
 
-        Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() end")
+        Logger.debug(tag=_TAG, msg="_finish_to_recover_rollback() end")
