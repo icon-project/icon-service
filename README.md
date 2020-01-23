@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/icon-project/icon-service.svg?branch=master)](https://travis-ci.org/icon-project/icon-service)
+[![PyPI](https://img.shields.io/pypi/v/iconservice)](https://pypi.org/project/iconservice)
+
 # ICON Service
 
 ICON Service manage state of ICON node including ICX, SCOREs using LevelDB.
