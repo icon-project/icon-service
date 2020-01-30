@@ -609,14 +609,10 @@ class Engine(EngineBase):
         :param _params:
         :return:
         """
-        Logger.debug(tag=_TAG, msg=f"handle_claim_iscore() start")
-
         iscore, block_height = self._claim_iscore(context)
 
         if iscore > 0:
             self._commit_claim(context, iscore)
-        else:
-            Logger.info(tag=_TAG, msg="I-Score is zero")
 
         EventLogEmitter.emit_event_log(
             context,
@@ -625,7 +621,6 @@ class Engine(EngineBase):
             arguments=[iscore, self._iscore_to_icx(iscore)],
             indexed_args_count=0
         )
-        Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
     @staticmethod
     def _check_claim_tx(context: 'IconScoreContext') -> bool:
@@ -866,7 +861,7 @@ class Engine(EngineBase):
         if prev_block_generator is None or prev_block_votes is None:
             return
 
-        Logger.debug(f"put_block_produce_info_for_rc", "iiss")
+        # Logger.debug(f"put_block_produce_info_for_rc", "IISS")
         prev_block_height: int = context.block.height - 1
         data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
                                                                                             prev_block_generator,

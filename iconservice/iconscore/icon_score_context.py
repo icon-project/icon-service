@@ -320,21 +320,21 @@ class IconScoreContext(object):
         return prep
 
     def put_dirty_prep(self, prep: 'PRep'):
-        Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
+        # Logger.debug(tag=self.TAG, msg=f"put_dirty_prep() start: {prep}")
 
         if self._tx_dirty_preps is None:
             Logger.warning(tag=self.TAG, msg="self._tx_dirty_preps is None")
-            Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+            # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
             return
 
         if not prep.is_dirty() and self.revision >= Revision.OPTIMIZE_DIRTY_PREP_UPDATE.value:
             Logger.info(tag=self.TAG, msg=f"No need to update an unchanged P-Rep: revision={self.revision}")
-            Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+            # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
             return
 
         self._tx_dirty_preps[prep.address] = prep
 
-        Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
+        # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
 
 class IconScoreContextFactory(object):

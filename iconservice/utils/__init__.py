@@ -20,13 +20,15 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import hashlib
+import json
 import re
 from collections import namedtuple
 from enum import Flag
 from typing import Any, Union, Optional
 
 from iconcommons import Logger
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICON_SERVICE_LOG_TAG, ICX_IN_LOOP
+
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICX_IN_LOOP
 
 
 def int_to_bytes(n: int) -> bytes:
@@ -128,6 +130,17 @@ ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
 ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc")
 
 
-def print_log_with_level(log_level: str, msg: str, tag: str = ICON_SERVICE_LOG_TAG):
+def print_log_with_level(log_level: str, msg: str, tag: str):
     logging_function = getattr(Logger, log_level)
     logging_function(msg, tag)
+
+
+class BytesToHexJSONEncoder(json.JSONEncoder):
+    """Used to make logging message more readable
+
+    """
+    def default(self, obj):
+        if isinstance(obj, bytes):
+            return bytes_to_hex(obj)
+
+        return json.JSONEncoder.default(self, obj)
