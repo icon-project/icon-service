@@ -95,6 +95,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         self.preps = self._load_preps(context)
         self.term = context.storage.prep.get_term(context)
+        self.term.freeze()
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
