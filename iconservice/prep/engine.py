@@ -94,8 +94,7 @@ class Engine(EngineBase, IISSEngineListener):
                                    block_validation_penalty_threshold)
 
         self.preps = self._load_preps(context)
-        self.term = context.storage.prep.get_term(context)
-        self.term.freeze()
+        self.term = self._load_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
@@ -134,6 +133,14 @@ class Engine(EngineBase, IISSEngineListener):
 
         preps.freeze()
         return preps
+
+    @classmethod
+    def _load_term(cls, context: 'IconScoreContext') -> Optional['Term']:
+        term = context.storage.prep.get_term(context)
+        if term:
+            term.freeze()
+
+        return term
 
     def close(self):
         IconScoreContext.engine.iiss.remove_listener(self)
@@ -181,7 +188,7 @@ class Engine(EngineBase, IISSEngineListener):
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
 
         self.preps = self._load_preps(context)
-        self.term = context.storage.prep.get_term(context)
+        self.term = self._load_term(context)
         Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end: {self.term}")
 
     def on_block_invoked(
