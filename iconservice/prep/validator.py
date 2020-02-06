@@ -109,17 +109,18 @@ def _validate_port(port: str, validating_field: str):
 
 def _validate_email(revision: int, email: str):
     error_msg = "Invalid email format"
-    if revision >= Revision.FIX_EMAIL_REGEX.value:
-        encoded_email = email.encode('utf-8')
-        at_index = encoded_email.rfind(b'@')
-        if at_index == -1 or len(encoded_email) > EMAIL_MAX:
-            raise InvalidParamsException(error_msg)
-        if at_index > EMAIL_LOCAL_PART_MAX:
-            raise InvalidParamsException(error_msg)
-        if len(encoded_email[at_index+1:]) == 0:
+    if revision < Revision.FIX_EMAIL_VALIDATION.value:
+        if not EMAIL_PATTERN.match(email):
             raise InvalidParamsException(error_msg)
         return
-    if not EMAIL_PATTERN.match(email):
+
+    encoded_email = email.encode('utf-8')
+    at_index = encoded_email.rfind(b'@')
+    if at_index == -1 or len(encoded_email) > EMAIL_MAX:
+        raise InvalidParamsException(error_msg)
+    if at_index > EMAIL_LOCAL_PART_MAX:
+        raise InvalidParamsException(error_msg)
+    if len(encoded_email[at_index+1:]) == 0:
         raise InvalidParamsException(error_msg)
 
 
