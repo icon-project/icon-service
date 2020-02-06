@@ -112,16 +112,12 @@ def _validate_email(revision: int, email: str):
     if revision < Revision.FIX_EMAIL_VALIDATION.value:
         if not EMAIL_PATTERN.match(email):
             raise InvalidParamsException(error_msg)
-        return
-
-    encoded_email = email.encode('utf-8')
-    at_index = encoded_email.rfind(b'@')
-    if at_index == -1 or len(encoded_email) > EMAIL_MAX:
-        raise InvalidParamsException(error_msg)
-    if at_index > EMAIL_LOCAL_PART_MAX:
-        raise InvalidParamsException(error_msg)
-    if len(encoded_email[at_index+1:]) == 0:
-        raise InvalidParamsException(error_msg)
+    else:
+        encoded_email = email.encode('utf-8')
+        at_index = encoded_email.rfind(b'@')
+        email_length = len(encoded_email)
+        if not (1 <= at_index <= EMAIL_LOCAL_PART_MAX and at_index + 1 < email_length <= EMAIL_MAX):
+            raise InvalidParamsException(error_msg)
 
 
 def _validate_country(country_code: str):
