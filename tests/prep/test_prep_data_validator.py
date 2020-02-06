@@ -125,6 +125,7 @@ def test_validate_fixed_email():
         except BaseException:
             pytest.fail("Validating email test failed")
 
+
 def test_validate_country():
     valid_country_codes: List[str] = ["KOR", "USA", "CHN", "JPN", "FRA", "RUS", "DEU", "CAN"]
     invalid_country_codes: List[str] = ["123", "hello", "KR", "US", "CA", "FR"]
