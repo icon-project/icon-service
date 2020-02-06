@@ -19,8 +19,8 @@ import iso3166
 
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
-    PERCENTAGE_FOR_BETA_2
+from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
+    PERCENTAGE_FOR_BETA_2, Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -32,14 +32,16 @@ port_regex = r'(:[0-9]{1,5})?'
 ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
 host_name_regex = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])'
 email_regex = r'^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@' + host_name_regex + '$'
+fixed_email_regex = r'^[\w\d!@#$%^&*()_+|~\-=\\`,./<>?\'"]{1,63}@[\w\d!@#$%^&*()_+|~\-=\\`,./<>?\'"]+$'
 ENDPOINT_DOMAIN_NAME_PATTERN = re.compile(f'^{host_name_regex}{port_regex}$')
 ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
 WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
 WEBSITE_IP_PATTERN = re.compile(f'{scheme_pattern}{ip_regex}{port_regex}{path_pattern}$')
 EMAIL_PATTERN = re.compile(email_regex)
+FIXED_EMAIL_PATTERN = re.compile(fixed_email_regex)
 
 
-def validate_prep_data(data: dict, set_prep: bool = False):
+def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool = False):
     if not set_prep:
         fields_to_validate = (
             ConstantKeys.NAME,
@@ -65,7 +67,7 @@ def validate_prep_data(data: dict, set_prep: bool = False):
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
             _validate_uri(data[key])
         elif key == ConstantKeys.EMAIL:
-            _validate_email(data[key])
+            _validate_email(context.revision, data[key])
         elif key == ConstantKeys.COUNTRY:
             _validate_country(data[key])
 
@@ -105,7 +107,11 @@ def _validate_port(port: str, validating_field: str):
         raise InvalidParamsException(f"Invalid {validating_field} format. Port out of range: {port}")
 
 
-def _validate_email(email: str):
+def _validate_email(revision: int, email: str):
+    if revision == Revision.FIX_EMAIL_REGEX.value:
+        if len(email) > 254 or not FIXED_EMAIL_PATTERN.match(email):
+            raise InvalidParamsException("Invalid email format")
+        return
     if not EMAIL_PATTERN.match(email):
         raise InvalidParamsException("Invalid email format")
 
