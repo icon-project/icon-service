@@ -13,14 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import copy
 import threading
 import warnings
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
-
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -30,7 +29,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag)
+    Revision, PRepFlag, TermFlag)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -159,6 +158,11 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
+        # for P-Rep reward about previous block votes
+        self.prev_node_key_mapper: dict = {}
+        # for assign node key validating on set_prep and register_prep
+        self.node_key_mapper: dict = {}
+
         self.regulator: Optional['Regulator'] = None
 
     @classmethod
@@ -251,11 +255,11 @@ class IconScoreContext(object):
             return
 
         if dirty_prep.is_electable():
-            self._change_main_prep_p2p_endpoint(dirty_prep)
+            self._update_term_flag(dirty_prep)
         else:
             self._remove_invalid_elected_prep_from_term(dirty_prep)
 
-    def _change_main_prep_p2p_endpoint(self, dirty_prep: 'PRep'):
+    def _update_term_flag(self, dirty_prep: 'PRep'):
         """Notify the term that p2p_endpoint of a main P-Rep is changed
 
         :param dirty_prep: dirty prep
@@ -266,13 +270,15 @@ class IconScoreContext(object):
         if not self._term.is_main_prep(dirty_prep.address):
             return
 
-        if not dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
-            return
-
-        self._duplicate_term()
-        self._term.on_main_prep_p2p_endpoint_changed()
-
-        Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
+        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT | PRepFlag.NODE_KEY):
+            self._duplicate_term()
+            if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
+                self._term.on_main_prep_changed(TermFlag.MAIN_PREP_P2P_ENDPOINT)
+            if dirty_prep.is_flags_on(PRepFlag.NODE_KEY):
+                self._term.on_main_prep_changed(TermFlag.MAIN_PREP_NODE_KEY)
+            Logger.info(tag=self.TAG, msg=f"_update_term_flag: {dirty_prep}")
+        else:
+            Logger.info(tag=self.TAG, msg=f"_update_term_flag(x): {dirty_prep}")
 
     def _remove_invalid_elected_prep_from_term(self, dirty_prep: 'PRep'):
         """Remove an invalidated elected P-Rep from the current term
@@ -374,8 +380,14 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
+
+            context.node_key_mapper = copy.copy(context.engine.prep.node_key_mapper)
+            context.prev_node_key_mapper = copy.copy(context.engine.prep.prev_node_key_mapper)
         else:
             # Readonly
             context._preps = context.engine.prep.preps
+
+            context.node_key_mapper = context.engine.prep.node_key_mapper
+            context.prev_node_key_mapper = context.engine.prep.prev_node_key_mapper
 
         context._term = context.engine.prep.term

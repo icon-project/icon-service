@@ -71,7 +71,7 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list_with_base_transaction, None, None, None, True, 0)
+                          tx_list_with_base_transaction, None, None, None, None, True, 0)
 
     def test_base_transaction_between_rev_iiss_and_rev_decentralization(self):
         self.update_governance()
@@ -106,5 +106,5 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list_with_base_transaction, None, None, None, True, 0)
+                          tx_list_with_base_transaction, None, None, None, None, True, 0)
 

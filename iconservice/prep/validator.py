@@ -60,6 +60,8 @@ def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool =
                 raise InvalidParamsException("Can not set empty data")
 
     for key in data:
+        if key == ConstantKeys.NODE_KEY:
+            continue
         if len(data[key].strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.P2P_ENDPOINT:

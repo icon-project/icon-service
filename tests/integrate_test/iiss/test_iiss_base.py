@@ -456,7 +456,7 @@ class TestIISSBase(TestIntegrateBase):
                                              prev_block_generator=prev_block_generator,
                                              prev_block_validators=prev_block_validators)
 
-    def init_decentralized(self):
+    def init_decentralized(self, network_proposal: bool = False):
         # decentralized
         self.update_governance()
 
@@ -518,8 +518,9 @@ class TestIISSBase(TestIntegrateBase):
         # set Revision REV_IISS (decentralization)
         self.set_revision(Revision.DECENTRALIZATION.value)
 
-        # Update governance SCORE-1.0.0 to support network proposal
-        self.update_governance("1_0_0", True)
+        if network_proposal:
+            # Update governance SCORE-1.0.0 to support network proposal
+            self.update_governance("1_0_0", True)
 
         # make blocks to start decentralization
         self.make_blocks_to_end_calculation()

@@ -30,6 +30,8 @@ class Storage(StorageBase):
     _KEY_LAST_TERM_INFO = b'last_term_info'
     _KEY_LAST_MAIN_PREPS = b'last_main_preps'
 
+    _KEY_PREV_NODE_MAPPER = b'prev_node_mapper'
+
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(MetaContextDatabase(db.key_value_db))
 
@@ -79,3 +81,23 @@ class Storage(StorageBase):
         data: list = MsgPackForDB.loads(value)
         _version = data[0]
         return data[1]
+
+    def put_prev_node_key_mapper(self,
+                                 context: 'IconScoreContext',
+                                 prev_node_key_mapper: dict):
+        version = 0
+
+        data: list = sorted(prev_node_key_mapper.items())
+        data: list = [[x, y] for x, y in data]
+        value: bytes = MsgPackForDB.dumps([version, data])
+        self._db.put(context, self._KEY_PREV_NODE_MAPPER, value)
+
+    def get_prev_node_key_mapper(self, context: 'IconScoreContext') -> dict:
+        value: bytes = self._db.get(context, self._KEY_PREV_NODE_MAPPER)
+        if value is None:
+            return {}
+        data: list = MsgPackForDB.loads(value)
+        _version = data[0]
+
+        data: dict = {x: y for x, y in data[1]}
+        return data

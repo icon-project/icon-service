@@ -104,7 +104,9 @@ class PrecommitData(object):
                  precommit_flag: PrecommitFlag,
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
-                 main_prep_as_dict: Optional[dict]):
+                 main_prep_as_dict: Optional[dict],
+                 prev_node_key_mapper: Optional[dict],
+                 node_key_mapper: Optional[dict]):
         """
 
         :param block_batch: changed states for a block
@@ -133,6 +135,9 @@ class PrecommitData(object):
 
         self.added_transactions: dict = added_transactions
         self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
+
+        self.prev_node_key_mapper: dict = prev_node_key_mapper
+        self.node_key_mapper: dict = node_key_mapper
 
         # To prevent redundant precommit data logging
         self.already_exists = False
