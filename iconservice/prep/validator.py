@@ -32,13 +32,13 @@ port_regex = r'(:[0-9]{1,5})?'
 ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
 host_name_regex = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])'
 email_regex = r'^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@' + host_name_regex + '$'
-fixed_email_regex = r'^[\w\d!@#$%^&*()_+|~\-=\\`,./<>?\'"]{1,63}@[\w\d!@#$%^&*()_+|~\-=\\`,./<>?\'"]+$'
 ENDPOINT_DOMAIN_NAME_PATTERN = re.compile(f'^{host_name_regex}{port_regex}$')
 ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
 WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
 WEBSITE_IP_PATTERN = re.compile(f'{scheme_pattern}{ip_regex}{port_regex}{path_pattern}$')
 EMAIL_PATTERN = re.compile(email_regex)
-FIXED_EMAIL_PATTERN = re.compile(fixed_email_regex)
+EMAIL_LOCAL_PART_MAX = 64
+EMAIL_MAX = 254
 
 
 def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool = False):
@@ -108,12 +108,19 @@ def _validate_port(port: str, validating_field: str):
 
 
 def _validate_email(revision: int, email: str):
-    if revision == Revision.FIX_EMAIL_REGEX.value:
-        if len(email) > 254 or not FIXED_EMAIL_PATTERN.match(email):
-            raise InvalidParamsException("Invalid email format")
+    error_msg = "Invalid email format"
+    if revision >= Revision.FIX_EMAIL_REGEX.value:
+        encoded_email = email.encode('utf-8')
+        at_index = encoded_email.rfind(b'@')
+        if at_index == -1 or len(encoded_email) > EMAIL_MAX:
+            raise InvalidParamsException(error_msg)
+        if at_index > EMAIL_LOCAL_PART_MAX:
+            raise InvalidParamsException(error_msg)
+        if len(encoded_email[at_index+1:]) == 0:
+            raise InvalidParamsException(error_msg)
         return
     if not EMAIL_PATTERN.match(email):
-        raise InvalidParamsException("Invalid email format")
+        raise InvalidParamsException(error_msg)
 
 
 def _validate_country(country_code: str):
