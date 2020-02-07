@@ -17,6 +17,7 @@ from typing import List
 import pytest
 
 from iconservice.base.exception import InvalidParamsException
+from iconservice.icon_constant import Revision
 from iconservice.prep.validator import _validate_p2p_endpoint
 from iconservice.prep.validator import _validate_uri, _validate_email, _validate_country
 
@@ -96,13 +97,31 @@ def test_validate_email():
 
     for email in invalid_email_list:
         with pytest.raises(InvalidParamsException) as e:
-            _validate_email(email)
+            _validate_email(Revision.DECENTRALIZATION.value, email)
         assert e.value.message == "Invalid email format"
 
     valid_email_list = ['example@localhost', 'user@email.com']
     for email in valid_email_list:
         try:
-            _validate_email(email)
+            _validate_email(Revision.DECENTRALIZATION.value, email)
+        except BaseException:
+            pytest.fail("Validating email test failed")
+
+
+def test_validate_fixed_email():
+    invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', f"{'a'*65}@example.com",
+                          f"{'a'*253}@aa", '@invalid', f'{"가"*64}@example.com', '@@', 'a@@']
+
+    for email in invalid_email_list:
+        with pytest.raises(InvalidParamsException) as e:
+            _validate_email(Revision.FIX_EMAIL_VALIDATION.value, email)
+        assert e.value.message == "Invalid email format"
+
+    valid_email_list = ['example@localhost', 'user@email.com', f'{"a"*63}@example.com',
+                        f"{'a'*64}@{'b'*189}", 'user-_-;+_+:)@example.com', 'a@a', ' @ ', '@@ ']
+    for email in valid_email_list:
+        try:
+            _validate_email(Revision.FIX_EMAIL_VALIDATION.value, email)
         except BaseException:
             pytest.fail("Validating email test failed")
 

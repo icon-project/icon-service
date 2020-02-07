@@ -410,7 +410,7 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"not {value}")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
-        validate_prep_data(ret_params)
+        validate_prep_data(context, ret_params)
 
         account: 'Account' = icx_storage.get_account(context, address, Intent.STAKE | Intent.DELEGATED)
 
@@ -579,7 +579,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
-        validate_prep_data(kwargs, True)
+        validate_prep_data(context, kwargs, True)
 
         if ConstantKeys.P2P_ENDPOINT in kwargs:
             p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]

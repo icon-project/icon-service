@@ -323,6 +323,25 @@ class TestIntegratePrep(TestIISSBase):
         self._validate_details()
         self._validate_p2p_endpoint()
 
+    def test_reg_prep_validator_fixed_email_validation(self):
+        self.update_governance()
+
+        # set Revision REV_FIX_EMAIL_REGEX
+        self.set_revision(Revision.FIX_EMAIL_VALIDATION.value)
+
+        # gain 10 icx user0
+        balance: int = 10 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:8],
+                            init_balance=balance)
+
+        self._validate_name()
+        self._validate_fixed_email()
+        self._validate_website()
+        self._validate_country()
+        self._validate_city()
+        self._validate_details()
+        self._validate_p2p_endpoint()
+
     def _validate_name(self):
         reg_data: dict = deepcopy(prep_register_data)
         reg_data[ConstantKeys.NAME] = ''
@@ -349,6 +368,25 @@ class TestIntegratePrep(TestIISSBase):
         reg_data[ConstantKeys.EMAIL] = "valid@validexample.com"
         tx = self.create_register_prep_tx(self._accounts[1], reg_data)
         self.process_confirm_block_tx([tx])
+
+    def _validate_fixed_email(self):
+        invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', f"{'a'*65}@example.com",
+                              f"{'a'*253}@aa", '@invalid', f'{"가"*64}@example.com']
+
+        for email in invalid_email_list:
+            reg_data: dict = deepcopy(prep_register_data)
+            reg_data[ConstantKeys.EMAIL] = email
+            tx = self.create_register_prep_tx(self._accounts[1], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
+
+        reg_data: dict = deepcopy(prep_register_data)
+        chinese_email = '你好@validexample.com'
+        reg_data[ConstantKeys.EMAIL] = chinese_email
+        tx = self.create_register_prep_tx(self._accounts[1], reg_data)
+        self.process_confirm_block_tx([tx])
+        registered_data = self.get_prep(self._accounts[1])
+        self.assertEqual(chinese_email, registered_data['email'])
 
     def _validate_website(self):
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',

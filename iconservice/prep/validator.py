@@ -19,8 +19,8 @@ import iso3166
 
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
-    PERCENTAGE_FOR_BETA_2
+from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
+    PERCENTAGE_FOR_BETA_2, Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -37,9 +37,11 @@ ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
 WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
 WEBSITE_IP_PATTERN = re.compile(f'{scheme_pattern}{ip_regex}{port_regex}{path_pattern}$')
 EMAIL_PATTERN = re.compile(email_regex)
+EMAIL_LOCAL_PART_MAX = 64
+EMAIL_MAX = 254
 
 
-def validate_prep_data(data: dict, set_prep: bool = False):
+def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool = False):
     if not set_prep:
         fields_to_validate = (
             ConstantKeys.NAME,
@@ -65,7 +67,7 @@ def validate_prep_data(data: dict, set_prep: bool = False):
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
             _validate_uri(data[key])
         elif key == ConstantKeys.EMAIL:
-            _validate_email(data[key])
+            _validate_email(context.revision, data[key])
         elif key == ConstantKeys.COUNTRY:
             _validate_country(data[key])
 
@@ -105,9 +107,17 @@ def _validate_port(port: str, validating_field: str):
         raise InvalidParamsException(f"Invalid {validating_field} format. Port out of range: {port}")
 
 
-def _validate_email(email: str):
-    if not EMAIL_PATTERN.match(email):
-        raise InvalidParamsException("Invalid email format")
+def _validate_email(revision: int, email: str):
+    error_msg = "Invalid email format"
+    if revision < Revision.FIX_EMAIL_VALIDATION.value:
+        if not EMAIL_PATTERN.match(email):
+            raise InvalidParamsException(error_msg)
+    else:
+        encoded_email = email.encode('utf-8')
+        at_index = encoded_email.rfind(b'@')
+        email_length = len(encoded_email)
+        if not (1 <= at_index <= EMAIL_LOCAL_PART_MAX and at_index + 1 < email_length <= EMAIL_MAX):
+            raise InvalidParamsException(error_msg)
 
 
 def _validate_country(country_code: str):
