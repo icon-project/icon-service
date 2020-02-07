@@ -110,7 +110,7 @@ def test_validate_email():
 
 def test_validate_fixed_email():
     invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', f"{'a'*65}@example.com",
-                          f"{'a'*253}@aa", '@invalid', f'{"가"*64}@example.com']
+                          f"{'a'*253}@aa", '@invalid', f'{"가"*64}@example.com', '@@', 'a@@']
 
     for email in invalid_email_list:
         with pytest.raises(InvalidParamsException) as e:
@@ -118,7 +118,7 @@ def test_validate_fixed_email():
         assert e.value.message == "Invalid email format"
 
     valid_email_list = ['example@localhost', 'user@email.com', f'{"a"*63}@example.com',
-                        f"{'a'*64}@{'b'*189}", 'user-_-;+_+:)@example.com', 'a@a']
+                        f"{'a'*64}@{'b'*189}", 'user-_-;+_+:)@example.com', 'a@a', ' @ ', '@@ ']
     for email in valid_email_list:
         try:
             _validate_email(Revision.FIX_EMAIL_VALIDATION.value, email)

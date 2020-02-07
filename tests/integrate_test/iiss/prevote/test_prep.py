@@ -381,12 +381,12 @@ class TestIntegratePrep(TestIISSBase):
                                           expected_status=False)
 
         reg_data: dict = deepcopy(prep_register_data)
-        chinese_mail = '你好@validexample.com'
-        reg_data[ConstantKeys.EMAIL] = chinese_mail
+        chinese_email = '你好@validexample.com'
+        reg_data[ConstantKeys.EMAIL] = chinese_email
         tx = self.create_register_prep_tx(self._accounts[1], reg_data)
         self.process_confirm_block_tx([tx])
         registered_data = self.get_prep(self._accounts[1])
-        self.assertEqual(chinese_mail, registered_data['email'])
+        self.assertEqual(chinese_email, registered_data['email'])
 
     def _validate_website(self):
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
