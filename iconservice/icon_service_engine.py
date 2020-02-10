@@ -19,8 +19,6 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
-from iconservice import Address
-
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
@@ -31,7 +29,7 @@ from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException, InternalServiceErrorException, DatabaseException, FatalException)
+    MethodNotFoundException, InternalServiceErrorException, DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
@@ -578,8 +576,7 @@ class IconServiceEngine(ContextContainer):
                                        rc_state_hash,
                                        added_transactions,
                                        main_prep_as_dict,
-                                       context.prev_node_key_mapper,
-                                       context.node_key_mapper)
+                                       context.prep_key_converter)
         if context.precommitdata_log_flag:
             Logger.info(tag=_TAG,
                         msg=f"Created precommit_data: \n{precommit_data}")
@@ -627,15 +624,8 @@ class IconServiceEngine(ContextContainer):
         """
 
         if prev_block_generator and prev_block_votes:
-            prev_block_generator: 'Address' = cls._get_operation_key_from_node_key(context, prev_block_generator)
-            tmp_votes: List[Tuple['Address', int]] = []
-            for address, vote in prev_block_votes:
-                if cls._is_contains_node_key_mapper(context, address):
-                    tmp_votes.append([cls._get_operation_key_from_node_key(context, address), vote])
-                else:
-                    tmp_votes.append([address, vote])
-            prev_block_votes: List[Tuple['Address', int]] = tmp_votes
-            return prev_block_votes, prev_block_generator
+            return context.prep_key_converter.node_key_to_operation_key(prev_block_generator=prev_block_generator,
+                                                                        prev_block_votes=prev_block_votes)
 
         if prev_block_generator is None or prev_block_validators is None:
             return None, None
@@ -654,30 +644,6 @@ class IconServiceEngine(ContextContainer):
                     vote_status: 'BlockVoteStatus' = BlockVoteStatus.TRUE
                 new_prev_block_votes.append([address, vote_status.value])
         return new_prev_block_votes, prev_block_generator
-
-    @classmethod
-    def _is_contains_node_key_mapper(cls,
-                                     context: 'IconScoreContext',
-                                     node_key: 'Address') -> bool:
-        ret: bool = node_key in context.prev_node_key_mapper
-        if not ret:
-            ret: bool = node_key in context.node_key_mapper
-        return ret
-
-    @classmethod
-    def _get_operation_key_from_node_key(cls,
-                                         context: 'IconScoreContext',
-                                         node_key: 'Address') -> 'Address':
-        address: Optional['Address'] = context.prev_node_key_mapper.get(node_key)
-        if address is None:
-            address: 'Address' = context.node_key_mapper.get(node_key)
-
-        if address is None:
-            address: 'Address' = node_key
-
-        if address is None:
-            raise Exception("mycom22!")
-        return address
 
     @classmethod
     def _log_step_trace(cls, context: 'IconScoreContext'):
@@ -720,8 +686,7 @@ class IconServiceEngine(ContextContainer):
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
 
-        context.engine.prep.prev_node_key_mapper.clear()
-        context.prev_node_key_mapper.clear()
+        context.prep_key_converter.reset_prev_node_key_mapper()
 
     @classmethod
     def _check_calculate_done(cls,
@@ -793,7 +758,7 @@ class IconServiceEngine(ContextContainer):
                                                                            flag,
                                                                            rc_db_revision)
         context.update_batch()
-        context.storage.meta.put_prev_node_key_mapper(context, context.prev_node_key_mapper)
+        context.prep_key_converter.save(context)
 
         if main_prep_as_dict is not None:
             Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")

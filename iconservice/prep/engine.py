@@ -15,7 +15,6 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
-
 from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -23,7 +22,7 @@ from .penalty_imposer import PenaltyImposer
 from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, MethodNotFoundException, ServiceNotReadyException, FatalException
+from ..base.exception import InvalidParamsException, MethodNotFoundException, ServiceNotReadyException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
@@ -33,8 +32,9 @@ from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
 from ..icx.storage import Intent
-from ..iiss import IISSEngineListener
+from ..iiss.listener import IISSEngineListener
 from ..iiss.reward_calc import RewardCalcDataCreator
+from ..prep.prep_key_converter import PRepKeyConverter
 
 if TYPE_CHECKING:
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
@@ -78,10 +78,7 @@ class Engine(EngineBase, IISSEngineListener):
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
-        # for P-Rep vate reward
-        self.prev_node_key_mapper: dict = {}
-        # for assign node key validating
-        self.node_key_mapper: dict = {}
+        self.prep_key_converter: 'PRepKeyConverter' = PRepKeyConverter()
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
@@ -102,7 +99,7 @@ class Engine(EngineBase, IISSEngineListener):
         self.term = self._load_term(context)
         self._initial_irep = irep
 
-        self.prev_node_key_mapper: dict = context.storage.meta.get_prev_node_key_mapper(context)
+        self.prep_key_converter.load(context)
 
         context.engine.iiss.add_listener(self)
 
@@ -132,7 +129,7 @@ class Engine(EngineBase, IISSEngineListener):
         for prep in context.storage.prep.get_prep_iterator():
 
             if prep.status == PRepStatus.ACTIVE and prep.node_key != prep.address:
-                self.node_key_mapper[prep.node_key] = prep.address
+                self.prep_key_converter.add_node_key_mapper(key=prep.node_key, value=prep.address)
 
             account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
 
@@ -187,8 +184,7 @@ class Engine(EngineBase, IISSEngineListener):
         if precommit_data.term is not None:
             self.term: 'Term' = precommit_data.term
 
-        self.prev_node_key_mapper: dict = precommit_data.prev_node_key_mapper
-        self.node_key_mapper: dict = precommit_data.node_key_mapper
+        self.prep_key_converter: 'PRepKeyConverter' = precommit_data.prep_key_converter
 
     def rollback(self, context: 'IconScoreContext', _block_height: int, _block_hash: bytes):
         """After rollback is called, the state of prep_engine is reverted to that of a given block
@@ -436,10 +432,11 @@ class Engine(EngineBase, IISSEngineListener):
 
         if context.revision < Revision.DIVIDE_NODE_KEY.value:
             if dirty_prep.address != dirty_prep.node_key:
-                raise InvalidParamsException(f"Mismatch nodeKey and address before divide node logic({Revision.DIVIDE_NODE_KEY})")
+                raise InvalidParamsException(f"Mismatch nodeKey and address. "
+                                             f"'divide node key' revision need to be accepted"
+                                             f"(revision: {Revision.DIVIDE_NODE_KEY.value})")
 
-        if dirty_prep.node_key in context.node_key_mapper:
-            raise InvalidParamsException(f"already assign nodeKey: {dirty_prep.node_key}")
+        self._validate_node_key(context, dirty_prep.node_key)
 
         dirty_prep.stake = account.stake
         dirty_prep.delegated = account.delegated_amount
@@ -451,7 +448,7 @@ class Engine(EngineBase, IISSEngineListener):
             dirty_prep.set_irep(self._initial_irep, context.block.height)
 
         if dirty_prep.node_key != dirty_prep.address:
-            context.node_key_mapper[dirty_prep.node_key] = dirty_prep.address
+            context.prep_key_converter.add_node_key_mapper(key=dirty_prep.node_key, value=dirty_prep.address)
 
         # Update preps in context
         context.put_dirty_prep(dirty_prep)
@@ -617,16 +614,17 @@ class Engine(EngineBase, IISSEngineListener):
 
             if context.revision < Revision.DIVIDE_NODE_KEY.value:
                 if dirty_prep.address != node_key:
-                    raise InvalidParamsException(f"Mismatch nodeKey and address before divide node logic({Revision.DIVIDE_NODE_KEY})")
+                    raise InvalidParamsException(f"Mismatch nodeKey and address. "
+                                                 f"'divide node key' revision need to be accepted"
+                                                 f"(revision: {Revision.DIVIDE_NODE_KEY.value})")
 
-            if node_key in context.node_key_mapper:
-                raise InvalidParamsException(f"already assign nodeKey: {dirty_prep.node_key}")
+            self._validate_node_key(context, node_key)
 
             del kwargs[ConstantKeys.NODE_KEY]
             kwargs["node_key"] = node_key
             if node_key != address:
-                context.prev_node_key_mapper[dirty_prep.node_key] = address
-                context.node_key_mapper[node_key] = address
+                context.prep_key_converter.add_prev_node_key_mapper(key=dirty_prep.node_key, value=address)
+                context.prep_key_converter.add_node_key_mapper(key=node_key, value=address)
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -641,6 +639,15 @@ class Engine(EngineBase, IISSEngineListener):
         dirty_prep.set(**kwargs)
 
         context.put_dirty_prep(dirty_prep)
+
+    @classmethod
+    def _validate_node_key(cls,
+                           context: 'IconScoreContext',
+                           key: 'Address'):
+
+        if key in context.prep_key_converter.node_key_mapper or context.preps.contains(address=key,
+                                                                                       active_prep_only=False):
+            raise InvalidParamsException(f"Already assign nodeKey: {key}")
 
     def handle_set_governance_variables(self,
                                         context: 'IconScoreContext',
@@ -698,7 +705,7 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
         if dirty_prep.node_key != dirty_prep.address:
-            del self.node_key_mapper[dirty_prep.node_key]
+            self.prep_key_converter.delete_node_key_mapper(dirty_prep.node_key)
 
         dirty_prep.status = PRepStatus.UNREGISTERED
         dirty_prep.grade = PRepGrade.CANDIDATE

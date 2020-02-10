@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING
 import decimal
 
 from .engine import Engine as IISSEngine
-from .engine import EngineListener as IISSEngineListener
 from .storage import Storage as IISSStorage
 from ..icon_constant import Revision
 

@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import copy
 import threading
 import warnings
 from collections import OrderedDict
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
+    from ..prep.prep_key_converter import PRepKeyConverter
 
 _thread_local_data = threading.local()
 
@@ -158,11 +158,7 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
-        # for P-Rep reward about previous block votes
-        self.prev_node_key_mapper: dict = {}
-        # for assign node key validating on set_prep and register_prep
-        self.node_key_mapper: dict = {}
-
+        self.prep_key_converter: 'PRepKeyConverter' = None
         self.regulator: Optional['Regulator'] = None
 
     @classmethod
@@ -380,14 +376,10 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
-
-            context.node_key_mapper = copy.copy(context.engine.prep.node_key_mapper)
-            context.prev_node_key_mapper = copy.copy(context.engine.prep.prev_node_key_mapper)
+            context.prep_key_converter: 'PRepKeyConverter' = context.engine.prep.prep_key_converter.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
-
-            context.node_key_mapper = context.engine.prep.node_key_mapper
-            context.prev_node_key_mapper = context.engine.prep.prev_node_key_mapper
+            context.prep_key_converter: 'PRepKeyConverter' = context.engine.prep.prep_key_converter
 
         context._term = context.engine.prep.term

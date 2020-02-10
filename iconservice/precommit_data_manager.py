@@ -25,6 +25,7 @@ from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iiss.reward_calc.msg_data import TxData
+from .prep.prep_key_converter import PRepKeyConverter
 from .utils import bytes_to_hex, sha3_256
 
 if TYPE_CHECKING:
@@ -105,8 +106,7 @@ class PrecommitData(object):
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
                  main_prep_as_dict: Optional[dict],
-                 prev_node_key_mapper: Optional[dict],
-                 node_key_mapper: Optional[dict]):
+                 prep_key_converter: 'PRepKeyConverter'):
         """
 
         :param block_batch: changed states for a block
@@ -136,8 +136,7 @@ class PrecommitData(object):
         self.added_transactions: dict = added_transactions
         self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
 
-        self.prev_node_key_mapper: dict = prev_node_key_mapper
-        self.node_key_mapper: dict = node_key_mapper
+        self.prep_key_converter: 'PRepKeyConverter' = prep_key_converter
 
         # To prevent redundant precommit data logging
         self.already_exists = False

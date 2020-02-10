@@ -33,7 +33,7 @@ from iconservice.base.type_converter import TypeConverter
 from iconservice.base.type_converter_templates import ParamType
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import IconServiceFlag, ConfigKey
+from iconservice.icon_constant import IconServiceFlag, ConfigKey, RCCalculateResult
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -41,6 +41,8 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
+from iconservice.iiss.reward_calc.ipc.message import CalculateDoneNotification
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
     raise_exception_start_tag, raise_exception_end_tag
 
@@ -80,6 +82,7 @@ class TestIconServiceEngine(unittest.TestCase):
         )
         # engine._load_builtin_scores = Mock()
         # engine._init_global_value_by_governance_score = Mock()
+        self._mock_ipc()
         engine.open(conf)
         self._engine = engine
 
@@ -115,6 +118,27 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.invoke(block, tx_lists)
         self._engine.commit(block.height, block.hash, None)
         self.genesis_block = block
+
+    def mock_calculate(self, _path, _block_height):
+        context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        calc_period: int = context.storage.iiss.get_calc_period(context)
+        response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
+        self._calculate_done_callback(response)
+
+    @classmethod
+    def _mock_ipc(cls, mock_calculate: callable = mock_calculate):
+        RewardCalcProxy.open = Mock()
+        RewardCalcProxy.start = Mock()
+        RewardCalcProxy.stop = Mock()
+        RewardCalcProxy.close = Mock()
+        RewardCalcProxy.get_version = Mock()
+        RewardCalcProxy.calculate = mock_calculate
+        RewardCalcProxy.claim_iscore = Mock()
+        RewardCalcProxy.query_iscore = Mock()
+        RewardCalcProxy.commit_block = Mock()
+        RewardCalcProxy.commit_claim = Mock()
+        RewardCalcProxy.query_calculate_result = Mock(return_value=(RCCalculateResult.SUCCESS, 0, 0, bytes()))
 
     def tearDown(self):
         self._engine.close()
