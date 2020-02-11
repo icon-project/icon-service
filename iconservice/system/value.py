@@ -15,7 +15,6 @@
 
 from typing import TYPE_CHECKING, Any, Dict
 
-
 from ..iconscore.icon_score_step import IconScoreStepCounter
 from ..system import SystemStorage
 
@@ -55,7 +54,8 @@ class SystemValue:
 
     # Todo: Implement all property
 
-    def create_step_counter(self, context_type: 'IconScoreContextType',
+    def create_step_counter(self,
+                            context_type: 'IconScoreContextType',
                             step_trace_flag: bool) -> 'IconScoreStepCounter':
         step_price: int = self._step_price
         # Copying a `dict` so as not to change step costs when processing a transaction.

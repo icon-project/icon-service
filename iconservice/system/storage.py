@@ -49,12 +49,11 @@ class Storage(StorageBase):
     def put_migration_flag(self, context: 'IconScoreContext') -> bool:
         return bool(self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True)))
 
-    def put_value(self, context: 'IconScoreContext', type: 'SystemValueType', value: Any):
-        assert isinstance(type, SystemValueType)
-        self._db.put(context, self.PREFIX + type.value, MsgPackForDB.dumps(value))
+    def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
+        assert isinstance(type_, SystemValueType)
+        self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
 
-    def get_value(self, context: 'IconScoreContext', type: 'SystemValueType'):
-        assert isinstance(type, SystemValueType)
-        value: Any = self._db.get(context, self.PREFIX + type.value)
-        # Todo: check this point
+    def get_value(self, context: 'IconScoreContext', type_: 'SystemValueType'):
+        assert isinstance(type_, SystemValueType)
+        value: Any = self._db.get(context, self.PREFIX + type_.value)
         return MsgPackForDB.loads(value)
