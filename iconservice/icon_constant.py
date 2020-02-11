@@ -197,6 +197,20 @@ class IconServiceFlag(IntFlag):
     SCORE_PACKAGE_VALIDATOR = 8
 
 
+class SystemValueType(Enum):
+    SERVICE_CONFIG = b'service_config'
+    STEP_PRICE = b'step_price'
+    STEP_COSTS = b'step_costs'
+    MAX_STEP_LIMITS = b'max_step_limits'
+
+    REVISION_CODE = b'revision_code'
+    REVISION_NAME = b'revision_name'
+
+    SCORE_BLACK_LIST = b'score_black_list'
+    IMPORT_WHITE_LIST = b'import_white_list'
+    IMPORT_WHITE_LIST_KEYS = b'import_white_list_key'
+
+
 @unique
 class IconScoreContextType(IntEnum):
     # Write data to db directly
