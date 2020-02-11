@@ -51,9 +51,11 @@ class Storage(StorageBase):
 
     def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
         assert isinstance(type_, SystemValueType)
+        # Todo: Check if the value is valid (type check)
         self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
 
     def get_value(self, context: 'IconScoreContext', type_: 'SystemValueType'):
         assert isinstance(type_, SystemValueType)
+        # Todo: Check if the value is None
         value: Any = self._db.get(context, self.PREFIX + type_.value)
         return MsgPackForDB.loads(value)
