@@ -21,10 +21,10 @@ from iconservice.system import SystemStorage
 from ..precommit_data_manager import PrecommitData
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
+    from ..iconscore.icon_score_context import IconScoreContext, ContextContainer
 
 
-class Engine(EngineBase):
+class Engine(EngineBase, ContextContainer):
     TAG = "SYSTEM"
 
     def __init__(self):
@@ -42,6 +42,20 @@ class Engine(EngineBase):
             # Initiate GV from Governance Score
             pass
         return system_value
+
+    @classmethod
+    def sync_system_value_with_governance(cls,
+                                          context: 'IconScoreContext',
+                                          system_value: 'SystemValue'):
+        """
+        Syncronize system value with governance value.
+        :param context:
+        :param system_value:
+        :return:
+        """
+        assert not system_value.is_migrated
+
+    # Todo: get governance variable from governance score
 
     def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         # Set updated system value
