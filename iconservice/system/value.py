@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from ..iconscore.icon_score_step import IconScoreStepCounter
@@ -20,6 +21,10 @@ from ..system import SystemStorage
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icon_constant import SystemValueType, IconScoreContextType, Revision
+
+
+SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
+ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
 
 
 class SystemValue:
@@ -39,6 +44,7 @@ class SystemValue:
         self._revision_name: Optional[str] = None
 
         self._score_black_list: Optional[list] = None
+        # Todo: Integrate
         self._import_white_list: Optional[list] = None
         self._import_white_list_keys: Optional[str] = None
 
@@ -120,6 +126,7 @@ class SystemValue:
         else:
             raise ValueError(f"Invalid value type: {value_type.name}")
 
+    #Todo: set method 통합
     def set_from_icon_service(self, value_type: 'SystemValueType', value: Any, is_open: bool = False):
         """
         Set value on system value instance from icon service.

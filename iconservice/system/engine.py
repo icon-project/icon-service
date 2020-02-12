@@ -57,6 +57,7 @@ class Engine(EngineBase, ContextContainer):
     def sync_system_value_with_governance(self,
                                           context: 'IconScoreContext',
                                           system_value: 'SystemValue'):
+        # Todo: context만 있어도 되지 않을까 -> 확인결과 load 부분에서도 공동으로 쓰기위해서는 system_value를 받을 필요 있음
         """
         Syncronize system value with governance value.
         :param context:
