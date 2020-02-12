@@ -15,21 +15,13 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from ..icon_constant import IISS_LOG_TAG
 from ..iconscore.icon_score_context import IconScoreContext
 from ..icx.icx_account import Account
 
-if TYPE_CHECKING:
-    pass
 
-_TAG = IISS_LOG_TAG
-
-QUERY_CALCULATE_REPEAT_COUNT = 3
-
-
-class IISSEngineListener(metaclass=ABCMeta):
+class EngineListener(metaclass=ABCMeta):
     @abstractmethod
     def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
         pass

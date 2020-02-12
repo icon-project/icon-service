@@ -178,7 +178,7 @@ class ConstantKeys:
     END_RANKING = "endRanking"
     IREP = "irep"
     IREP_BLOCK_HEIGHT = "irepUpdateBlockHeight"
-    NODE_KEY = "nodeKey"
+    NODE_ADDRESS = "nodeAddress"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -373,7 +373,7 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
     ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
-    ConstantKeys.NODE_KEY: ValueType.ADDRESS,
+    ConstantKeys.NODE_ADDRESS: ValueType.ADDRESS,
 }
 
 type_convert_templates[ParamType.IISS_SET_PREP] = {
@@ -384,7 +384,7 @@ type_convert_templates[ParamType.IISS_SET_PREP] = {
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
     ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
-    ConstantKeys.NODE_KEY: ValueType.ADDRESS
+    ConstantKeys.NODE_ADDRESS: ValueType.ADDRESS
 }
 
 type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]

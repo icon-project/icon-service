@@ -576,7 +576,7 @@ class IconServiceEngine(ContextContainer):
                                        rc_state_hash,
                                        added_transactions,
                                        main_prep_as_dict,
-                                       context.prep_key_converter)
+                                       context.prep_address_converter)
         if context.precommitdata_log_flag:
             Logger.info(tag=_TAG,
                         msg=f"Created precommit_data: \n{precommit_data}")
@@ -624,8 +624,9 @@ class IconServiceEngine(ContextContainer):
         """
 
         if prev_block_generator and prev_block_votes:
-            return context.prep_key_converter.node_key_to_operation_key(prev_block_generator=prev_block_generator,
-                                                                        prev_block_votes=prev_block_votes)
+            return context.prep_address_converter.node_address_to_operation_address(
+                prev_block_generator=prev_block_generator,
+                prev_block_votes=prev_block_votes)
 
         if prev_block_generator is None or prev_block_validators is None:
             return None, None
@@ -686,7 +687,7 @@ class IconServiceEngine(ContextContainer):
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
 
-        context.prep_key_converter.reset_prev_node_key_mapper()
+        context.prep_address_converter.reset_prev_node_address_mapper()
 
     @classmethod
     def _check_calculate_done(cls,
@@ -758,7 +759,7 @@ class IconServiceEngine(ContextContainer):
                                                                            flag,
                                                                            rc_db_revision)
         context.update_batch()
-        context.prep_key_converter.save(context)
+        context.prep_address_converter.save(context)
 
         if main_prep_as_dict is not None:
             Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")

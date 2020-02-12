@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
-    from ..prep.prep_key_converter import PRepKeyConverter
+    from ..prep.prep_address_converter import PRepAddressConverter
 
 _thread_local_data = threading.local()
 
@@ -158,7 +158,7 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
-        self.prep_key_converter: 'PRepKeyConverter' = None
+        self.prep_address_converter: 'PRepKeyConverter' = None
         self.regulator: Optional['Regulator'] = None
 
     @classmethod
@@ -266,12 +266,12 @@ class IconScoreContext(object):
         if not self._term.is_main_prep(dirty_prep.address):
             return
 
-        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT | PRepFlag.NODE_KEY):
+        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) or dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
             self._duplicate_term()
             if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
                 self._term.on_main_prep_changed(TermFlag.MAIN_PREP_P2P_ENDPOINT)
-            if dirty_prep.is_flags_on(PRepFlag.NODE_KEY):
-                self._term.on_main_prep_changed(TermFlag.MAIN_PREP_NODE_KEY)
+            if dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
+                self._term.on_main_prep_changed(TermFlag.MAIN_PREP_NODE_ADDRESS)
             Logger.info(tag=self.TAG, msg=f"_update_term_flag: {dirty_prep}")
         else:
             Logger.info(tag=self.TAG, msg=f"_update_term_flag(x): {dirty_prep}")
@@ -376,10 +376,10 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
-            context.prep_key_converter: 'PRepKeyConverter' = context.engine.prep.prep_key_converter.copy()
+            context.prep_address_converter: 'PRepAddressConverter' = context.engine.prep.prep_address_converter.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
-            context.prep_key_converter: 'PRepKeyConverter' = context.engine.prep.prep_key_converter
+            context.prep_address_converter: 'PRepAddressConverter' = context.engine.prep.prep_address_converter
 
         context._term = context.engine.prep.term

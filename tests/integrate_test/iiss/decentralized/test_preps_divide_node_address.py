@@ -39,7 +39,7 @@ class TestPreps(TestIISSBase):
         super().setUp()
         self.init_decentralized()
 
-    def test_prep_register_node_key_before_rev_DIVIDE_NODE_KEY(self):
+    def test_prep_register_node_address_before_rev_DIVIDE_NODE_ADDRESS(self):
         account: 'EOAAccount' = self.create_eoa_account()
         self.distribute_icx(accounts=[account],
                             init_balance=1 * ICX_IN_LOOP)
@@ -48,18 +48,18 @@ class TestPreps(TestIISSBase):
 
         # register prep
         reg_data: dict = self.create_register_prep_params(account)
-        reg_data["nodeKey"] = str(dummy_node)
+        reg_data["nodeAddress"] = str(dummy_node)
 
         tx: dict = self.create_register_prep_tx(from_=account,
                                                 reg_data=reg_data)
 
         _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_results[1].failure.message, f"Mismatch nodeKey and address. "
-                                                        f"'divide node key' revision need to be accepted"
+        self.assertEqual(tx_results[1].failure.message, f"Mismatch nodeAddress and address. "
+                                                        f"'divide node address' revision need to be accepted"
                                                         f"(revision: 9)")
 
-    def test_prep_set_node_key_before_rev_DIVIDE_NODE_KEY(self):
+    def test_prep_set_node_address_before_rev_DIVIDE_NODE_ADDRESS(self):
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
                             init_balance=1 * ICX_IN_LOOP)
 
@@ -68,16 +68,16 @@ class TestPreps(TestIISSBase):
 
         # set prep 1
         tx: dict = self.create_set_prep_tx(from_=account,
-                                           set_data={"nodeKey": str(dummy_node)})
+                                           set_data={"nodeAddress": str(dummy_node)})
 
         _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_results[1].failure.message, f"Mismatch nodeKey and address. "
-                                                        f"'divide node key' revision need to be accepted"
+        self.assertEqual(tx_results[1].failure.message, f"Mismatch nodeAddress and address. "
+                                                        f"'divide node address' revision need to be accepted"
                                                         f"(revision: 9)")
 
-    def test_prep_register_node_key(self):
-        self.set_revision(Revision.DIVIDE_NODE_KEY.value)
+    def test_prep_register_node_address(self):
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
         account: 'EOAAccount' = self.create_eoa_account()
         self.distribute_icx(accounts=[account],
                             init_balance=1 * ICX_IN_LOOP)
@@ -86,7 +86,7 @@ class TestPreps(TestIISSBase):
 
         # register prep
         reg_data: dict = self.create_register_prep_params(account)
-        reg_data["nodeKey"] = str(dummy_node)
+        reg_data["nodeAddress"] = str(dummy_node)
 
         tx: dict = self.create_register_prep_tx(from_=account,
                                                 reg_data=reg_data)
@@ -97,10 +97,10 @@ class TestPreps(TestIISSBase):
         self._write_precommit_state(block)
 
         ret: dict = self.get_prep(account.address)
-        self.assertEqual(str(ret['nodeKey']), reg_data['nodeKey'])
+        self.assertEqual(str(ret['nodeAddress']), reg_data['nodeAddress'])
 
-    def test_prep_set_node_key(self):
-        self.set_revision(Revision.DIVIDE_NODE_KEY.value)
+    def test_prep_set_node_address(self):
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
                             init_balance=1 * ICX_IN_LOOP)
@@ -110,32 +110,45 @@ class TestPreps(TestIISSBase):
 
         # set prep 1
         tx: dict = self.create_set_prep_tx(from_=account,
-                                           set_data={"nodeKey": str(dummy_node)})
+                                           set_data={"nodeAddress": str(dummy_node)})
 
         _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].status, True)
         self.assertEqual(main_prep_as_dict["preps"][0]["id"], dummy_node)
 
-    def test_prep_set_node_key_check_generator(self):
-        self.set_revision(Revision.DIVIDE_NODE_KEY.value)
+    def test_prep_set_node_address_check_generator(self):
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
                             init_balance=1 * ICX_IN_LOOP)
 
-        # 0 start change node_key
+        # 0 start change node_address
         account: 'EOAAccount' = self._accounts[0]
         dummy_node1: 'Address' = create_address()
+        dummy_node1_1: 'Address' = create_address()
+        dummy_node1_2: 'Address' = create_address()
 
         # set prep 1
-        tx: dict = self.create_set_prep_tx(from_=account,
-                                           set_data={"nodeKey": str(dummy_node1)})
+        tx_list: list = []
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        tx: dict = self.create_set_prep_tx(from_=account,
+                                           set_data={"nodeAddress": str(dummy_node1)})
+        tx_list.append(tx)
+        tx: dict = self.create_set_prep_tx(from_=account,
+                                           set_data={"nodeAddress": str(dummy_node1_1)})
+        tx_list.append(tx)
+        tx: dict = self.create_set_prep_tx(from_=account,
+                                           set_data={"nodeAddress": str(dummy_node1_2)})
+        tx_list.append(tx)
+
+        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
-        self.assertEqual(main_prep_as_dict["preps"][0]["id"], dummy_node1)
+        self.assertEqual(tx_results[2].status, True)
+        self.assertEqual(tx_results[3].status, True)
+        self.assertEqual(main_prep_as_dict["preps"][0]["id"], dummy_node1_2)
         self._write_precommit_state(block)
 
-        # 1 before change node_key
+        # 1 before change node_address
         prev_block_generator = self._accounts[0].address
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[],
@@ -148,13 +161,13 @@ class TestPreps(TestIISSBase):
 
         self._write_precommit_state(block)
 
-        # 2 after change node_key
+        # 2 after change node_address
         dummy_node2: 'Address' = create_address()
-        prev_block_generator = dummy_node1
+        prev_block_generator = dummy_node1_2
 
         # set prep 2
         tx: dict = self.create_set_prep_tx(from_=account,
-                                           set_data={"nodeKey": str(dummy_node2)})
+                                           set_data={"nodeAddress": str(dummy_node2)})
 
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx],
@@ -166,8 +179,8 @@ class TestPreps(TestIISSBase):
         self.assertEqual(main_prep_as_dict["preps"][0]["id"], dummy_node2)
         self._write_precommit_state(block)
 
-    def test_prep_set_node_key_check_votes(self):
-        self.set_revision(Revision.DIVIDE_NODE_KEY.value)
+    def test_prep_set_node_address_check_votes(self):
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
                             init_balance=1 * ICX_IN_LOOP)
@@ -175,17 +188,30 @@ class TestPreps(TestIISSBase):
         # 0 start change node_key
         account: 'EOAAccount' = self._accounts[1]
         dummy_node1: 'Address' = create_address()
+        dummy_node1_1: 'Address' = create_address()
+        dummy_node1_2: 'Address' = create_address()
 
         # set prep 1
-        tx: dict = self.create_set_prep_tx(from_=account,
-                                           set_data={"nodeKey": str(dummy_node1)})
+        tx_list: list = []
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        tx: dict = self.create_set_prep_tx(from_=account,
+                                           set_data={"nodeAddress": str(dummy_node1)})
+        tx_list.append(tx)
+        tx: dict = self.create_set_prep_tx(from_=account,
+                                           set_data={"nodeAddress": str(dummy_node1_1)})
+        tx_list.append(tx)
+        tx: dict = self.create_set_prep_tx(from_=account,
+                                           set_data={"nodeAddress": str(dummy_node1_2)})
+        tx_list.append(tx)
+
+        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
-        self.assertEqual(main_prep_as_dict["preps"][1]["id"], dummy_node1)
+        self.assertEqual(tx_results[2].status, True)
+        self.assertEqual(tx_results[3].status, True)
+        self.assertEqual(main_prep_as_dict["preps"][1]["id"], dummy_node1_2)
         self._write_precommit_state(block)
 
-        # 1 before change node_key
+        # 1 before change node_address
         prev_block_generator = self._accounts[0].address
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[],
@@ -198,13 +224,13 @@ class TestPreps(TestIISSBase):
 
         self._write_precommit_state(block)
 
-        # 2 after change node_key
+        # 2 after change node_address
         dummy_node2: 'Address' = create_address()
-        prev_block_generator = dummy_node1
+        prev_block_generator = dummy_node1_2
 
         # set prep 2
         tx: dict = self.create_set_prep_tx(from_=account,
-                                           set_data={"nodeKey": str(dummy_node2)})
+                                           set_data={"nodeAddress": str(dummy_node2)})
 
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx],
