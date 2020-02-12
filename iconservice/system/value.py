@@ -12,41 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from ..iconscore.icon_score_step import IconScoreStepCounter
 from ..system import SystemStorage
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..icon_constant import SystemValueType, IconScoreContextType
+    from ..icon_constant import SystemValueType, IconScoreContextType, Revision
 
 
 class SystemValue:
 
-    def __init__(self,
-                 is_migrated: bool,
-                 step_price: int,
-                 step_costs: dict,
-                 max_step_limits: dict,
-                 revision_code: int,
-                 revision_name: str,
-                 score_black_list: list,
-                 import_white_list: list,
-                 import_white_list_key: str):
+    def __init__(self, is_migrated: bool):
         # Todo: consider if the compound data should be immutable
+        # Todo: consider about transaction failure
         self._is_migrated: bool = is_migrated
 
-        self._step_price: int = step_price
-        self._step_costs: dict = step_costs
-        self._max_step_limits: dict = max_step_limits
+        # Todo: raise Exception when trying to get variable which is not set (i.e. None)
+        self._step_price: Optional[int] = None
+        self._step_costs: Optional[dict] = None
+        self._max_step_limits: Optional[dict] = None
 
-        self._revision_code: int = revision_code
-        self._revision_name: str = revision_name
+        # Todo: Integrate to revision
+        self._revision_code: Optional[Revision] = None
+        self._revision_name: Optional[str] = None
 
-        self._score_black_list: list = score_black_list
-        self._import_white_list: list = import_white_list
-        self._import_white_list_keys: str = import_white_list_key
+        self._score_black_list: Optional[list] = None
+        self._import_white_list: Optional[list] = None
+        self._import_white_list_keys: Optional[str] = None
 
     @property
     def is_migrated(self):
@@ -108,7 +102,7 @@ class SystemValue:
         SystemStorage.put_migration_flag(context)
         self._is_migrated = True
 
-    def _set_value(self, value_type: 'SystemValueType', value: Any):
+    def _set(self, value_type: 'SystemValueType', value: Any):
         if value_type == SystemValueType.STEP_PRICE:
             self._step_price = value
         elif value_type == SystemValueType.STEP_COSTS:
@@ -116,29 +110,36 @@ class SystemValue:
         elif value_type == SystemValueType.MAX_STEP_LIMITS:
             self._max_step_limits = value
         elif value_type == SystemValueType.REVISION_CODE:
-            self._revision_code = value
+            self._revision_code = Revision(value)
         elif value_type == SystemValueType.SCORE_BLACK_LIST:
             self._score_black_list = value
         elif value_type == SystemValueType.IMPORT_WHITE_LIST:
             self._import_white_list = value
         elif value_type == SystemValueType.IMPORT_WHITE_LIST_KEYS:
-            self._import_white_list_keys= value
+            self._import_white_list_keys = value
         else:
             raise ValueError(f"Invalid value type: {value_type.name}")
 
-    def set_value_before_migration(self, value_type: 'SystemValueType', value: Any):
+    def set_from_icon_service(self, value_type: 'SystemValueType', value: Any, is_open: bool = False):
         """
-        Set value on system value instance before migration.
-        Update entire values simultaneously as it is hard to know which data has been changed.
-        Only Iconservice can set values before migration
+        Set value on system value instance from icon service.
+        There are two cases of calling this method.
+        First: Before migration
+        Second: Initiating 'system value' when opening icon service (i.e. first initiation)
+
+        :param value_type:
+        :param value:
+        :param is_open:
         :return:
         """
-        assert not self._is_migrated
         assert isinstance(value_type, SystemValueType)
-        # Update member variables
-        self._set_value(value_type, value)
+        if not self._is_migrated or is_open is True:
+            self._set(value_type, value)
+        else:
+            raise PermissionError(f"Invalid case of setting system value from icon-service"
+                                  f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_value_after_migration(self, context: 'IconScoreContext', value_type: 'SystemValueType', value: Any):
+    def set_from_governance_score(self, context: 'IconScoreContext', value_type: 'SystemValueType', value: Any):
         """
         Set values on system value and put these into DB.
         Only Governance Score can set values after migration.
@@ -152,7 +153,7 @@ class SystemValue:
         assert isinstance(value_type, SystemValueType)
         # Update member variables
         # Check If value is valid
-        self._set_value(value_type, value)
+        self._set(value_type, value)
         SystemStorage.put_value(context, value_type, value)
 
     def copy(self):
