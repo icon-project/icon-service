@@ -45,18 +45,50 @@ class InterfaceScoreMeta(ABCMeta):
 
 
 class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
+    """
+    An interface class that is used to invoke other SCORE’s external method.
+    """
     def __init__(self, addr_to: 'Address'):
+        """
+        A Python init function. Invoked when the contract call create_interface_score()
+        """
         self.__addr_to = addr_to
+        self.__value = 0
 
     @property
     def addr_to(self) -> 'Address':
+        """
+        The address of SCORE to invoke
+
+        :return: :class:`.Address` SCORE address
+        """
         return self.__addr_to
 
     @property
-    def context(self) -> 'IconScoreContext':
-        context = ContextContainer._get_context()
-        assert context
-        return context
+    def value(self) -> int:
+        """
+        The amount of ICX that the caller SCORE attempts to transfer to the callee SCORE when invoke interface method.
+        After the interface method is invoked, the value is reset to zero.
+
+        :Getter: Returns amount of ICX in loop
+        :Setter: Sets amount of ICX in loop
+        :type: int
+        """
+        return self.__value
+
+    @value.setter
+    def value(self, value: int):
+        self.__value = value
+
+    def set_transfer_value(self, value: int) -> 'InterfaceScore':
+        """
+        Set the value and return instance
+
+        :param value: amount of ICX in loop
+        :return: :class:`.InterfaceScore` Instance of InterfaceScore
+        """
+        self.__value = value
+        return self
 
 
 class Block(object):
