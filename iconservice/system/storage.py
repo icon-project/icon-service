@@ -33,14 +33,23 @@ class Storage(StorageBase):
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(db)
 
-    # Todo: move to the system engine
-    def load_system_value(self, context: 'IconScoreContext') -> 'SystemValue':
+    def load_system_value(self, context: 'IconScoreContext') -> Optional['SystemValue']:
+        """
+        Load system value from DB after migration
+
+        :param context:
+        :return: Return'None' if migration has not been finished
+        """
         is_migrated: bool = self.get_migration_flag(context)
         system_value: Optional['SystemValue'] = None
         if not is_migrated:
             return system_value
 
-        # load from the db
+        system_value: 'SystemValue' = SystemValue(is_migrated)
+        for type_ in SystemValueType:
+            value: Optional[Any] = self.get_value(context, type_)
+            if value is not None:
+                system_value.set_from_icon_service(type_, value, is_open=True)
         return system_value
 
     def get_migration_flag(self, context: 'IconScoreContext') -> bool:
@@ -54,8 +63,9 @@ class Storage(StorageBase):
         # Todo: Check if the value is valid (type check)
         self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
 
-    def get_value(self, context: 'IconScoreContext', type_: 'SystemValueType'):
+    def get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional[Any]:
         assert isinstance(type_, SystemValueType)
-        # Todo: Check if the value is None
-        value: Any = self._db.get(context, self.PREFIX + type_.value)
-        return MsgPackForDB.loads(value)
+        value: Optional[Any] = self._db.get(context, self.PREFIX + type_.value)
+        if value is not None:
+            value = MsgPackForDB.loads(value)
+        return value
