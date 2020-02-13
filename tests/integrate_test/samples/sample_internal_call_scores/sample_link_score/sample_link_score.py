@@ -76,7 +76,8 @@ class SampleLinkScore(IconScoreBase):
     @external(readonly=False)
     def transfer_icx_to_other_score_fail(self, value: int) -> None:
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
-        test_interface.set_transfer_value(value).fallback_via_not_payable_internal_call()
+        test_interface.value = value
+        test_interface.fallback_via_not_payable_internal_call()
 
     @external(readonly=False)
     @payable

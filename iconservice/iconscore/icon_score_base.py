@@ -71,7 +71,6 @@ def interface(func):
         context = ContextContainer._get_context()
         addr_to = calling_obj.addr_to
         amount = calling_obj.value
-        calling_obj.value = 0   # reset to zero
         addr_from: 'Address' = context.current_address
 
         if addr_to is None:

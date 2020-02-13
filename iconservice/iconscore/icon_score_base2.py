@@ -68,7 +68,7 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     def value(self) -> int:
         """
         The amount of ICX that the caller SCORE attempts to transfer to the callee SCORE when invoke interface method.
-        After the interface method is invoked, the value is reset to zero.
+        The value is retained till setting again. If don't want to transfer ICX, reset the value to zero.
 
         :Getter: Returns amount of ICX in loop
         :Setter: Sets amount of ICX in loop
@@ -79,16 +79,6 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     @value.setter
     def value(self, value: int):
         self.__value = value
-
-    def set_transfer_value(self, value: int) -> 'InterfaceScore':
-        """
-        Set the value and return instance
-
-        :param value: amount of ICX in loop
-        :return: :class:`.InterfaceScore` Instance of InterfaceScore
-        """
-        self.__value = value
-        return self
 
 
 class Block(object):
