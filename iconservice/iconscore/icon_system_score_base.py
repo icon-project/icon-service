@@ -15,10 +15,11 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException, IconServiceBaseException
+from ..icon_constant import SystemValueType
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
 
@@ -70,6 +71,18 @@ class IconSystemScoreBase(IconScoreBase):
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         return IconScoreContextUtil.get_owner(self._context, score_address)
+
+    def migrate_system_value(self, data: Dict['SystemValueType', Any]):
+        # Todo: TBD!!
+        pass
+
+    def get_system_value(self, type_: 'SystemValueType') -> Any:
+        # Todo: TBD!!
+        pass
+
+    def set_system_value(self, type_: 'SystemValueType', value: Any):
+        # Todo: TBD!!
+        pass
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True
