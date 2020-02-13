@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
@@ -25,6 +26,12 @@ if TYPE_CHECKING:
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
+
+
+class SystemValueListener(metaclass=ABCMeta):
+    @abstractmethod
+    def update(self, type_: 'SystemValueType', value: Any):
+        pass
 
 
 class SystemValue:
@@ -47,6 +54,12 @@ class SystemValue:
         # Todo: Integrate
         self._import_white_list: Optional[list] = None
         self._import_white_list_keys: Optional[str] = None
+
+        self._listener: Optional['SystemValueListener'] = None
+
+    def add_listener(self, listener: 'SystemValueListener'):
+        assert isinstance(listener, SystemValueListener)
+        self._listener = listener
 
     @property
     def is_migrated(self):
@@ -125,6 +138,8 @@ class SystemValue:
             self._import_white_list_keys = value
         else:
             raise ValueError(f"Invalid value type: {value_type.name}")
+        if self._listener is not None:
+            self._listener.update(value_type, value)
 
     #Todo: set method 통합
     def set_from_icon_service(self, value_type: 'SystemValueType', value: Any, is_open: bool = False):
@@ -164,5 +179,5 @@ class SystemValue:
         SystemStorage.put_value(context, value_type, value)
 
     def copy(self):
-        """Copy governance value"""
+        """Copy system value"""
         return copy.copy(self)
