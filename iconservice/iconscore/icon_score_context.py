@@ -266,7 +266,7 @@ class IconScoreContext(object):
         if not self._term.is_main_prep(dirty_prep.address):
             return
 
-        if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT) or dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
+        if dirty_prep.flags & (PRepFlag.P2P_ENDPOINT | PRepFlag.NODE_ADDRESS):
             self._duplicate_term()
             if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
                 self._term.on_main_prep_changed(TermFlag.MAIN_PREP_P2P_ENDPOINT)

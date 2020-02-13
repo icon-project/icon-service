@@ -15,7 +15,7 @@
 
 import copy
 from enum import auto, IntEnum, Enum
-from typing import TYPE_CHECKING, Tuple, Any
+from typing import TYPE_CHECKING, Tuple, Any, Optional
 
 import iso3166
 
@@ -94,7 +94,7 @@ class PRep(Sortable):
             total_blocks: int = 0,
             validated_blocks: int = 0,
             unvalidated_sequence_blocks: int = 0,
-            node_address: 'Address' = None,
+            node_address: Optional['Address'] = None,
 
     ):
         """
@@ -167,10 +167,7 @@ class PRep(Sortable):
         self._is_frozen: bool = False
 
         # node key
-        if node_address is None:
-            self._node_address: 'Address' = address
-        else:
-            self._node_address: 'Address' = node_address
+        self._node_address = node_address if node_address else address
 
     def is_flags_on(self, flags: 'PRepFlag') -> bool:
         return (self._flags & flags) == flags

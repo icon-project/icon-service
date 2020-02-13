@@ -56,13 +56,11 @@ def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool =
         for key in fields_to_validate:
             if key not in data:
                 raise InvalidParamsException(f'"{key}" not found')
-            elif len(data[key].strip()) < 1:
+            elif isinstance(data[key], str) and len(data[key].strip()) < 1:
                 raise InvalidParamsException("Can not set empty data")
 
     for key in data:
-        if key == ConstantKeys.NODE_ADDRESS:
-            continue
-        if len(data[key].strip()) < 1:
+        if isinstance(data[key], str) and len(data[key].strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.P2P_ENDPOINT:
             _validate_p2p_endpoint(data[key])
@@ -72,6 +70,8 @@ def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool =
             _validate_email(context.revision, data[key])
         elif key == ConstantKeys.COUNTRY:
             _validate_country(data[key])
+        elif key == ConstantKeys.NODE_ADDRESS:
+            pass
 
 
 def _validate_p2p_endpoint(p2p_endpoint: str):

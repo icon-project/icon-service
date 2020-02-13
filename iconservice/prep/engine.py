@@ -128,7 +128,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         for prep in context.storage.prep.get_prep_iterator():
 
-            if prep.status == PRepStatus.ACTIVE and prep.node_address != prep.address:
+            if prep.status == PRepStatus.ACTIVE:
                 self.prep_address_converter.add_node_address_mapper(key=prep.node_address, value=prep.address)
 
             account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
@@ -447,8 +447,7 @@ class Engine(EngineBase, IISSEngineListener):
         else:
             dirty_prep.set_irep(self._initial_irep, context.block.height)
 
-        if dirty_prep.node_address != dirty_prep.address:
-            context.prep_address_converter.add_node_address_mapper(key=dirty_prep.node_address, value=dirty_prep.address)
+        context.prep_address_converter.add_node_address_mapper(key=dirty_prep.node_address, value=dirty_prep.address)
 
         # Update preps in context
         context.put_dirty_prep(dirty_prep)
@@ -626,6 +625,8 @@ class Engine(EngineBase, IISSEngineListener):
                 context.prep_address_converter.add_prev_node_address_mapper(key=dirty_prep.node_address, value=address)
                 context.prep_address_converter.delete_node_address_mapper(dirty_prep.node_address)
                 context.prep_address_converter.add_node_address_mapper(key=node_address, value=address)
+            else:
+                raise InvalidParamsException(f"Invalid NodeAddress : NodeAddress == PRepAddress")
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -704,8 +705,7 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        if dirty_prep.node_address != dirty_prep.address:
-            self.prep_address_converter.delete_node_address_mapper(dirty_prep.node_address)
+        context.prep_address_converter.delete_node_address_mapper(dirty_prep.node_address)
 
         dirty_prep.status = PRepStatus.UNREGISTERED
         dirty_prep.grade = PRepGrade.CANDIDATE

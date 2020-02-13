@@ -624,7 +624,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if prev_block_generator and prev_block_votes:
-            return context.prep_address_converter.node_address_to_operation_address(
+            return context.prep_address_converter.node_address_to_prep_address(
                 prev_block_generator=prev_block_generator,
                 prev_block_votes=prev_block_votes)
 
@@ -687,7 +687,7 @@ class IconServiceEngine(ContextContainer):
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
 
-        context.prep_address_converter.reset_prev_node_address_mapper()
+        context.prep_address_converter.reset_prev_node_address()
 
     @classmethod
     def _check_calculate_done(cls,
