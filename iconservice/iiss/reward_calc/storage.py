@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
 
-from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
+from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType, make_block_produce_info_key
 from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
@@ -249,8 +249,6 @@ class Storage(object):
         assert block_height > 0
 
         self._db.close()
-        # Process compaction before send the RC DB to reward calculator
-        self.process_db_compaction(os.path.join(self._path, self.CURRENT_IISS_DB_NAME))
 
         standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height)
         self._db = self.create_current_db(self._path)
@@ -258,7 +256,42 @@ class Storage(object):
         return RewardCalcDBInfo(standby_db_path, block_height)
 
     @classmethod
-    def process_db_compaction(cls, path: str):
+    def finalize_iiss_db(cls,
+                         prev_end_bh: int,
+                         current_db: 'KeyValueDatabase',
+                         prev_db_path: str):
+        """
+        Finalize iiss db before sending to reward calculator (i.e. RC). Process is below
+            1. Move last Block produce data to previous iiss_db which is to be sent to RC
+            2. db compaction
+
+        :param prev_end_bh: end block height of previous term
+        :param current_db: newly created db
+        :param prev_db_path: iiss_db path which is to be finalized and sent to RC (must has been closed)
+        :return:
+        """
+        bp_key: bytes = make_block_produce_info_key(prev_end_bh)
+        prev_db: 'KeyValueDatabase' = KeyValueDatabase.from_path(prev_db_path)
+        cls._move_data_from_current_db_to_prev_db(bp_key,
+                                                  current_db,
+                                                  prev_db)
+        prev_db.close()
+        cls._process_db_compaction(prev_db_path)
+
+    @classmethod
+    def _move_data_from_current_db_to_prev_db(cls,
+                                              key: bytes,
+                                              current_db: 'KeyValueDatabase',
+                                              prev_db: 'KeyValueDatabase'):
+        value: Optional[bytes] = current_db.get(key)
+        if value is None:
+            return
+
+        current_db.delete(key)
+        prev_db.put(key, value)
+
+    @classmethod
+    def _process_db_compaction(cls, path: str):
         """
         There is compatibility issue between C++ levelDB and go levelDB.
         To solve it, should make DB being compacted before reading (from RC).

@@ -726,7 +726,7 @@ class Engine(EngineBase):
         if not context.is_decentralized():
             return rc_state_hash
 
-        if start != context.block.height:
+        if not context.is_the_first_block_on_decentralization():
             self.put_block_produce_info_to_rc_db(context,
                                                  context.rc_block_batch,
                                                  prev_block_generator,
@@ -857,7 +857,7 @@ class Engine(EngineBase):
         :param prev_block_votes:
         :return:
         """
-        assert context.is_decentralized()
+        assert context.is_decentralized() and not context.is_the_first_block_on_decentralization()
         if prev_block_generator is None or prev_block_votes is None:
             return
 
