@@ -263,6 +263,18 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         balance = self.get_balance(score_addr2)
         self.assertEqual(0, balance, balance)
 
+        # invoke intercall twice and check balance
+        self.score_call(from_=self._admin,
+                        to_=score_addr2,
+                        value=value * 2,
+                        func_name="transfer_icx_to_other_score_twice",
+                        params={"value": hex(value)})
+
+        balance = self.get_balance(score_addr1)
+        self.assertEqual(value * 4, balance, balance)
+        balance = self.get_balance(score_addr2)
+        self.assertEqual(0, balance, balance)
+
     def test_transfer_via_internal_call_error(self):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_score",
