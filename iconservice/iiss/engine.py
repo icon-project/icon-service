@@ -41,7 +41,6 @@ from ..icx import Intent
 from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
 from ..iiss.reward_calc.storage import get_rc_version
-from ..precommit_data_manager import PrecommitFlag
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -694,7 +693,6 @@ class Engine(EngineBase):
                   term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
                   prev_block_votes: Optional[List[Tuple['Address', int]]],
-                  flag: 'PrecommitFlag',
                   rc_db_revision: int) -> Optional[bytes]:
         """Called on IconServiceEngine._after_transaction_process()
 
@@ -702,16 +700,15 @@ class Engine(EngineBase):
         :param term:
         :param prev_block_generator:
         :param prev_block_votes:
-        :param flag:
         :param rc_db_revision:
         :return: rc_state_hash
         """
         version: int = get_rc_version(rc_db_revision)
 
         rc_state_hash: Optional[bytes] = None
-        if self._is_iiss_calc(flag):
+        if self._is_iiss_calc(context.revision_changed_flag):
             self._update_state_db_on_end_calc(context)
-            if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
+            if bool(context.revision_changed_flag & RevisionChangedFlag.GENESIS_IISS_CALC):
                 self._put_header_to_rc_db(context, context.revision, 0, is_genesis_iiss=True)
 
             # get rc_state_hash in calc done response.
@@ -757,8 +754,8 @@ class Engine(EngineBase):
 
     @classmethod
     def _is_iiss_calc(cls,
-                      flag: 'PrecommitFlag') -> bool:
-        return bool(flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC))
+                      flag: 'RevisionChangedFlag') -> bool:
+        return bool(flag & (RevisionChangedFlag.GENESIS_IISS_CALC | RevisionChangedFlag.IISS_CALC))
 
     @classmethod
     def _check_update_calc_period(cls,

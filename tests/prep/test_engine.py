@@ -24,7 +24,6 @@ from iconservice.base.block import Block
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatus, PenaltyReason
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.prep import PRepEngine
 from iconservice.prep.data import PRepContainer, Term
 from iconservice.prep.data.prep import PRep, PRepDictType

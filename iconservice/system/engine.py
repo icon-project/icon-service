@@ -15,18 +15,19 @@
 
 from typing import Optional, TYPE_CHECKING, Any
 
-from ..base.ComponentBase import EngineBase
 from .value import SystemValue
-from ..system import SystemStorage
+from ..base.ComponentBase import EngineBase
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException
-from ..builtin_scores.governance.governance import Governance
 from ..icon_constant import SystemValueType
+from ..iconscore.context.context import ContextContainer
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
-from ..precommit_data_manager import PrecommitData
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext, ContextContainer
+    from ..iconscore.icon_score_context import IconScoreContext
+    from ..system import SystemStorage
+    from ..builtin_scores.governance.governance import Governance
+    from ..precommit_data_manager import PrecommitData
 
 
 class Engine(EngineBase, ContextContainer):
@@ -44,6 +45,10 @@ class Engine(EngineBase, ContextContainer):
 
     def open(self, context: 'IconScoreContext'):
         self._system_value: 'SystemValue' = self._load_system_value(context)
+
+    @property
+    def system_value(self) -> 'SystemValue':
+        return self._system_value
 
     def _load_system_value(self, context: 'IconScoreContext') -> 'SystemValue':
         # Todo: set storage to context

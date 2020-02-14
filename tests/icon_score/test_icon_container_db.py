@@ -17,12 +17,12 @@
 import unittest
 
 from iconservice import Address
-from iconservice.database.db import ContextDatabase, IconScoreDatabase
-from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import InvalidParamsException
+from iconservice.database.db import ContextDatabase, IconScoreDatabase
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
-from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from tests import create_address
 from tests.mock_db import MockKeyValueDatabase
 

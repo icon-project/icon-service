@@ -29,7 +29,8 @@ from iconservice.deploy.storage import IconScoreDeployInfo
 from iconservice.fee import FeeEngine, FeeStorage
 from iconservice.fee.engine import VirtualStepCalculator, FIXED_TERM
 from iconservice.icon_constant import IconScoreContextType, DeployState
-from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.icx import IcxStorage

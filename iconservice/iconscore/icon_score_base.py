@@ -20,21 +20,22 @@ from functools import partial, wraps
 from inspect import isfunction, getmembers, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple
 
+from .context.context import ContextGetter
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
-from .icon_score_context import ContextGetter, IconScoreContextType
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
 from .internal_call import InternalCall
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
+from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision, IconScoreContextType
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:

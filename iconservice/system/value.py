@@ -11,27 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import copy
-from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+
 from ..iconscore.icon_score_step import IconScoreStepCounter
-from ..system import SystemStorage
+
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icon_constant import SystemValueType, IconScoreContextType, Revision
+    from .listener import SystemValueListener
+    from ..system import SystemStorage
 
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
-
-
-class SystemValueListener(metaclass=ABCMeta):
-    @abstractmethod
-    def update(self, type_: 'SystemValueType', value: Any):
-        pass
 
 
 class SystemValue:

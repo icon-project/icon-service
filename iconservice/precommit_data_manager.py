@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag
 from threading import Lock
 from typing import TYPE_CHECKING, Optional, List
 
@@ -72,23 +71,6 @@ def _print_rc_block_batch(rc_block_batch: list) -> List[str]:
     return lines
 
 
-class PrecommitFlag(IntFlag):
-    # Empty
-    NONE = 0x0
-    # Set when STEP price changed on the block
-    STEP_PRICE_CHANGED = 0x10
-    # Set when STEP costs changed on the block
-    STEP_COST_CHANGED = 0x20
-    # Set when Max STEP limits changed on the block
-    STEP_MAX_LIMIT_CHANGED = 0x40
-    # STEP changed flag mask
-    STEP_ALL_CHANGED = 0xf0
-    # CHANGE REVISION
-    GENESIS_IISS_CALC = 0x100
-    IISS_CALC = 0x200
-    DECENTRALIZATION = 0x400
-
-
 class PrecommitData(object):
     def __init__(self,
                  revision: int,
@@ -101,7 +83,6 @@ class PrecommitData(object):
                  prev_block_generator: Optional['Address'],
                  prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'],
-                 precommit_flag: PrecommitFlag,
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
                  main_prep_as_dict: Optional[dict]):
@@ -110,7 +91,6 @@ class PrecommitData(object):
         :param block_batch: changed states for a block
         :param block_result: tx_results made from transactions in a block
         :param score_mapper: newly deployed scores in a block
-        :param precommit_flag: precommit flag
 
         """
         self.revision: int = revision
@@ -124,7 +104,6 @@ class PrecommitData(object):
         self.prev_block_generator = prev_block_generator
         self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
-        self.precommit_flag = precommit_flag
         
         self.is_state_root_hash: bytes = self.block_batch.digest()
         self.rc_state_root_hash: Optional[bytes] = rc_state_root_hash
@@ -151,7 +130,6 @@ class PrecommitData(object):
             f"rc_state_root_hash: {bytes_to_hex(self.rc_state_root_hash)}",
             f"state_root_hash: {bytes_to_hex(self.state_root_hash)}",
             f"prev_block_generator: {self.prev_block_generator}",
-            f"precommit_flag: {self.precommit_flag}",
             "",
             f"added_transactions: {self.added_transactions}",
             f"main_prep_as_dict: {self.main_prep_as_dict}",
