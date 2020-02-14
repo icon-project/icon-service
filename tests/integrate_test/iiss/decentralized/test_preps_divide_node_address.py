@@ -281,8 +281,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx_list: list = [self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(old_addr)})]
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
-        self.assertEqual(tx_results[1].status, False)
-        self.assertEqual(tx_results[1].failure.message, f"Invalid NodeAddress : NodeAddress == PRepAddress")
+        self.assertEqual(tx_results[1].status, True)
 
     def test_scenario3(self):
         # PRepA a ---- a

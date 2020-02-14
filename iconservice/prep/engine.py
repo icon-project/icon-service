@@ -424,7 +424,9 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"not {value}")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
-        validate_prep_data(context, ret_params)
+        validate_prep_data(context=context,
+                           prep_address=address,
+                           tx_data=ret_params)
 
         account: 'Account' = icx_storage.get_account(context, address, Intent.STAKE | Intent.DELEGATED)
 
@@ -432,12 +434,6 @@ class Engine(EngineBase, IISSEngineListener):
         # prep.irep is set to IISS_MIN_IREP by default
 
         dirty_prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
-
-        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
-            if dirty_prep.address != dirty_prep.node_address:
-                raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
-
-        context.prep_address_converter.validate_node_address(dirty_prep.node_address)
 
         dirty_prep.stake = account.stake
         dirty_prep.delegated = account.delegated_amount
@@ -600,32 +596,26 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
-        validate_prep_data(context, kwargs, True)
+        validate_prep_data(context=context,
+                           prep_address=address,
+                           tx_data=ret_params,
+                           set_prep=True)
 
-        if ConstantKeys.P2P_ENDPOINT in kwargs:
-            p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]
-            del kwargs[ConstantKeys.P2P_ENDPOINT]
-            kwargs["p2p_endpoint"] = p2p_endpoint
+        if ConstantKeys.P2P_ENDPOINT in ret_params:
+            p2p_endpoint: str = ret_params[ConstantKeys.P2P_ENDPOINT]
+            del ret_params[ConstantKeys.P2P_ENDPOINT]
+            ret_params["p2p_endpoint"] = p2p_endpoint
 
-        if ConstantKeys.NODE_ADDRESS in kwargs:
-            node_address: 'Address' = kwargs[ConstantKeys.NODE_ADDRESS]
+        if ConstantKeys.NODE_ADDRESS in ret_params:
+            node_address: 'Address' = ret_params[ConstantKeys.NODE_ADDRESS]
+            del ret_params[ConstantKeys.NODE_ADDRESS]
+            ret_params["node_address"] = node_address
 
-            if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
-                if dirty_prep.address != node_address:
-                    raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
-
-            context.prep_address_converter.validate_node_address(node_address)
-
-            del kwargs[ConstantKeys.NODE_ADDRESS]
-            kwargs["node_address"] = node_address
-            if node_address != address:
-                context.prep_address_converter.replace_node_address(prev_node=dirty_prep.node_address,
-                                                                    prep=address,
-                                                                    node=node_address)
-            else:
-                raise InvalidParamsException(f"Invalid NodeAddress : NodeAddress == PRepAddress")
+            context.prep_address_converter.replace_node_address(prev_node=dirty_prep.node_address,
+                                                                prep=address,
+                                                                node=node_address)
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -637,7 +627,7 @@ class Engine(EngineBase, IISSEngineListener):
         )
 
         # Update registration info
-        dirty_prep.set(**kwargs)
+        dirty_prep.set(**ret_params)
 
         context.put_dirty_prep(dirty_prep)
 

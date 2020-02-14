@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import iso3166
 
@@ -25,6 +25,7 @@ from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH,
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from .data import PRep, Term
+    from ..base.address import Address
 
 scheme_pattern = r'^(http:\/\/|https:\/\/)'
 path_pattern = r'(\/\S*)?$'
@@ -41,7 +42,10 @@ EMAIL_LOCAL_PART_MAX = 64
 EMAIL_MAX = 254
 
 
-def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool = False):
+def validate_prep_data(context: 'IconScoreContext',
+                       prep_address: 'Address',
+                       tx_data: dict,
+                       set_prep: bool = False):
     if not set_prep:
         fields_to_validate = (
             ConstantKeys.NAME,
@@ -50,28 +54,41 @@ def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool =
             ConstantKeys.EMAIL,
             ConstantKeys.WEBSITE,
             ConstantKeys.DETAILS,
-            ConstantKeys.P2P_ENDPOINT
+            ConstantKeys.P2P_ENDPOINT,
         )
 
         for key in fields_to_validate:
-            if key not in data:
+            if key not in tx_data:
                 raise InvalidParamsException(f'"{key}" not found')
-            elif isinstance(data[key], str) and len(data[key].strip()) < 1:
+            elif isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
                 raise InvalidParamsException("Can not set empty data")
 
-    for key in data:
-        if isinstance(data[key], str) and len(data[key].strip()) < 1:
+    for key in tx_data:
+        if isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.P2P_ENDPOINT:
-            _validate_p2p_endpoint(data[key])
+            _validate_p2p_endpoint(tx_data[key])
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
-            _validate_uri(data[key])
+            _validate_uri(tx_data[key])
         elif key == ConstantKeys.EMAIL:
-            _validate_email(context.revision, data[key])
+            _validate_email(context.revision, tx_data[key])
         elif key == ConstantKeys.COUNTRY:
-            _validate_country(data[key])
-        elif key == ConstantKeys.NODE_ADDRESS:
-            pass
+            _validate_country(tx_data[key])
+
+    # node address validate
+    is_update_node_address: bool = ConstantKeys.NODE_ADDRESS in tx_data
+    if set_prep and not is_update_node_address:
+        # non changed skip
+        return
+
+    # register_prep or is_update_node_address is True
+    node_address: 'Address' = tx_data[ConstantKeys.NODE_ADDRESS] if is_update_node_address else prep_address
+
+    # must prevent to change node address before divide node address revision.
+    if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+        if prep_address != node_address:
+            raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
+    context.prep_address_converter.validate_node_address(node_address)
 
 
 def _validate_p2p_endpoint(p2p_endpoint: str):
