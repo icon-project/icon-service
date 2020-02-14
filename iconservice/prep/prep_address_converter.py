@@ -15,6 +15,8 @@
 import copy
 from typing import TYPE_CHECKING, Optional, List, Tuple
 
+from ..base.exception import InvalidParamsException
+
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..base.address import Address
@@ -49,31 +51,34 @@ class PRepAddressConverter:
         self._prev_node_address_mapper: dict = context.storage.meta.get_prev_node_address_mapper(context)
 
     def save(self, context: 'IconScoreContext'):
-        context.storage.meta.put_prev_node_address_mapper(context,
-                                                          self._prev_node_address_mapper)
+        context.storage.meta.put_prev_node_address_mapper(context, self._prev_node_address_mapper)
 
-    @property
-    def prev_node_address_mapper(self) -> dict:
-        return self._prev_node_address_mapper
+    def add_node_address(self, node: 'Address', prep: 'Address'):
+        if node in self._node_address_mapper:
+            raise InvalidParamsException(f"assert deprecated node address assigned: {node}")
+        self._node_address_mapper[node] = prep
 
-    @property
-    def node_address_mapper(self) -> dict:
-        return self._node_address_mapper
+    def delete_node_address(self, node: 'Address'):
+        if node in self._node_address_mapper:
+            del self._node_address_mapper[node]
 
-    def add_node_address_mapper(self, key: 'Address', value: 'Address'):
-        self._node_address_mapper[key] = value
+    def _add_prev_node_address(self, node: 'Address', prep: 'Address'):
+        if prep not in self._prev_node_address_mapper.values():
+            self._prev_node_address_mapper[node] = prep
 
-    def add_prev_node_address_mapper(self, key: 'Address', value: 'Address'):
-        if value not in self._prev_node_address_mapper:
-            self._prev_node_address_mapper[key] = value
-
-    def delete_node_address_mapper(self, key: 'Address'):
-        if key in self._node_address_mapper:
-            del self._node_address_mapper[key]
+    def replace_node_address(self, prev_node: 'Address', prep: 'Address', node: 'Address'):
+        self._add_prev_node_address(node=prev_node, prep=prep)
+        self.delete_node_address(node=prev_node)
+        self.add_node_address(node=node, prep=prep)
 
     def copy(self) -> 'PRepAddressConverter':
-        return PRepAddressConverter(prev_node_address_mapper=copy.copy(self.prev_node_address_mapper),
-                                    node_address_mapper=copy.copy(self.node_address_mapper))
+        return PRepAddressConverter(prev_node_address_mapper=copy.copy(self._prev_node_address_mapper),
+                                    node_address_mapper=copy.copy(self._node_address_mapper))
+
+    def rollback(self, context: 'IconScoreContext'):
+        self.reset_prev_node_address()
+        self._node_address_mapper.clear()
+        self.load(context=context)
 
     def node_address_to_prep_address(self,
                                      prev_block_generator: Optional['Address'] = None,
@@ -93,8 +98,14 @@ class PRepAddressConverter:
     def reset_prev_node_address(self):
         self._prev_node_address_mapper.clear()
 
+    def validate_node_address(self,
+                              address: 'Address'):
+
+        if address in self._node_address_mapper:
+            raise InvalidParamsException(f"nodeAddress already in use: {address}")
+
     def _is_contains_node_address(self,
-                                         node_address: 'Address') -> bool:
+                                  node_address: 'Address') -> bool:
         return node_address in self._prev_node_address_mapper or node_address in self._node_address_mapper
 
     def _get_prep_address_from_node_address(self,

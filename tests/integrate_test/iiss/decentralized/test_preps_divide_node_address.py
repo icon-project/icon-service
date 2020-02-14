@@ -55,9 +55,8 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_results[1].failure.message, f"Mismatch nodeAddress and address. "
-                                                        f"'divide node address' revision need to be accepted"
-                                                        f"(revision: {Revision.DIVIDE_NODE_ADDRESS.value})")
+        self.assertEqual(tx_results[1].failure.message,
+                         f"nodeAddress not supported: revision={Revision.DECENTRALIZATION.value}")
 
     def test_prep_set_node_address_before_rev_DIVIDE_NODE_ADDRESS(self):
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
@@ -72,9 +71,8 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_results[1].failure.message, f"Mismatch nodeAddress and address. "
-                                                        f"'divide node address' revision need to be accepted"
-                                                        f"(revision: {Revision.DIVIDE_NODE_ADDRESS.value})")
+        self.assertEqual(tx_results[1].failure.message,
+                         f"nodeAddress not supported: revision={Revision.DECENTRALIZATION.value}")
 
     def test_prep_register_node_address(self):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
@@ -253,7 +251,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, False)
-        self.assertEqual(tx_results[1].failure.message, f"Already assign node address: {str(prep_a)}")
+        self.assertEqual(tx_results[1].failure.message, f"nodeAddress already in use: {str(prep_a)}")
 
     def test_scenario2(self):
         # PRepA a ---- a

@@ -129,7 +129,7 @@ class Engine(EngineBase, IISSEngineListener):
         for prep in context.storage.prep.get_prep_iterator():
 
             if prep.status == PRepStatus.ACTIVE:
-                self.prep_address_converter.add_node_address_mapper(key=prep.node_address, value=prep.address)
+                self.prep_address_converter.add_node_address(node=prep.node_address, prep=prep.address)
 
             account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
 
@@ -196,8 +196,11 @@ class Engine(EngineBase, IISSEngineListener):
         """
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
 
+        self.prep_address_converter.rollback(context)
+
         self.preps = self._load_preps(context)
         self.term = self._load_term(context)
+
         Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end: {self.term}")
 
     def on_block_invoked(
@@ -432,11 +435,9 @@ class Engine(EngineBase, IISSEngineListener):
 
         if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
             if dirty_prep.address != dirty_prep.node_address:
-                raise InvalidParamsException(f"Mismatch nodeAddress and address. "
-                                             f"'divide node address' revision need to be accepted"
-                                             f"(revision: {Revision.DIVIDE_NODE_ADDRESS.value})")
+                raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
 
-        self._validate_node_address(context, dirty_prep.node_address)
+        context.prep_address_converter.validate_node_address(dirty_prep.node_address)
 
         dirty_prep.stake = account.stake
         dirty_prep.delegated = account.delegated_amount
@@ -447,7 +448,7 @@ class Engine(EngineBase, IISSEngineListener):
         else:
             dirty_prep.set_irep(self._initial_irep, context.block.height)
 
-        context.prep_address_converter.add_node_address_mapper(key=dirty_prep.node_address, value=dirty_prep.address)
+        context.prep_address_converter.add_node_address(node=dirty_prep.node_address, prep=dirty_prep.address)
 
         # Update preps in context
         context.put_dirty_prep(dirty_prep)
@@ -613,18 +614,16 @@ class Engine(EngineBase, IISSEngineListener):
 
             if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
                 if dirty_prep.address != node_address:
-                    raise InvalidParamsException(f"Mismatch nodeAddress and address. "
-                                                 f"'divide node address' revision need to be accepted"
-                                                 f"(revision: {Revision.DIVIDE_NODE_ADDRESS.value})")
+                    raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
 
-            self._validate_node_address(context, node_address)
+            context.prep_address_converter.validate_node_address(node_address)
 
             del kwargs[ConstantKeys.NODE_ADDRESS]
             kwargs["node_address"] = node_address
             if node_address != address:
-                context.prep_address_converter.add_prev_node_address_mapper(key=dirty_prep.node_address, value=address)
-                context.prep_address_converter.delete_node_address_mapper(dirty_prep.node_address)
-                context.prep_address_converter.add_node_address_mapper(key=node_address, value=address)
+                context.prep_address_converter.replace_node_address(prev_node=dirty_prep.node_address,
+                                                                    prep=address,
+                                                                    node=node_address)
             else:
                 raise InvalidParamsException(f"Invalid NodeAddress : NodeAddress == PRepAddress")
 
@@ -641,14 +640,6 @@ class Engine(EngineBase, IISSEngineListener):
         dirty_prep.set(**kwargs)
 
         context.put_dirty_prep(dirty_prep)
-
-    @classmethod
-    def _validate_node_address(cls,
-                               context: 'IconScoreContext',
-                               key: 'Address'):
-
-        if key in context.prep_address_converter.node_address_mapper:
-            raise InvalidParamsException(f"Already assign node address: {key}")
 
     def handle_set_governance_variables(self,
                                         context: 'IconScoreContext',
@@ -705,7 +696,7 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
 
-        context.prep_address_converter.delete_node_address_mapper(dirty_prep.node_address)
+        context.prep_address_converter.delete_node_address(node=dirty_prep.node_address)
 
         dirty_prep.status = PRepStatus.UNREGISTERED
         dirty_prep.grade = PRepGrade.CANDIDATE
