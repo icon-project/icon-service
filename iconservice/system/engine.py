@@ -164,6 +164,7 @@ class Engine(EngineBase, ContextContainer):
 
     @staticmethod
     def _get_score_black_list(_, governance_score: 'Governance'):
+        # Todo: should I set default value?
         score_black_list = []
         if hasattr(governance_score, '_score_black_list'):
             score_black_list = [address for address in governance_score._score_black_list]
@@ -171,4 +172,4 @@ class Engine(EngineBase, ContextContainer):
 
     def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         # Set updated system value
-        pass
+        self._system_value: 'SystemValue' = precommit_data.system_value

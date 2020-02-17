@@ -524,6 +524,7 @@ class IconServiceEngine(ContextContainer):
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(context.revision,
                                        rc_db_revision,
+                                       context.system_value,
                                        context.block_batch,
                                        block_result,
                                        context.rc_block_batch,
@@ -1809,8 +1810,8 @@ class IconServiceEngine(ContextContainer):
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
         self._icx_context_db.write_batch(context, state_wal)
-
         context.storage.icx.set_last_block(precommit_data.block_batch.block)
+        context.engine.system.commit(context, precommit_data)
         self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
     @staticmethod
