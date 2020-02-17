@@ -18,14 +18,11 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
 from .. import Address
 from ..iconscore.icon_score_step import IconScoreStepCounter
-
+from ..icon_constant import SystemValueType, IconScoreContextType, Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..icon_constant import SystemValueType, IconScoreContextType, Revision
     from .listener import SystemValueListener
-    from ..system import SystemStorage
-
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
