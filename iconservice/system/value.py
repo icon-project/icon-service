@@ -45,7 +45,7 @@ class SystemValue:
         self._max_step_limits: Optional[dict] = None
 
         # Todo: Integrate to revision
-        self._revision_code: Optional[Revision] = None
+        self._revision_code: Optional[int] = None
         self._revision_name: Optional[str] = None
 
         self._score_black_list: Optional[list] = None
@@ -81,7 +81,7 @@ class SystemValue:
         return self._max_step_limits
 
     @property
-    def revision_code(self):
+    def revision_code(self) -> int:
         return self._revision_code
 
     @property
@@ -122,7 +122,9 @@ class SystemValue:
 
     def _set(self, value_type: 'SystemValueType', value: Any):
         if value_type == SystemValueType.REVISION_CODE:
-            self._revision_code = Revision(value)
+            self._revision_code = value
+        elif value_type == SystemValueType.REVISION_NAME:
+            self._revision_name = value
         elif value_type == SystemValueType.SCORE_BLACK_LIST:
             self._score_black_list = value
         elif value_type == SystemValueType.STEP_PRICE:

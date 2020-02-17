@@ -55,15 +55,12 @@ class Engine(EngineBase, ContextContainer):
     def system_value(self) -> 'SystemValue':
         return self._system_value
 
-    def open(self, context: 'IconScoreContext'):
-        self._system_value: 'SystemValue' = self._load_system_value(context)
-
-    def _load_system_value(self, context: 'IconScoreContext') -> 'SystemValue':
+    def load_system_value(self, context: 'IconScoreContext'):
         system_value: Optional['SystemValue'] = context.storage.system.get_system_value(context)
         if system_value is None:
             system_value: 'SystemValue' = SystemValue(is_migrated=False)
             self._sync_system_value_with_governance(context, system_value)
-        return system_value
+        self._system_value = system_value
 
     def legacy_system_value_update(self,
                                    context: 'IconScoreContext',

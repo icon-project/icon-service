@@ -190,8 +190,6 @@ class IconServiceEngine(ContextContainer):
         # Clean up stale backup files
         self._backup_cleaner.run_on_init(context.block.height)
 
-        self._open_system_component_context(context)
-
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
@@ -209,6 +207,8 @@ class IconServiceEngine(ContextContainer):
 
         self._load_builtin_scores(context,
                                   Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
+
+        context.engine.system.load_system_value(context)
 
         # DO NOT change the values in conf
         self._conf = conf
@@ -241,12 +241,6 @@ class IconServiceEngine(ContextContainer):
         context.block = self._get_last_block()
 
     @classmethod
-    def _open_system_component_context(cls,
-                                       context: 'IconScoreContext'):
-        IconScoreContext.storage.system.open(context)
-        IconScoreContext.engine.system.open(context)
-
-    @classmethod
     def _open_component_context(cls,
                                 context: 'IconScoreContext',
                                 log_dir: str,
@@ -271,9 +265,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.meta.open(context)
         IconScoreContext.storage.rc.open(context, rc_data_path)
-
-        # move to _open_system_component_context
-        # IconScoreContext.storage.system.open(context)
+        IconScoreContext.storage.system.open(context)
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -291,9 +283,7 @@ class IconServiceEngine(ContextContainer):
                                           low_productivity_penalty_threshold,
                                           block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
-
-        # move to _open_system_component_context
-        # IconScoreContext.engine.system.open(context)
+        IconScoreContext.engine.system.open(context)
 
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
