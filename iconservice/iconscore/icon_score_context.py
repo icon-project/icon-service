@@ -91,6 +91,7 @@ class IconScoreContext(SystemValueListener, ABC):
         self.event_logs: Optional[List['EventLog']] = None
         self.traces: Optional[List['Trace']] = None
         self.fee_sharing_proportion = 0  # The proportion of fee by SCORE in percent (0-100)
+        self.step_counter: Optional['IconScoreStepCounter'] = None
 
         self.msg_stack = []
         self.event_log_stack = []
@@ -142,10 +143,6 @@ class IconScoreContext(SystemValueListener, ABC):
 
     def system_value(self) -> Optional['SystemValue']:
         return self._system_value
-
-    @property
-    def step_counter(self) -> Optional['IconScoreStepCounter']:
-        return self._system_value.step_counter
 
     def is_revision_changed(self, target_rev: int) -> bool:
         old: 'SystemValue' = self.engine.system.system_value
@@ -335,8 +332,6 @@ class IconScoreContext(SystemValueListener, ABC):
             pass
         elif type_ == SystemValueType.IMPORT_WHITE_LIST:
             pass
-        elif type_ == SystemValueType.IMPORT_WHITE_LIST_KEYS:
-            pass
         else:
             raise ValueError(f"Invalid value type: {type_.name}")
 
@@ -365,21 +360,28 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
+            system_value: 'SystemValue' = context.engine.system.system_value.copy()
+            system_value.add_listener(context)
+            context._system_value = system_value
             context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
+            context._system_value = context.engine.system.system_value
             context._prep_address_converter = context.engine.prep.prep_address_converter
-
-        cls._set_system_value_to_context(context)
+            
+        cls.set_step_counter(context)
         context._term = context.engine.prep.term
 
     @classmethod
-    def _set_system_value_to_context(cls, context: 'IconScoreContext'):
+    def set_step_counter(cls, context: 'IconScoreContext'):
         is_step_trace_on: bool = cls._is_step_trace_on(context)
-        system_value: 'SystemValue' = context.engine.system.system_value.create(context.type, is_step_trace_on)
-        system_value.add_listener(context)
-        context._system_value = system_value
+        if context.type == IconScoreContextType.ESTIMATION:
+            context.step_counter = context.system_value.create_step_counter(IconScoreContextType.INVOKE,
+                                                                            is_step_trace_on)
+        else:
+            context.step_counter = context.system_value.create_step_counter(context.type,
+                                                                            is_step_trace_on)
 
     @classmethod
     def _is_step_trace_on(cls, context: 'IconScoreContext') -> bool:

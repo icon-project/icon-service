@@ -14,9 +14,9 @@
 
 import copy
 from collections import namedtuple
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
-
+from .. import Address
 from ..iconscore.icon_score_step import IconScoreStepCounter
 
 
@@ -37,6 +37,10 @@ class SystemValue:
         # Todo: consider if the compound data should be immutable
         # Todo: consider about transaction failure
         self._is_migrated: bool = is_migrated
+        self._listener: Optional['SystemValueListener'] = None
+
+        self._service_config: Optional[int] = None
+        self._deployer_list: Optional[List['Address']] = None
 
         # Todo: raise Exception when trying to get variable which is not set (i.e. None)
         self._step_price: Optional[int] = None
@@ -48,12 +52,9 @@ class SystemValue:
         self._revision_name: Optional[str] = None
 
         self._score_black_list: Optional[list] = None
-        # Todo: Integrate
         self._import_white_list: Optional[list] = None
-        self._import_white_list_keys: Optional[str] = None
 
-        self._listener: Optional['SystemValueListener'] = None
-
+    # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
     def add_listener(self, listener: 'SystemValueListener'):
         assert isinstance(listener, SystemValueListener)
         self._listener = listener
@@ -61,6 +62,14 @@ class SystemValue:
     @property
     def is_migrated(self):
         return self._is_migrated
+
+    @property
+    def service_config(self):
+        return self._service_config
+
+    @property
+    def deployer_list(self):
+        return self._deployer_list
 
     @property
     def step_price(self):
@@ -90,10 +99,6 @@ class SystemValue:
     def import_white_list(self):
         return self._import_white_list
 
-    @property
-    def import_white_list_keys(self):
-        return self._import_white_list_keys
-
     def create_step_counter(self,
                             context_type: 'IconScoreContextType',
                             step_trace_flag: bool) -> 'IconScoreStepCounter':
@@ -119,20 +124,20 @@ class SystemValue:
         self._is_migrated = True
 
     def _set(self, value_type: 'SystemValueType', value: Any):
-        if value_type == SystemValueType.STEP_PRICE:
+        if value_type == SystemValueType.REVISION_CODE:
+            self._revision_code = Revision(value)
+        elif value_type == SystemValueType.SCORE_BLACK_LIST:
+            self._score_black_list = value
+        elif value_type == SystemValueType.STEP_PRICE:
             self._step_price = value
         elif value_type == SystemValueType.STEP_COSTS:
             self._step_costs = value
         elif value_type == SystemValueType.MAX_STEP_LIMITS:
             self._max_step_limits = value
-        elif value_type == SystemValueType.REVISION_CODE:
-            self._revision_code = Revision(value)
-        elif value_type == SystemValueType.SCORE_BLACK_LIST:
-            self._score_black_list = value
+        elif value_type == SystemValueType.SERVICE_CONFIG:
+            self._service_config = value
         elif value_type == SystemValueType.IMPORT_WHITE_LIST:
             self._import_white_list = value
-        elif value_type == SystemValueType.IMPORT_WHITE_LIST_KEYS:
-            self._import_white_list_keys = value
         else:
             raise ValueError(f"Invalid value type: {value_type.name}")
         if self._listener is not None:
