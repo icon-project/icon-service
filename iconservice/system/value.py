@@ -115,8 +115,8 @@ class SystemValue:
         :return:
         """
         for key, value in data.items():
-            SystemStorage.put_value(context, key.value, value)
-        SystemStorage.put_migration_flag(context)
+            context.storage.system.put_value(context, key.value, value)
+        context.storage.system.put_migration_flag(context)
         self._is_migrated = True
 
     def _set(self, value_type: 'SystemValueType', value: Any):
