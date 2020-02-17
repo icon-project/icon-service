@@ -33,7 +33,7 @@ class Storage(StorageBase):
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(db)
 
-    def load_system_value(self, context: 'IconScoreContext') -> Optional['SystemValue']:
+    def get_system_value(self, context: 'IconScoreContext') -> Optional['SystemValue']:
         """
         Load system value from DB after migration
 

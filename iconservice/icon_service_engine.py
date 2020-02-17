@@ -190,6 +190,8 @@ class IconServiceEngine(ContextContainer):
         # Clean up stale backup files
         self._backup_cleaner.run_on_init(context.block.height)
 
+        self._open_system_component_context(context)
+
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
@@ -239,6 +241,12 @@ class IconServiceEngine(ContextContainer):
         context.block = self._get_last_block()
 
     @classmethod
+    def _open_system_component_context(cls,
+                                       context: 'IconScoreContext'):
+        IconScoreContext.storage.system.open(context)
+        IconScoreContext.engine.system.open(context)
+
+    @classmethod
     def _open_component_context(cls,
                                 context: 'IconScoreContext',
                                 log_dir: str,
@@ -254,8 +262,6 @@ class IconServiceEngine(ContextContainer):
                                 block_validation_penalty_threshold: int,
                                 ipc_timeout: int,
                                 icon_rc_path: str):
-        # storages MUST be prepared prior to engines because engines use them on open()
-        IconScoreContext.storage.system.open(context)
 
         IconScoreContext.storage.deploy.open(context)
         IconScoreContext.storage.fee.open(context)
@@ -265,6 +271,9 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.meta.open(context)
         IconScoreContext.storage.rc.open(context, rc_data_path)
+
+        # move to _open_system_component_context
+        # IconScoreContext.storage.system.open(context)
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -282,7 +291,9 @@ class IconServiceEngine(ContextContainer):
                                           low_productivity_penalty_threshold,
                                           block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
-        IconScoreContext.engine.system.open(context)
+
+        # move to _open_system_component_context
+        # IconScoreContext.engine.system.open(context)
 
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
@@ -494,7 +505,8 @@ class IconServiceEngine(ContextContainer):
                 block_result.append(tx_result)
                 context.update_batch()
 
-                context.engine.system.sync_system_value_with_governance(context, context.system_value)
+                # for migration governance SCORE
+                context.engine.system.legacy_system_value_update(context, tx_result)
 
                 if context.is_revision_changed(Revision.IISS.value):
                     context.revision_changed_flag |= RevisionChangedFlag.GENESIS_IISS_CALC
