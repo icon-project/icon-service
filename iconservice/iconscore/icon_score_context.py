@@ -118,7 +118,10 @@ class IconScoreContext(SystemValueListener, ABC):
 
     @property
     def revision(self) -> int:
-        return self._system_value.revision_code
+        if self._system_value:
+            return self._system_value.revision_code
+        else:
+            return 0
 
     @property
     def readonly(self):

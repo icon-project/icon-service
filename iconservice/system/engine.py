@@ -51,6 +51,10 @@ class Engine(EngineBase, ContextContainer):
             SystemValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
         }
 
+    @property
+    def system_value(self) -> 'SystemValue':
+        return self._system_value
+
     def open(self, context: 'IconScoreContext'):
         self._system_value: 'SystemValue' = self._load_system_value(context)
 
@@ -90,7 +94,8 @@ class Engine(EngineBase, ContextContainer):
             for type_ in SystemValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
                 system_value.set_from_icon_service(type_, value)
-
+        except ScoreNotFoundException:
+            pass
         finally:
             self._pop_context()
 

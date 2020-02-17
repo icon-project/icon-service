@@ -16,13 +16,13 @@ import copy
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
+from .listener import SystemValueListener
 from .. import Address
-from ..iconscore.icon_score_step import IconScoreStepCounter
 from ..icon_constant import SystemValueType, IconScoreContextType, Revision
+from ..iconscore.icon_score_step import IconScoreStepCounter
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from .listener import SystemValueListener
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
