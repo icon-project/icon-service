@@ -311,7 +311,7 @@ class IconScoreContext(SystemValueListener, ABC):
         elif type_ == SystemValueType.STEP_COSTS:
             self.step_counter.set_step_costs(value)
         elif type_ == SystemValueType.MAX_STEP_LIMITS:
-            self.step_counter.set_max_step_limit(value)
+            self.step_counter.set_max_step_limit(value.get(self.type))
         elif type_ == SystemValueType.SERVICE_CONFIG:
             pass
         elif type_ == SystemValueType.IMPORT_WHITE_LIST:
