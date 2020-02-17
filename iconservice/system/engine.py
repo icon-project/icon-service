@@ -25,9 +25,9 @@ from ..iconscore.icon_score_context_util import IconScoreContextUtil
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..system import SystemStorage
     from ..builtin_scores.governance.governance import Governance
     from ..precommit_data_manager import PrecommitData
+    from ..iconscore.icon_score_result import TransactionResult
 
 
 class Engine(EngineBase, ContextContainer):
@@ -46,30 +46,36 @@ class Engine(EngineBase, ContextContainer):
     def open(self, context: 'IconScoreContext'):
         self._system_value: 'SystemValue' = self._load_system_value(context)
 
-    @property
-    def system_value(self) -> 'SystemValue':
-        return self._system_value
-
     def _load_system_value(self, context: 'IconScoreContext') -> 'SystemValue':
-        # Todo: set storage to context
-        system_value: Optional['SystemValue'] = SystemStorage.load_system_value(context)
+        system_value: Optional['SystemValue'] = context.storage.system.get_system_value(context)
         if system_value is None:
             system_value: 'SystemValue' = SystemValue(is_migrated=False)
-            self.sync_system_value_with_governance(context, system_value)
-            pass
+            self._sync_system_value_with_governance(context, system_value)
         return system_value
 
-    def sync_system_value_with_governance(self,
-                                          context: 'IconScoreContext',
-                                          system_value: 'SystemValue'):
-        # Todo: context만 있어도 되지 않을까 -> 확인결과 load 부분에서도 공동으로 쓰기위해서는 system_value를 받을 필요 있음
+    def legacy_system_value_update(self,
+                                   context: 'IconScoreContext',
+                                   tx_result: 'TransactionResult'):
+
+        if context.system_value.is_migrated:
+            return
+
+        if tx_result.to != GOVERNANCE_SCORE_ADDRESS or tx_result.status != TransactionResult.SUCCESS:
+            return
+
+        self._sync_system_value_with_governance(context, context.system_value)
+
+    def _sync_system_value_with_governance(self,
+                                           context: 'IconScoreContext',
+                                           system_value: 'SystemValue'):
         """
         Syncronize system value with governance value.
         :param context:
         :param system_value:
         :return:
         """
-        assert not system_value.is_migrated
+        assert system_value.is_migrated
+
         try:
             self._push_context(context)
             governance_score = self._get_governance_score(context)
