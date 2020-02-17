@@ -54,6 +54,7 @@ class SystemValue:
 
         self._listener: Optional['SystemValueListener'] = None
 
+    # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
     def add_listener(self, listener: 'SystemValueListener'):
         assert isinstance(listener, SystemValueListener)
         self._listener = listener
