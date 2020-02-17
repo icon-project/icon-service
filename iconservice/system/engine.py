@@ -74,7 +74,7 @@ class Engine(EngineBase, ContextContainer):
         :param system_value:
         :return:
         """
-        assert system_value.is_migrated
+        assert not system_value.is_migrated
 
         try:
             self._push_context(context)
