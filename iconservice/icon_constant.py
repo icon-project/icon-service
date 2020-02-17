@@ -199,6 +199,8 @@ class IconServiceFlag(IntFlag):
 
 class SystemValueType(Enum):
     SERVICE_CONFIG = b'service_config'
+    DEPLOYER_LIST = b'deployer_list'
+
     STEP_PRICE = b'step_price'
     STEP_COSTS = b'step_costs'
     MAX_STEP_LIMITS = b'max_step_limits'
