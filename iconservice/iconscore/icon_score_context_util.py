@@ -153,19 +153,9 @@ class IconScoreContextUtil(object):
 
         score_deploy_path: str = get_score_deploy_path(context.score_root_path, address, tx_hash)
         score_package_name: str = get_package_name_by_address_and_tx_hash(address, tx_hash)
-        import_whitelist: dict = IconScoreContextUtil._get_import_whitelist(context)
+        import_whitelist: dict = context.system_value.import_white_list
 
         ScorePackageValidator.execute(import_whitelist, score_deploy_path, score_package_name)
-
-    @staticmethod
-    def _get_import_whitelist(context: 'IconScoreContext') -> dict:
-        governance_score =\
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        if hasattr(governance_score, 'import_white_list_cache'):
-            return governance_score.import_white_list_cache
-
-        return {"iconservice": ['*']}
 
     @staticmethod
     def validate_score_blacklist(context: 'IconScoreContext', score_address: 'Address') -> None:
@@ -202,24 +192,12 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:
-        service_flag = IconScoreContextUtil._get_service_flag(context)
+        service_flag = context.system_value.service_config
         return IconScoreContextUtil._is_flag_on(service_flag, flag)
 
     @staticmethod
     def _is_flag_on(src_flag: int, dst_flag: int) -> bool:
         return src_flag & dst_flag == dst_flag
-
-    @staticmethod
-    def _get_service_flag(context: 'IconScoreContext') -> int:
-        governance_score = \
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        service_config = context.icon_service_flag
-        try:
-            service_config = governance_score.service_config
-        except AttributeError:
-            pass
-        return service_config
 
     @staticmethod
     def get_tx_hashes_by_score_address(context: 'IconScoreContext',
