@@ -57,11 +57,11 @@ class SystemValue:
         self._listener = listener
 
     @property
-    def is_migrated(self):
+    def is_migrated(self) -> bool:
         return self._is_migrated
 
     @property
-    def service_config(self):
+    def service_config(self) -> int:
         return self._service_config
 
     @property
@@ -73,7 +73,7 @@ class SystemValue:
         return self._step_price
 
     @property
-    def step_costs(self):
+    def step_costs(self) -> dict:
         return self._step_costs
 
     @property

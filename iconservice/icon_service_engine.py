@@ -102,7 +102,6 @@ class IconServiceEngine(ContextContainer):
 
         """
         self._icx_context_db = None
-        self._step_counter_factory = None
         self._icon_pre_validator = None
         self._deposit_handler = None
         self._context_factory = None
@@ -303,7 +302,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.close(context)
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
-        IconScoreContext.storage.system.close()
+        IconScoreContext.storage.system.close(context)
 
     @classmethod
     def get_ready_future(cls):
@@ -1076,14 +1075,14 @@ class IconServiceEngine(ContextContainer):
             self._push_context(context)
 
             step_price: int = context.step_counter.step_price
-            minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+            minimum_step: int = context.system_value.step_costs[StepType.DEFAULT]
 
             if 'data' in params:
                 # minimum_step is the sum of
                 # default STEP cost and input STEP costs if data field exists
                 data = params['data']
                 input_size = get_input_data_size(context.revision, data)
-                minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
+                minimum_step += input_size * context.system_value.step_costs[StepType.INPUT]
 
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 

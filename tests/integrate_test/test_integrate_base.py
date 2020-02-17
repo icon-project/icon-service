@@ -212,7 +212,6 @@ class TestIntegrateBase(TestCase):
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
-        self.icon_service_engine._set_revision_to_context(context)
         if context.is_decentralized():
             is_block_editable = True
 
