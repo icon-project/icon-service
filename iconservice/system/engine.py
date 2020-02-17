@@ -22,13 +22,14 @@ from ..base.exception import ScoreNotFoundException
 from ..icon_constant import SystemValueType, IconServiceFlag, IconScoreContextType
 from ..iconscore.context.context import ContextContainer
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
+from ..iconscore.icon_score_result import TransactionResult
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..builtin_scores.governance.governance import Governance
     from ..precommit_data_manager import PrecommitData
-    from ..iconscore.icon_score_result import TransactionResult
+
 
 
 class Engine(EngineBase, ContextContainer):

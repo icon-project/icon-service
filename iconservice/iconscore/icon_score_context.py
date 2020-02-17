@@ -147,7 +147,7 @@ class IconScoreContext(SystemValueListener, ABC):
         old: 'SystemValue' = self.engine.system.system_value
         new: 'SystemValue' = self.system_value
 
-        return old.revision_code != new.revision_code and new.revision_code.value == target_rev
+        return old.revision_code != new.revision_code and new.revision_code == target_rev
 
     def is_decentralized(self) -> bool:
         return self._term is not None
@@ -300,16 +300,19 @@ class IconScoreContext(SystemValueListener, ABC):
 
     def update(self, type_: 'SystemValueType', value: Any):
         # system value update listener
-
-        if type_ == SystemValueType.STEP_PRICE:
+        if type_ == SystemValueType.REVISION_CODE:
+            pass
+        elif type_ == SystemValueType.REVISION_NAME:
+            pass
+        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+            pass
+        elif type_ == SystemValueType.STEP_PRICE:
             self.step_counter.set_step_price(value)
         elif type_ == SystemValueType.STEP_COSTS:
             self.step_counter.set_step_costs(value)
         elif type_ == SystemValueType.MAX_STEP_LIMITS:
             self.step_counter.set_max_step_limit(value)
-        elif type_ == SystemValueType.REVISION_CODE:
-            pass
-        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+        elif type_ == SystemValueType.SERVICE_CONFIG:
             pass
         elif type_ == SystemValueType.IMPORT_WHITE_LIST:
             pass
