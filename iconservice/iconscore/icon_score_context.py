@@ -310,8 +310,6 @@ class IconScoreContext(SystemValueListener, ABC):
             pass
         elif type_ == SystemValueType.IMPORT_WHITE_LIST:
             pass
-        elif type_ == SystemValueType.IMPORT_WHITE_LIST_KEYS:
-            pass
         else:
             raise ValueError(f"Invalid value type: {type_.name}")
 

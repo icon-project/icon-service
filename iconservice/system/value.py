@@ -52,9 +52,7 @@ class SystemValue:
         self._revision_name: Optional[str] = None
 
         self._score_black_list: Optional[list] = None
-        # Todo: Integrate
         self._import_white_list: Optional[list] = None
-        self._import_white_list_keys: Optional[str] = None
 
     # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
     def add_listener(self, listener: 'SystemValueListener'):
@@ -101,10 +99,6 @@ class SystemValue:
     def import_white_list(self):
         return self._import_white_list
 
-    @property
-    def import_white_list_keys(self):
-        return self._import_white_list_keys
-
     def create_step_counter(self,
                             context_type: 'IconScoreContextType',
                             step_trace_flag: bool) -> 'IconScoreStepCounter':
@@ -142,14 +136,8 @@ class SystemValue:
             self._max_step_limits = value
         elif value_type == SystemValueType.SERVICE_CONFIG:
             self._service_config = value
-        elif value_type == SystemValueType.DEPLOYER_LIST:
-            self._deployer_list = value
-        elif value_type == SystemValueType.IMPORT_WHITE_LIST_KEYS:
-            self._import_white_list_keys = value
         elif value_type == SystemValueType.IMPORT_WHITE_LIST:
             self._import_white_list = value
-        elif value_type == SystemValueType.IMPORT_WHITE_LIST_KEYS:
-            self._import_white_list_keys = value
         else:
             raise ValueError(f"Invalid value type: {value_type.name}")
         if self._listener is not None:

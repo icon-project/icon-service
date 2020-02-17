@@ -199,7 +199,6 @@ class IconServiceFlag(IntFlag):
 
 class SystemValueType(Enum):
     SERVICE_CONFIG = b'service_config'
-    DEPLOYER_LIST = b'deployer_list'
 
     STEP_PRICE = b'step_price'
     STEP_COSTS = b'step_costs'
@@ -210,7 +209,6 @@ class SystemValueType(Enum):
 
     SCORE_BLACK_LIST = b'score_black_list'
     IMPORT_WHITE_LIST = b'import_white_list'
-    IMPORT_WHITE_LIST_KEYS = b'import_white_list_key'
 
 
 @unique
