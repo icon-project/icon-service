@@ -174,7 +174,7 @@ class SystemValue:
         # Update member variables
         # Check If value is valid
         self._set(value_type, value)
-        SystemStorage.put_value(context, value_type, value)
+        context.storage.system.put_value(context, value_type, value)
 
     def copy(self):
         """Copy system value"""
