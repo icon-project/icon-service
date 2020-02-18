@@ -19,16 +19,16 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, List
 from .listener import SystemValueListener
 from .. import Address
 from ..icon_constant import SystemValueType, IconScoreContextType, Revision
-from ..iconscore.icon_score_step import IconScoreStepCounter
+from ..iconscore.icon_score_step import IconScoreStepCounter, StepType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
-ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
 
 
-class SystemValue:
+
+class SystemValue(object):
 
     def __init__(self, is_migrated: bool):
         # Todo: consider if the compound data should be immutable
@@ -120,64 +120,90 @@ class SystemValue:
         context.storage.system.put_migration_flag(context)
         self._is_migrated = True
 
-    def _set(self, value_type: 'SystemValueType', value: Any):
-        if value_type == SystemValueType.REVISION_CODE:
+    def _set(self, type_: 'SystemValueType', value: Any):
+        value = self._convert_format_before_set(type_, value)
+        if type_ == SystemValueType.REVISION_CODE:
             self._revision_code = value
-        elif value_type == SystemValueType.REVISION_NAME:
+        elif type_ == SystemValueType.REVISION_NAME:
             self._revision_name = value
-        elif value_type == SystemValueType.SCORE_BLACK_LIST:
+        elif type_ == SystemValueType.SCORE_BLACK_LIST:
             self._score_black_list = value
-        elif value_type == SystemValueType.STEP_PRICE:
+        elif type_ == SystemValueType.STEP_PRICE:
             self._step_price = value
-        elif value_type == SystemValueType.STEP_COSTS:
+        elif type_ == SystemValueType.STEP_COSTS:
             self._step_costs = value
-        elif value_type == SystemValueType.MAX_STEP_LIMITS:
+        elif type_ == SystemValueType.MAX_STEP_LIMITS:
             self._max_step_limits = value
-        elif value_type == SystemValueType.SERVICE_CONFIG:
+        elif type_ == SystemValueType.SERVICE_CONFIG:
             self._service_config = value
-        elif value_type == SystemValueType.IMPORT_WHITE_LIST:
+        elif type_ == SystemValueType.IMPORT_WHITE_LIST:
             self._import_white_list = value
         else:
-            raise ValueError(f"Invalid value type: {value_type.name}")
+            raise ValueError(f"Invalid value type: {type_.name}")
         if self._listener is not None:
-            self._listener.update(value_type, value)
+            self._listener.update(type_, value)
 
-    #Todo: set method 통합
-    def set_from_icon_service(self, value_type: 'SystemValueType', value: Any, is_open: bool = False):
+    @staticmethod
+    def _convert_format_before_set(type_: 'SystemValueType', value: Any):
+        converted_value: Any = value
+        if type_ == SystemValueType.MAX_STEP_LIMITS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                if isinstance(key, IconScoreContextType):
+                    converted_value[key] = value
+                elif isinstance(key, str):
+                    if key == "invoke":
+                        converted_value[IconScoreContextType.INVOKE] = value
+                    elif key == "query":
+                        converted_value[IconScoreContextType.QUERY] = value
+        elif type_ == SystemValueType.STEP_COSTS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                if isinstance(key, StepType):
+                    converted_value[key] = value
+                elif isinstance(key, str):
+                    try:
+                        converted_value[StepType(key)] = value
+                    except ValueError:
+                        # Pass the unknown step type
+                        pass
+        return converted_value
+
+    # Consider about integrating set method
+    def set_by_icon_service(self, type_: 'SystemValueType', value: Any, is_open: bool = False):
         """
         Set value on system value instance from icon service.
         There are two cases of calling this method.
         First: Before migration
         Second: Initiating 'system value' when opening icon service (i.e. first initiation)
 
-        :param value_type:
+        :param type_:
         :param value:
         :param is_open:
         :return:
         """
-        assert isinstance(value_type, SystemValueType)
+        assert isinstance(type_, SystemValueType)
         if not self._is_migrated or is_open is True:
-            self._set(value_type, value)
+            self._set(type_, value)
         else:
             raise PermissionError(f"Invalid case of setting system value from icon-service"
                                   f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_from_governance_score(self, context: 'IconScoreContext', value_type: 'SystemValueType', value: Any):
+    def set_by_governance_score(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
         """
         Set values on system value and put these into DB.
         Only Governance Score can set values after migration.
         :param context:
-        :param value_type:
+        :param type_:
         :param value:
         :return:
         """
-        # Todo: Only GS can access. IS can not call directly (Inspect caller)
         assert self._is_migrated
-        assert isinstance(value_type, SystemValueType)
+        assert isinstance(type_, SystemValueType)
         # Update member variables
         # Check If value is valid
-        self._set(value_type, value)
-        context.storage.system.put_value(context, value_type, value)
+        self._set(type_, value)
+        context.storage.system.put_value(context, type_, value)
 
     def copy(self):
         """Copy system value"""
