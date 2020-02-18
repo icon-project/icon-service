@@ -22,6 +22,7 @@ from .icon_score_step import StepType
 from ..base.exception import AccessDeniedException, IconServiceBaseException
 from ..icon_constant import SystemValueType, IconScoreContextType
 from ..iconscore.icon_score_base import IconScoreBase
+from ..system.value import SystemValueConverter
 from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
@@ -96,22 +97,7 @@ class IconSystemScoreBase(IconScoreBase):
             value = self._context.system_value.service_config
         else:
             raise ValueError(f"Invalid value type: {type_.name}")
-        converted_value: Any = self._convert_format_from_sv_to_gv(type_, value)
-        return converted_value
-
-    @staticmethod
-    def _convert_format_from_sv_to_gv(type_: 'SystemValueType', value: Any) -> Any:
-        converted_value: Any = value
-        if type_ == SystemValueType.MAX_STEP_LIMITS:
-            converted_value: dict = {}
-            for key, value in value.items():
-                assert isinstance(key, IconScoreContextType)
-                converted_value[key.name.lower()] = value
-        elif type_ == SystemValueType.STEP_COSTS:
-            converted_value: dict = {}
-            for key, value in value.items():
-                assert isinstance(key, StepType)
-                converted_value[key.value] = value
+        converted_value: Any = SystemValueConverter.convert_for_governance_score(type_, value)
         return converted_value
 
     def set_system_value(self, type_: 'SystemValueType', value: Any):
