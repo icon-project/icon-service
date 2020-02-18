@@ -78,7 +78,7 @@ class Engine(EngineBase, IISSEngineListener):
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
-        self.prep_address_converter: 'PRepAddressConverter' = PRepAddressConverter()
+        self.prep_address_converter: 'PRepAddressConverter' = None
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
@@ -95,11 +95,11 @@ class Engine(EngineBase, IISSEngineListener):
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
 
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
+
         self.preps = self._load_preps(context)
         self.term = self._load_term(context)
         self._initial_irep = irep
-
-        self.prep_address_converter.load(context)
 
         context.engine.iiss.add_listener(self)
 
@@ -196,7 +196,7 @@ class Engine(EngineBase, IISSEngineListener):
         """
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
 
-        self.prep_address_converter.rollback(context)
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
 
         self.preps = self._load_preps(context)
         self.term = self._load_term(context)

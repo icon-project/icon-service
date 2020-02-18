@@ -791,7 +791,7 @@ class IconServiceEngine(ContextContainer):
                                                                            flag,
                                                                            rc_db_revision)
         context.update_batch()
-        context.prep_address_converter.save(context)
+        context.storage.meta.put_prep_address_converter(context, context.prep_address_converter)
 
         if main_prep_as_dict is not None:
             Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")

@@ -16,13 +16,14 @@
 
 from typing import TYPE_CHECKING, Tuple, List
 
-from iconservice.database.db import MetaContextDatabase, ContextDatabase
 from ..base.ComponentBase import StorageBase
-from ..base.address import Address
+from ..database.db import MetaContextDatabase, ContextDatabase
+from ..prep.prep_address_converter import PRepAddressConverter
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..base.address import Address
 
 
 class Storage(StorageBase):
@@ -82,20 +83,12 @@ class Storage(StorageBase):
         _version = data[0]
         return data[1]
 
-    def put_prev_node_address_mapper(self,
-                                     context: 'IconScoreContext',
-                                     prev_node_address_mapper: dict):
-        version = 0
-
-        value: bytes = MsgPackForDB.dumps([version, prev_node_address_mapper])
+    def put_prep_address_converter(self,
+                                   context: 'IconScoreContext',
+                                   prep_address_converter: 'PRepAddressConverter'):
+        value: bytes = prep_address_converter.to_bytes()
         self._db.put(context, self._KEY_PREV_NODE_ADDRESS_MAPPER, value)
 
-    def get_prev_node_address_mapper(self, context: 'IconScoreContext') -> dict:
+    def get_prep_address_converter(self, context: 'IconScoreContext') -> 'PRepAddressConverter':
         value: bytes = self._db.get(context, self._KEY_PREV_NODE_ADDRESS_MAPPER)
-        if value is None:
-            return {}
-        data: list = MsgPackForDB.loads(value)
-        _version = data[0]
-
-        data: dict = data[1]
-        return data
+        return PRepAddressConverter.from_bytes(value)
