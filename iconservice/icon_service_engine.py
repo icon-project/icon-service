@@ -344,34 +344,6 @@ class IconServiceEngine(ContextContainer):
             raise ScoreNotFoundException('Governance SCORE not found')
         return governance_score
 
-    @staticmethod
-    def _get_step_price_from_governance(context: 'IconScoreContext', governance) -> int:
-        step_price = 0
-        # Gets the step price if the fee flag is on
-        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
-            step_price = governance.getStepPrice()
-
-        return step_price
-
-    @staticmethod
-    def _get_step_costs_from_governance(governance) -> dict:
-        step_costs = {}
-        # Gets the step costs
-        for key, value in governance.getStepCosts().items():
-            try:
-                step_costs[StepType(key)] = value
-            except ValueError:
-                # Pass the unknown step type
-                pass
-
-        return step_costs
-
-    @staticmethod
-    def _get_step_max_limits_from_governance(governance) -> dict:
-        # Gets the max step limit
-        return {IconScoreContextType.INVOKE: governance.getMaxStepLimit("invoke"),
-                IconScoreContextType.QUERY: governance.getMaxStepLimit("query")}
-
     def _validate_deployer_whitelist(self, context: 'IconScoreContext', params: dict):
         data_type = params.get('dataType')
 
