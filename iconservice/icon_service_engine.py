@@ -495,7 +495,7 @@ class IconServiceEngine(ContextContainer):
                 context.update_batch()
 
                 # for migration governance SCORE
-                context.engine.system.legacy_system_value_update(context, tx_result)
+                context.engine.system.update_system_value(context, tx_result)
 
                 if context.is_revision_changed(Revision.IISS.value):
                     context.revision_changed_flag |= RevisionChangedFlag.GENESIS_IISS_CALC

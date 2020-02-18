@@ -21,5 +21,5 @@ if TYPE_CHECKING:
 
 class SystemValueListener(metaclass=ABCMeta):
     @abstractmethod
-    def update(self, type_: 'SystemValueType', value: Any):
+    def update_system_value(self, type_: 'SystemValueType', value: Any):
         pass

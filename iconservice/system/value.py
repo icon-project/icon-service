@@ -99,9 +99,12 @@ class SystemValue(object):
         # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
         # Todo: consider if the compound data should be immutable
         # Todo: consider about transaction failure
+        # Todo: Freeze data
+        # Todo: Consider about integrating set method
         # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
         self._listener: Optional['SystemValueListener'] = None
+        self._batch: dict = {}
 
         self._service_config: Optional[int] = None
 
@@ -119,40 +122,70 @@ class SystemValue(object):
         assert isinstance(listener, SystemValueListener)
         self._listener = listener
 
+    def _get_from_batch(self, type_: 'SystemValueType') -> Optional[Any]:
+        if type_ in self._batch:
+            return SystemValueConverter.convert_for_icon_service(type_, self._batch)
+        return None
+
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
     @property
     def service_config(self) -> int:
+        # Change to decorator
+        service_config: Optional[Any] = self._get_from_batch(SystemValueType.SERVICE_CONFIG)
+        if service_config is not None:
+            return service_config
         return self._service_config
 
     @property
     def step_price(self) -> int:
+        step_price: Optional[Any] = self._get_from_batch(SystemValueType.STEP_PRICE)
+        if step_price is not None:
+            return step_price
         return self._step_price
 
     @property
     def step_costs(self) -> Dict['StepType', int]:
+        step_costs: Optional[Any] = self._get_from_batch(SystemValueType.STEP_COSTS)
+        if step_costs is not None:
+            return step_costs
         return self._step_costs
 
     @property
     def max_step_limits(self) -> Dict['IconScoreContextType', int]:
+        max_step_limits: Optional[Any] = self._get_from_batch(SystemValueType.MAX_STEP_LIMITS)
+        if max_step_limits is not None:
+            return max_step_limits
         return self._max_step_limits
 
     @property
     def revision_code(self) -> int:
+        revision_code: Optional[Any] = self._get_from_batch(SystemValueType.REVISION_CODE)
+        if revision_code is not None:
+            return revision_code
         return self._revision_code
 
     @property
     def revision_name(self) -> str:
+        revision_name: Optional[Any] = self._get_from_batch(SystemValueType.REVISION_NAME)
+        if revision_name is not None:
+            return revision_name
         return self._revision_name
 
     @property
     def score_black_list(self) -> List['Address']:
+        score_black_list: Optional[Any] = self._get_from_batch(SystemValueType.SCORE_BLACK_LIST)
+        if score_black_list is not None:
+            return score_black_list
         return self._score_black_list
 
     @property
     def import_white_list(self) -> Dict[str, List[str]]:
+        import_white_list: Optional[Any] = self._get_from_batch(SystemValueType.IMPORT_WHITE_LIST)
+        if import_white_list is not None:
+            return import_white_list
         return self._import_white_list
 
     def create_step_counter(self,
@@ -174,9 +207,17 @@ class SystemValue(object):
         :param data:
         :return:
         """
-        for key, value in data.items():
-            context.storage.system.put_value(context, key.value, value)
+        for type_, value in data.items():
+            context.storage.system.put_value(context, type_, value)
         context.storage.system.put_migration_flag(context)
+        self._batch["is_migrated"] = True
+
+    def is_migration_success(self) -> bool:
+        if self._batch.get("is_migrated"):
+            return True
+        return False
+
+    def update_migration(self):
         self._is_migrated = True
 
     def _set(self, type_: 'SystemValueType', value: Any):
@@ -200,9 +241,8 @@ class SystemValue(object):
         else:
             raise ValueError(f"Invalid value type: {type_.name}")
         if self._listener is not None:
-            self._listener.update(type_, value)
+            self._listener.update_system_value(type_, value)
 
-    # Consider about integrating set method
     def set_by_icon_service(self, type_: 'SystemValueType', value: Any, is_open: bool = False):
         """
         Set value on system value instance from icon service.
@@ -235,8 +275,18 @@ class SystemValue(object):
         assert isinstance(type_, SystemValueType)
         # Update member variables
         # Check If value is valid
-        self._set(type_, value)
+        self._batch[type_] = value
         context.storage.system.put_value(context, type_, value)
+
+    def is_updated(self) -> bool:
+        return bool(len(self._batch))
+
+    def update_batch(self):
+        for type_, value in self._batch.items():
+            self._set(type_, value)
+
+    def clear_batch(self):
+        self._batch.clear()
 
     def copy(self) -> 'SystemValue':
         """Copy system value"""

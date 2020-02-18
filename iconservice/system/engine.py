@@ -62,17 +62,19 @@ class Engine(EngineBase, ContextContainer):
             self._sync_system_value_with_governance(context, system_value)
         self._system_value = system_value
 
-    def legacy_system_value_update(self,
-                                   context: 'IconScoreContext',
-                                   tx_result: 'TransactionResult'):
-
+    def update_system_value(self,
+                            context: 'IconScoreContext',
+                            tx_result: 'TransactionResult'):
         if context.system_value.is_migrated:
-            return
+            if context.system_value.is_updated() and tx_result.status == TransactionResult.SUCCESS:
+                context.system_value.update_batch()
+        else:
+            if tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
+                self._sync_system_value_with_governance(context, context.system_value)
+            if context.system_value.is_migration_success():
+                context.system_value.update_migration()
+        context.system_value.clear_batch()
 
-        if tx_result.to != GOVERNANCE_SCORE_ADDRESS or tx_result.status != TransactionResult.SUCCESS:
-            return
-
-        self._sync_system_value_with_governance(context, context.system_value)
 
     def _sync_system_value_with_governance(self,
                                            context: 'IconScoreContext',

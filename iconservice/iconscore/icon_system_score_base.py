@@ -75,8 +75,7 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def migrate_system_value(self, data: Dict['SystemValueType', Any]):
-        for type_, value in data.items():
-            self._context.system_value.set_by_governance_score(self._context, type_, value)
+        self._context.system_value.migrate(self._context, data)
 
     def get_system_value(self, type_: 'SystemValueType') -> Any:
         if type_ == SystemValueType.REVISION_CODE:
