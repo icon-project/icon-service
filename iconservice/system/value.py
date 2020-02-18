@@ -27,31 +27,95 @@ if TYPE_CHECKING:
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 
 
+class SystemValueConverter(object):
+    @staticmethod
+    def convert_for_icon_service(type_: 'SystemValueType', value: Any) -> Any:
+        """
+        Convert system value data type for icon service.
+        Some data need to be converted for enhancing efficiency.
+        :param type_:
+        :param value:
+        :return:
+        """
+        converted_value: Any = value
+        if type_ == SystemValueType.MAX_STEP_LIMITS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                if isinstance(key, IconScoreContextType):
+                    converted_value[key] = value
+                elif isinstance(key, str):
+                    if key == "invoke":
+                        converted_value[IconScoreContextType.INVOKE] = value
+                    elif key == "query":
+                        converted_value[IconScoreContextType.QUERY] = value
+                else:
+                    raise ValueError(f"Invalid data type: "
+                                     f"system value: {SystemValueType.name} "
+                                     f"key type: {type(key)}")
+        elif type_ == SystemValueType.STEP_COSTS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                if isinstance(key, StepType):
+                    converted_value[key] = value
+                elif isinstance(key, str):
+                    try:
+                        converted_value[StepType(key)] = value
+                    except ValueError:
+                        # Pass the unknown step type
+                        pass
+                else:
+                    raise ValueError(f"Invalid data type: "
+                                     f"system value: {SystemValueType.name} "
+                                     f"key type: {type(key)}")
+        return converted_value
+
+    @staticmethod
+    def convert_for_governance_score(type_: 'SystemValueType', value: Any) -> Any:
+        """
+        Convert system value data type for governance score
+        Some data which have been converted for enhancing efficiency need to be converted.
+
+        :param type_:
+        :param value:
+        :return:
+        """
+        converted_value: Any = value
+        if type_ == SystemValueType.MAX_STEP_LIMITS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                assert isinstance(key, IconScoreContextType)
+                converted_value[key.name.lower()] = value
+        elif type_ == SystemValueType.STEP_COSTS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                assert isinstance(key, StepType)
+                converted_value[key.value] = value
+        return converted_value
+
 
 class SystemValue(object):
 
     def __init__(self, is_migrated: bool):
+        # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
         # Todo: consider if the compound data should be immutable
         # Todo: consider about transaction failure
+        # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
         self._listener: Optional['SystemValueListener'] = None
 
         self._service_config: Optional[int] = None
         self._deployer_list: Optional[List['Address']] = None
 
-        # Todo: raise Exception when trying to get variable which is not set (i.e. None)
         self._step_price: Optional[int] = None
-        self._step_costs: Optional[dict] = None
-        self._max_step_limits: Optional[dict] = None
+        self._step_costs: Optional[Dict['StepType', int]] = None
+        self._max_step_limits: Optional[Dict['IconScoreContextType', int]] = None
 
-        # Todo: Integrate to revision
         self._revision_code: Optional[int] = None
         self._revision_name: Optional[str] = None
 
-        self._score_black_list: Optional[list] = None
-        self._import_white_list: Optional[list] = None
+        self._score_black_list: Optional[List['Address']] = None
+        self._import_white_list: Optional[Dict[str, List[str]]] = None
 
-    # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
     def add_listener(self, listener: 'SystemValueListener'):
         assert isinstance(listener, SystemValueListener)
         self._listener = listener
@@ -65,19 +129,19 @@ class SystemValue(object):
         return self._service_config
 
     @property
-    def deployer_list(self):
+    def deployer_list(self) -> List['Address']:
         return self._deployer_list
 
     @property
-    def step_price(self):
+    def step_price(self) -> int:
         return self._step_price
 
     @property
-    def step_costs(self) -> dict:
+    def step_costs(self) -> Dict['StepType', int]:
         return self._step_costs
 
     @property
-    def max_step_limits(self):
+    def max_step_limits(self) -> Dict['IconScoreContextType', int]:
         return self._max_step_limits
 
     @property
@@ -85,15 +149,15 @@ class SystemValue(object):
         return self._revision_code
 
     @property
-    def revision_name(self):
+    def revision_name(self) -> str:
         return self._revision_name
 
     @property
-    def score_black_list(self):
+    def score_black_list(self) -> List['Address']:
         return self._score_black_list
 
     @property
-    def import_white_list(self):
+    def import_white_list(self) -> Dict[str, List[str]]:
         return self._import_white_list
 
     def create_step_counter(self,
@@ -121,7 +185,7 @@ class SystemValue(object):
         self._is_migrated = True
 
     def _set(self, type_: 'SystemValueType', value: Any):
-        value = self._convert_format_before_set(type_, value)
+        value = SystemValueConverter.convert_for_icon_service(type_, value)
         if type_ == SystemValueType.REVISION_CODE:
             self._revision_code = value
         elif type_ == SystemValueType.REVISION_NAME:
@@ -142,32 +206,6 @@ class SystemValue(object):
             raise ValueError(f"Invalid value type: {type_.name}")
         if self._listener is not None:
             self._listener.update(type_, value)
-
-    @staticmethod
-    def _convert_format_before_set(type_: 'SystemValueType', value: Any):
-        converted_value: Any = value
-        if type_ == SystemValueType.MAX_STEP_LIMITS:
-            converted_value: dict = {}
-            for key, value in value.items():
-                if isinstance(key, IconScoreContextType):
-                    converted_value[key] = value
-                elif isinstance(key, str):
-                    if key == "invoke":
-                        converted_value[IconScoreContextType.INVOKE] = value
-                    elif key == "query":
-                        converted_value[IconScoreContextType.QUERY] = value
-        elif type_ == SystemValueType.STEP_COSTS:
-            converted_value: dict = {}
-            for key, value in value.items():
-                if isinstance(key, StepType):
-                    converted_value[key] = value
-                elif isinstance(key, str):
-                    try:
-                        converted_value[StepType(key)] = value
-                    except ValueError:
-                        # Pass the unknown step type
-                        pass
-        return converted_value
 
     # Consider about integrating set method
     def set_by_icon_service(self, type_: 'SystemValueType', value: Any, is_open: bool = False):
@@ -205,6 +243,6 @@ class SystemValue(object):
         self._set(type_, value)
         context.storage.system.put_value(context, type_, value)
 
-    def copy(self):
+    def copy(self) -> 'SystemValue':
         """Copy system value"""
         return copy.copy(self)
