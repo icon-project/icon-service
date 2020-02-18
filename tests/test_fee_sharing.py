@@ -45,6 +45,7 @@ class TestFeeSharing(unittest.TestCase):
         IconScoreContext.engine.icx.transfer = Mock()
         IconScoreContext.engine.icx.get_balance = Mock(return_value=5000)
         IconScoreContext.engine.prep.preps = Mock()
+        IconScoreContext.engine.prep.prep_address_converter = Mock()
 
     def tearDown(self):
         ContextContainer._clear_context()

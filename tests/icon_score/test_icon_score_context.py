@@ -66,6 +66,7 @@ class TestIconScoreContext(unittest.TestCase):
         prep_engine = PRepEngine()
         prep_engine.preps = preps
         prep_engine.term = term
+        prep_engine.prep_address_converter = Mock()
 
         IconScoreContext.engine.prep = prep_engine
 

@@ -525,6 +525,7 @@ class TestEngine(unittest.TestCase):
         engine = PRepEngine()
         engine.term = self.term
         engine.preps = self.preps
+        engine.prep_address_converter = Mock()
 
         self.term.freeze()
         self.preps.freeze()

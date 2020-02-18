@@ -114,6 +114,22 @@ class TestPRepAddressConverter(unittest.TestCase):
         assert old_node_address == new_converter.get_prep_address_from_node_address(old_node_address)
         assert prep_address == converter.get_prep_address_from_node_address(old_node_address)
 
+    def test_serialize(self):
+        # empty
+        data: bytes = PRepAddressConverter().to_bytes()
+        converter: 'PRepAddressConverter' = PRepAddressConverter.from_bytes(data)
+        assert self.converter._prev_node_address_mapper == converter._prev_node_address_mapper
+
+        # add data
+        old_node_address = self.node_addresses[0]
+        new_node_address = self.node_addresses[1]
+        prep_address = self.prep_addresses[0]
+
+        self.converter.replace_node_address(old_node_address, prep_address, new_node_address)
+        data: bytes = self.converter.to_bytes()
+        converter: 'PRepAddressConverter' = PRepAddressConverter.from_bytes(data)
+        assert self.converter._prev_node_address_mapper == converter._prev_node_address_mapper
+
 
 if __name__ == '__main__':
     unittest.main()

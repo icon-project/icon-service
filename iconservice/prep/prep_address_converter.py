@@ -15,10 +15,10 @@
 import copy
 from typing import TYPE_CHECKING
 
+from ..utils.msgpack_for_db import MsgPackForDB
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
     from ..base.address import Address
 
 _TAG = "PRepAddressConverter"
@@ -47,11 +47,20 @@ class PRepAddressConverter:
         else:
             self._node_address_mapper: dict = {}
 
-    def load(self, context: 'IconScoreContext'):
-        self._prev_node_address_mapper: dict = context.storage.meta.get_prev_node_address_mapper(context)
+    def to_bytes(self) -> bytes:
+        version: int = 0
+        return MsgPackForDB.dumps([version, self._prev_node_address_mapper])
 
-    def save(self, context: 'IconScoreContext'):
-        context.storage.meta.put_prev_node_address_mapper(context, self._prev_node_address_mapper)
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'PRepAddressConverter':
+        if data is None:
+            return PRepAddressConverter()
+
+        data: list = MsgPackForDB.loads(data)
+        _version = data[0]
+
+        prev_node_address_mapper: dict = data[1]
+        return PRepAddressConverter(prev_node_address_mapper=prev_node_address_mapper)
 
     def add_node_address(self, node: 'Address', prep: 'Address'):
         if node in self._node_address_mapper:
@@ -74,11 +83,6 @@ class PRepAddressConverter:
     def copy(self) -> 'PRepAddressConverter':
         return PRepAddressConverter(prev_node_address_mapper=copy.copy(self._prev_node_address_mapper),
                                     node_address_mapper=copy.copy(self._node_address_mapper))
-
-    def rollback(self, context: 'IconScoreContext'):
-        self.reset_prev_node_address()
-        self._node_address_mapper.clear()
-        self.load(context=context)
 
     def reset_prev_node_address(self):
         self._prev_node_address_mapper.clear()

@@ -33,6 +33,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext, IconScore
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from iconservice.prep import PRepEngine
 from iconservice.prep.data import PRep, Term, PRepContainer
+from iconservice.prep.prep_address_converter import PRepAddressConverter
 from iconservice.utils import ContextEngine
 from tests import create_address
 
@@ -93,6 +94,7 @@ class TestIconScoreApi(unittest.TestCase):
         self.step_limit = 1_000_000_000
 
         self._prep_engine = PRepEngine()
+        self._prep_engine.prep_address_converter = PRepAddressConverter()
 
         self.context = self._create_context()
         ContextContainer._push_context(self.context)
