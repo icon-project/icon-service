@@ -90,7 +90,7 @@ class Engine(EngineBase, ContextContainer):
             governance_score = self._get_governance_score(context)
             for type_ in SystemValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
-                system_value.set_from_icon_service(type_, value)
+                system_value.set_by_icon_service(type_, value)
         except ScoreNotFoundException:
             pass
         finally:
@@ -107,16 +107,7 @@ class Engine(EngineBase, ContextContainer):
 
     @staticmethod
     def _get_step_costs_from_governance(_, governance_score: 'Governance') -> dict:
-        step_costs = {}
-        # Gets the step costs
-        for key, value in governance_score.getStepCosts().items():
-            try:
-                step_costs[StepType(key)] = value
-            except ValueError:
-                # Pass the unknown step type
-                pass
-
-        return step_costs
+        return governance_score.getStepCosts()
 
     @staticmethod
     def _get_step_max_limits_from_governance(_, governance_score: 'Governance') -> dict:

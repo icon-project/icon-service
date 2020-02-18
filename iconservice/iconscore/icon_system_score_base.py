@@ -18,8 +18,9 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
+from .icon_score_step import StepType
 from ..base.exception import AccessDeniedException, IconServiceBaseException
-from ..icon_constant import SystemValueType
+from ..icon_constant import SystemValueType, IconScoreContextType
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
 
@@ -73,16 +74,48 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def migrate_system_value(self, data: Dict['SystemValueType', Any]):
-        # Todo: TBD!!
-        pass
+        for type_, value in data.items():
+            self._context.system_value.set_by_governance_score(self._context, type_, value)
 
     def get_system_value(self, type_: 'SystemValueType') -> Any:
-        # Todo: TBD!!
-        pass
+        if type_ == SystemValueType.REVISION_CODE:
+            value = self._context.system_value.revision_code
+        elif type_ == SystemValueType.REVISION_NAME:
+            value = self._context.system_value.revision_name
+        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+            value = self._context.system_value.score_black_list
+        elif type_ == SystemValueType.STEP_PRICE:
+            value = self._context.system_value.step_price
+        elif type_ == SystemValueType.STEP_COSTS:
+            value = self._context.system_value.step_costs
+        elif type_ == SystemValueType.MAX_STEP_LIMITS:
+            value = self._context.system_value.max_step_limits
+        elif type_ == SystemValueType.SERVICE_CONFIG:
+            value = self._context.system_value.service_config
+        elif type_ == SystemValueType.IMPORT_WHITE_LIST:
+            value = self._context.system_value.service_config
+        else:
+            raise ValueError(f"Invalid value type: {type_.name}")
+        converted_value: Any = self._convert_format_from_sv_to_gv(type_, value)
+        return converted_value
+
+    @staticmethod
+    def _convert_format_from_sv_to_gv(type_: 'SystemValueType', value: Any) -> Any:
+        converted_value: Any = value
+        if type_ == SystemValueType.MAX_STEP_LIMITS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                assert isinstance(key, IconScoreContextType)
+                converted_value[key.name.lower()] = value
+        elif type_ == SystemValueType.STEP_COSTS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                assert isinstance(key, StepType)
+                converted_value[key.value] = value
+        return converted_value
 
     def set_system_value(self, type_: 'SystemValueType', value: Any):
-        # Todo: TBD!!
-        pass
+        self._context.system_value.set_by_governance_score(self._context, type_, value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True

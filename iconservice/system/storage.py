@@ -49,11 +49,19 @@ class Storage(StorageBase):
         for type_ in SystemValueType:
             value: Optional[Any] = self._get_value(context, type_)
             if value is not None:
-                system_value.set_from_icon_service(type_, value, is_open=True)
+                system_value.set_by_icon_service(type_, value, is_open=True)
         return system_value
+
+    def put_migration_flag(self, context: 'IconScoreContext') -> bool:
+        return bool(self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True)))
 
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
         return bool(self._db.get(context, self.PREFIX + self.MIGRATION_FLAG))
+
+    def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
+        assert isinstance(type_, SystemValueType)
+        # Todo: Check if the value is valid (type check)
+        self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
 
     def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional[Any]:
         assert isinstance(type_, SystemValueType)
@@ -61,11 +69,3 @@ class Storage(StorageBase):
         if value is not None:
             value = MsgPackForDB.loads(value)
         return value
-
-    def put_migration_flag(self, context: 'IconScoreContext') -> bool:
-        return bool(self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True)))
-
-    def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
-        assert isinstance(type_, SystemValueType)
-        # Todo: Check if the value is valid (type check)
-        self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
