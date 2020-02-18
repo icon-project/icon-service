@@ -18,11 +18,10 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
 from .listener import SystemValueListener
 from .. import Address
+from ..base.exception import AccessDeniedException
 from ..icon_constant import SystemValueType, IconScoreContextType
 from ..iconscore.icon_score_step import IconScoreStepCounter, StepType
-
-if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
+from ..iconscore.icon_score_context import IconScoreContext
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 
@@ -96,9 +95,7 @@ class SystemValueConverter(object):
 class SystemValue(object):
 
     def __init__(self, is_migrated: bool):
-        # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
         # Todo: consider if the compound data should be immutable
-        # Todo: consider about transaction failure
         # Todo: Freeze data
         # Todo: Consider about integrating set method
         # Todo: Integrate to revision
@@ -120,6 +117,9 @@ class SystemValue(object):
 
     def add_listener(self, listener: 'SystemValueListener'):
         assert isinstance(listener, SystemValueListener)
+        assert isinstance(listener, IconScoreContext)
+        if listener.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            raise AccessDeniedException(f"Method not allowed: context={listener.type.name}")
         self._listener = listener
 
     def _get_from_batch(self, type_: 'SystemValueType') -> Optional[Any]:
@@ -133,7 +133,6 @@ class SystemValue(object):
 
     @property
     def service_config(self) -> int:
-        # Change to decorator
         service_config: Optional[Any] = self._get_from_batch(SystemValueType.SERVICE_CONFIG)
         if service_config is not None:
             return service_config
@@ -212,7 +211,7 @@ class SystemValue(object):
         context.storage.system.put_migration_flag(context)
         self._batch["is_migrated"] = True
 
-    def is_migration_success(self) -> bool:
+    def is_migration_succeed(self) -> bool:
         if self._batch.get("is_migrated"):
             return True
         return False

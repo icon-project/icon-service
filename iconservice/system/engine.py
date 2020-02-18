@@ -71,10 +71,9 @@ class Engine(EngineBase, ContextContainer):
         else:
             if tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
                 self._sync_system_value_with_governance(context, context.system_value)
-            if context.system_value.is_migration_success():
+            if context.system_value.is_migration_succeed():
                 context.system_value.update_migration()
         context.system_value.clear_batch()
-
 
     def _sync_system_value_with_governance(self,
                                            context: 'IconScoreContext',
