@@ -298,7 +298,7 @@ class IconScoreContext(SystemValueListener, ABC):
 
         # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
-    def update(self, type_: 'SystemValueType', value: Any):
+    def update_system_value(self, type_: 'SystemValueType', value: Any):
         # system value update listener
         if type_ == SystemValueType.REVISION_CODE:
             pass

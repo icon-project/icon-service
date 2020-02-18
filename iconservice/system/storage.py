@@ -52,8 +52,8 @@ class Storage(StorageBase):
                 system_value.set_by_icon_service(type_, value, is_open=True)
         return system_value
 
-    def put_migration_flag(self, context: 'IconScoreContext') -> bool:
-        return bool(self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True)))
+    def put_migration_flag(self, context: 'IconScoreContext'):
+        self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
 
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
         return bool(self._db.get(context, self.PREFIX + self.MIGRATION_FLAG))
