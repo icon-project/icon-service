@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
 
 
-
 class Engine(EngineBase, ContextContainer):
     TAG = "SYSTEM"
 
