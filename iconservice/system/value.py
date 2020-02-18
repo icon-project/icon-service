@@ -104,7 +104,6 @@ class SystemValue(object):
         self._listener: Optional['SystemValueListener'] = None
 
         self._service_config: Optional[int] = None
-        self._deployer_list: Optional[List['Address']] = None
 
         self._step_price: Optional[int] = None
         self._step_costs: Optional[Dict['StepType', int]] = None
@@ -127,10 +126,6 @@ class SystemValue(object):
     @property
     def service_config(self) -> int:
         return self._service_config
-
-    @property
-    def deployer_list(self) -> List['Address']:
-        return self._deployer_list
 
     @property
     def step_price(self) -> int:
