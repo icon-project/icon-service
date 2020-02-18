@@ -19,6 +19,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
+
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
@@ -495,10 +496,13 @@ class IconServiceEngine(ContextContainer):
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
-        prev_block_votes, prev_block_generator = self._get_prev_block_votes(context,
-                                                                            prev_block_generator,
-                                                                            prev_block_validators,
-                                                                            prev_block_votes)
+        prev_block_votes: Optional[List[Tuple['Address', int]]] = \
+            self._get_prev_block_votes(context,
+                                       prev_block_generator,
+                                       prev_block_validators,
+                                       prev_block_votes)
+        prev_block_generator = \
+            context.prep_address_converter.get_prep_address_from_node_address(prev_block_generator)
 
         self._set_revision_to_context(context)
 
@@ -611,7 +615,8 @@ class IconServiceEngine(ContextContainer):
                               context: 'IconScoreContext',
                               prev_block_generator: Optional['Address'] = None,
                               prev_block_validators: Optional[List['Address']] = None,
-                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> tuple:
+                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> \
+            Optional[List[Tuple['Address', int]]]:
 
         """
         If prev_block_votes is valid field, you can just return origin data but if not,
@@ -622,16 +627,41 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_votes:
         :return:
         """
+        if prev_block_generator:
+            if prev_block_votes:
+                return cls._convert_node_address_to_prep_address(context, prev_block_votes)
+            elif prev_block_validators:
+                return cls._convert_validators_to_votes(context, prev_block_generator, prev_block_validators)
 
-        if prev_block_generator and prev_block_votes:
-            return context.prep_address_converter.node_address_to_prep_address(
-                prev_block_generator=prev_block_generator,
-                prev_block_votes=prev_block_votes)
+        return None
 
-        if prev_block_generator is None or prev_block_validators is None:
-            return None, None
+    @classmethod
+    def _convert_node_address_to_prep_address(cls,
+                                              context: 'IconScoreContext',
+                                              prev_block_votes: Optional[List[Tuple['Address', int]]]) -> \
+            Optional[List[Tuple['Address', int]]]:
+        """Convert node_address in prev_block_votes to prep_address
+
+        """
 
         new_prev_block_votes: List[Tuple['Address', int]] = []
+
+        for node_address, vote in prev_block_votes:
+            # prep_address can be the same as node_address
+            # if P-Rep does not have its specific node_address
+            prep_address: 'Address' = \
+                context.prep_address_converter.get_prep_address_from_node_address(node_address)
+            new_prev_block_votes.append([prep_address, vote])
+
+        return new_prev_block_votes
+
+    @classmethod
+    def _convert_validators_to_votes(cls,
+                                     context: 'IconScoreContext',
+                                     prev_block_generator: 'Address',
+                                     prev_block_validators: Optional[List['Address']]) -> list:
+
+        prev_block_votes: List[Tuple['Address', int]] = []
         last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
 
         for address in last_main_preps:
@@ -643,8 +673,10 @@ class IconServiceEngine(ContextContainer):
                 vote_status: 'BlockVoteStatus' = BlockVoteStatus.NONE
                 if address in prev_block_validators:
                     vote_status: 'BlockVoteStatus' = BlockVoteStatus.TRUE
-                new_prev_block_votes.append([address, vote_status.value])
-        return new_prev_block_votes, prev_block_generator
+
+                prev_block_votes.append([address, vote_status.value])
+
+        return prev_block_votes
 
     @classmethod
     def _log_step_trace(cls, context: 'IconScoreContext'):

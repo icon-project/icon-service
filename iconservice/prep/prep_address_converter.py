@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-from typing import TYPE_CHECKING, Optional, List, Tuple
+from typing import TYPE_CHECKING
 
 from ..base.exception import InvalidParamsException
 
@@ -29,7 +29,7 @@ class PRepAddressConverter:
     Convert prep address being used for consensus in loopchain (i.e. node address) to
     P-Rep address being used for managing P-Rep (i.e. prep address).
 
-    Loopchain distinguish P-Reps using node address, but iconservice uses an prep address as a identification.
+    Loopchain distinguishes P-Reps using node address, but iconservice uses an prep address as a identification.
     """
 
     def __init__(self,
@@ -55,7 +55,7 @@ class PRepAddressConverter:
 
     def add_node_address(self, node: 'Address', prep: 'Address'):
         if node in self._node_address_mapper:
-            raise InvalidParamsException(f"assert deprecated node address assigned: {node}")
+            raise InvalidParamsException(f"nodeAddress already in use: {node}")
         self._node_address_mapper[node] = prep
 
     def delete_node_address(self, node: 'Address'):
@@ -80,21 +80,6 @@ class PRepAddressConverter:
         self._node_address_mapper.clear()
         self.load(context=context)
 
-    def node_address_to_prep_address(self,
-                                     prev_block_generator: Optional['Address'] = None,
-                                     prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> tuple:
-
-        prev_block_generator: 'Address' = self._get_prep_address_from_node_address(prev_block_generator)
-        tmp_votes: List[Tuple['Address', int]] = []
-
-        for address, vote in prev_block_votes:
-            if self._is_contains_node_address(address):
-                tmp_votes.append([self._get_prep_address_from_node_address(address), vote])
-            else:
-                tmp_votes.append([address, vote])
-        prev_block_votes: List[Tuple['Address', int]] = tmp_votes
-        return prev_block_votes, prev_block_generator
-
     def reset_prev_node_address(self):
         self._prev_node_address_mapper.clear()
 
@@ -104,11 +89,8 @@ class PRepAddressConverter:
         if address in self._node_address_mapper:
             raise InvalidParamsException(f"nodeAddress already in use: {address}")
 
-    def _is_contains_node_address(self,
-                                  node_address: 'Address') -> bool:
-        return node_address in self._prev_node_address_mapper or node_address in self._node_address_mapper
+    def get_prep_address_from_node_address(self,
+                                           node_address: 'Address') -> 'Address':
 
-    def _get_prep_address_from_node_address(self,
-                                            node_address: 'Address') -> 'Address':
         return self._prev_node_address_mapper.get(node_address,
                                                   self._node_address_mapper.get(node_address, node_address))

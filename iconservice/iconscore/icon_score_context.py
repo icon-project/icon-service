@@ -158,7 +158,7 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
-        self.prep_address_converter: 'PRepAddressConverter' = None
+        self.prep_address_converter: Optional['PRepAddressConverter'] = None
         self.regulator: Optional['Regulator'] = None
 
     @classmethod
