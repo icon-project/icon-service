@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
 from .listener import SystemValueListener
 from .. import Address
-from ..icon_constant import SystemValueType, IconScoreContextType, Revision
+from ..icon_constant import SystemValueType, IconScoreContextType
 from ..iconscore.icon_score_step import IconScoreStepCounter, StepType
 
 if TYPE_CHECKING:
