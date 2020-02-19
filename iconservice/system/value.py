@@ -22,6 +22,7 @@ from ..base.exception import AccessDeniedException
 from ..icon_constant import SystemValueType, IconScoreContextType
 from ..iconscore.icon_score_step import IconScoreStepCounter, StepType
 from ..iconscore.icon_score_context import IconScoreContext
+from ..utils.msgpack_for_db import MsgPackForDB
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 
@@ -42,6 +43,8 @@ class SystemValueConverter(object):
             for key, value in value.items():
                 if isinstance(key, IconScoreContextType):
                     converted_value[key] = value
+                elif isinstance(key, int):
+                    converted_value[IconScoreContextType(key)] = value
                 elif isinstance(key, str):
                     if key == "invoke":
                         converted_value[IconScoreContextType.INVOKE] = value
@@ -122,70 +125,41 @@ class SystemValue(object):
             raise AccessDeniedException(f"Method not allowed: context={listener.type.name}")
         self._listener = listener
 
-    def _get_from_batch(self, type_: 'SystemValueType') -> Optional[Any]:
-        if type_ in self._batch:
-            return SystemValueConverter.convert_for_icon_service(type_, self._batch)
-        return None
-
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
     @property
     def service_config(self) -> int:
-        service_config: Optional[Any] = self._get_from_batch(SystemValueType.SERVICE_CONFIG)
-        if service_config is not None:
-            return service_config
-        return self._service_config
+        return self._batch.get(SystemValueType.SERVICE_CONFIG, self._service_config).value
 
     @property
     def step_price(self) -> int:
-        step_price: Optional[Any] = self._get_from_batch(SystemValueType.STEP_PRICE)
-        if step_price is not None:
-            return step_price
-        return self._step_price
+        return self._batch.get(SystemValueType.STEP_PRICE, self._step_price)
 
     @property
     def step_costs(self) -> Dict['StepType', int]:
-        step_costs: Optional[Any] = self._get_from_batch(SystemValueType.STEP_COSTS)
-        if step_costs is not None:
-            return step_costs
-        return self._step_costs
+        return self._batch.get(SystemValueType.STEP_COSTS, self._step_costs)
 
     @property
     def max_step_limits(self) -> Dict['IconScoreContextType', int]:
-        max_step_limits: Optional[Any] = self._get_from_batch(SystemValueType.MAX_STEP_LIMITS)
-        if max_step_limits is not None:
-            return max_step_limits
-        return self._max_step_limits
+        return self._batch.get(SystemValueType.MAX_STEP_LIMITS, self._max_step_limits)
 
     @property
     def revision_code(self) -> int:
-        revision_code: Optional[Any] = self._get_from_batch(SystemValueType.REVISION_CODE)
-        if revision_code is not None:
-            return revision_code
-        return self._revision_code
+        return self._batch.get(SystemValueType.REVISION_CODE, self._revision_code)
 
     @property
     def revision_name(self) -> str:
-        revision_name: Optional[Any] = self._get_from_batch(SystemValueType.REVISION_NAME)
-        if revision_name is not None:
-            return revision_name
-        return self._revision_name
+        return self._batch.get(SystemValueType.REVISION_NAME, self._revision_name)
 
     @property
     def score_black_list(self) -> List['Address']:
-        score_black_list: Optional[Any] = self._get_from_batch(SystemValueType.SCORE_BLACK_LIST)
-        if score_black_list is not None:
-            return score_black_list
-        return self._score_black_list
+        return self._batch.get(SystemValueType.SCORE_BLACK_LIST, self._score_black_list)
 
     @property
     def import_white_list(self) -> Dict[str, List[str]]:
-        import_white_list: Optional[Any] = self._get_from_batch(SystemValueType.IMPORT_WHITE_LIST)
-        if import_white_list is not None:
-            return import_white_list
-        return self._import_white_list
+        return self._batch.get(SystemValueType.IMPORT_WHITE_LIST, self._import_white_list)
 
     def create_step_counter(self,
                             context_type: 'IconScoreContextType',
@@ -212,15 +186,12 @@ class SystemValue(object):
         self._batch["is_migrated"] = True
 
     def is_migration_succeed(self) -> bool:
-        if self._batch.get("is_migrated"):
-            return True
-        return False
+        return self._batch.get("is_migrated", False)
 
     def update_migration(self):
         self._is_migrated = True
 
     def _set(self, type_: 'SystemValueType', value: Any):
-        value = SystemValueConverter.convert_for_icon_service(type_, value)
         if type_ == SystemValueType.REVISION_CODE:
             self._revision_code = value
         elif type_ == SystemValueType.REVISION_NAME:
@@ -276,6 +247,22 @@ class SystemValue(object):
         # Check If value is valid
         self._batch[type_] = value
         context.storage.system.put_value(context, type_, value)
+
+    @staticmethod
+    def serialize_value_by_type(type_: 'SystemValueType', value: Any) -> bytes:
+        version: int = 0
+        if type_ == SystemValueType.MAX_STEP_LIMITS or type_ == SystemValueType.STEP_COSTS:
+            value: dict = {key.value: value for key, value in value.items()}
+        items: List[version, Any] = [version, value]
+        return MsgPackForDB.dumps(items)
+
+    @staticmethod
+    def deserialize_value_by_type(type_: 'SystemValueType', value: bytes) -> Any:
+        items: list = MsgPackForDB.loads(value)
+        version: int = items[0]
+        deserialized_value: Any = items[1]
+        assert version == 0
+        return SystemValueConverter.convert_for_icon_service(type_, deserialized_value)
 
     def is_updated(self) -> bool:
         return bool(len(self._batch))

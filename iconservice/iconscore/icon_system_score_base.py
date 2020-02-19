@@ -75,7 +75,10 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def migrate_system_value(self, data: Dict['SystemValueType', Any]):
-        self._context.system_value.migrate(self._context, data)
+        converted_data: dict = {}
+        for type_, value in data.items():
+            converted_data[type_] = SystemValueConverter.convert_for_icon_service(type_, value)
+        self._context.system_value.migrate(self._context, converted_data)
 
     def get_system_value(self, type_: 'SystemValueType') -> Any:
         if type_ == SystemValueType.REVISION_CODE:
@@ -100,7 +103,8 @@ class IconSystemScoreBase(IconScoreBase):
         return converted_value
 
     def set_system_value(self, type_: 'SystemValueType', value: Any):
-        self._context.system_value.set_by_governance_score(self._context, type_, value)
+        converted_value: Any = SystemValueConverter.convert_for_icon_service(type_, value)
+        self._context.system_value.set_by_governance_score(self._context, type_, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True

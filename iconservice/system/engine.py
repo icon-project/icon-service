@@ -15,7 +15,7 @@
 
 from typing import Optional, TYPE_CHECKING, Any, Dict, List
 
-from .value import SystemValue
+from .value import SystemValue, SystemValueConverter
 from .. import Address
 from ..base.ComponentBase import EngineBase
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
@@ -91,7 +91,8 @@ class Engine(EngineBase, ContextContainer):
             governance_score = self._get_governance_score(context)
             for type_ in SystemValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
-                system_value.set_by_icon_service(type_, value)
+                system_value.set_by_icon_service(type_,
+                                                 SystemValueConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass
         finally:
