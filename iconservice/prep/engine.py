@@ -444,8 +444,6 @@ class Engine(EngineBase, IISSEngineListener):
         else:
             dirty_prep.set_irep(self._initial_irep, context.block.height)
 
-        context.prep_address_converter.add_node_address(node=dirty_prep.node_address, prep=dirty_prep.address)
-
         # Update preps in context
         context.put_dirty_prep(dirty_prep)
 
@@ -613,10 +611,6 @@ class Engine(EngineBase, IISSEngineListener):
             del ret_params[ConstantKeys.NODE_ADDRESS]
             ret_params["node_address"] = node_address
 
-            context.prep_address_converter.replace_node_address(prev_node=dirty_prep.node_address,
-                                                                prep=address,
-                                                                node=node_address)
-
         # EventLog
         EventLogEmitter.emit_event_log(
             context,
@@ -685,8 +679,6 @@ class Engine(EngineBase, IISSEngineListener):
 
         if dirty_prep.status != PRepStatus.ACTIVE:
             raise InvalidParamsException(f"Inactive P-Rep: {address}")
-
-        context.prep_address_converter.delete_node_address(node=dirty_prep.node_address)
 
         dirty_prep.status = PRepStatus.UNREGISTERED
         dirty_prep.grade = PRepGrade.CANDIDATE

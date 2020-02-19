@@ -28,7 +28,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag, TermFlag)
+    Revision, PRepFlag, TermFlag, PRepStatus)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -233,12 +233,29 @@ class IconScoreContext(object):
             if self._term is not None:
                 self._update_term(dirty_prep)
 
+            self._update_prep_address_converter(dirty_prep=dirty_prep)
+
             self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
             dirty_prep.freeze()
 
         self._tx_dirty_preps.clear()
+
+    def _update_prep_address_converter(self, dirty_prep: 'PRep'):
+        if not self.preps.contains(dirty_prep.address, active_prep_only=False):
+            # register
+            self.prep_address_converter.add_node_address(node=dirty_prep.node_address,
+                                                         prep=dirty_prep.address)
+        elif dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
+            # set
+            old_prep = self._preps.get_by_address(dirty_prep.address)
+            self.prep_address_converter.replace_node_address(node=dirty_prep.node_address,
+                                                             prep=dirty_prep.address,
+                                                             prev_node=old_prep.node_address)
+        elif dirty_prep.status != PRepStatus.ACTIVE:
+            # delete
+            self.prep_address_converter.delete_node_address(node=dirty_prep.node_address)
 
     def _update_term(self, dirty_prep: 'PRep'):
         """Update term info with dirty_prep

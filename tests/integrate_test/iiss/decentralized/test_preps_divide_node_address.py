@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 from iconservice import Address
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, ConfigKey, Revision
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
@@ -348,3 +349,93 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         self.assertEqual(tx_results[1].status, True)
         self.assertEqual(tx_results[2].status, True)
 
+    def test_scenario5(self):
+        # 1 block
+        # PRepA a ---- a
+        # PRepB b ---- b
+        # penalty PRepB (low productivity)
+
+        # after 1 block
+        # PRepA a ---- b
+
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
+
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        PREV_PENALTY_GRACE_PERIOD = IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period
+        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
+
+        PENALTY_GRACE_PERIOD = 0
+        # enable low productivity
+        LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 100
+
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+        votes = [[self._accounts[1].address, False]] + [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        tx_results = self.make_blocks(to=self._block_height + 2,
+                                      prev_block_generator=self._accounts[0].address,
+                                      prev_block_votes=votes)
+
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PREV_PENALTY_GRACE_PERIOD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+        # PRepA: 0
+        # PRepB: 1
+        prep_a: 'EOAAccount' = self._accounts[0]
+        prep_b: 'EOAAccount' = self._accounts[1]
+
+        tx_list: list = [self.create_set_prep_tx(from_=prep_a,
+                                                 set_data={"nodeAddress": str(prep_b.address)})]
+
+        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        self.assertEqual(tx_results[1].status, True)
+
+    def test_scenario6(self):
+        # 1 block
+        # PRepA a ---- a
+        # PRepB b ---- b
+        # penalty PRepB (turn over)
+
+        # after 1 block
+        # PRepA a ---- b (fail)
+
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
+
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        PREV_PENALTY_GRACE_PERIOD = IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period
+        PREV_BLOCK_VALIDATION_PENALTY_THRESHOLD = IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold
+        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
+
+        PENALTY_GRACE_PERIOD = 0
+        # disable low productivity
+        LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 0
+        # enable block validation
+        BLOCK_VALIDATION_PENALTY_THRESHOLD = 1
+
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
+        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = BLOCK_VALIDATION_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+        votes = [[self._accounts[1].address, False]] + [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        tx_results = self.make_blocks(to=self._block_height + 2,
+                                      prev_block_generator=self._accounts[0].address,
+                                      prev_block_votes=votes)
+
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PREV_PENALTY_GRACE_PERIOD
+        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = PREV_BLOCK_VALIDATION_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+        # PRepA: 0
+        # PRepB: 1
+        prep_a: 'EOAAccount' = self._accounts[0]
+        prep_b: 'EOAAccount' = self._accounts[1]
+
+        tx_list: list = [self.create_set_prep_tx(from_=prep_a,
+                                                 set_data={"nodeAddress": str(prep_b.address)})]
+
+        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        self.assertEqual(tx_results[1].status, False)

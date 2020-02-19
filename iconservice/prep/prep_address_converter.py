@@ -75,7 +75,7 @@ class PRepAddressConverter:
         if prep not in self._prev_node_address_mapper.values():
             self._prev_node_address_mapper[node] = prep
 
-    def replace_node_address(self, prev_node: 'Address', prep: 'Address', node: 'Address'):
+    def replace_node_address(self, node: 'Address', prep: 'Address', prev_node: 'Address'):
         self._add_prev_node_address(node=prev_node, prep=prep)
         self.delete_node_address(node=prev_node)
         self.add_node_address(node=node, prep=prep)
@@ -88,10 +88,10 @@ class PRepAddressConverter:
         self._prev_node_address_mapper.clear()
 
     def validate_node_address(self,
-                              address: 'Address'):
+                              node: 'Address'):
 
-        if address in self._node_address_mapper:
-            raise InvalidParamsException(f"nodeAddress already in use: {address}")
+        if node in self._node_address_mapper:
+            raise InvalidParamsException(f"nodeAddress already in use: {node}")
 
     def get_prep_address_from_node_address(self,
                                            node_address: 'Address') -> 'Address':
