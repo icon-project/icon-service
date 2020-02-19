@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Any, Optional, TYPE_CHECKING, List
+from typing import Optional, TYPE_CHECKING
 
 from .data.system_data import SystemData, SYSTEM_DATA_MAPPER
 from .value import SystemValue
@@ -21,7 +21,6 @@ from ..base.ComponentBase import StorageBase
 from ..database.db import ContextDatabase
 from ..icon_constant import SystemValueType
 from ..utils.msgpack_for_db import MsgPackForDB
-
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -53,15 +52,15 @@ class Storage(StorageBase):
         return system_value
 
     def put_migration_flag(self, context: 'IconScoreContext'):
-        self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
+        self._db.put(context, self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
 
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
-        return bool(self._db.get(context, self.PREFIX + self.MIGRATION_FLAG))
+        return bool(self._db.get(context, self.MIGRATION_FLAG))
 
-    def put_value(self, context: 'IconScoreContext', system_value: 'SystemData'):
-        self._db.put(context, system_value.make_key(), system_value.to_bytes())
+    def put_value(self, context: 'IconScoreContext', system_data: 'SystemData'):
+        self._db.put(context, system_data.make_key(), system_data.to_bytes())
 
-    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> 'SystemData':
+    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional['SystemData']:
         assert isinstance(type_, SystemValueType)
         value: Optional[bytes] = self._db.get(context, SystemData.PREFIX + type_.value)
         if value is None:

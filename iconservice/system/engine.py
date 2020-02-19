@@ -62,9 +62,9 @@ class Engine(EngineBase, ContextContainer):
             self._sync_system_value_with_governance(context, system_value)
         self._system_value = system_value
 
-    def update_system_value(self,
-                            context: 'IconScoreContext',
-                            tx_result: 'TransactionResult'):
+    def update_system_value_by_result(self,
+                                      context: 'IconScoreContext',
+                                      tx_result: 'TransactionResult'):
         if context.system_value.is_migrated:
             if context.system_value.is_updated() and tx_result.status == TransactionResult.SUCCESS:
                 context.system_value.update_batch()
@@ -91,8 +91,7 @@ class Engine(EngineBase, ContextContainer):
             governance_score = self._get_governance_score(context)
             for type_ in SystemValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
-                system_value.set_by_icon_service(type_,
-                                                 SystemValueConverter.convert_for_icon_service(type_, value))
+                system_value.set_by_icon_service(SystemValueConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass
         finally:
@@ -120,10 +119,10 @@ class Engine(EngineBase, ContextContainer):
         return governance_score.getStepCosts()
 
     @staticmethod
-    def _get_step_max_limits_from_governance(_, governance_score: 'Governance') -> Dict['IconScoreContextType', int]:
+    def _get_step_max_limits_from_governance(_, governance_score: 'Governance') -> Dict[str, int]:
         # Gets the max step limit
-        return {IconScoreContextType.INVOKE: governance_score.getMaxStepLimit("invoke"),
-                IconScoreContextType.QUERY: governance_score.getMaxStepLimit("query")}
+        return {"invoke": governance_score.getMaxStepLimit("invoke"),
+                "query": governance_score.getMaxStepLimit("query")}
 
     @staticmethod
     def _get_service_flag(context: 'IconScoreContext', governance_score: 'Governance') -> int:
