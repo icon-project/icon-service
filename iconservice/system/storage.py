@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING, List
 
 from .value import SystemValue
 from ..base.ComponentBase import StorageBase
@@ -60,11 +60,14 @@ class Storage(StorageBase):
 
     def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
         assert isinstance(type_, SystemValueType)
-        self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
+        data: bytes = context.system_value.serialize_value_by_type(type_, value)
+        self._db.put(context, self.PREFIX + type_.value, data)
 
     def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional[Any]:
         assert isinstance(type_, SystemValueType)
-        value: Optional[Any] = self._db.get(context, self.PREFIX + type_.value)
-        if value is not None:
-            value = MsgPackForDB.loads(value)
+        value: Optional[bytes] = self._db.get(context, self.PREFIX + type_.value)
+        if value is None:
+            return None
+
+        value: Any = context.system_value.deserialize_value_by_type(type_, value)
         return value
