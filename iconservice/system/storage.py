@@ -15,6 +15,7 @@
 
 from typing import Any, Optional, TYPE_CHECKING, List
 
+from .data.system_data import SystemData, SYSTEM_DATA_MAPPER
 from .value import SystemValue
 from ..base.ComponentBase import StorageBase
 from ..database.db import ContextDatabase
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
 
 
 class Storage(StorageBase):
-    PREFIX: bytes = b'gv'
     MIGRATION_FLAG: bytes = b'mf'
 
     def __init__(self, db: 'ContextDatabase'):
@@ -47,9 +47,9 @@ class Storage(StorageBase):
 
         system_value: 'SystemValue' = SystemValue(is_migrated)
         for type_ in SystemValueType:
-            value: Optional[Any] = self._get_value(context, type_)
-            if value is not None:
-                system_value.set_by_icon_service(type_, value, is_open=True)
+            system_data: 'SystemData' = self._get_value(context, type_)
+            if system_data is not None:
+                system_value.set_by_icon_service(system_data, is_open=True)
         return system_value
 
     def put_migration_flag(self, context: 'IconScoreContext'):
@@ -58,16 +58,14 @@ class Storage(StorageBase):
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
         return bool(self._db.get(context, self.PREFIX + self.MIGRATION_FLAG))
 
-    def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
-        assert isinstance(type_, SystemValueType)
-        data: bytes = context.system_value.serialize_value_by_type(type_, value)
-        self._db.put(context, self.PREFIX + type_.value, data)
+    def put_value(self, context: 'IconScoreContext', system_value: 'SystemData'):
+        self._db.put(context, system_value.make_key(), system_value.to_bytes())
 
-    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional[Any]:
+    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> 'SystemData':
         assert isinstance(type_, SystemValueType)
-        value: Optional[bytes] = self._db.get(context, self.PREFIX + type_.value)
+        value: Optional[bytes] = self._db.get(context, SystemData.PREFIX + type_.value)
         if value is None:
             return None
 
-        value: Any = context.system_value.deserialize_value_by_type(type_, value)
-        return value
+        system_data: 'SystemData' = SYSTEM_DATA_MAPPER[type_].from_bytes(value)
+        return system_data

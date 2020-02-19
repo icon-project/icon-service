@@ -16,6 +16,7 @@ import copy
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
+from .data.system_data import SystemData
 from .listener import SystemValueListener
 from .. import Address
 from ..base.exception import AccessDeniedException
@@ -104,8 +105,6 @@ class SystemValue(object):
         # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
         self._listener: Optional['SystemValueListener'] = None
-        self._batch: dict = {}
-
         self._service_config: Optional[int] = None
 
         self._step_price: Optional[int] = None
@@ -117,6 +116,11 @@ class SystemValue(object):
 
         self._score_black_list: Optional[List['Address']] = None
         self._import_white_list: Optional[Dict[str, List[str]]] = None
+
+        self._batch: dict = {}
+        self._get_mapper: dict = {
+            SystemValueType.STEP_COSTS: self._step_costs
+        }
 
     def add_listener(self, listener: 'SystemValueListener'):
         assert isinstance(listener, SystemValueListener)
@@ -131,7 +135,7 @@ class SystemValue(object):
 
     @property
     def service_config(self) -> int:
-        return self._batch.get(SystemValueType.SERVICE_CONFIG, self._service_config).value
+        return self._batch.get(SystemValueType.SERVICE_CONFIG, self._get_mapper[SystemValueType.SERVICE_CONFIG]).value
 
     @property
     def step_price(self) -> int:
@@ -160,6 +164,16 @@ class SystemValue(object):
     @property
     def import_white_list(self) -> Dict[str, List[str]]:
         return self._batch.get(SystemValueType.IMPORT_WHITE_LIST, self._import_white_list)
+
+    def is_updated(self) -> bool:
+        return bool(len(self._batch))
+
+    def update_batch(self):
+        for type_, value in self._batch.items():
+            self._set(type_, value)
+
+    def clear_batch(self):
+        self._batch.clear()
 
     def create_step_counter(self,
                             context_type: 'IconScoreContextType',
@@ -191,48 +205,46 @@ class SystemValue(object):
     def update_migration(self):
         self._is_migrated = True
 
-    def _set(self, type_: 'SystemValueType', value: Any):
-        if type_ == SystemValueType.REVISION_CODE:
-            self._revision_code = value
-        elif type_ == SystemValueType.REVISION_NAME:
-            self._revision_name = value
-        elif type_ == SystemValueType.SCORE_BLACK_LIST:
-            self._score_black_list = value
-        elif type_ == SystemValueType.STEP_PRICE:
-            self._step_price = value
-        elif type_ == SystemValueType.STEP_COSTS:
-            self._step_costs = value
-        elif type_ == SystemValueType.MAX_STEP_LIMITS:
-            self._max_step_limits = value
-        elif type_ == SystemValueType.SERVICE_CONFIG:
-            self._service_config = value
-        elif type_ == SystemValueType.IMPORT_WHITE_LIST:
-            self._import_white_list = value
+    def _set(self, system_data: 'SystemData'):
+        if system_data.SYSTEM_TYPE == SystemValueType.REVISION_CODE:
+            self._revision_code = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.REVISION_NAME:
+            self._revision_name = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.SCORE_BLACK_LIST:
+            self._score_black_list = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.STEP_PRICE:
+            self._step_price = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.STEP_COSTS:
+            self._step_costs = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.MAX_STEP_LIMITS:
+            self._max_step_limits = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.SERVICE_CONFIG:
+            self._service_config = system_data
+        elif system_data.SYSTEM_TYPE == SystemValueType.IMPORT_WHITE_LIST:
+            self._import_white_list = system_data
         else:
-            raise ValueError(f"Invalid value type: {type_.name}")
+            raise ValueError(f"Invalid value type: {system_data.SYSTEM_TYPE.name}")
         if self._listener is not None:
-            self._listener.update_system_value(type_, value)
+            self._listener.update_system_value(system_data.SYSTEM_TYPE, system_data.value)
 
-    def set_by_icon_service(self, type_: 'SystemValueType', value: Any, is_open: bool = False):
+    def set_by_icon_service(self, system_data: 'SystemData', is_open: bool = False):
         """
         Set value on system value instance from icon service.
         There are two cases of calling this method.
         First: Before migration
         Second: Initiating 'system value' when opening icon service (i.e. first initiation)
 
-        :param type_:
-        :param value:
+        :param system_data:
         :param is_open:
         :return:
         """
-        assert isinstance(type_, SystemValueType)
         if not self._is_migrated or is_open is True:
-            self._set(type_, value)
+            self._set(system_data)
         else:
             raise PermissionError(f"Invalid case of setting system value from icon-service"
                                   f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_by_governance_score(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
+    def set_by_governance_score(self, context: 'IconScoreContext', system_data: 'SystemData'):
         """
         Set values on system value and put these into DB.
         Only Governance Score can set values after migration.
@@ -242,37 +254,10 @@ class SystemValue(object):
         :return:
         """
         assert self._is_migrated
-        assert isinstance(type_, SystemValueType)
         # Update member variables
         # Check If value is valid
-        self._batch[type_] = value
-        context.storage.system.put_value(context, type_, value)
-
-    @staticmethod
-    def serialize_value_by_type(type_: 'SystemValueType', value: Any) -> bytes:
-        version: int = 0
-        if type_ == SystemValueType.MAX_STEP_LIMITS or type_ == SystemValueType.STEP_COSTS:
-            value: dict = {key.value: value for key, value in value.items()}
-        items: List[version, Any] = [version, value]
-        return MsgPackForDB.dumps(items)
-
-    @staticmethod
-    def deserialize_value_by_type(type_: 'SystemValueType', value: bytes) -> Any:
-        items: list = MsgPackForDB.loads(value)
-        version: int = items[0]
-        deserialized_value: Any = items[1]
-        assert version == 0
-        return SystemValueConverter.convert_for_icon_service(type_, deserialized_value)
-
-    def is_updated(self) -> bool:
-        return bool(len(self._batch))
-
-    def update_batch(self):
-        for type_, value in self._batch.items():
-            self._set(type_, value)
-
-    def clear_batch(self):
-        self._batch.clear()
+        self._batch[system_data.SYSTEM_TYPE] = system_data
+        context.storage.system.put_value(context, system_data)
 
     def copy(self) -> 'SystemValue':
         """Copy system value"""
