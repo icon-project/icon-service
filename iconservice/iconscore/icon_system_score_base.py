@@ -18,9 +18,8 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
-from .icon_score_step import StepType
 from ..base.exception import AccessDeniedException, IconServiceBaseException
-from ..icon_constant import SystemValueType, IconScoreContextType
+from ..icon_constant import SystemValueType
 from ..iconscore.icon_score_base import IconScoreBase
 from ..system.value import SystemValueConverter
 from ..utils import is_builtin_score as util_is_builtin_score
@@ -96,7 +95,7 @@ class IconSystemScoreBase(IconScoreBase):
         elif type_ == SystemValueType.SERVICE_CONFIG:
             value = self._context.system_value.service_config
         elif type_ == SystemValueType.IMPORT_WHITE_LIST:
-            value = self._context.system_value.service_config
+            value = self._context.system_value.import_white_list
         else:
             raise ValueError(f"Invalid value type: {type_.name}")
         converted_value: Any = SystemValueConverter.convert_for_governance_score(type_, value)
@@ -104,7 +103,7 @@ class IconSystemScoreBase(IconScoreBase):
 
     def set_system_value(self, type_: 'SystemValueType', value: Any):
         converted_value: Any = SystemValueConverter.convert_for_icon_service(type_, value)
-        self._context.system_value.set_by_governance_score(self._context, type_, converted_value)
+        self._context.system_value.set_by_governance_score(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True

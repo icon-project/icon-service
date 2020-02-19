@@ -31,6 +31,7 @@ from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     Revision, PRepFlag, SystemValueType, RevisionChangedFlag)
 from ..icx.issue.regulator import Regulator
+from ..system.data.system_data import SystemData
 from ..system.listener import SystemValueListener
 
 if TYPE_CHECKING:
@@ -298,26 +299,26 @@ class IconScoreContext(SystemValueListener, ABC):
 
         # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
-    def update_system_value(self, type_: 'SystemValueType', value: Any):
+    def update_system_value(self, system_data: 'SystemData'):
         # system value update listener
-        if type_ == SystemValueType.REVISION_CODE:
+        if system_data.SYSTEM_TYPE == SystemValueType.REVISION_CODE:
             pass
-        elif type_ == SystemValueType.REVISION_NAME:
+        elif system_data.SYSTEM_TYPE == SystemValueType.REVISION_NAME:
             pass
-        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+        elif system_data.SYSTEM_TYPE == SystemValueType.SCORE_BLACK_LIST:
             pass
-        elif type_ == SystemValueType.STEP_PRICE:
-            self.step_counter.set_step_price(value)
-        elif type_ == SystemValueType.STEP_COSTS:
-            self.step_counter.set_step_costs(value)
-        elif type_ == SystemValueType.MAX_STEP_LIMITS:
-            self.step_counter.set_max_step_limit(value.get(self.type))
-        elif type_ == SystemValueType.SERVICE_CONFIG:
+        elif system_data.SYSTEM_TYPE == SystemValueType.STEP_PRICE:
+            self.step_counter.set_step_price(system_data.value)
+        elif system_data.SYSTEM_TYPE == SystemValueType.STEP_COSTS:
+            self.step_counter.set_step_costs(system_data.value)
+        elif system_data.SYSTEM_TYPE == SystemValueType.MAX_STEP_LIMITS:
+            self.step_counter.set_max_step_limit(system_data.value.get(self.type))
+        elif system_data.SYSTEM_TYPE == SystemValueType.SERVICE_CONFIG:
             pass
-        elif type_ == SystemValueType.IMPORT_WHITE_LIST:
+        elif system_data.SYSTEM_TYPE == SystemValueType.IMPORT_WHITE_LIST:
             pass
         else:
-            raise ValueError(f"Invalid value type: {type_.name}")
+            raise ValueError(f"Invalid value type: {system_data.SYSTEM_TYPE.name}")
 
 
 class IconScoreContextFactory(object):
