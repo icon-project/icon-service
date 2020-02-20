@@ -27,7 +27,7 @@ from ..iconscore.icon_score_step import IconScoreStepCounter, StepType
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 
 
-class SystemValueConverter(object):
+class SystemDataConverter(object):
     @staticmethod
     def convert_for_icon_service(type_: 'SystemValueType', value: Any) -> 'SystemData':
         """
@@ -136,45 +136,40 @@ class SystemValue(object):
     def is_migrated(self) -> bool:
         return self._is_migrated
 
+    def get_by_type(self, type_: 'SystemValueType') -> Any:
+        return self._tx_unit_batch.get(type_, self._cache[type_]).value
+
     @property
     def service_config(self) -> int:
-        return self._tx_unit_batch.get(SystemValueType.SERVICE_CONFIG,
-                                       self._cache[SystemValueType.SERVICE_CONFIG]).value
+        return self.get_by_type(SystemValueType.SERVICE_CONFIG)
 
     @property
     def step_price(self) -> int:
-        return self._tx_unit_batch.get(SystemValueType.STEP_PRICE,
-                                       self._cache[SystemValueType.STEP_PRICE]).value
+        return self.get_by_type(SystemValueType.STEP_PRICE)
 
     @property
     def step_costs(self) -> Dict['StepType', int]:
-        return self._tx_unit_batch.get(SystemValueType.STEP_COSTS,
-                                       self._cache[SystemValueType.STEP_COSTS]).value
+        return self.get_by_type(SystemValueType.STEP_COSTS)
 
     @property
     def max_step_limits(self) -> Dict['IconScoreContextType', int]:
-        return self._tx_unit_batch.get(SystemValueType.MAX_STEP_LIMITS,
-                                       self._cache[SystemValueType.MAX_STEP_LIMITS]).value
+        return self.get_by_type(SystemValueType.MAX_STEP_LIMITS)
 
     @property
     def revision_code(self) -> int:
-        return self._tx_unit_batch.get(SystemValueType.REVISION_CODE,
-                                       self._cache[SystemValueType.REVISION_CODE]).value
+        return self.get_by_type(SystemValueType.REVISION_CODE)
 
     @property
     def revision_name(self) -> str:
-        return self._tx_unit_batch.get(SystemValueType.REVISION_NAME,
-                                       self._cache[SystemValueType.REVISION_NAME]).value
+        return self.get_by_type(SystemValueType.REVISION_NAME)
 
     @property
     def score_black_list(self) -> List['Address']:
-        return self._tx_unit_batch.get(SystemValueType.SCORE_BLACK_LIST,
-                                       self._cache[SystemValueType.SCORE_BLACK_LIST]).value
+        return self.get_by_type(SystemValueType.SCORE_BLACK_LIST)
 
     @property
     def import_white_list(self) -> Dict[str, List[str]]:
-        return self._tx_unit_batch.get(SystemValueType.IMPORT_WHITE_LIST,
-                                       self._cache[SystemValueType.IMPORT_WHITE_LIST]).value
+        return self.get_by_type(SystemValueType.IMPORT_WHITE_LIST)
 
     def is_updated(self) -> bool:
         return bool(len(self._tx_unit_batch))

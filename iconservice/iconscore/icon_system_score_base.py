@@ -21,7 +21,7 @@ from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException, IconServiceBaseException
 from ..icon_constant import SystemValueType
 from ..iconscore.icon_score_base import IconScoreBase
-from ..system.value import SystemValueConverter
+from ..system.value import SystemDataConverter
 from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
@@ -76,33 +76,16 @@ class IconSystemScoreBase(IconScoreBase):
     def migrate_system_value(self, data: Dict['SystemValueType', Any]):
         converted_data: dict = {}
         for type_, value in data.items():
-            converted_data[type_] = SystemValueConverter.convert_for_icon_service(type_, value)
+            converted_data[type_] = SystemDataConverter.convert_for_icon_service(type_, value)
         self._context.system_value.migrate(self._context, converted_data)
 
     def get_system_value(self, type_: 'SystemValueType') -> Any:
-        if type_ == SystemValueType.REVISION_CODE:
-            value = self._context.system_value.revision_code
-        elif type_ == SystemValueType.REVISION_NAME:
-            value = self._context.system_value.revision_name
-        elif type_ == SystemValueType.SCORE_BLACK_LIST:
-            value = self._context.system_value.score_black_list
-        elif type_ == SystemValueType.STEP_PRICE:
-            value = self._context.system_value.step_price
-        elif type_ == SystemValueType.STEP_COSTS:
-            value = self._context.system_value.step_costs
-        elif type_ == SystemValueType.MAX_STEP_LIMITS:
-            value = self._context.system_value.max_step_limits
-        elif type_ == SystemValueType.SERVICE_CONFIG:
-            value = self._context.system_value.service_config
-        elif type_ == SystemValueType.IMPORT_WHITE_LIST:
-            value = self._context.system_value.import_white_list
-        else:
-            raise ValueError(f"Invalid value type: {type_.name}")
-        converted_value: Any = SystemValueConverter.convert_for_governance_score(type_, value)
+        value: Any = self._context.system_value.get_by_type(type_)
+        converted_value: Any = SystemDataConverter.convert_for_governance_score(type_, value)
         return converted_value
 
     def set_system_value(self, type_: 'SystemValueType', value: Any):
-        converted_value: Any = SystemValueConverter.convert_for_icon_service(type_, value)
+        converted_value: Any = SystemDataConverter.convert_for_icon_service(type_, value)
         self._context.system_value.set_by_governance_score(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
