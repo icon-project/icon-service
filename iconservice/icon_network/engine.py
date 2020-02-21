@@ -15,12 +15,12 @@
 
 from typing import Optional, TYPE_CHECKING, Any, Dict, List
 
-from .value import SystemValue, SystemDataConverter
+from .container import Container, ValueConverter
 from .. import Address
 from ..base.ComponentBase import EngineBase
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException
-from ..icon_constant import SystemValueType, IconServiceFlag, IconScoreContextType
+from ..icon_constant import IconNetworkValueType, IconServiceFlag
 from ..iconscore.context.context import ContextContainer
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_result import TransactionResult
@@ -32,66 +32,67 @@ if TYPE_CHECKING:
 
 
 class Engine(EngineBase, ContextContainer):
-    TAG = "SYSTEM"
+    TAG = "INV"
 
     def __init__(self):
         super().__init__()
-        self._system_value: Optional['SystemValue'] = None
+        self._inv_container: Optional['Container'] = None
 
         # Warning: This mapper must be used only before migration
-        # 'gs' means governance score
+        # 'gs' means governance SCORE
         self._get_gs_data_mapper: dict = {
-            SystemValueType.SERVICE_CONFIG: self._get_service_flag,
-            SystemValueType.STEP_PRICE: self._get_step_price_from_governance,
-            SystemValueType.STEP_COSTS: self._get_step_costs_from_governance,
-            SystemValueType.MAX_STEP_LIMITS: self._get_step_max_limits_from_governance,
-            SystemValueType.REVISION_CODE: self._get_revision_from_governance_score,
-            SystemValueType.REVISION_NAME: self._get_revision_name_from_governance_score,
-            SystemValueType.SCORE_BLACK_LIST: self._get_score_black_list,
-            SystemValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
+            IconNetworkValueType.SERVICE_CONFIG: self._get_service_flag,
+            IconNetworkValueType.STEP_PRICE: self._get_step_price_from_governance,
+            IconNetworkValueType.STEP_COSTS: self._get_step_costs_from_governance,
+            IconNetworkValueType.MAX_STEP_LIMITS: self._get_step_max_limits_from_governance,
+            IconNetworkValueType.REVISION_CODE: self._get_revision_from_governance_score,
+            IconNetworkValueType.REVISION_NAME: self._get_revision_name_from_governance_score,
+            IconNetworkValueType.SCORE_BLACK_LIST: self._get_score_black_list,
+            IconNetworkValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
         }
 
     @property
-    def system_value(self) -> 'SystemValue':
-        return self._system_value
+    def inv_container(self) -> 'Container':
+        return self._inv_container
 
-    def load_system_value(self, context: 'IconScoreContext'):
-        system_value: Optional['SystemValue'] = context.storage.system.get_system_value(context)
-        if system_value is None:
-            system_value: 'SystemValue' = SystemValue(is_migrated=False)
-            self._sync_system_value_with_governance(context, system_value)
-        self._system_value = system_value
+    def load_inv_container(self, context: 'IconScoreContext'):
+        container: Optional['Container'] = context.storage.inv.get_container(context)
+        if container is None:
+            container: 'Container' = Container(is_migrated=False)
+            self._sync_inv_container_with_governance(context, container)
+        self._inv_container = container
 
-    def update_system_value_by_result(self,
-                                      context: 'IconScoreContext',
-                                      tx_result: 'TransactionResult'):
-        if context.system_value.is_migrated:
-            if context.system_value.is_updated() and tx_result.status == TransactionResult.SUCCESS:
-                context.system_value.update_batch()
+    # TODO 코드정리가 필요
+    def update_inv_container_by_result(self,
+                                       context: 'IconScoreContext',
+                                       tx_result: 'TransactionResult'):
+        if context.inv_container.is_migrated:
+            if context.inv_container.is_updated() and tx_result.status == TransactionResult.SUCCESS:
+                context.inv_container.update_batch()
         else:
             if tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
-                self._sync_system_value_with_governance(context, context.system_value)
-            if context.system_value.is_migration_succeed():
-                context.system_value.update_migration()
-        context.system_value.clear_batch()
+                self._sync_inv_container_with_governance(context, context.inv_container)
+            if context.inv_container.is_migration_succeed():
+                context.inv_container.update_migration()
+        context.inv_container.clear_batch()
 
-    def _sync_system_value_with_governance(self,
-                                           context: 'IconScoreContext',
-                                           system_value: 'SystemValue'):
+    def _sync_inv_container_with_governance(self,
+                                            context: 'IconScoreContext',
+                                            container: 'Container'):
         """
-        Syncronize system value with governance value.
+        Syncronize ICON Network value.
         :param context:
-        :param system_value:
+        :param container:
         :return:
         """
-        assert not system_value.is_migrated
+        assert not container.is_migrated
 
         try:
             self._push_context(context)
             governance_score = self._get_governance_score(context)
-            for type_ in SystemValueType:
+            for type_ in IconNetworkValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
-                system_value.set_by_icon_service(SystemDataConverter.convert_for_icon_service(type_, value))
+                container.set_by_icon_service(ValueConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass
         finally:
@@ -136,11 +137,11 @@ class Engine(EngineBase, ContextContainer):
     @staticmethod
     def _get_revision_name_from_governance_score(_, governance_score: 'Governance') -> str:
         # TBD, but before migration, there is no usecase of revision name. So do not need to implement
-        return
+        return ""
 
     @staticmethod
     def _get_revision_from_governance_score(_, governance_score: 'Governance') -> int:
-        # Check if revision has been changed by comparing with system engine's system value
+        # Check if revision has been changed by comparing with INV engine's ICON Network value
         revision: int = 0
         if hasattr(governance_score, 'revision_code'):
             revision: int = governance_score.revision_code
@@ -161,5 +162,5 @@ class Engine(EngineBase, ContextContainer):
         return score_black_list
 
     def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        # Set updated system value
-        self._system_value: 'SystemValue' = precommit_data.system_value
+        # Set updated INVContainer
+        self._inv_container: 'Container' = precommit_data.inv_container

@@ -15,11 +15,11 @@
 
 from typing import Optional, TYPE_CHECKING
 
-from .data.system_data import SystemData, SYSTEM_DATA_MAPPER
-from .value import SystemValue
+from .container import Container
+from .data.value import Value, VALUE_MAPPER
 from ..base.ComponentBase import StorageBase
 from ..database.db import ContextDatabase
-from ..icon_constant import SystemValueType
+from ..icon_constant import IconNetworkValueType
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -32,24 +32,24 @@ class Storage(StorageBase):
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(db)
 
-    def get_system_value(self, context: 'IconScoreContext') -> Optional['SystemValue']:
+    def get_container(self, context: 'IconScoreContext') -> Optional['Container']:
         """
-        Load system value from DB after migration
+        Load container from DB after migration
 
         :param context:
         :return: Return'None' if migration has not been finished
         """
         is_migrated: bool = self._get_migration_flag(context)
-        system_value: Optional['SystemValue'] = None
+        container: Optional['Container'] = None
         if not is_migrated:
-            return system_value
+            return container
 
-        system_value: 'SystemValue' = SystemValue(is_migrated)
-        for type_ in SystemValueType:
-            system_data: 'SystemData' = self._get_value(context, type_)
-            if system_data is not None:
-                system_value.set_by_icon_service(system_data, is_open=True)
-        return system_value
+        container: 'Container' = Container(is_migrated)
+        for type_ in IconNetworkValueType:
+            value: 'Value' = self._get_value(context, type_)
+            if value is not None:
+                container.set_by_icon_service(value, is_open=True)
+        return container
 
     def put_migration_flag(self, context: 'IconScoreContext'):
         self._db.put(context, self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
@@ -57,14 +57,14 @@ class Storage(StorageBase):
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
         return bool(self._db.get(context, self.MIGRATION_FLAG))
 
-    def put_value(self, context: 'IconScoreContext', system_data: 'SystemData'):
-        self._db.put(context, system_data.make_key(), system_data.to_bytes())
+    def put_value(self, context: 'IconScoreContext', value: 'Value'):
+        self._db.put(context, value.make_key(), value.to_bytes())
 
-    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional['SystemData']:
-        assert isinstance(type_, SystemValueType)
-        value: Optional[bytes] = self._db.get(context, SystemData.PREFIX + type_.value)
+    def _get_value(self, context: 'IconScoreContext', type_: 'IconNetworkValueType') -> Optional['Value']:
+        assert isinstance(type_, IconNetworkValueType)
+        value: Optional[bytes] = self._db.get(context, Value.PREFIX + type_.value)
         if value is None:
             return None
 
-        system_data: 'SystemData' = SYSTEM_DATA_MAPPER[type_].from_bytes(value)
-        return system_data
+        value: 'value' = VALUE_MAPPER[type_].from_bytes(value)
+        return value

@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException, IconServiceBaseException
-from ..icon_constant import SystemValueType
+from ..icon_constant import IconNetworkValueType
+from ..icon_network.container import ValueConverter as INVConverter
 from ..iconscore.icon_score_base import IconScoreBase
-from ..system.value import SystemDataConverter
 from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
@@ -73,20 +73,20 @@ class IconSystemScoreBase(IconScoreBase):
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
-    def migrate_system_value(self, data: Dict['SystemValueType', Any]):
+    def migrate_icon_network_value(self, data: Dict['IconNetworkValueType', Any]):
         converted_data: dict = {}
         for type_, value in data.items():
-            converted_data[type_] = SystemDataConverter.convert_for_icon_service(type_, value)
-        self._context.system_value.migrate(self._context, converted_data)
+            converted_data[type_] = INVConverter.convert_for_icon_service(type_, value)
+        self._context.inv_container.migrate(self._context, converted_data)
 
-    def get_system_value(self, type_: 'SystemValueType') -> Any:
-        value: Any = self._context.system_value.get_by_type(type_)
-        converted_value: Any = SystemDataConverter.convert_for_governance_score(type_, value)
+    def get_icon_network_value(self, type_: 'IconNetworkValueType') -> Any:
+        value: Any = self._context.inv_container.get_by_type(type_)
+        converted_value: Any = INVConverter.convert_for_governance_score(type_, value)
         return converted_value
 
-    def set_system_value(self, type_: 'SystemValueType', value: Any):
-        converted_value: Any = SystemDataConverter.convert_for_icon_service(type_, value)
-        self._context.system_value.set_by_governance_score(self._context, converted_value)
+    def set_icon_network_value(self, type_: 'IconNetworkValueType', value: Any):
+        converted_value: Any = INVConverter.convert_for_icon_service(type_, value)
+        self._context.inv_container.set_by_governance_score(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True
