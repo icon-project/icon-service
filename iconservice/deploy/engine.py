@@ -66,8 +66,6 @@ class Engine(EngineBase):
             raise InvalidParamsException(f'Invalid SCORE address: {icon_score_address}')
 
         try:
-            IconScoreContextUtil.validate_deployer(context, context.tx.origin)
-
             deploy_type: 'DeployType' = \
                 DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
 

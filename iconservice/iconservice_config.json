@@ -22,7 +22,6 @@
 	"service": {
 		"fee": false,
 		"audit": false,
-		"deployerWhiteList": false,
 		"scorePackageValidator": false
 	}
 }
