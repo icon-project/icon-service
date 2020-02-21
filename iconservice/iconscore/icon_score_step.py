@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, List, Tuple, Optional
 
 from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
 from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, Revision
+from ..system.value import SystemValue
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
 if TYPE_CHECKING:
@@ -216,6 +217,23 @@ class StepTracer(object):
 
         self._cumulative_step += step
         self._steps.append((step_type, step, cumulative_step))
+
+
+class IconScoreStepCounterFactory(object):
+    """Creates a step counter for the transaction
+    """
+
+    @classmethod
+    def create_step_counter(cls,
+                            system_value: 'SystemValue',
+                            context_type: 'IconScoreContextType',
+                            step_trace_flag: bool) -> 'IconScoreStepCounter':
+        step_price: int = system_value.step_price
+        # Copying a `dict` so as not to change step costs when processing a transaction.
+        step_costs: dict = system_value.step_costs
+        max_step_limit: int = system_value.max_step_limits.get(context_type, 0)
+
+        return IconScoreStepCounter(step_price, step_costs, max_step_limit, step_trace_flag)
 
 
 class IconScoreStepCounter(object):

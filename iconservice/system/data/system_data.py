@@ -29,7 +29,7 @@ class SystemData(metaclass=ABCMeta):
 class StepCosts(SystemData):
     SYSTEM_TYPE: 'SystemValueType' = SystemValueType.STEP_COSTS
 
-    def __init__(self, value: Any):
+    def __init__(self, value: dict):
         super().__init__(value)
 
     def make_key(self) -> bytes:
