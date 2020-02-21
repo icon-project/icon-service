@@ -141,7 +141,6 @@ class ConfigKey:
     SERVICE = 'service'
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
-    SERVICE_DEPLOYER_WHITE_LIST = 'deployerWhiteList'
     SERVICE_SCORE_PACKAGE_VALIDATOR = 'scorePackageValidator'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
@@ -194,7 +193,7 @@ class EnableThreadFlag(IntFlag):
 class IconServiceFlag(IntFlag):
     FEE = 1
     AUDIT = 2
-    DEPLOYER_WHITE_LIST = 4
+    # DEPLOYER_WHITE_LIST = 4
     SCORE_PACKAGE_VALIDATOR = 8
 
 

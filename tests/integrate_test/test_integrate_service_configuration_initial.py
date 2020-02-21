@@ -36,7 +36,6 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
         self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
                                                      ConfigKey.SERVICE_FEE: False,
-                                                     ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                                                      ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
         self.config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                                  ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
@@ -57,14 +56,6 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         self.assertEqual(context.icon_service_flag, IconServiceFlag.AUDIT)
 
-    def test_service_configuration_deployer_white_list_setting(self):
-        self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: True}})
-        self.icon_service_engine = IconServiceEngine()
-        self.icon_service_engine.open(self.config)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        self.assertEqual(context.icon_service_flag, IconServiceFlag.DEPLOYER_WHITE_LIST)
-
     def test_service_configuration_score_package_validiator_setting(self):
         self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: True}})
         self.icon_service_engine = IconServiceEngine()
@@ -76,7 +67,6 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
     def test_service_configuration_multiple_setting(self):
         multiple_config = {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True,
                                                ConfigKey.SERVICE_FEE: True,
-                                               ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: True,
                                                ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: True}}
         self.config.update_conf(multiple_config)
         self.icon_service_engine = IconServiceEngine()
@@ -84,5 +74,5 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
 
         context = IconScoreContext(IconScoreContextType.INVOKE)
         expected_flag = IconServiceFlag.FEE | IconServiceFlag.AUDIT | \
-                        IconServiceFlag.SCORE_PACKAGE_VALIDATOR | IconServiceFlag.DEPLOYER_WHITE_LIST
+                        IconServiceFlag.SCORE_PACKAGE_VALIDATOR
         self.assertEqual(context.icon_service_flag, expected_flag)
