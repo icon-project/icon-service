@@ -16,16 +16,15 @@
 
 import json
 from enum import Enum, auto
-from threading import Lock
 from typing import TYPE_CHECKING, Any, List, Tuple, Optional
 
 from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
 from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, Revision
-from ..system.value import SystemValue
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContextType
+    from ..system.value import SystemValue
 
 
 def get_input_data_size(revision: int, input_data: Any) -> int:
