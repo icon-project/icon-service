@@ -83,7 +83,6 @@ from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
-    from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
     from .prep.data import Term
 
@@ -337,34 +336,6 @@ class IconServiceEngine(ContextContainer):
             self._pop_context()
 
         context.current_address = current_address
-
-    @staticmethod
-    def _get_governance_score(context: 'IconScoreContext') -> 'Governance':
-        governance_score = \
-            IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-        if governance_score is None:
-            raise ScoreNotFoundException('Governance SCORE not found')
-        return governance_score
-
-    def _validate_deployer_whitelist(self, context: 'IconScoreContext', params: dict):
-        data_type = params.get('dataType')
-
-        if data_type != 'deploy':
-            return
-
-        _from: 'Address' = params.get('from')
-        if _from is None:
-            return
-
-        try:
-            self._push_context(context)
-            # Gets the governance SCORE
-            governance_score = self._get_governance_score(context)
-
-            if not governance_score.isDeployer(_from):
-                raise AccessDeniedException(f'Invalid deployer: no permission ({_from})')
-        finally:
-            self._pop_context()
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -1099,9 +1070,6 @@ class IconServiceEngine(ContextContainer):
             # SCORE updating is not blocked by SCORE blacklist
             if 'dataType' in params and params['dataType'] == 'call':
                 IconScoreContextUtil.validate_score_blacklist(context, to)
-
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
-                self._validate_deployer_whitelist(context, params)
         finally:
             self._pop_context()
 

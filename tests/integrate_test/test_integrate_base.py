@@ -83,7 +83,6 @@ class TestIntegrateBase(TestCase):
         config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
         config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
                                                 ConfigKey.SERVICE_FEE: False,
-                                                ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                                                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
         config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                             ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})

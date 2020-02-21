@@ -171,24 +171,6 @@ class IconScoreContextUtil(object):
             raise AccessDeniedException(f'SCORE in blacklist: {score_address}')
 
     @staticmethod
-    # TODO remove
-    def validate_deployer(context: 'IconScoreContext', deployer: 'Address') -> None:
-        """Check if a given deployer is allowed to deploy a SCORE
-
-        :param context:
-        :param deployer: EOA address to deploy a SCORE
-        """
-        if not IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
-            return
-
-        # Gets the governance SCORE
-        governance_score =\
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        if not governance_score.isDeployer(deployer):
-            raise AccessDeniedException(f'Invalid deployer: no permission (address: {deployer})')
-
-    @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:
         if context.inv_container:
             service_flag = context.inv_container.service_config

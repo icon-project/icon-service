@@ -49,8 +49,6 @@ GET_DEPLOY_TX_PARAMS_PATCHER = patch('iconservice.iconscore.icon_score_context_u
 IconScoreContextUtil.get_deploy_tx_params')
 VALIDATE_SCORE_BLACKLIST_PATCHER = patch('iconservice.iconscore.icon_score_context_util.\
 IconScoreContextUtil.validate_score_blacklist')
-VALIDATE_DEPLOYER = patch('iconservice.iconscore.icon_score_context_util.\
-IconScoreContextUtil.validate_deployer')
 VALIDATE_PACKAGE_PATCHER = patch('iconservice.iconscore.icon_score_context_util.\
 IconScoreContextUtil.validate_score_package')
 MAKE_DIR_PATCHER = patch('iconservice.deploy.engine.os.makedirs')
@@ -195,14 +193,13 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.legacy_tbears_mode = legacy_tbears_mode
 
     # case when icon_score_address is in (None, ZERO_ADDRESS)
-    @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
+    @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER)
     def test_invoke_case1(self):
         self._invoke_setUp(True)
 
         with self.assertRaises(AssertionError):
             self._score_deploy_engine._invoke(self._context, GOVERNANCE_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS, {})
         IconScoreContextUtil.validate_score_blacklist.assert_not_called()
-        IconScoreContextUtil.validate_deployer.assert_not_called()
         self._deploy_storage.put_deploy_info_and_tx_params.assert_not_called()
         self._score_deploy_engine._is_audit_needed.assert_not_called()
         self._score_deploy_engine.deploy.assert_not_called()
@@ -210,58 +207,8 @@ class TestScoreDeployEngine(unittest.TestCase):
         with self.assertRaises(AssertionError):
             self._score_deploy_engine._invoke(self._context, GOVERNANCE_SCORE_ADDRESS, None, {})
         IconScoreContextUtil.validate_score_blacklist.assert_not_called()
-        IconScoreContextUtil.validate_deployer.assert_not_called()
         self._deploy_storage.put_deploy_info_and_tx_params.assert_not_called()
         self._score_deploy_engine._is_audit_needed.assert_not_called()
-        self._score_deploy_engine.deploy.assert_not_called()
-
-    # case when deployer_white_list flag on, ignore audit
-    @patch_several(IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
-    def test_invoke_case2(self):
-        self._invoke_setUp(False)
-
-        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
-
-        IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
-        self._deploy_storage.put_deploy_info_and_tx_params.\
-            assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS, DeployType.INSTALL, self._context.tx.origin,
-                               self._context.tx.hash, {})
-        self._score_deploy_engine.deploy.assert_called_with(self._context, self._context.tx.hash)
-
-    # case when deployer_white_list flag on, audit
-    @patch_several(IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
-    def test_invoke_case3(self):
-        self._invoke_setUp(True)
-
-        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
-
-        IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
-        self._deploy_storage.put_deploy_info_and_tx_params.\
-            assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS, DeployType.INSTALL, self._context.tx.origin,
-                               self._context.tx.hash, {})
-        self._score_deploy_engine.deploy.assert_not_called()
-
-    # case when deployer_white_list flag off, audit
-    @patch_several(IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
-    def test_invoke_case4(self):
-        self._invoke_setUp(False)
-
-        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
-
-        IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
-        self._deploy_storage.put_deploy_info_and_tx_params. \
-            assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS, DeployType.INSTALL, self._context.tx.origin,
-                               self._context.tx.hash, {})
-        self._score_deploy_engine.deploy.assert_called_with(self._context, self._context.tx.hash)
-
-    # case when deployer_white_list flag off, audit on
-    @patch_several(IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
-    def test_invoke_case5(self):
-        self._invoke_setUp(True)
-
-        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
-
-        IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
         self._score_deploy_engine.deploy.assert_not_called()
 
     # case when revision0, owner, audit false

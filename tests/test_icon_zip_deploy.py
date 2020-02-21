@@ -121,7 +121,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
         ContextContainer._push_context(self._context)
-        self._context.validate_deployer = Mock()
         self._context.validate_score_blacklist = Mock()
         self._context.is_service_flag_on = Mock(return_value=False)
 
