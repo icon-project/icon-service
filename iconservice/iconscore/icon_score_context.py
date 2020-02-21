@@ -17,10 +17,12 @@
 import warnings
 from abc import ABC
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional, List, Any
+from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
+
 from .icon_score_mapper import IconScoreMapper
+from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.exception import FatalException, AccessDeniedException
@@ -37,7 +39,7 @@ from ..system.listener import SystemValueListener
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
-    from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
+
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
