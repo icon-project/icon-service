@@ -22,7 +22,7 @@ from .. import Address
 from ..base.exception import AccessDeniedException
 from ..icon_constant import SystemValueType, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
-from ..iconscore.icon_score_step import IconScoreStepCounter, StepType
+from ..iconscore.icon_score_step import StepType
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 
@@ -180,16 +180,6 @@ class SystemValue(object):
 
     def clear_batch(self):
         self._tx_unit_batch.clear()
-
-    def create_step_counter(self,
-                            context_type: 'IconScoreContextType',
-                            step_trace_flag: bool) -> 'IconScoreStepCounter':
-        step_price: int = self.step_price
-        # Copying a `dict` so as not to change step costs when processing a transaction.
-        step_costs: dict = self.step_costs
-        max_step_limit: int = self.max_step_limits.get(context_type, 0)
-
-        return IconScoreStepCounter(step_price, step_costs, max_step_limit, step_trace_flag)
 
     def migrate(self, context: 'IconScoreContext', data: Dict['SystemValueType', 'SystemData']):
         """

@@ -37,7 +37,7 @@ from ..system.listener import SystemValueListener
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
-    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
@@ -360,11 +360,13 @@ class IconScoreContextFactory(object):
     def set_step_counter(cls, context: 'IconScoreContext'):
         is_step_trace_on: bool = cls._is_step_trace_on(context)
         if context.type == IconScoreContextType.ESTIMATION:
-            context.step_counter = context.system_value.create_step_counter(IconScoreContextType.INVOKE,
-                                                                            is_step_trace_on)
+            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.system_value,
+                                                                                   IconScoreContextType.INVOKE,
+                                                                                   is_step_trace_on)
         else:
-            context.step_counter = context.system_value.create_step_counter(context.type,
-                                                                            is_step_trace_on)
+            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.system_value,
+                                                                                   context.type,
+                                                                                   is_step_trace_on)
 
     @classmethod
     def _is_step_trace_on(cls, context: 'IconScoreContext') -> bool:
