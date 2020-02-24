@@ -360,7 +360,7 @@ class Governance(IconSystemScoreBase):
             else:
                 result = {}
 
-        system = self.create_interface_score(ZERO_SCORE_ADDRESS, SystemInterface)
+        system = self.create_interface_score(SYSTEM_SCORE_ADDRESS, SystemInterface)
         deposit_info = system.getScoreDepositInfo(address)
         if deposit_info is not None:
             result[DEPOSIT_INFO] = deposit_info

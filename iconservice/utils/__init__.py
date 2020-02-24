@@ -98,6 +98,7 @@ def get_main_type_from_annotations_type(annotations_type: type) -> type:
         annotations = annotations_type.__args__
         for annotation_type in annotations:
             if annotation_type is not None:
+                print(f' find {annotation_type}')
                 main_type = annotation_type
                 break
     else:

@@ -19,7 +19,7 @@
 
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         # success case: call valid event log and check log data
@@ -115,7 +115,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
@@ -133,7 +133,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
             score_root="sample_event_log_scores",
             score_name="sample_self_is_not_defined_event_log_score",
             from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS,
+            to_=SYSTEM_SCORE_ADDRESS,
             expected_status=False)
 
         self.assertEqual(tx_results[0].failure.message, "'self' is not declared as the first parameter")
@@ -142,7 +142,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         # failure case: the case of raising an error when call event log, the state should be revert
@@ -161,7 +161,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         # success case: even though the event log has body, body should be ignored
@@ -179,7 +179,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         # success case: set index under 0(index number should be treated as 0)
@@ -197,7 +197,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_exceed_max_index_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS,
+                                                                  to_=SYSTEM_SCORE_ADDRESS,
                                                                   expected_status=False)
         self.assertEqual(tx_results[0].failure.message, "Indexed arguments overflow: limit=3")
 
@@ -205,7 +205,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_index_exceed_params_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS,
+                                                                  to_=SYSTEM_SCORE_ADDRESS,
                                                                   expected_status=False)
         self.assertEqual(tx_results[0].failure.message, "Index exceeds the number of parameters")
 
@@ -213,30 +213,30 @@ class TestIntegrateEventLog(TestIntegrateBase):
         pass
 
     def test_event_log_parameters_on_deploy(self):
-        # failure case: define dict type parameter
-        tx_results: List['TransactionResult'] = self.deploy_score(
-            score_root="sample_event_log_scores",
-            score_name="sample_invalid_params_type_event_log_score_dict",
-            from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS,
-            expected_status=False)
-        self.assertEqual(tx_results[0].failure.message, "Unsupported type for 'value: <class 'dict'>'")
-
-        # failure case: define list type parameter
-        tx_results: List['TransactionResult'] = self.deploy_score(
-            score_root="sample_event_log_scores",
-            score_name="sample_invalid_params_type_event_log_score_array",
-            from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS,
-            expected_status=False)
-        self.assertEqual(tx_results[0].failure.message, "Unsupported type for 'value: <class 'list'>'")
+        # # failure case: define dict type parameter
+        # tx_results: List['TransactionResult'] = self.deploy_score(
+        #     score_root="sample_event_log_scores",
+        #     score_name="sample_invalid_params_type_event_log_score_dict",
+        #     from_=self._accounts[0],
+        #     to_=SYSTEM_SCORE_ADDRESS,
+        #     expected_status=False)
+        # self.assertEqual(tx_results[0].failure.message, "Unsupported type for 'value: <class 'dict'>'")
+        #
+        # # failure case: define list type parameter
+        # tx_results: List['TransactionResult'] = self.deploy_score(
+        #     score_root="sample_event_log_scores",
+        #     score_name="sample_invalid_params_type_event_log_score_array",
+        #     from_=self._accounts[0],
+        #     to_=SYSTEM_SCORE_ADDRESS,
+        #     expected_status=False)
+        # self.assertEqual(tx_results[0].failure.message, "Unsupported type for 'value: <class 'list'>'")
 
         # failure case: omit type hint
         tx_results: List['TransactionResult'] = self.deploy_score(
             score_root="sample_event_log_scores",
             score_name="sample_invalid_params_type_hint_event_log_score",
             from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS,
+            to_=SYSTEM_SCORE_ADDRESS,
             expected_status=False)
         self.assertEqual(tx_results[0].failure.message,
                          "Missing argument hint for 'EventLogInvalidParamsType': 'value'")
@@ -245,7 +245,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_event_log_scores",
                                                                   score_name="sample_event_log_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         # failure case: input less parameter to event log(raise error)
@@ -338,21 +338,21 @@ class TestIntegrateEventLog(TestIntegrateBase):
             score_root="sample_event_log_scores",
             score_name="sample_internal_call_event_log_scores/sample_event_log_score_a",
             from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS)
+            to_=SYSTEM_SCORE_ADDRESS)
         score_addr_a = tx_results[0].score_address
 
         tx_results: List['TransactionResult'] = self.deploy_score(
             score_root="sample_event_log_scores",
             score_name="sample_internal_call_event_log_scores/sample_event_log_score_b",
             from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS)
+            to_=SYSTEM_SCORE_ADDRESS)
         score_addr_b = tx_results[0].score_address
 
         tx_results: List['TransactionResult'] = self.deploy_score(
             score_root="sample_event_log_scores",
             score_name="sample_internal_call_event_log_scores/sample_event_log_score_c",
             from_=self._accounts[0],
-            to_=ZERO_SCORE_ADDRESS)
+            to_=SYSTEM_SCORE_ADDRESS)
         score_addr_c = tx_results[0].score_address
 
         # success case: score A(emit) -> score B(emit): both A and B's eventlog should be recorded

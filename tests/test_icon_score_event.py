@@ -50,7 +50,7 @@ class TestEventlog(unittest.TestCase):
             fee=None,
             iiss=None,
             prep=None,
-            issue=None
+            issue=None,
         )
         IconScoreContext.storage = ContextStorage(
             icx=Mock(IcxStorage),

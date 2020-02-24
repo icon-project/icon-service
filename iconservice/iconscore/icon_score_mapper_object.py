@@ -16,9 +16,10 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..icon_constant import Revision
+from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -67,7 +68,7 @@ class IconScoreInfo(object):
         :param revision:
         :return:
         """
-        if revision <= Revision.TWO.value or self.address == GOVERNANCE_SCORE_ADDRESS:
+        if revision <= Revision.TWO.value or is_builtin_score(str(self.address)):
             if self._score is None:
                 self._score = self.create_score()
 

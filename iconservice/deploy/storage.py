@@ -268,8 +268,9 @@ class Storage(StorageBase):
     def get_deploy_info(self, context: Optional['IconScoreContext'], score_address: 'Address') \
             -> Optional['IconScoreDeployInfo']:
 
-        data: bytes = self._db.get(context, self._create_db_key(
-            self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_address.to_bytes()))
+        key: bytes = self._create_db_key(
+            self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_address.to_bytes())
+        data: bytes = self._db.get(context, key)
         if data is None:
             return None
 

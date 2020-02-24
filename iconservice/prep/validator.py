@@ -63,20 +63,23 @@ def validate_prep_data(context: 'IconScoreContext',
             elif isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
                 raise InvalidParamsException("Can not set empty data")
 
-    for key in tx_data:
-        if isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
+    for key, value in tx_data.items():
+        if value is None:
+            continue
+        if isinstance(value, str) and len(value.strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.P2P_ENDPOINT:
-            _validate_p2p_endpoint(tx_data[key])
+            _validate_p2p_endpoint(value)
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
-            _validate_uri(tx_data[key])
+            _validate_uri(value)
         elif key == ConstantKeys.EMAIL:
-            _validate_email(context.revision, tx_data[key])
+            _validate_email(context.revision, value)
         elif key == ConstantKeys.COUNTRY:
-            _validate_country(tx_data[key])
+            _validate_country(value)
 
     # node address validate
-    is_update_node_address: bool = ConstantKeys.NODE_ADDRESS in tx_data
+    is_update_node_address: bool = \
+        ConstantKeys.NODE_ADDRESS in tx_data and tx_data[ConstantKeys.NODE_ADDRESS] is not None
     if set_prep and not is_update_node_address:
         # non changed skip
         return

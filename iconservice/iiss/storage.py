@@ -14,8 +14,8 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import FatalException
 from ..base.ComponentBase import StorageBase
+from ..base.exception import FatalException
 from ..icon_constant import IISS_MAX_REWARD_RATE, ConfigKey
 from ..utils.msgpack_for_db import MsgPackForDB
 

@@ -19,7 +19,7 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException, FatalException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, Revision, \
@@ -313,7 +313,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
             if group_key not in issue_data:
                 continue
-            expected_score_address = ZERO_SCORE_ADDRESS
+            expected_score_address = SYSTEM_SCORE_ADDRESS
             expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
             expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
@@ -367,7 +367,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
             if group_key not in issue_data:
                 continue
-            expected_score_address = ZERO_SCORE_ADDRESS
+            expected_score_address = SYSTEM_SCORE_ADDRESS
             expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
             expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)

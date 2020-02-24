@@ -20,7 +20,8 @@ from typing import TypeVar
 from ..base.address import Address
 
 T = TypeVar('T')
-BaseType = TypeVar('BaseType', bool, int, str, bytes, Address)
+# TODO add checking function for list, dict type
+BaseType = TypeVar("BaseType", bool, int, str, bytes, list, dict, Address)
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'

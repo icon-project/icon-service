@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Optional
 from iconcommons import Logger
 from .issue_formula import IssueFormula
 from .regulator import Regulator
-from ... import ZERO_SCORE_ADDRESS
+from ... import SYSTEM_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
 from ...base.exception import OutOfBalanceException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG, Revision
@@ -93,13 +93,13 @@ class Engine(EngineBase):
             event_signature: str = ISSUE_EVENT_LOG_MAPPER[group_key]["event_signature"]
             data: list = [issue_data[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
             EventLogEmitter.emit_event_log(context,
-                                           score_address=ZERO_SCORE_ADDRESS,
+                                           score_address=SYSTEM_SCORE_ADDRESS,
                                            event_signature=event_signature,
                                            arguments=data,
                                            indexed_args_count=0)
 
         EventLogEmitter.emit_event_log(context,
-                                       score_address=ZERO_SCORE_ADDRESS,
+                                       score_address=SYSTEM_SCORE_ADDRESS,
                                        event_signature=ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["event_signature"],
                                        arguments=[context.regulator.covered_icx_by_fee,
                                                   context.regulator.covered_icx_by_over_issue,
@@ -128,7 +128,7 @@ class Engine(EngineBase):
         if context.revision >= Revision.FIX_BURN_EVENT_SIGNATURE.value:
             event_sig: str = "ICXBurned(int)"
         EventLogEmitter.emit_event_log(context,
-                                       score_address=ZERO_SCORE_ADDRESS,
+                                       score_address=SYSTEM_SCORE_ADDRESS,
                                        event_signature=event_sig,
                                        arguments=[amount],
                                        indexed_args_count=0)

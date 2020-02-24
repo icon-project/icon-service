@@ -16,7 +16,7 @@
 
 import os
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
     IISS_DB
@@ -353,7 +353,7 @@ class TestRCDatabase(TestIISSBase):
 
         # unregister prep on start term period
         tx: dict = self.create_score_call_tx(from_=main_preps_address[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="unregisterPRep",
                                              params={},
                                              value=0)
@@ -425,7 +425,7 @@ class TestRCDatabase(TestIISSBase):
         # unregister on term
         self.make_blocks(self._block_height + 4)
         tx: dict = self.create_score_call_tx(from_=main_preps_address[1],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="unregisterPRep",
                                              params={},
                                              value=0)

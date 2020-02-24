@@ -16,7 +16,7 @@
 
 import time
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
 
@@ -26,7 +26,7 @@ from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotificatio
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
-from ..base.address import ZERO_SCORE_ADDRESS
+from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import (
     InvalidParamsException, InvalidRequestException,
     OutOfBalanceException, FatalException, InternalServiceErrorException
@@ -58,26 +58,53 @@ _TAG = IISS_LOG_TAG
 QUERY_CALCULATE_REPEAT_COUNT = 3
 
 
+class Method:
+    SET_STAKE = 'setStake'
+    GET_STAKE = 'getStake'
+    SET_DELEGATION = 'setDelegation'
+    GET_DELEGATION = 'getDelegation'
+    CLAIM_ISCORE = 'claimIScore'
+    QUERY_ISCORE = 'queryIScore'
+    ESTIMATE_UNLOCK_PERIOD = 'estimateUnstakeLockPeriod'
+
+
 class Engine(EngineBase):
     """IISSEngine class
 
     """
     TAG = "IISS"
 
+    INVOKE_METHOD_TABLE = [
+        Method.SET_STAKE,
+        Method.SET_DELEGATION,
+        Method.CLAIM_ISCORE,
+    ]
+    QUERY_METHOD_TABLE = [
+        Method.GET_STAKE,
+        Method.GET_DELEGATION,
+        Method.QUERY_ISCORE,
+        Method.ESTIMATE_UNLOCK_PERIOD,
+    ]
+    METHOD_TABLE = INVOKE_METHOD_TABLE + QUERY_METHOD_TABLE
+
     def __init__(self):
         super().__init__()
 
         self._invoke_handlers: dict = {
-            'setStake': self.handle_set_stake,
-            'setDelegation': self.handle_set_delegation,
-            'claimIScore': self.handle_claim_iscore
+            Method.SET_STAKE: self.handle_set_stake,
+            Method.SET_DELEGATION: self.handle_set_delegation,
+            Method.CLAIM_ISCORE: self.handle_claim_iscore,
+            Method.GET_STAKE: self.handle_get_stake,
+            Method.GET_DELEGATION: self.handle_get_delegation,
+            Method.QUERY_ISCORE: self.handle_query_iscore,
+            Method.ESTIMATE_UNLOCK_PERIOD: self.handle_estimate_unstake_lock_period,
         }
 
         self._query_handler: dict = {
-            'getStake': self.handle_get_stake,
-            'getDelegation': self.handle_get_delegation,
-            'queryIScore': self.handle_query_iscore,
-            'estimateUnstakeLockPeriod': self.handle_estimate_unstake_lock_period
+            Method.GET_STAKE: self.handle_get_stake,
+            Method.GET_DELEGATION: self.handle_get_delegation,
+            Method.QUERY_ISCORE: self.handle_query_iscore,
+            Method.ESTIMATE_UNLOCK_PERIOD: self.handle_estimate_unstake_lock_period,
         }
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
@@ -218,33 +245,41 @@ class Engine(EngineBase):
     def close(self):
         self._close_reward_calc_proxy()
 
-    def invoke(self, context: 'IconScoreContext', data: dict) -> None:
-        method: str = data['method']
-        params: dict = data.get('params', {})
+    @classmethod
+    def check_method(cls, method: str) -> bool:
+        return method in cls.METHOD_TABLE
 
+    @classmethod
+    def check_invoke_method(cls, method: str) -> bool:
+        return method in cls.INVOKE_METHOD_TABLE
+
+    @classmethod
+    def check_query_method(cls, method: str) -> bool:
+        return method in cls.QUERY_METHOD_TABLE
+
+    def invoke(self, context: 'IconScoreContext', method: str, params: dict):
         handler: callable = self._invoke_handlers[method]
-        handler(context, params)
+        handler(context, **params)
 
-    def query(self, context: 'IconScoreContext', data: dict) -> Any:
-        method: str = data['method']
-        params: dict = data.get('params', {})
-
+    def query(self, context: 'IconScoreContext', method: str, params: dict) -> Any:
         handler: callable = self._query_handler[method]
-        ret = handler(context, params)
+        ret = handler(context, **params)
         return ret
 
-    def handle_set_stake(self, context: 'IconScoreContext', params: dict):
+    def handle_set_stake(self, context: 'IconScoreContext', value: int):
+        if not isinstance(value, int) or value < 0:
+            raise InvalidParamsException(
+                "Failed to stake: value is not int type or value < 0"
+            )
 
-        address: 'Address' = context.tx.origin
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_STAKE)
-        stake: int = ret_params[ConstantKeys.VALUE]
+        address: 'Address' = context.msg.sender
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         total_stake: int = context.storage.iiss.get_total_stake(context)
 
-        if not isinstance(stake, int) or stake < 0:
-            raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
+        if value < 0:
+            raise InvalidParamsException('Failed to stake: value < 0')
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
-        self._check_from_can_stake(context, stake, account)
+        self._check_from_can_stake(context, value, account)
 
         unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
                                                                        context.storage.iiss.lock_max,
@@ -253,7 +288,7 @@ class Engine(EngineBase):
                                                                        context.total_supply)
         # subtract account's staked amount from the total stake
         total_stake -= account.stake
-        account.set_stake(stake, unstake_lock_period)
+        account.set_stake(value, unstake_lock_period)
         # add account's newly set staked amount from the total stake
         total_stake += account.stake
         context.storage.icx.put_account(context, account)
@@ -267,11 +302,15 @@ class Engine(EngineBase):
                               context: 'IconScoreContext',
                               stake: int,
                               account: 'Account'):
-        fee: int = context.step_counter.step_price * context.step_counter.step_used
+        fee: int = 0
+        # SCORE can stake via SCORE inter-call
+        # fee must be charged to TX sender
+        if account.address == context.tx.origin:
+            fee = context.step_counter.step_price * context.step_counter.step_used
 
         if account.balance + account.total_stake < stake + fee:
             raise OutOfBalanceException(
-                f'Out of balance: balance({account.balance}) + total_stake({account.total_stake})'
+                f'Out of balance({account.address}): balance({account.balance}) + total_stake({account.total_stake})'
                 f' < stake({stake}) + fee({fee})')
 
         if stake < account.delegations_amount:
@@ -293,16 +332,11 @@ class Engine(EngineBase):
         second_operand: float = (stake_percentage - (rpoint / IISS_MAX_REWARD_RATE)) ** 2
         return int(first_operand * second_operand) + lmin
 
-    def handle_get_stake(self, context: 'IconScoreContext', params: dict) -> dict:
-
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_STAKE)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-        return self._get_stake(context, address)
-
-    @classmethod
-    def _get_stake(cls, context: 'IconScoreContext', address: 'Address') -> dict:
-
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
+    @staticmethod
+    def handle_get_stake(context: 'IconScoreContext', address: "Address") -> dict:
+        account: "Account" = context.storage.icx.get_account(
+            context, address, Intent.STAKE
+        )
 
         stake: int = account.stake
         unstake: int = account.unstake
@@ -319,7 +353,7 @@ class Engine(EngineBase):
 
         return data
 
-    def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext', _params: dict):
+    def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext'):
         total_stake: int = context.storage.iiss.get_total_stake(context)
         unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
                                                                        context.storage.iiss.lock_max,
@@ -330,19 +364,16 @@ class Engine(EngineBase):
             "unstakeLockPeriod": unstake_lock_period
         }
 
-    def handle_set_delegation(self, context: 'IconScoreContext', params: dict):
+    def handle_set_delegation(self, context: 'IconScoreContext', delegations: list):
         """Handles setDelegation JSON-RPC API request
-
-        :param context:
-        :param params:
-        :return:
         """
-        sender: 'Address' = context.tx.origin
+        # SCORE can stake via SCORE inter-call
+        sender: 'Address' = context.msg.sender
         cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
 
         # Convert setDelegation params
         total_delegating, new_delegations = \
-            self._convert_params_of_set_delegation(params)
+            self._convert_params_of_set_delegation(delegations)
 
         # Check whether voting power is enough to delegate
         self._check_voting_power_is_enough(context, sender, total_delegating, cached_accounts)
@@ -365,22 +396,15 @@ class Engine(EngineBase):
 
     @classmethod
     def _convert_params_of_set_delegation(cls,
-                                          params: dict) -> Tuple[int, List[Tuple['Address', int]]]:
+                                          delegations: dict) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
-        [("hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", 1000000000000000000), ...]
+        [(Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), 1000000000000000000), ...]
 
-        :param params: params of setDelegation JSON-RPC API request
+        :param delegations: delegations of setDelegation JSON-RPC API request
         :return: total_delegating, (address, delegated)
         """
-
-        if len(params) == 1:
-            delegations: Optional[List[Dict[str, str]]] = params[ConstantKeys.DELEGATIONS]
-        elif len(params) == 0:
-            delegations = None
-        else:
-            raise InvalidParamsException(f"Invalid params: {params}")
 
         assert delegations is None or isinstance(delegations, list)
 
@@ -390,15 +414,12 @@ class Engine(EngineBase):
         if len(delegations) > IISS_MAX_DELEGATIONS:
             raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
 
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
-        delegations: List[Dict[str, Union['Address', int]]] = \
-            ret_params[ConstantKeys.DELEGATIONS]
-
+        temp_delegations: dict = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
         delegated_addresses = set()
 
-        for delegation in delegations:
+        for delegation in temp_delegations:
             address: 'Address' = delegation["address"]
             value: int = delegation["value"]
             assert isinstance(address, Address)
@@ -547,24 +568,9 @@ class Engine(EngineBase):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, context.block.height, delegation_tx)
         context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
 
-    def handle_get_delegation(self,
-                              context: 'IconScoreContext',
-                              params: dict) -> dict:
+    def handle_get_delegation(self, context: 'IconScoreContext', address: 'Address') -> dict:
         """Handles getDelegation JSON-RPC API request
-
-        :param context:
-        :param params:
-        :return:
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_DELEGATION)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-        return self._get_delegation(context, address)
-
-    @classmethod
-    def _get_delegation(cls,
-                        context: 'IconScoreContext',
-                        address: 'Address') -> dict:
-
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         delegation_list: list = []
         for address, value in account.delegations:
@@ -590,14 +596,8 @@ class Engine(EngineBase):
         """
         return iscore // ISCORE_EXCHANGE_RATE
 
-    def handle_claim_iscore(self,
-                            context: 'IconScoreContext',
-                            _params: dict):
+    def handle_claim_iscore(self, context: 'IconScoreContext'):
         """Handles claimIScore JSON-RPC request
-
-        :param context:
-        :param _params:
-        :return:
         """
         iscore, block_height = self._claim_iscore(context)
 
@@ -606,7 +606,7 @@ class Engine(EngineBase):
 
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="IScoreClaimed(int,int)",
             arguments=[iscore, self._iscore_to_icx(iscore)],
             indexed_args_count=0
@@ -659,12 +659,7 @@ class Engine(EngineBase):
         finally:
             self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash, tx.index, tx.hash)
 
-    def handle_query_iscore(self,
-                            _context: 'IconScoreContext',
-                            params: dict) -> dict:
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)
-        address: 'Address' = ret_params.get(ConstantKeys.ADDRESS)
-
+    def handle_query_iscore(self, context: 'IconScoreContext', address: 'Address') -> dict:
         if not isinstance(address, Address):
             raise InvalidParamsException(f"Invalid address: {address}")
 

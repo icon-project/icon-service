@@ -18,7 +18,7 @@
 """
 from typing import TYPE_CHECKING, List
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
@@ -165,6 +165,8 @@ class TestIntegratePrepRegistration(TestIISSBase):
             self.assertEqual(icx_amount_before_reg - expected_burned_amount - step_price,
                              self.get_balance(self._accounts[i]))
 
+        self.assertEqual(expected_total_supply, self.get_total_supply())
+
     def test_set_value_when_prep_related_set_method(self):
         # failure case: except registerPRep, value can not be set when calling prep related setting method
         arbitrary_value = 10
@@ -175,7 +177,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
 
         # unregisterPRep
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="unregisterPRep",
                                              params={},
                                              value=arbitrary_value)
@@ -184,7 +186,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
 
         # setPRep
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setPRep",
                                              params={"name": f"new{str(self._accounts[0].address)}"},
                                              value=arbitrary_value)
@@ -194,7 +196,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
         # setGovernanceVariables
         arbitrary_irep = 10
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setGovernanceVariables",
                                              params={"irep": hex(arbitrary_irep)},
                                              value=arbitrary_value)

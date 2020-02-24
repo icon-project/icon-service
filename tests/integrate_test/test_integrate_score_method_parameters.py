@@ -111,7 +111,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
                 }
             }
         }
-        self.assertRaises(TypeError, self._query, query_request)
+        self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_less_parameters_query(self):
         init_supply: int = 1000
@@ -186,8 +186,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
                                                                         "value": hex(value),
                                                                         "additional_param": hex(1)},
                                                                 expected_status=False)
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertTrue(tx_results[0].failure.message.find("got an unexpected keyword argument") != -1)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         query_request = {
             "from": self._admin,
@@ -513,37 +512,37 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, init_supply * 10 ** decimal + 1)
 
     # unsupported parameter type testcase
-    def test_kwargs_parameter_method(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
-            score_root="sample_deploy_scores",
-            score_name="install/sample_kwargs_score",
-            from_=self._accounts[0],
-            deploy_params={"value": str(self._accounts[1].address),
-                           "value1": str(self._accounts[1].address)},
-            expected_status=False)
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
-
+    # def test_kwargs_parameter_method(self):
+    #     tx_results: List['TransactionResult'] = self.deploy_score(
+    #         score_root="sample_deploy_scores",
+    #         score_name="install/sample_kwargs_score",
+    #         from_=self._accounts[0],
+    #         deploy_params={"value": str(self._accounts[1].address),
+    #                        "value1": str(self._accounts[1].address)},
+    #         expected_status=False)
+    #     self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
+    #
     # unsupported parameter type testcase
-    def test_list_parameters_query(self):
-        # deploy
-        tx_results: List['TransactionResult'] = self.deploy_score(
-            score_root="sample_deploy_scores",
-            score_name="install/sample_list_params_score",
-            from_=self._accounts[0],
-            deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
-            expected_status=False)
-
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
-        self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'list_param: <class 'list'>'") != -1)
-
-    def test_dict_parameters_query(self):
-        # deploy
-        tx_results: List['TransactionResult'] = self.deploy_score(
-            score_root="sample_deploy_scores",
-            score_name="install/sample_dict_params_score",
-            from_=self._accounts[0],
-            deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
-            expected_status=False)
-
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
-        self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'dict_param: <class 'dict'>'") != -1)
+    # def test_list_parameters_query(self):
+    #     # deploy
+    #     tx_results: List['TransactionResult'] = self.deploy_score(
+    #         score_root="sample_deploy_scores",
+    #         score_name="install/sample_list_params_score",
+    #         from_=self._accounts[0],
+    #         deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+    #         expected_status=False)
+    #
+    #     self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
+    #     self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'list_param: <class 'list'>'") != -1)
+    #
+    # def test_dict_parameters_query(self):
+    #     # deploy
+    #     tx_results: List['TransactionResult'] = self.deploy_score(
+    #         score_root="sample_deploy_scores",
+    #         score_name="install/sample_dict_params_score",
+    #         from_=self._accounts[0],
+    #         deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+    #         expected_status=False)
+    #
+    #     self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
+    #     self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'dict_param: <class 'dict'>'") != -1)

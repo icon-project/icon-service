@@ -21,7 +21,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from iconservice import *
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import AddressPrefix, SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.exception import ScoreNotFoundException, InvalidParamsException
 from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
     ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
@@ -37,12 +37,6 @@ class TestIconScoreEngine(unittest.TestCase):
     def test_validate_score_blacklist(self,
                                       mocked_score_context_util_validate_score_blacklist):
         context = IconScoreContext(IconScoreContextType.INVOKE)
-
-        # failure case: should not accept ZERO_SCORE_ADDRESS as SCORE address
-        self.assertRaises(InvalidParamsException,
-                          IconScoreEngine._validate_score_blacklist,
-                          context, ZERO_SCORE_ADDRESS)
-        mocked_score_context_util_validate_score_blacklist.assert_not_called()
 
         # failure case: should not accept EOA as SCORE address
         eoa_address = create_address(AddressPrefix.EOA)

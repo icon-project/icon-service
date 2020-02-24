@@ -48,7 +48,7 @@ class TestIconScoreClassLoader(unittest.TestCase):
             fee=None,
             iiss=None,
             prep=None,
-            issue=None
+            issue=None,
         )
         IconScoreContext.storage = ContextStorage(
             icx=None,

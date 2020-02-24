@@ -21,6 +21,7 @@ from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
+from iconservice.deploy import DeployEngine
 from iconservice.fee import FeeEngine
 from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
@@ -57,15 +58,16 @@ class TestIconScoreStepCounter(unittest.TestCase):
         prep_engine = PRepEngine()
         prep_engine.preps = Mock()
         prep_engine.prep_address_converter = Mock()
+        deploy_engine = DeployEngine()
         fee_engine = FeeEngine()
         icx_engine = IcxEngine()
         IconScoreContext.engine = ContextEngine(
-            deploy=Mock(),
+            deploy=deploy_engine,
             fee=fee_engine,
             icx=icx_engine,
             iiss=None,
             prep=prep_engine,
-            issue=None
+            issue=None,
         )
 
     def tearDown(self):
@@ -75,7 +77,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def test_install_step(self):
         # Ignores deploy
         deploy_engine_invoke = Mock()
-        IconScoreContext.engine.deploy.invoke = deploy_engine_invoke
+        IconScoreContext.engine.deploy._invoke = deploy_engine_invoke
 
         tx_hash1: str = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)

@@ -118,8 +118,24 @@ class TestScoreApiGenerator(unittest.TestCase):
         function_name = 'list_param_empty_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        self.assertRaises(IllegalFormatException, ScoreApiGenerator.generate,
-                          functions)
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual('function', api['type'])
+        self.assertEqual(function_name, api['name'])
+        self.assertEqual(1, len(api['inputs']))
+        self.assertEqual('list', api['inputs'][0]['type'])
+        self.assertEqual(0, len(api['outputs']))
+
+    def test_function_dict_param_dict_return(self):
+        function_name = 'dict_param_dict_return'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual('function', api['type'])
+        self.assertEqual(function_name, api['name'])
+        self.assertEqual(1, len(api['inputs']))
+        self.assertEqual('dict', api['inputs'][0]['type'])
+        self.assertEqual(1, len(api['outputs']))
+        self.assertEqual('dict', api['outputs'][0]['type'])
 
     def test_function_unsupported_param_empty_return(self):
         function_name = 'unsupported_param_empty_return'
@@ -235,6 +251,10 @@ class TestScore:
 
     @external
     def list_param_empty_return(self, name: list):
+        pass
+
+    @external(readonly=True)
+    def dict_param_dict_return(self, name: Dict[str, int]) -> dict:
         pass
 
     @external

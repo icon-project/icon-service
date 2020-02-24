@@ -19,7 +19,7 @@ import random
 import unittest
 
 from iconservice.base.address import Address, AddressPrefix, ICON_EOA_ADDRESS_PREFIX, ICON_CONTRACT_ADDRESS_PREFIX, \
-    ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, is_icon_address_valid, split_icon_address, MalformedAddress
+    SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, is_icon_address_valid, split_icon_address, MalformedAddress
 from iconservice.base.exception import ExceptionCode
 from tests import create_address
 
@@ -142,7 +142,7 @@ class TestAddress(unittest.TestCase):
         self.assertEqual(body, bytes.hex(address.body))
 
     def test_prefix_and_int(self):
-        self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0), ZERO_SCORE_ADDRESS)
+        self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0), SYSTEM_SCORE_ADDRESS)
         self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1), GOVERNANCE_SCORE_ADDRESS)
         self.assertEqual(str(Address.from_prefix_and_int(AddressPrefix.EOA, 10)),
                          "hx000000000000000000000000000000000000000a")

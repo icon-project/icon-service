@@ -22,7 +22,7 @@ from enum import IntEnum
 from typing import Optional
 
 from .exception import InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER, ICON_DEX_DB_NAME
+from ..icon_constant import DATA_BYTE_ORDER, ICON_DEX_DB_NAME, GOVERNANCE_ADDRESS, SYSTEM_ADDRESS
 from ..utils import is_lowercase_hex_string, int_to_bytes
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
@@ -300,9 +300,10 @@ class MalformedAddress(Address):
 
 
 # cx0000000000000000000000000000000000000000
-ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
+SYSTEM_SCORE_ADDRESS = Address.from_string(SYSTEM_ADDRESS)
+ZERO_SCORE_ADDRESS = SYSTEM_SCORE_ADDRESS
 # cx0000000000000000000000000000000000000001
-GOVERNANCE_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
+GOVERNANCE_SCORE_ADDRESS = Address.from_string(GOVERNANCE_ADDRESS)
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, ICON_DEX_DB_NAME.encode())
 
 

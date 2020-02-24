@@ -17,7 +17,7 @@
 """on_update parameters testcase"""
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.exception import ExceptionCode
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -29,7 +29,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
 
     def _deploy_score(self,
                       deploy_params: dict,
-                      to_: 'Address' = ZERO_SCORE_ADDRESS,
+                      to_: 'Address' = SYSTEM_SCORE_ADDRESS,
                       expected_status: bool = True) -> List['TransactionResult']:
         return self.deploy_score(score_root="sample_deploy_scores",
                                  score_name=f"install/sample_token",
@@ -40,7 +40,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
 
     def _create_init_deploy_tx(self,
                                deploy_params: dict,
-                               to_: 'Address' = ZERO_SCORE_ADDRESS,
+                               to_: 'Address' = SYSTEM_SCORE_ADDRESS,
                                count: int = 1) -> List[dict]:
         return [self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                             score_name="install/sample_token",
@@ -104,9 +104,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
                                                                                   "decimal": hex(decimal),
                                                                                   "additional_param": hex(123)},
                                                                    expected_status=False)
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertTrue(tx_results[0].failure.message.find("on_update() got an unexpected keyword argument "
-                                                           "'additional_param'") != -1)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         total_supply = self._query(query_request)
         self.assertEqual(total_supply, init_supply * 10 ** decimal)

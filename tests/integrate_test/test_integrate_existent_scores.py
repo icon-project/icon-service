@@ -21,7 +21,7 @@ import time
 from typing import TYPE_CHECKING, Union, List, Optional
 
 from iconcommons import IconConfig
-from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice import SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.address import generate_score_address, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, BUILTIN_SCORE_ADDRESS_MAPPER
@@ -135,7 +135,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_no_python",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -143,7 +143,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_no_external_func",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -151,7 +151,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_no_scorebase",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -159,7 +159,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_on_install_error",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -167,6 +167,6 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_with_korean_comment",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)

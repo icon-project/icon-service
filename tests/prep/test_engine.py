@@ -350,7 +350,7 @@ class TestEngine(unittest.TestCase):
         engine.term = term
         engine.preps = self.preps
 
-        ret: dict = engine.handle_get_prep_term(context, params)
+        ret: dict = engine.handle_get_prep_term(context)
 
         assert ret["blockHeight"] == block_height
         assert ret["sequence"] == term.sequence
@@ -430,7 +430,7 @@ class TestEngine(unittest.TestCase):
         engine.term = term
         engine.preps = preps
 
-        ret: dict = engine.handle_get_prep_term(context, params)
+        ret: dict = engine.handle_get_prep_term(context)
 
         assert ret["blockHeight"] == block_height
         assert ret["sequence"] == sequence
@@ -511,7 +511,7 @@ class TestEngine(unittest.TestCase):
         engine.preps = new_preps
 
         params = {}
-        response: dict = engine.handle_get_inactive_preps(context, params)
+        response: dict = engine.handle_get_inactive_preps(context)
         inactive_preps: list = response["preps"]
         for i, prep in enumerate(expected_preps):
             expected_prep_data: dict = prep.to_dict(PRepDictType.FULL)

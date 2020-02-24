@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from copy import deepcopy
 from typing import Union, Any, get_type_hints
 
@@ -229,6 +230,15 @@ class TypeConverter:
             raise InvalidParamsException(f'TypeConvert Exception bytes value :{value}, type: {type(value)}')
 
     @staticmethod
+    def get_default_args(func):
+        signature = inspect.signature(func)
+        return {
+            k: v.default
+            for k, v in signature.parameters.items()
+            if v.default is not inspect.Parameter.empty
+        }
+
+    @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
         # in python 3.7, get_type_hints method return _GenericAlias type object
         # (when parameter has 'NoneType' as a default)
@@ -239,18 +249,42 @@ class TypeConverter:
         return hints
 
     @staticmethod
-    def convert_data_params(annotation_params: dict, kw_params: dict) -> None:
-        for key, param in annotation_params.items():
-            if key == 'self' or key == 'cls':
+    def convert_data_params(annotations: dict, kw_params: dict) -> None:
+        for param_name, param_type in annotations.items():
+            if param_name == "self" or param_name == "cls":
                 continue
 
-            kw_param = kw_params.get(key)
+            kw_param = kw_params.get(param_name)
             if kw_param is None:
                 continue
 
-            param = get_main_type_from_annotations_type(param)
-            kw_param = TypeConverter._convert_data_value(param, kw_param)
-            kw_params[key] = kw_param
+            param_type = get_main_type_from_annotations_type(param_type)
+            kw_param = TypeConverter._convert_data_value(param_type, kw_param)
+            kw_params[param_name] = kw_param
+
+    @staticmethod
+    def adjust_params_to_method(func: callable, kw_params: dict):
+        hints = TypeConverter.make_annotations_from_method(func)
+
+        # check user input argument name is valid
+        for key in kw_params.keys():
+            try:
+                _type = hints[key]
+            except KeyError:
+                raise InvalidParamsException(f"Invalid parameter name '{key}'")
+
+        # check required argument is exist in user input
+        for param_name, param_type in hints.items():
+            if param_name == "self" or param_name == "cls":
+                continue
+
+            param = kw_params.get(param_name, None)
+            if param is None:
+                continue
+
+            param_type = get_main_type_from_annotations_type(param_type)
+            param = TypeConverter._convert_data_value(param_type, param)
+            kw_params[param_name] = param
 
     @staticmethod
     def _convert_data_value(annotation_type: type, param: Any) -> Any:

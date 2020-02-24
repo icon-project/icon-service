@@ -21,7 +21,7 @@ from typing import Optional
 from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.message import Message
@@ -137,7 +137,7 @@ class TestTransactionResult(unittest.TestCase):
             {
                 'version': 3,
                 'from': from_,
-                'to': ZERO_SCORE_ADDRESS,
+                'to': SYSTEM_SCORE_ADDRESS,
                 'dataType': 'deploy',
                 'timestamp': 0,
                 'data': {
@@ -150,7 +150,7 @@ class TestTransactionResult(unittest.TestCase):
         self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(1, tx_result.status)
         self.assertEqual(0, tx_result.tx_index)
-        self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_result.to)
         self.assertIsNotNone(tx_result.score_address)
         camel_dict = tx_result.to_dict(to_camel_case)
         self.assertNotIn('failure', camel_dict)
