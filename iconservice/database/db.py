@@ -384,6 +384,14 @@ class IconScoreDatabase(ContextGetter):
         self._context_db = context_db
         self._observer: Optional[DatabaseObserver] = None
 
+        self.prefix_hash_key: bytes = self._make_prefix_hash_key()
+
+    def _make_prefix_hash_key(self) -> bytes:
+        data = [self.address.to_bytes()]
+        if self._prefix is not None:
+            data.append(self._prefix)
+        return b'|'.join(data) + b'|'
+
     def get(self, key: bytes) -> bytes:
         """
         Gets the value for the specified key
@@ -460,12 +468,8 @@ class IconScoreDatabase(ContextGetter):
         :params key: key passed by SCORE
         :return: key bytes
         """
-        data = [self.address.to_bytes()]
-        if self._prefix is not None:
-            data.append(self._prefix)
-        data.append(key)
 
-        return b'|'.join(data)
+        return b''.join((self.prefix_hash_key, key))
 
     def _validate_ownership(self):
         """Prevent a SCORE from accessing the database of another SCORE
@@ -489,6 +493,14 @@ class IconScoreSubDatabase(object):
         self.address = address
         self._prefix = prefix
         self._score_db = score_db
+
+        self.prefix_hash_key: bytes = self._make_prefix_hash_key()
+
+    def _make_prefix_hash_key(self) -> bytes:
+        data = []
+        if self._prefix is not None:
+            data.append(self._prefix)
+        return b'|'.join(data) + b'|'
 
     def get(self, key: bytes) -> bytes:
         """
@@ -544,9 +556,5 @@ class IconScoreSubDatabase(object):
         :params key: key passed by SCORE
         :return: key bytes
         """
-        data = []
-        if self._prefix is not None:
-            data.append(self._prefix)
-        data.append(key)
 
-        return b'|'.join(data)
+        return b''.join((self.prefix_hash_key, key))
