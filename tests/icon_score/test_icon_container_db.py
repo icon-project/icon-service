@@ -14,58 +14,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
+import pytest
 
 from iconservice import Address
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import InvalidParamsException
-from iconservice.database.db import ContextDatabase, IconScoreDatabase
+from iconservice.database.db import IconScoreDatabase
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from tests import create_address
-from tests.mock_db import MockKeyValueDatabase
 
 
-class TestIconContainerDB(unittest.TestCase):
+@pytest.fixture(scope="function")
+def score_db(context_db):
+    return IconScoreDatabase(create_address(), context_db)
 
-    def setUp(self):
-        self.db = self.create_db()
-        self._context = IconScoreContext(IconScoreContextType.DIRECT)
-        self._context.current_address = self.db.address
 
-        ContextContainer._push_context(self._context)
-        pass
+@pytest.fixture(scope="function", autouse=True)
+def context(score_db):
+    context = IconScoreContext(IconScoreContextType.DIRECT)
+    context.current_address = score_db.address
 
-    def tearDown(self):
-        ContextContainer._clear_context()
-        self.db = None
-        pass
+    ContextContainer._push_context(context)
+    yield context
+    ContextContainer._clear_context()
 
-    @staticmethod
-    def create_db():
-        mock_db = MockKeyValueDatabase.create_db()
-        context_db = ContextDatabase(mock_db)
-        return IconScoreDatabase(create_address(), context_db)
 
-    def test_success_list(self):
-        addr1 = create_address(AddressPrefix.CONTRACT)
-        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], addr1]
-        ContainerUtil.put_to_db(self.db, 'test_list', test_list)
+class TestIconContainerDB:
+    ADDRESS = create_address(AddressPrefix.CONTRACT)
 
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 0, value_type=int), 1)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 1, value_type=int), 2)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 2, value_type=int), 3)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 3, 0, value_type=int), 4)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 3, 1, value_type=int), 5)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 3, 2, value_type=int), 6)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 0, value_type=int), 7)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 1, value_type=int), 8)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 2, value_type=int), 9)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 0, value_type=int), 10)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 1, value_type=int), 11)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 2, value_type=int), 12)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 5, value_type=Address), addr1)
+    @pytest.mark.parametrize("args, value_type, expected_value", [
+        (0, int, 1),
+        (1, int, 2),
+        (2, int, 3),
+        ((3, 0), int, 4),
+        ((3, 1), int, 5),
+        ((3, 2), int, 6),
+        ((4, 0), int, 7),
+        ((4, 1), int, 8),
+        ((4, 2), int, 9),
+        ((4, 3, 0), int, 10),
+        ((4, 3, 1), int, 11),
+        ((4, 3, 2), int, 12),
+        (5, Address, ADDRESS),
+    ])
+    def test_success_list(self, score_db, args, value_type, expected_value):
+        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], self.ADDRESS]
+        ContainerUtil.put_to_db(score_db, 'test_list', test_list)
+
+        if isinstance(args, tuple):
+            assert ContainerUtil.get_from_db(score_db, 'test_list', *args, value_type=value_type) == expected_value
+        else:
+            assert ContainerUtil.get_from_db(score_db, 'test_list', args, value_type=value_type) == expected_value
 
     def test_success_dict(self):
         addr1 = create_address(AddressPrefix.CONTRACT)
@@ -221,9 +222,9 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertNotEqual(test_var._db, self.db)
         self.assertEqual(test_var._db._prefix, b'\x02')
 
-        test_var.set(10**19+1)
+        test_var.set(10 ** 19 + 1)
 
-        self.assertEqual(test_var.get(), 10**19+1)
+        self.assertEqual(test_var.get(), 10 ** 19 + 1)
 
         test_var2 = VarDB(2,
                           self.db, value_type=Address)
@@ -338,4 +339,3 @@ class TestIconContainerDB(unittest.TestCase):
 
         with self.assertRaises(InvalidParamsException):
             prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
-

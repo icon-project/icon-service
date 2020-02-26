@@ -21,7 +21,7 @@ from unittest.mock import Mock
 import pytest
 
 from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import ExceptionCode, MethodNotFoundException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
@@ -174,8 +174,11 @@ class TestExternalPayableCall:
         assert e.value.code == ExceptionCode.METHOD_NOT_PAYABLE
         assert e.value.message.startswith("Method not payable") is True
 
+    # Todo: compare exception case between 'test_payable_call_exception' and 'test_inherit_call'
     @pytest.mark.parametrize("context_type, func_type, func_name, msg_value, args, kwargs", [
         (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func1", 0, (), {}),
+        pytest.param(IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func2", 0, (), {},
+                     marks=pytest.mark.xfail(raises=MethodNotFoundException, reason="Method does not exists"))
     ])
     def test_inherit_call(self, context, context_type, func_type, func_name, msg_value, args, kwargs):
         context.context_type = context_type
@@ -185,19 +188,3 @@ class TestExternalPayableCall:
         context.msg.value = msg_value
         func = getattr(test_score, ATTR_SCORE_CALL)
         func(func_name, args, kwargs)
-
-    @pytest.mark.parametrize("context_type, func_type, func_name, msg_value, args, kwargs", [
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func2", 0, (), {}),
-    ])
-    def test_inherit_call_exception(self, context, context_type, func_type, func_name, msg_value, args, kwargs):
-        context.context_type = context_type
-        context.func_type = func_type
-        test_score = ChildCallClass(Mock())
-        func = getattr(test_score, ATTR_SCORE_CALL)
-
-        context.msg.value = msg_value
-        with pytest.raises(BaseException) as e:
-            func(func_name, args, kwargs)
-        assert e.value.code == ExceptionCode.METHOD_NOT_FOUND
-        assert e.value.message.startswith("Method not found") is True
-
