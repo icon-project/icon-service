@@ -34,8 +34,10 @@ from iconservice.iiss import IISSEngine, IISSStorage
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.meta import MetaDBStorage
 from iconservice.prep import PRepEngine, PRepStorage
+from iconservice.icon_network import INVEngine, INVStorage
 from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_block_hash, rmtree
+from tests.conftest import generate_inv_container
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
 ICX_ENGINE_PATH = 'iconservice.icx.engine'
@@ -49,6 +51,8 @@ IISS_ENGINE_PATH = 'iconservice.iiss.engine'
 IISS_STORAGE_PATH = 'iconservice.iiss.storage'
 PREP_ENGINE_PATH = 'iconservice.prep.engine'
 PREP_STORAGE_PATH = 'iconservice.prep.storage'
+INV_ENGINE_PATH = 'iconservice.icon_network.engine'
+INV_STORAGE_PATH = 'iconservice.icon_network.storage'
 
 
 # noinspection PyProtectedMember
@@ -61,7 +65,6 @@ def generate_inner_task(revision=0):
 
 
 # noinspection PyProtectedMember
-@patch(f'{SERVICE_ENGINE_PATH}._init_global_value_by_governance_score')
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
 @patch(f'{ICX_ENGINE_PATH}.Engine.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
@@ -80,8 +83,7 @@ def _create_inner_task(
         rc_db_from_path,
         db_factory_create_by_name,
         icx_engine_open,
-        service_engine_load_builtin_scores,
-        service_engine_init_global_value_by_governance_score):
+        service_engine_load_builtin_scores):
     state_db = {}
     rc_db = {}
 
@@ -115,12 +117,6 @@ def _create_inner_task(
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
     service_engine_load_builtin_scores.assert_called()
-    service_engine_init_global_value_by_governance_score.assert_called()
-
-    # Mocks _init_global_value_by_governance_score
-    # to ignore initializing governance SCORE
-    inner_task._icon_service_engine._init_global_value_by_governance_score = \
-        service_engine_init_global_value_by_governance_score
 
     return inner_task
 
@@ -139,6 +135,9 @@ def generate_service_engine(revision=0):
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
+@patch(f'{INV_ENGINE_PATH}.Engine.load_inv_container')
+@patch(f'{INV_ENGINE_PATH}.Engine.open')
+@patch(f'{INV_STORAGE_PATH}.Storage.open')
 @patch(f'{PREP_ENGINE_PATH}.Engine.open')
 @patch(f'{IISS_STORAGE_PATH}.Storage.open')
 @patch(f'{IISS_ENGINE_PATH}.Engine.open')
@@ -153,14 +152,12 @@ def _create_service_engine(
         icx_storage_open,
         iiss_engine_open,
         iiss_storage_open,
-        prep_engine_open):
+        prep_engine_open,
+        inv_storage_open,
+        inv_engine_open,
+        inv_engine_load_inv_container):
     service_engine = IconServiceEngine()
-
     service_engine._load_builtin_scores = Mock()
-
-    # Mocks _init_global_value_by_governance_score
-    # to ignore initializing governance SCORE
-    service_engine._init_global_value_by_governance_score = Mock()
 
     state_db = {}
     rc_db = {}
@@ -197,8 +194,7 @@ def _create_service_engine(
     icx_engine_open.assert_called()
 
     service_engine._load_builtin_scores.assert_called()
-    service_engine._init_global_value_by_governance_score.assert_called()
-
+    inv_engine_load_inv_container.assert_called()
     service_engine._icon_pre_validator._is_inactive_score = Mock()
 
     return service_engine
@@ -214,7 +210,8 @@ def _patch_service_engine(icon_service_engine, revision):
         icx=IcxEngine(),
         iiss=IISSEngine(),
         prep=PRepEngine(),
-        issue=IssueEngine()
+        issue=IssueEngine(),
+        inv=INVEngine()
     )
 
     db = icon_service_engine._icx_context_db
@@ -226,15 +223,10 @@ def _patch_service_engine(icon_service_engine, revision):
         prep=PRepStorage(db),
         issue=IssueStorage(db),
         meta=MetaDBStorage(db),
-        rc=RewardCalcStorage()
+        rc=RewardCalcStorage(),
+        inv=INVStorage(db)
     )
-
-    # Patch revision
-    def set_revision_to_context(context):
-        context.revision = revision
-
-    icon_service_engine._set_revision_to_context = \
-        Mock(side_effect=set_revision_to_context)
+    IconScoreContext.engine.inv._inv_container = generate_inv_container(False, revision)
 
     return icon_service_engine
 

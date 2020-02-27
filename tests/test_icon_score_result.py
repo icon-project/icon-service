@@ -35,6 +35,7 @@ from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLog
+from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 from tests import create_tx_hash, create_address, \
@@ -43,7 +44,7 @@ from tests.mock_generator import generate_service_engine, generate_inner_task, \
     create_request, ReqData, clear_inner_task
 
 
-class TestTransactionResult(unittest.TestCase):
+class TestScoreResult(unittest.TestCase):
     def setUp(self):
         self._icon_service_engine = generate_service_engine()
 
@@ -51,9 +52,6 @@ class TestTransactionResult(unittest.TestCase):
             Mock(return_value=({}, 0))
         IconScoreContext.engine.iiss.open = Mock()
 
-        step_counter_factory = IconScoreStepCounterFactory()
-        step_counter_factory.get_step_cost = Mock(return_value=6000)
-        self._icon_service_engine._step_counter_factory = step_counter_factory
         self._icon_service_engine._icon_pre_validator = \
             Mock(spec=IconPreValidator)
 
@@ -63,9 +61,12 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.block = Mock(spec=Block)
         self._mock_context.event_logs = []
         self._mock_context.traces = []
-        self._mock_context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE)
+        self._mock_context._inv_container = IconScoreContext.engine.inv.inv_container.copy()
+        self._mock_context.step_counter = \
+            IconScoreStepCounterFactory.create_step_counter(self._mock_context.inv_container,
+                                                            IconScoreContextType.INVOKE,
+                                                            step_trace_flag=False)
         self._mock_context.current_address = Mock(spec=Address)
-        self._mock_context.revision = 0
 
     def tearDown(self):
         ContextContainer._clear_context()

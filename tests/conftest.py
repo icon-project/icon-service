@@ -65,8 +65,8 @@ def generate_inv_container(is_migrated: bool, revision: int = 0):
     step_price: int = 0
     score_black_list: list = []
     import_white_list = {"iconservice": ['*']}
-    system_value = INVContainer(is_migrated=False)
-    system_value._cache = {
+    inv_container = INVContainer(is_migrated=False)
+    inv_container._cache = {
         IconNetworkValueType.REVISION_CODE: RevisionCode(revision),
         IconNetworkValueType.SCORE_BLACK_LIST: ScoreBlackList(score_black_list),
         IconNetworkValueType.STEP_PRICE: StepPrice(step_price),
@@ -75,7 +75,7 @@ def generate_inv_container(is_migrated: bool, revision: int = 0):
         IconNetworkValueType.SERVICE_CONFIG: ServiceConfig(service_config),
         IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(import_white_list)
     }
-    return system_value
+    return inv_container
 
 
 @pytest.fixture(scope="function")
