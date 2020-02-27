@@ -40,7 +40,7 @@ def patch_several(*decorate_args):
     return decorate
 
 
-def _generate_inv_container(revision: int = 0):
+def generate_inv_container(is_migrated: bool, revision: int = 0):
     is_migrated: bool = False
     service_config: int = 0
     step_costs = {
@@ -84,7 +84,7 @@ def context_db():
     return ContextDatabase(mocked_kv_db)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def set_default_context_storage_and_engine():
     # Only work on python3 upper
     temp_storage, temp_engine = ContextStorage.__new__.__defaults__, ContextEngine.__new__.__defaults__
@@ -92,27 +92,3 @@ def set_default_context_storage_and_engine():
     ContextEngine.__new__.__defaults__ = (None,) * len(ContextEngine._fields)
     yield
     ContextStorage.__new__.__defaults__, ContextEngine.__new__.__defaults__ = temp_storage, temp_engine
-
-#
-# @pytest.fixture(scope="module")
-# def icon_context_factory():
-#     origin_addr: 'Address' = create_address(AddressPrefix.EOA)
-#     inv_container = _generate_inv_container()
-#     context_type: 'IconScoreContextType' = IconScoreContextType.INVOKE
-#
-#     context = IconScoreContext(context_type)
-#     context.msg = Message(origin_addr, 0)
-#     context._inv_container = inv_container
-#
-#     context.tx = Transaction(create_tx_hash(), origin=origin_addr)
-#     context.block = Block(1, create_block_hash(), 0, None, 0)
-#     context.icon_score_mapper = IconScoreMapper()
-#     context.new_icon_score_mapper = {}
-#     step_counter: 'IconScoreStepCounterFactory' = IconScoreStepCounterFactory.create_step_counter(inv_container,
-#                                                                                                   context_type)
-#     context.step_counter = step_counter
-#     context.icx = IcxEngine()
-#     context.icx.open(self._icx_storage)
-#     context.event_logs = Mock(spec=list)
-#     context.traces = Mock(spec=list)
-#     return context
