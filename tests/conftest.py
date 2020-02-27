@@ -1,9 +1,7 @@
-import hashlib
 from functools import wraps
 
 import pytest
 
-from iconservice import AddressPrefix, Address
 from iconservice.database.db import KeyValueDatabase, ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, IconNetworkValueType
 from iconservice.icon_network.container import Container as INVContainer
@@ -16,8 +14,7 @@ from iconservice.icon_network.data.value import (
     ServiceConfig,
     ImportWhiteList
 )
-from iconservice.iconscore.icon_score_context import IconScoreContext
-from tests import create_tx_hash
+from iconservice.utils import ContextStorage, ContextEngine
 from tests.mock_db import MockKeyValueDatabase
 
 
@@ -82,18 +79,19 @@ def _generate_inv_container(revision: int = 0):
 
 
 @pytest.fixture(scope="function")
-def address() -> 'Address':
-    prefix: int = 0
-    data: bytes = create_tx_hash()
-    hash_value = hashlib.sha3_256(data).digest()
-    return Address(AddressPrefix(prefix), hash_value[-20:])
-
-
-@pytest.fixture(scope="function")
 def context_db():
     mocked_kv_db: 'KeyValueDatabase' = MockKeyValueDatabase.create_db()
     return ContextDatabase(mocked_kv_db)
 
+
+@pytest.fixture(autouse=True)
+def set_default_context_storage_and_engine():
+    # Only work on python3 upper
+    temp_storage, temp_engine = ContextStorage.__new__.__defaults__, ContextEngine.__new__.__defaults__
+    ContextStorage.__new__.__defaults__ = (None,) * len(ContextStorage._fields)
+    ContextEngine.__new__.__defaults__ = (None,) * len(ContextEngine._fields)
+    yield
+    ContextStorage.__new__.__defaults__, ContextEngine.__new__.__defaults__ = temp_storage, temp_engine
 
 #
 # @pytest.fixture(scope="module")

@@ -73,7 +73,8 @@ class TestTrace(unittest.TestCase):
             fee=None,
             iiss=None,
             prep=None,
-            issue=None
+            issue=None,
+            inv=None
         )
         IconScoreContext.storage = ContextStorage(
             icx=None,
@@ -83,7 +84,8 @@ class TestTrace(unittest.TestCase):
             prep=None,
             issue=None,
             rc=None,
-            meta=None
+            meta=None,
+            inv=None
         )
 
         context.icon_score_mapper = Mock()

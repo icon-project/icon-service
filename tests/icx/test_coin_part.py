@@ -18,6 +18,8 @@
 
 import unittest
 
+import pytest
+
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import Revision
@@ -27,25 +29,23 @@ from iconservice.utils import set_flag
 from tests import create_address
 
 
-class TestAccountType(unittest.TestCase):
+class TestAccountType:
     def test_account_type(self):
-        self.assertTrue(CoinPartType.GENERAL == 0)
-        self.assertTrue(CoinPartType.GENESIS == 1)
-        self.assertTrue(CoinPartType.TREASURY == 2)
-
-        self.assertTrue(str(CoinPartType.GENERAL) == 'GENERAL')
-        self.assertTrue(str(CoinPartType.GENESIS) == 'GENESIS')
-        self.assertTrue(str(CoinPartType.TREASURY) == 'TREASURY')
+        assert 0 == CoinPartType.GENERAL
+        assert 1 == CoinPartType.GENESIS
+        assert 2 == CoinPartType.TREASURY
+        assert 'GENERAL' == str(CoinPartType.GENERAL)
+        assert 'GENESIS' == str(CoinPartType.GENESIS)
+        assert 'TREASURY' == str(CoinPartType.TREASURY)
 
     def test_from_int(self):
-        self.assertEqual(CoinPartType.GENERAL, CoinPartType(0))
-        self.assertEqual(CoinPartType.GENESIS, CoinPartType(1))
-        self.assertEqual(CoinPartType.TREASURY, CoinPartType(2))
+        assert CoinPartType(0) == CoinPartType.GENERAL
+        assert CoinPartType(1) == CoinPartType.GENESIS
+        assert CoinPartType(2) == CoinPartType.TREASURY
+        pytest.raises(ValueError, CoinPartType, 3)
 
-        self.assertRaises(ValueError, CoinPartType, 3)
 
-
-class TestCoinPart(unittest.TestCase):
+class TestCoinPart:
     def test_coin_part_revision_3(self):
         part1 = CoinPart()
         self.assertIsNotNone(part1)
@@ -73,43 +73,24 @@ class TestCoinPart(unittest.TestCase):
         part1.withdraw(0)
         self.assertEqual(old, part1.balance)
 
-    def test_coin_part_from_bytes_to_bytes_revision_3(self):
+    @pytest.mark.parametrize("revision", [Revision(i) for i in range(Revision.LATEST.value + 1) if i in range(3, 5)])
+    def test_coin_part_from_bytes_to_bytes_revision_3_to_4(self, revision):
+        # Todo: No need to tests after revision 4?
         part1 = CoinPart()
-        revision = 3
-
-        data = part1.to_bytes(revision)
-        self.assertTrue(isinstance(data, bytes))
-        self.assertEqual(36, len(data))
+        data = part1.to_bytes(revision.value)
+        assert isinstance(data, bytes) is True
+        assert len(data) == 36
 
         part2 = CoinPart.from_bytes(data)
-        self.assertEqual(CoinPartType.GENERAL, part2.type)
-        self.assertEqual(0, part2.balance)
+        assert part2.type == CoinPartType.GENERAL
+        assert part2.balance == 0
 
         part1.type = CoinPartType.GENESIS
         part1.deposit(1024)
 
-        part3 = CoinPart.from_bytes(part1.to_bytes(revision))
-        self.assertEqual(CoinPartType.GENESIS, part3.type)
-        self.assertEqual(1024, part3.balance)
-
-    def test_coin_part_from_bytes_to_bytes_revision_4(self):
-        part1 = CoinPart()
-
-        data = part1.to_bytes(Revision.FOUR.value)
-        self.assertTrue(isinstance(data, bytes))
-
-        part2 = CoinPart.from_bytes(data)
-        self.assertEqual(part1, part2)
-        self.assertEqual(CoinPartType.GENERAL, part2.type)
-        self.assertEqual(0, part2.balance)
-        self.assertEqual(CoinPartFlag.NONE, part2.flags)
-
-        part1.type = CoinPartType.GENESIS
-        part1.deposit(1024)
-
-        part3 = CoinPart.from_bytes(part1.to_bytes(Revision.FOUR.value))
-        self.assertEqual(CoinPartType.GENESIS, part3.type)
-        self.assertEqual(1024, part3.balance)
+        part3 = CoinPart.from_bytes(part1.to_bytes(revision.value))
+        assert part3.type == CoinPartType.GENESIS
+        assert part3.balance == 1024
 
     def test_coin_part_from_bytes_to_bytes_old_db_load_revision_4(self):
         part1 = CoinPart()
@@ -119,15 +100,15 @@ class TestCoinPart(unittest.TestCase):
         part1.deposit(balance)
 
         part2 = CoinPart.from_bytes(part1.to_bytes(Revision.THREE.value))
-        self.assertEqual(part1, part2)
+        assert part2 == part1
 
         data: bytes = part1.to_bytes(Revision.FOUR.value)
         part3 = CoinPart.from_bytes(data)
-        self.assertEqual(part1, part3)
+        assert part3 == part1
 
     def test_coin_part_flag(self):
         part1 = CoinPart()
-        self.assertEqual(BasePartState.NONE, part1.states)
+        assert part1.states == BasePartState.NONE
 
         part1._flags = set_flag(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
         self.assertIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
@@ -200,5 +181,3 @@ class TestCoinPart(unittest.TestCase):
         self.assertEqual(part1, part3)
 
 
-if __name__ == '__main__':
-    unittest.main()

@@ -15,18 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import shutil
-import unittest
 from unittest.mock import Mock
 
 import pytest
 
 from iconservice.base.address import Address, MalformedAddress
 from iconservice.base.block import Block
-from iconservice.database.db import ContextDatabase
-from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icon_constant import IconScoreContextType
-from iconservice.iconscore.context.context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextStorage
 
@@ -62,17 +58,7 @@ def context_with_icx_storage(context_db, genesis_address, fee_treasury_address):
     block = Mock(spec=Block)
     block.attach_mock(Mock(return_value=0), 'height')
     context.block = block
-    context.storage = ContextStorage(
-        deploy=None,
-        fee=None,
-        icx=storage,
-        iiss=None,
-        prep=None,
-        issue=None,
-        rc=None,
-        meta=None,
-        inv=None
-    )
+    context.storage = ContextStorage(icx=storage)
     storage.put_genesis_accounts(context, accounts)
     yield context
     storage.close(context)
