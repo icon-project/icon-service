@@ -74,7 +74,7 @@ def context(score_db):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def set_mock(monkeypatch, context):
+def set_container_and_intercall_before_test(monkeypatch, context):
     monkeypatch.setattr(InternalCall, "_other_score_call", Mock())
     ContextContainer._push_context(context)
     yield
@@ -83,37 +83,37 @@ def set_mock(monkeypatch, context):
 
 
 @pytest.fixture(scope="function")
-def test_score(score_db, context):
+def mapped_test_score(score_db, context):
     context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(score_db))
     return TestScore(score_db)
 
 
 class TestTrace:
-    def test_transfer(self, context, test_score):
+    def test_transfer(self, context, mapped_test_score):
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
         to_ = create_address(AddressPrefix.EOA)
         amount = 100
-        test_score.icx.transfer(to_, amount)
+        mapped_test_score.icx.transfer(to_, amount)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         assert trace.trace == TraceType.CALL
         assert trace.data[0] == to_
         assert trace.data[3] == amount
 
-    def test_send(self, test_score):
+    def test_send(self, mapped_test_score):
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
         to_ = create_address(AddressPrefix.EOA)
         amount = 100
-        test_score.icx.send(to_, amount)
+        mapped_test_score.icx.send(to_, amount)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         assert trace.trace == TraceType.CALL
         assert trace.data[0] == to_
         assert trace.data[3] == amount
 
-    def test_call(self, test_score):
+    def test_call(self, mapped_test_score):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         func_name = "testCall"
@@ -121,7 +121,7 @@ class TestTrace:
         amount = 100
         params = {'to': to_, 'amount': amount}
 
-        test_score.call(score_address, func_name, params)
+        mapped_test_score.call(score_address, func_name, params)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         assert trace.trace == TraceType.CALL
@@ -130,13 +130,13 @@ class TestTrace:
         assert trace.data[2][0] == params['to']
         assert trace.data[2][1] == params['amount']
 
-    def test_interface_call(self, test_score):
+    def test_interface_call(self, mapped_test_score):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         to_ = Mock(spec=Address)
         amount = 100
 
-        test_score.test_interface_call(score_address, to_, amount)
+        mapped_test_score.test_interface_call(score_address, to_, amount)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         assert trace.trace == TraceType.CALL
