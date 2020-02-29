@@ -185,6 +185,9 @@ class ConfigKey:
     # The maximum number of backup files for rollback
     BACKUP_FILES = "backupFiles"
 
+    # Block invoke timeout in second
+    BLOCK_INVOKE_TIMEOUT = "blockInvokeTimeout"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1
@@ -305,6 +308,8 @@ BASE_TRANSACTION_VERSION = 3
 PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
 
 BACKUP_FILES = 10
+
+BLOCK_INVOKE_TIMEOUT_S = 15
 
 
 class RCStatus(IntEnum):
