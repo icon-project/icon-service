@@ -19,6 +19,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
+
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -158,7 +159,7 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
-        self.prep_address_converter: Optional['PRepAddressConverter'] = None
+        self._prep_address_converter: Optional['PRepAddressConverter'] = None
         self.regulator: Optional['Regulator'] = None
 
     @classmethod
@@ -185,6 +186,10 @@ class IconScoreContext(object):
     @property
     def term(self) -> Optional['Term']:
         return self._term
+
+    @property
+    def prep_address_converter(self) -> Optional['PRepAddressConverter']:
+        return self._prep_address_converter
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
@@ -243,19 +248,19 @@ class IconScoreContext(object):
         self._tx_dirty_preps.clear()
 
     def _update_prep_address_converter(self, dirty_prep: 'PRep'):
-        if not self.preps.contains(dirty_prep.address, active_prep_only=False):
-            # register
-            self.prep_address_converter.add_node_address(node=dirty_prep.node_address,
-                                                         prep=dirty_prep.address)
+        if not self._preps.contains(dirty_prep.address, active_prep_only=False):
+            # registerPRep
+            self._prep_address_converter.add_node_address(node=dirty_prep.node_address,
+                                                          prep=dirty_prep.address)
         elif dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
-            # set
+            # setPRep
             old_prep = self._preps.get_by_address(dirty_prep.address)
-            self.prep_address_converter.replace_node_address(node=dirty_prep.node_address,
-                                                             prep=dirty_prep.address,
-                                                             prev_node=old_prep.node_address)
+            self._prep_address_converter.replace_node_address(node=dirty_prep.node_address,
+                                                              prep=dirty_prep.address,
+                                                              prev_node=old_prep.node_address)
         elif dirty_prep.status != PRepStatus.ACTIVE:
-            # delete
-            self.prep_address_converter.delete_node_address(node=dirty_prep.node_address)
+            # unregisterPRep or disqualified by productivity penalty
+            self._prep_address_converter.delete_node_address(node=dirty_prep.node_address)
 
     def _update_term(self, dirty_prep: 'PRep'):
         """Update term info with dirty_prep
@@ -393,10 +398,10 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
-            context.prep_address_converter: 'PRepAddressConverter' = context.engine.prep.prep_address_converter.copy()
+            context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
-            context.prep_address_converter: 'PRepAddressConverter' = context.engine.prep.prep_address_converter
+            context._prep_address_converter = context.engine.prep.prep_address_converter
 
         context._term = context.engine.prep.term
