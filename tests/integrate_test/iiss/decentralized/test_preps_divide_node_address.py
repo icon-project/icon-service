@@ -16,7 +16,7 @@
 
 """IconScoreEngine testcase
 """
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Union
 
 from iconservice import Address
 from iconservice.base.exception import ExceptionCode
@@ -364,22 +364,26 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                             init_balance=1 * ICX_IN_LOOP)
 
         PREV_PENALTY_GRACE_PERIOD = IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period
-        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
+        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = \
+            IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
 
         PENALTY_GRACE_PERIOD = 0
         # enable low productivity
         LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 100
 
         IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
+            LOW_PRODUCTIVITY_PENALTY_THRESHOLD
 
-        votes = [[self._accounts[1].address, False]] + [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        votes = [[self._accounts[1].address, False]] + \
+                [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
         tx_results = self.make_blocks(to=self._block_height + 2,
                                       prev_block_generator=self._accounts[0].address,
                                       prev_block_votes=votes)
 
         IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PREV_PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
+            PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
 
         # PRepA: 0
         # PRepB: 1
@@ -391,6 +395,16 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
+
+        # Before calling write_precommit_state()
+        ret: Dict[str, Union[str, int, bytes, 'Address']] = self.get_prep(prep_a)
+        assert ret["nodeAddress"] == prep_a.address
+
+        self._write_precommit_state(block)
+
+        # After calling write_precommit_state()
+        ret: Dict[str, Union[str, int, bytes, 'Address']] = self.get_prep(prep_a)
+        assert ret["nodeAddress"] == prep_b.address
 
     def test_scenario6(self):
         # 1 block
@@ -407,8 +421,10 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                             init_balance=1 * ICX_IN_LOOP)
 
         PREV_PENALTY_GRACE_PERIOD = IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period
-        PREV_BLOCK_VALIDATION_PENALTY_THRESHOLD = IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold
-        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
+        PREV_BLOCK_VALIDATION_PENALTY_THRESHOLD = \
+            IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold
+        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = \
+            IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
 
         PENALTY_GRACE_PERIOD = 0
         # disable low productivity
@@ -417,17 +433,22 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         BLOCK_VALIDATION_PENALTY_THRESHOLD = 1
 
         IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = BLOCK_VALIDATION_PENALTY_THRESHOLD
-        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = \
+            BLOCK_VALIDATION_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
+            LOW_PRODUCTIVITY_PENALTY_THRESHOLD
 
-        votes = [[self._accounts[1].address, False]] + [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        votes = [[self._accounts[1].address, False]] + \
+                [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
         tx_results = self.make_blocks(to=self._block_height + 2,
                                       prev_block_generator=self._accounts[0].address,
                                       prev_block_votes=votes)
 
         IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PREV_PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = PREV_BLOCK_VALIDATION_PENALTY_THRESHOLD
-        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = \
+            PREV_BLOCK_VALIDATION_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
+            PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
 
         # PRepA: 0
         # PRepB: 1
@@ -439,3 +460,13 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, False)
+
+        # Before calling write_precommit_state()
+        ret: Dict[str, Union[str, int, bytes, 'Address']] = self.get_prep(prep_a)
+        assert ret["nodeAddress"] == prep_a.address
+
+        self._write_precommit_state(block)
+
+        # After calling write_precommit_state()
+        ret: Dict[str, Union[str, int, bytes, 'Address']] = self.get_prep(prep_a)
+        assert ret["nodeAddress"] == prep_a.address
