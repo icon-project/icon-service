@@ -16,10 +16,8 @@
 
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
-from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
-from ..icon_constant import Revision, IconScoreContextType
 from ..utils import int_to_bytes, bytes_to_int
 
 if TYPE_CHECKING:
@@ -39,27 +37,27 @@ def get_encoded_key(key: V) -> bytes:
 
 class ContainerUtil(object):
 
-    @staticmethod
-    def create_db_prefix(cls, var_key: K) -> bytes:
+    @classmethod
+    def create_db_prefix(cls, container_cls: type, var_key: K) -> bytes:
         """Create a prefix used
         as a parameter of IconScoreDatabase.get_sub_db()
 
-        :param cls: ArrayDB, DictDB, VarDB
+        :param container_cls: ArrayDB, DictDB, VarDB
         :param var_key:
         :return:
         """
-        if cls == ArrayDB:
+        if container_cls == ArrayDB:
             container_id = ARRAY_DB_ID
-        elif cls == DictDB:
+        elif container_cls == DictDB:
             container_id = DICT_DB_ID
         else:
-            raise InvalidParamsException(f'Unsupported container class: {cls}')
+            raise InvalidParamsException(f'Unsupported container class: {container_cls}')
 
         encoded_key: bytes = get_encoded_key(var_key)
         return b'|'.join([container_id, encoded_key])
 
-    @staticmethod
-    def encode_key(key: K) -> bytes:
+    @classmethod
+    def encode_key(cls, key: K) -> bytes:
         """Create a key passed to IconScoreDatabase
 
         :param key:
@@ -80,8 +78,8 @@ class ContainerUtil(object):
             raise InvalidParamsException(f'Unsupported key type: {type(key)}')
         return bytes_key
 
-    @staticmethod
-    def encode_value(value: V) -> bytes:
+    @classmethod
+    def encode_value(cls, value: V) -> bytes:
         if isinstance(value, int):
             byte_value = int_to_bytes(value)
         elif isinstance(value, str):
@@ -96,8 +94,8 @@ class ContainerUtil(object):
             raise InvalidParamsException(f'Unsupported value type: {type(value)}')
         return byte_value
 
-    @staticmethod
-    def decode_object(value: bytes, value_type: type) -> Optional[Union[K, V]]:
+    @classmethod
+    def decode_object(cls, value: bytes, value_type: type) -> Optional[Union[K, V]]:
         if value is None:
             return get_default_value(value_type)
 
@@ -114,45 +112,45 @@ class ContainerUtil(object):
             obj_value = value
         return obj_value
 
-    @staticmethod
-    def remove_prefix_from_iters(iter_items: iter) -> iter:
-        return ((ContainerUtil.__remove_prefix_from_key(key), value) for key, value in iter_items)
+    @classmethod
+    def remove_prefix_from_iters(cls, iter_items: iter) -> iter:
+        return ((cls.__remove_prefix_from_key(key), value) for key, value in iter_items)
 
-    @staticmethod
-    def __remove_prefix_from_key(key_from_bytes: bytes) -> bytes:
+    @classmethod
+    def __remove_prefix_from_key(cls, key_from_bytes: bytes) -> bytes:
         return key_from_bytes[:-1]
 
-    @staticmethod
-    def put_to_db(db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
-        sub_db = db.get_sub_db(ContainerUtil.encode_key(db_key))
+    @classmethod
+    def put_to_db(cls, db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
+        sub_db = db.get_sub_db(cls.encode_key(db_key))
         if isinstance(container, dict):
-            ContainerUtil.__put_to_db_internal(sub_db, container.items())
+            cls.__put_to_db_internal(sub_db, container.items())
         elif isinstance(container, (list, set, tuple)):
-            ContainerUtil.__put_to_db_internal(sub_db, enumerate(container))
+            cls.__put_to_db_internal(sub_db, enumerate(container))
 
-    @staticmethod
-    def get_from_db(db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
-        sub_db = db.get_sub_db(ContainerUtil.encode_key(db_key))
+    @classmethod
+    def get_from_db(cls, db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
+        sub_db = db.get_sub_db(cls.encode_key(db_key))
         *args, last_arg = args
         for arg in args:
-            sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(arg))
+            sub_db = sub_db.get_sub_db(cls.encode_key(arg))
 
-        byte_key = sub_db.get(ContainerUtil.encode_key(last_arg))
+        byte_key = sub_db.get(cls.encode_key(last_arg))
         if byte_key is None:
             return get_default_value(value_type)
-        return ContainerUtil.decode_object(byte_key, value_type)
+        return cls.decode_object(byte_key, value_type)
 
-    @staticmethod
-    def __put_to_db_internal(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
+    @classmethod
+    def __put_to_db_internal(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
         for key, value in iters:
-            sub_db = db.get_sub_db(ContainerUtil.encode_key(key))
+            sub_db = db.get_sub_db(cls.encode_key(key))
             if isinstance(value, dict):
-                ContainerUtil.__put_to_db_internal(sub_db, value.items())
+                cls.__put_to_db_internal(sub_db, value.items())
             elif isinstance(value, (list, set, tuple)):
-                ContainerUtil.__put_to_db_internal(sub_db, enumerate(value))
+                cls.__put_to_db_internal(sub_db, enumerate(value))
             else:
-                db_key = ContainerUtil.encode_key(key)
-                db_value = ContainerUtil.encode_value(value)
+                db_key = cls.encode_key(key)
+                db_value = cls.encode_value(value)
                 db.put(db_key, db_value)
 
 
@@ -232,7 +230,7 @@ class ArrayDB(object):
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
         self.__value_type = value_type
-        self.__legacy_size = self.__get_size_from_db()
+        self.__size = self.__get_size_from_db()
 
     def put(self, value: V) -> None:
         """
@@ -240,7 +238,7 @@ class ArrayDB(object):
 
         :param value: value to add
         """
-        size: int = self.__get_size()
+        size: int = self.__size
         self.__put(size, value)
         self.__set_size(size + 1)
 
@@ -250,7 +248,7 @@ class ArrayDB(object):
 
         :return: last added value
         """
-        size: int = self.__get_size()
+        size: int = self.__size
         if size == 0:
             return None
 
@@ -269,35 +267,29 @@ class ArrayDB(object):
         """
         return self[index]
 
-    def __get_size(self) -> int:
-        if self.__is_defective_revision():
-            return self.__legacy_size
-        else:
-            return self.__get_size_from_db()
-
     def __get_size_from_db(self) -> int:
-        return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
+        return ContainerUtil.decode_object(self._db.get(self.__SIZE_BYTE_KEY), int)
 
     def __set_size(self, size: int) -> None:
-        self.__legacy_size = size
+        self.__size = size
         byte_value = ContainerUtil.encode_value(size)
-        self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
+        self._db.put(self.__SIZE_BYTE_KEY, byte_value)
 
     def __put(self, index: int, value: V) -> None:
         byte_value = ContainerUtil.encode_value(value)
         self._db.put(get_encoded_key(index), byte_value)
 
     def __iter__(self):
-        return self._get_generator(self._db, self.__get_size(), self.__value_type)
+        return self._get_generator(self._db, self.__size, self.__value_type)
 
     def __len__(self):
-        return self.__get_size()
+        return self.__size
 
     def __setitem__(self, index: int, value: V) -> None:
         if not isinstance(index, int):
             raise InvalidParamsException('Invalid index type: not an integer')
 
-        size: int = self.__get_size()
+        size: int = self.__size
 
         # Negative index means that you count from the right instead of the left.
         if index < 0:
@@ -309,7 +301,7 @@ class ArrayDB(object):
             raise InvalidParamsException('ArrayDB out of index')
 
     def __getitem__(self, index: int) -> V:
-        return ArrayDB._get(self._db, self.__get_size(), index, self.__value_type)
+        return self._get(self._db, self.__size, index, self.__value_type)
 
     def __contains__(self, item: V):
         for e in self:
@@ -317,14 +309,8 @@ class ArrayDB(object):
                 return True
         return False
 
-    @staticmethod
-    def __is_defective_revision():
-        context = ContextContainer._get_context()
-        revision = context.revision
-        return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
-
-    @staticmethod
-    def _get(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:
+    @classmethod
+    def _get(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:
         if not isinstance(index, int):
             raise InvalidParamsException('Invalid index type: not an integer')
 
@@ -338,10 +324,10 @@ class ArrayDB(object):
 
         raise InvalidParamsException('ArrayDB out of index')
 
-    @staticmethod
-    def _get_generator(db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, value_type: type):
+    @classmethod
+    def _get_generator(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, value_type: type):
         for index in range(size):
-            yield ArrayDB._get(db, size, index, value_type)
+            yield cls._get(db, size, index, value_type)
 
 
 class VarDB(object):
