@@ -339,3 +339,33 @@ class TestIconContainerDB(unittest.TestCase):
         with self.assertRaises(InvalidParamsException):
             prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
 
+
+class TestOnlyGetItemObj:
+    def __init__(self, limit):
+        self._limit = limit
+
+    def __getitem__(self, key):
+        if key > self._limit:
+            raise IndexError(key)
+
+
+class TestIterObj(TestOnlyGetItemObj):
+    def __iter__(self):
+        pass
+
+
+class TestContainerDB(unittest.TestCase):
+    def test_getitem(self):
+        limit = 100
+        datas = TestOnlyGetItemObj(limit)
+        index = 0
+        for index, e in enumerate(datas):
+            pass
+        self.assertEqual(index, limit)
+
+    def test_iter(self):
+        limit = 100
+        datas = TestIterObj(limit)
+        with self.assertRaises(TypeError) as e:
+            for e in datas:
+                pass
