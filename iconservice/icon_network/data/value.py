@@ -8,6 +8,7 @@ from ...utils.msgpack_for_db import MsgPackForDB
 
 class Value(metaclass=ABCMeta):
     PREFIX: bytes = b'inv'
+    # All subclass must have 'TYPE' constant variable
     TYPE: 'IconNetworkValueType' = None
 
     def __init__(self, value: Any):
@@ -198,13 +199,4 @@ class ServiceConfig(Value):
         return cls(value)
 
 
-VALUE_MAPPER = {
-    IconNetworkValueType.REVISION_CODE: RevisionCode,
-    IconNetworkValueType.REVISION_NAME: RevisionName,
-    IconNetworkValueType.SCORE_BLACK_LIST: ScoreBlackList,
-    IconNetworkValueType.STEP_PRICE: StepPrice,
-    IconNetworkValueType.STEP_COSTS: StepCosts,
-    IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits,
-    IconNetworkValueType.SERVICE_CONFIG: ServiceConfig,
-    IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList
-}
+VALUE_MAPPER = {val.TYPE: val for val in Value.__subclasses__()}
