@@ -535,7 +535,6 @@ class IconServiceEngine(ContextContainer):
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
                 if is_block_editable:
-                    tx_timer.stop()
                     if tx_timer.duration >= self._block_invoke_timeout_s:
                         Logger.info(
                             tag=self.TAG,

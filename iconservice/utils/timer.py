@@ -19,20 +19,10 @@ import time
 class Timer(object):
     def __init__(self):
         self._start_time_s: float = 0
-        self._duration_s: float = 0
-        self._end_time_s: float = 0
 
     @property
     def duration(self) -> float:
-        return self._duration_s
+        return time.time() - self._start_time_s
 
-    def start(self) -> float:
-        time_s: float = time.time()
-        self._start_time_s = time_s
-        return time_s
-
-    def stop(self) -> float:
-        time_s: float = time.time()
-        self._end_time_s = time_s
-        self._duration_s = time_s - self._start_time_s
-        return time_s
+    def start(self):
+        self._start_time_s = time.time()
