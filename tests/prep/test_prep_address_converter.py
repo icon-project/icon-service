@@ -73,7 +73,7 @@ class TestPRepAddressConverter(unittest.TestCase):
         assert address == prep_address
 
         # Replace old_node_address with a new node_address
-        converter.replace_node_address(old_node_address, prep_address, new_node_address)
+        converter.replace_node_address(new_node_address, prep_address, old_node_address)
         assert prep_address == converter.get_prep_address_from_node_address(old_node_address)
         assert prep_address == converter.get_prep_address_from_node_address(new_node_address)
         assert old_node_address in converter._prev_node_address_mapper
@@ -93,7 +93,7 @@ class TestPRepAddressConverter(unittest.TestCase):
         assert address == prep_address
 
         # Replace old_node_address with a new node_address
-        converter.replace_node_address(old_node_address, prep_address, new_node_address)
+        converter.replace_node_address(new_node_address, prep_address, old_node_address)
 
         new_converter = converter.copy()
         assert isinstance(new_converter, PRepAddressConverter)
