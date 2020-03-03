@@ -130,61 +130,64 @@ def context():
 
 
 class TestExternalPayableCall:
-    @pytest.mark.parametrize("context_type, func_type, func_name, msg_value, args, kwargs", [
-        (IconScoreContextType.INVOKE, IconScoreFuncType.READONLY, "func1", 0, (), {}),
-        (IconScoreContextType.QUERY, IconScoreFuncType.READONLY, "func1", 0, (), {}),
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func2", 0, (), {"value": 1}),
-        (IconScoreContextType.QUERY, IconScoreFuncType.WRITABLE, "func2", 0, (), {"value": 1}),
+    @pytest.mark.parametrize("context_type, func_type, msg_value, func_name, args, kwargs", [
+        (IconScoreContextType.INVOKE, IconScoreFuncType.READONLY, 0, "func1", (), {}),
+        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 0, "func2", (), {"value": 1}),
+        (IconScoreContextType.QUERY, IconScoreFuncType.READONLY, 0, "func1", (), {}),
+        (IconScoreContextType.QUERY, IconScoreFuncType.WRITABLE, 0, "func2", (), {"value": 1}),
     ])
-    def test_external_call(self, context, context_type, func_type, func_name, msg_value, args, kwargs):
+    def test_external_call(self, context, context_type, func_type, msg_value, func_name, args, kwargs):
         context.context_type = context_type
         context.func_type = func_type
+        context.msg.value = msg_value
         test_score = ExternalCallClass(Mock())
         func = getattr(test_score, ATTR_SCORE_CALL)
 
-        context.msg.value = msg_value
         func(func_name, args, kwargs)
 
-    @pytest.mark.parametrize("context_type, func_type, func_name, msg_value, args, kwargs", [
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func1", 0, (), {}),
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func1", 1, (), {}),
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func2", 0, (), {})
+    @pytest.mark.parametrize("context_type, func_type, msg_value, func_name, args, kwargs", [
+        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 0, "func1", (), {}),
+        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 1, "func1", (), {}),
+        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 0, "func2", (), {})
     ])
-    def test_payable_call(self, context, context_type, func_type, func_name, msg_value, args, kwargs):
+    def test_payable_call(self, context, context_type, func_type, msg_value, func_name, args, kwargs):
         context.context_type = context_type
         context.func_type = func_type
+        context.msg.value = msg_value
         test_score = ExternalPayableCallClass(Mock())
         func = getattr(test_score, ATTR_SCORE_CALL)
 
-        context.msg.value = msg_value
         func(func_name, args, kwargs)
 
-    @pytest.mark.parametrize("context_type, func_type, func_name, msg_value, args, kwargs", [
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func2", 1, (), {}),
+    @pytest.mark.parametrize("context_type, func_type, msg_value, func_name, args, kwargs", [
+        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 1, "func2", (), {}),
     ])
-    def test_payable_call_exception(self, context, context_type, func_type, func_name, msg_value, args, kwargs):
+    def test_call_with_value_to_not_payable_call_raise_exception(self,
+                                                                 context, context_type, func_type, msg_value,
+                                                                 func_name, args, kwargs):
         context.context_type = context_type
         context.func_type = func_type
+        context.msg.value = msg_value
         test_score = ExternalPayableCallClass(Mock())
         func = getattr(test_score, ATTR_SCORE_CALL)
 
-        context.msg.value = msg_value
         with pytest.raises(BaseException) as e:
             func(func_name, args, kwargs)
+
         assert e.value.code == ExceptionCode.METHOD_NOT_PAYABLE
         assert e.value.message.startswith("Method not payable") is True
 
     # Todo: compare exception case between 'test_payable_call_exception' and 'test_inherit_call'
-    @pytest.mark.parametrize("context_type, func_type, func_name, msg_value, args, kwargs", [
-        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func1", 0, (), {}),
-        pytest.param(IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, "func2", 0, (), {},
+    @pytest.mark.parametrize("context_type, func_type, msg_value, func_name, args, kwargs", [
+        (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 0, "func1", (), {}),
+        pytest.param(IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 0, "func2", (), {},
                      marks=pytest.mark.xfail(raises=MethodNotFoundException, reason="Method does not exists"))
     ])
-    def test_inherit_call(self, context, context_type, func_type, func_name, msg_value, args, kwargs):
+    def test_inherit_call(self, context, context_type, func_type, msg_value, func_name, args, kwargs):
         context.context_type = context_type
         context.func_type = func_type
-        test_score = ChildCallClass(Mock())
-
         context.msg.value = msg_value
+        test_score = ChildCallClass(Mock())
         func = getattr(test_score, ATTR_SCORE_CALL)
+
         func(func_name, args, kwargs)
