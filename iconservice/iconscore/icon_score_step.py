@@ -23,8 +23,8 @@ from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, Revision
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
 if TYPE_CHECKING:
-    from iconservice.iconscore.icon_score_context import IconScoreContextType
-    from ..system.value import SystemValue
+    from .icon_score_context import IconScoreContextType
+    from ..icon_network.container import Container as INVContainer
 
 
 def get_input_data_size(revision: int, input_data: Any) -> int:
@@ -224,13 +224,13 @@ class IconScoreStepCounterFactory(object):
 
     @classmethod
     def create_step_counter(cls,
-                            system_value: 'SystemValue',
+                            container: 'INVContainer',
                             context_type: 'IconScoreContextType',
                             step_trace_flag: bool) -> 'IconScoreStepCounter':
-        step_price: int = system_value.step_price
+        step_price: int = container.step_price
         # Copying a `dict` so as not to change step costs when processing a transaction.
-        step_costs: dict = system_value.step_costs
-        max_step_limit: int = system_value.max_step_limits.get(context_type, 0)
+        step_costs: dict = container.step_costs
+        max_step_limit: int = container.max_step_limits.get(context_type, 0)
 
         return IconScoreStepCounter(step_price, step_costs, max_step_limit, step_trace_flag)
 

@@ -210,7 +210,7 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context._system_value = context.engine.system.system_value
+        context._inv_container = context.engine.inv.inv_container
         context._term = context.engine.prep.term
         is_block_editable = False
         if context.is_decentralized():
@@ -244,7 +244,7 @@ class TestIntegrateBase(TestCase):
             block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context._system_value = context.engine.system.system_value
+        context._inv_container = context.engine.inv.inv_container
         context._term = context.engine.prep.term
         is_block_editable = False
         if context.is_decentralized():

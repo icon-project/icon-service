@@ -153,7 +153,7 @@ class IconScoreContextUtil(object):
 
         score_deploy_path: str = get_score_deploy_path(context.score_root_path, address, tx_hash)
         score_package_name: str = get_package_name_by_address_and_tx_hash(address, tx_hash)
-        import_whitelist: dict = context.system_value.import_white_list
+        import_whitelist: dict = context.inv_container.import_white_list
 
         ScorePackageValidator.execute(import_whitelist, score_deploy_path, score_package_name)
 
@@ -169,7 +169,7 @@ class IconScoreContextUtil(object):
         if score_address == ZERO_SCORE_ADDRESS:
             return
 
-        if score_address in context.system_value.score_black_list:
+        if score_address in context.inv_container.score_black_list:
             raise AccessDeniedException(f'SCORE in blacklist: {score_address}')
 
     @staticmethod
@@ -192,8 +192,8 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:
-        if context.system_value:
-            service_flag = context.system_value.service_config
+        if context.inv_container:
+            service_flag = context.inv_container.service_config
         else:
             service_flag = context.icon_service_flag
         return IconScoreContextUtil._is_flag_on(service_flag, flag)

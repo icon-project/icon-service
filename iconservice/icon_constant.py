@@ -198,7 +198,7 @@ class IconServiceFlag(IntFlag):
     SCORE_PACKAGE_VALIDATOR = 8
 
 
-class SystemValueType(Enum):
+class IconNetworkValueType(Enum):
     SERVICE_CONFIG = b'service_config'
 
     STEP_PRICE = b'step_price'

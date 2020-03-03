@@ -31,10 +31,10 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag, SystemValueType, RevisionChangedFlag)
+    Revision, PRepFlag, IconNetworkValueType, RevisionChangedFlag)
+from ..icon_network.data.value import Value as IconNetworkValue
+from ..icon_network.listener import Listener as INVListener
 from ..icx.issue.regulator import Regulator
-from ..system.data.system_data import SystemData
-from ..system.listener import SystemValueListener
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -43,10 +43,10 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
-    from ..system.value import SystemValue
+    from ..icon_network.container import Container as INVContainer
 
 
-class IconScoreContext(SystemValueListener, ABC):
+class IconScoreContext(INVListener, ABC):
     TAG = "CTX"
 
     score_root_path: str = None
@@ -104,7 +104,7 @@ class IconScoreContext(SystemValueListener, ABC):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
-        self._system_value: Optional['SystemValue'] = None
+        self._inv_container: Optional['INVContainer'] = None
 
         self.regulator: Optional['Regulator'] = None
 
@@ -121,8 +121,8 @@ class IconScoreContext(SystemValueListener, ABC):
 
     @property
     def revision(self) -> int:
-        if self._system_value:
-            return self._system_value.revision_code
+        if self._inv_container:
+            return self._inv_container.revision_code
         else:
             return 0
 
@@ -143,12 +143,12 @@ class IconScoreContext(SystemValueListener, ABC):
         return self._term
 
     @property
-    def system_value(self) -> Optional['SystemValue']:
-        return self._system_value
+    def inv_container(self) -> Optional['INVContainer']:
+        return self._inv_container
 
     def is_revision_changed(self, target_rev: int) -> bool:
-        old: 'SystemValue' = self.engine.system.system_value
-        new: 'SystemValue' = self.system_value
+        old: 'INVContainer' = self.engine.inv.inv_container
+        new: 'INVContainer' = self.inv_container
 
         return old.revision_code != new.revision_code and new.revision_code == target_rev
 
@@ -301,26 +301,26 @@ class IconScoreContext(SystemValueListener, ABC):
 
         # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
-    def update_system_value(self, system_data: 'SystemData'):
-        # system value update listener
-        if system_data.SYSTEM_TYPE == SystemValueType.REVISION_CODE:
+    def update_icon_network_value(self, value: 'IconNetworkValue'):
+        # ICON Network value update listener
+        if value.TYPE == IconNetworkValueType.REVISION_CODE:
             pass
-        elif system_data.SYSTEM_TYPE == SystemValueType.REVISION_NAME:
+        elif value.TYPE == IconNetworkValueType.REVISION_NAME:
             pass
-        elif system_data.SYSTEM_TYPE == SystemValueType.SCORE_BLACK_LIST:
+        elif value.TYPE == IconNetworkValueType.SCORE_BLACK_LIST:
             pass
-        elif system_data.SYSTEM_TYPE == SystemValueType.STEP_PRICE:
-            self.step_counter.set_step_price(system_data.value)
-        elif system_data.SYSTEM_TYPE == SystemValueType.STEP_COSTS:
-            self.step_counter.set_step_costs(system_data.value)
-        elif system_data.SYSTEM_TYPE == SystemValueType.MAX_STEP_LIMITS:
-            self.step_counter.set_max_step_limit(system_data.value.get(self.type))
-        elif system_data.SYSTEM_TYPE == SystemValueType.SERVICE_CONFIG:
+        elif value.TYPE == IconNetworkValueType.STEP_PRICE:
+            self.step_counter.set_step_price(value.value)
+        elif value.TYPE == IconNetworkValueType.STEP_COSTS:
+            self.step_counter.set_step_costs(value.value)
+        elif value.TYPE == IconNetworkValueType.MAX_STEP_LIMITS:
+            self.step_counter.set_max_step_limit(value.value.get(self.type))
+        elif value.TYPE == IconNetworkValueType.SERVICE_CONFIG:
             pass
-        elif system_data.SYSTEM_TYPE == SystemValueType.IMPORT_WHITE_LIST:
+        elif value.TYPE == IconNetworkValueType.IMPORT_WHITE_LIST:
             pass
         else:
-            raise ValueError(f"Invalid value type: {system_data.SYSTEM_TYPE.name}")
+            raise ValueError(f"Invalid value type: {value.TYPE.name}")
 
 
 class IconScoreContextFactory(object):
@@ -347,13 +347,13 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
-            system_value: 'SystemValue' = context.engine.system.system_value.copy()
-            system_value.add_listener(context)
-            context._system_value = system_value
+            container: 'INVContainer' = context.engine.inv.inv_container.copy()
+            container.add_listener(context)
+            context._inv_container = container
         else:
             # Readonly
             context._preps = context.engine.prep.preps
-            context._system_value = context.engine.system.system_value
+            context._inv_container = context.engine.inv.inv_container
 
         cls.set_step_counter(context)
         context._term = context.engine.prep.term
@@ -362,11 +362,11 @@ class IconScoreContextFactory(object):
     def set_step_counter(cls, context: 'IconScoreContext'):
         is_step_trace_on: bool = cls._is_step_trace_on(context)
         if context.type == IconScoreContextType.ESTIMATION:
-            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.system_value,
+            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.inv_container,
                                                                                    IconScoreContextType.INVOKE,
                                                                                    is_step_trace_on)
         else:
-            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.system_value,
+            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.inv_container,
                                                                                    context.type,
                                                                                    is_step_trace_on)
 
