@@ -1,39 +1,36 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, List
 
-from ...icon_constant import SystemValueType, IconScoreContextType
+from ...icon_constant import IconNetworkValueType, IconScoreContextType
 from ...iconscore.icon_score_step import StepType
 from ...utils.msgpack_for_db import MsgPackForDB
 
 
-class SystemData(metaclass=ABCMeta):
-    PREFIX: bytes = b'sv'
-    SYSTEM_TYPE: 'SystemValueType' = None
+class Value(metaclass=ABCMeta):
+    PREFIX: bytes = b'inv'
+    TYPE: 'IconNetworkValueType' = None
 
     def __init__(self, value: Any):
         self.value: Any = value
 
-    @abstractmethod
     def make_key(self) -> bytes:
-        pass
+        key: bytes = self.TYPE.value
+        return self.PREFIX + key
 
     @abstractmethod
     def to_bytes(self) -> bytes:
         pass
 
     @abstractmethod
-    def from_bytes(self, bytes_: bytes) -> 'SystemData':
+    def from_bytes(self, bytes_: bytes) -> 'Value':
         pass
 
 
-class StepCosts(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.STEP_COSTS
+class StepCosts(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_COSTS
 
     def __init__(self, value: dict):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -52,14 +49,11 @@ class StepCosts(SystemData):
         return cls(converted_value)
 
 
-class StepPrice(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.STEP_PRICE
+class StepPrice(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_PRICE
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -76,14 +70,11 @@ class StepPrice(SystemData):
         return cls(value)
 
 
-class MaxStepLimits(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.MAX_STEP_LIMITS
+class MaxStepLimits(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.MAX_STEP_LIMITS
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -102,14 +93,11 @@ class MaxStepLimits(SystemData):
         return cls(converted_value)
 
 
-class ScoreBlackList(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.SCORE_BLACK_LIST
+class ScoreBlackList(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.SCORE_BLACK_LIST
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -126,14 +114,11 @@ class ScoreBlackList(SystemData):
         return cls(value)
 
 
-class RevisionCode(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.REVISION_CODE
+class RevisionCode(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.REVISION_CODE
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -150,14 +135,11 @@ class RevisionCode(SystemData):
         return cls(value)
 
 
-class RevisionName(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.REVISION_NAME
+class RevisionName(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.REVISION_NAME
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -174,14 +156,11 @@ class RevisionName(SystemData):
         return cls(value)
 
 
-class ImportWhiteList(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.IMPORT_WHITE_LIST
+class ImportWhiteList(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.IMPORT_WHITE_LIST
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -198,14 +177,11 @@ class ImportWhiteList(SystemData):
         return cls(value)
 
 
-class ServiceConfig(SystemData):
-    SYSTEM_TYPE: 'SystemValueType' = SystemValueType.SERVICE_CONFIG
+class ServiceConfig(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.SERVICE_CONFIG
 
     def __init__(self, value: Any):
         super().__init__(value)
-
-    def make_key(self) -> bytes:
-        return self.PREFIX + self.SYSTEM_TYPE.value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -222,13 +198,13 @@ class ServiceConfig(SystemData):
         return cls(value)
 
 
-SYSTEM_DATA_MAPPER = {
-    SystemValueType.REVISION_CODE: RevisionCode,
-    SystemValueType.REVISION_NAME: RevisionName,
-    SystemValueType.SCORE_BLACK_LIST: ScoreBlackList,
-    SystemValueType.STEP_PRICE: StepPrice,
-    SystemValueType.STEP_COSTS: StepCosts,
-    SystemValueType.MAX_STEP_LIMITS: MaxStepLimits,
-    SystemValueType.SERVICE_CONFIG: ServiceConfig,
-    SystemValueType.IMPORT_WHITE_LIST: ImportWhiteList
+VALUE_MAPPER = {
+    IconNetworkValueType.REVISION_CODE: RevisionCode,
+    IconNetworkValueType.REVISION_NAME: RevisionName,
+    IconNetworkValueType.SCORE_BLACK_LIST: ScoreBlackList,
+    IconNetworkValueType.STEP_PRICE: StepPrice,
+    IconNetworkValueType.STEP_COSTS: StepCosts,
+    IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits,
+    IconNetworkValueType.SERVICE_CONFIG: ServiceConfig,
+    IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList
 }

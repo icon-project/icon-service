@@ -16,29 +16,29 @@ import copy
 from collections import namedtuple
 from typing import Any, Dict, Optional, List
 
-from .data.system_data import SystemData, SYSTEM_DATA_MAPPER
-from .listener import SystemValueListener
+from .data.value import Value, VALUE_MAPPER
+from .listener import Listener
 from .. import Address
 from ..base.exception import AccessDeniedException
-from ..icon_constant import SystemValueType, IconScoreContextType
+from ..icon_constant import IconNetworkValueType, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_step import StepType
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 
 
-class SystemDataConverter(object):
+class ValueConverter(object):
     @staticmethod
-    def convert_for_icon_service(type_: 'SystemValueType', value: Any) -> 'SystemData':
+    def convert_for_icon_service(type_: 'IconNetworkValueType', value: Any) -> 'Value':
         """
-        Convert system value data type for icon service.
+        Convert IconNetwork value data type for icon service.
         Some data need to be converted for enhancing efficiency.
         :param type_:
         :param value:
         :return:
         """
         converted_value: Any = value
-        if type_ == SystemValueType.MAX_STEP_LIMITS:
+        if type_ == IconNetworkValueType.MAX_STEP_LIMITS:
             converted_value: dict = {}
             for key, value in value.items():
                 if isinstance(key, str):
@@ -48,9 +48,9 @@ class SystemDataConverter(object):
                         converted_value[IconScoreContextType.QUERY] = value
                 else:
                     raise ValueError(f"Invalid data type: "
-                                     f"system value: {SystemValueType.name} "
+                                     f"value: {type_.name} "
                                      f"key type: {type(key)}")
-        elif type_ == SystemValueType.STEP_COSTS:
+        elif type_ == IconNetworkValueType.STEP_COSTS:
             converted_value: dict = {}
             for key, value in value.items():
                 if isinstance(key, str):
@@ -61,14 +61,14 @@ class SystemDataConverter(object):
                         pass
                 else:
                     raise ValueError(f"Invalid data type: "
-                                     f"system value: {SystemValueType.name} "
+                                     f"value: {type_.name} "
                                      f"key type: {type(key)}")
-        return SYSTEM_DATA_MAPPER[type_](converted_value)
+        return VALUE_MAPPER[type_](converted_value)
 
     @staticmethod
-    def convert_for_governance_score(type_: 'SystemValueType', value: Any) -> Any:
+    def convert_for_governance_score(type_: 'IconNetworkValueType', value: Any) -> Any:
         """
-        Convert system value data type for governance score
+        Convert IconNetwork value data type for governance score
         Some data which have been converted for enhancing efficiency need to be converted.
 
         :param type_:
@@ -76,12 +76,12 @@ class SystemDataConverter(object):
         :return:
         """
         converted_value: Any = value
-        if type_ == SystemValueType.MAX_STEP_LIMITS:
+        if type_ == IconNetworkValueType.MAX_STEP_LIMITS:
             converted_value: dict = {}
             for key, value in value.items():
                 assert isinstance(key, IconScoreContextType)
                 converted_value[key.name.lower()] = value
-        elif type_ == SystemValueType.STEP_COSTS:
+        elif type_ == IconNetworkValueType.STEP_COSTS:
             converted_value: dict = {}
             for key, value in value.items():
                 assert isinstance(key, StepType)
@@ -89,21 +89,19 @@ class SystemDataConverter(object):
         return converted_value
 
 
-class SystemDict(dict):
-    def __setitem__(self, key, value):
-        if value is None:
-            return
-        if not isinstance(key, SystemValueType) or key not in SystemValueType:
-            raise ValueError(f"Invalid system value type: {key}")
-        if not isinstance(value, SystemData):
-            raise ValueError(f"Invalid value type: {type(value)}")
-        if key != value.SYSTEM_TYPE:
-            raise ValueError(f"Do not match key and value")
+class Container(object):
+    class CacheDict(dict):
+        def __setitem__(self, key, value):
+            if value is None:
+                return
+            if not isinstance(key, IconNetworkValueType) or key not in IconNetworkValueType:
+                raise ValueError(f"Invalid value type: {key}")
+            if not isinstance(value, Value):
+                raise ValueError(f"Invalid value type: {type(value)}")
+            if key != value.TYPE:
+                raise ValueError(f"Do not match key and value")
 
-        super().__setitem__(key, value)
-
-
-class SystemValue(object):
+            super().__setitem__(key, value)
 
     def __init__(self, is_migrated: bool):
         # Todo: consider if the compound data should be immutable
@@ -111,22 +109,22 @@ class SystemValue(object):
         # Todo: Consider about integrating set method
         # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
-        self._listener: Optional['SystemValueListener'] = None
+        self._listener: Optional['Listener'] = None
 
         self._tx_unit_batch: dict = {}
-        self._cache: SystemDict['SystemValueType', Optional['SystemData']] = SystemDict({
-            SystemValueType.REVISION_CODE: None,
-            SystemValueType.REVISION_NAME: None,
-            SystemValueType.SCORE_BLACK_LIST: None,
-            SystemValueType.STEP_PRICE: None,
-            SystemValueType.STEP_COSTS: None,
-            SystemValueType.MAX_STEP_LIMITS: None,
-            SystemValueType.SERVICE_CONFIG: None,
-            SystemValueType.IMPORT_WHITE_LIST: None
+        self._cache = self.CacheDict({
+            IconNetworkValueType.REVISION_CODE: None,
+            IconNetworkValueType.REVISION_NAME: None,
+            IconNetworkValueType.SCORE_BLACK_LIST: None,
+            IconNetworkValueType.STEP_PRICE: None,
+            IconNetworkValueType.STEP_COSTS: None,
+            IconNetworkValueType.MAX_STEP_LIMITS: None,
+            IconNetworkValueType.SERVICE_CONFIG: None,
+            IconNetworkValueType.IMPORT_WHITE_LIST: None
         })
 
-    def add_listener(self, listener: 'SystemValueListener'):
-        assert isinstance(listener, SystemValueListener)
+    def add_listener(self, listener: 'Listener'):
+        assert isinstance(listener, Listener)
         assert isinstance(listener, IconScoreContext)
         if listener.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
             raise AccessDeniedException(f"Method not allowed: context={listener.type.name}")
@@ -136,40 +134,40 @@ class SystemValue(object):
     def is_migrated(self) -> bool:
         return self._is_migrated
 
-    def get_by_type(self, type_: 'SystemValueType') -> Any:
+    def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
         return self._tx_unit_batch.get(type_, self._cache[type_]).value
 
     @property
     def service_config(self) -> int:
-        return self.get_by_type(SystemValueType.SERVICE_CONFIG)
+        return self.get_by_type(IconNetworkValueType.SERVICE_CONFIG)
 
     @property
     def step_price(self) -> int:
-        return self.get_by_type(SystemValueType.STEP_PRICE)
+        return self.get_by_type(IconNetworkValueType.STEP_PRICE)
 
     @property
     def step_costs(self) -> Dict['StepType', int]:
-        return self.get_by_type(SystemValueType.STEP_COSTS)
+        return self.get_by_type(IconNetworkValueType.STEP_COSTS)
 
     @property
     def max_step_limits(self) -> Dict['IconScoreContextType', int]:
-        return self.get_by_type(SystemValueType.MAX_STEP_LIMITS)
+        return self.get_by_type(IconNetworkValueType.MAX_STEP_LIMITS)
 
     @property
     def revision_code(self) -> int:
-        return self.get_by_type(SystemValueType.REVISION_CODE)
+        return self.get_by_type(IconNetworkValueType.REVISION_CODE)
 
     @property
     def revision_name(self) -> str:
-        return self.get_by_type(SystemValueType.REVISION_NAME)
+        return self.get_by_type(IconNetworkValueType.REVISION_NAME)
 
     @property
     def score_black_list(self) -> List['Address']:
-        return self.get_by_type(SystemValueType.SCORE_BLACK_LIST)
+        return self.get_by_type(IconNetworkValueType.SCORE_BLACK_LIST)
 
     @property
     def import_white_list(self) -> Dict[str, List[str]]:
-        return self.get_by_type(SystemValueType.IMPORT_WHITE_LIST)
+        return self.get_by_type(IconNetworkValueType.IMPORT_WHITE_LIST)
 
     def is_updated(self) -> bool:
         return bool(len(self._tx_unit_batch))
@@ -181,18 +179,18 @@ class SystemValue(object):
     def clear_batch(self):
         self._tx_unit_batch.clear()
 
-    def migrate(self, context: 'IconScoreContext', data: Dict['SystemValueType', 'SystemData']):
+    def migrate(self, context: 'IconScoreContext', data: Dict['IconNetworkValueType', 'Value']):
         """
-        Migrates governance variablie from Governance score to Governance Value.
+        Migrates governance variable from SCORE DB to State DB.
         It will be called when updating governance score to version "".
         This method is called only once.
         :param context:
         :param data:
         :return:
         """
-        for type_, system_data in data.items():
-            context.storage.system.put_value(context, type_, system_data)
-        context.storage.system.put_migration_flag(context)
+        for type_, value in data.items():
+            context.storage.inv.put_value(context, type_, value)
+        context.storage.inv.put_migration_flag(context)
         self._tx_unit_batch["is_migrated"] = True
 
     def is_migration_succeed(self) -> bool:
@@ -201,45 +199,45 @@ class SystemValue(object):
     def update_migration(self):
         self._is_migrated = True
 
-    def _set(self, system_data: 'SystemData'):
-        self._cache[system_data.SYSTEM_TYPE] = system_data
+    def _set(self, value: 'Value'):
+        self._cache[value.TYPE] = value
         if self._listener is not None:
-            self._listener.update_system_value(system_data)
+            self._listener.update_icon_network_value(value)
 
-    def set_by_icon_service(self, system_data: 'SystemData', is_open: bool = False):
+    def set_by_icon_service(self, value: 'Value', is_open: bool = False):
         """
         Set value on system value instance from icon service.
         There are two cases of calling this method.
         First: Before migration
         Second: Initiating 'system value' when opening icon service (i.e. first initiation)
 
-        :param system_data:
+        :param value:
         :param is_open:
         :return:
         """
         if not self._is_migrated or is_open is True:
-            self._set(system_data)
+            self._set(value)
         else:
-            raise PermissionError(f"Invalid case of setting system value from icon-service"
+            raise PermissionError(f"Invalid case of setting ICON Network value from icon-service"
                                   f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_by_governance_score(self, context: 'IconScoreContext', system_data: 'SystemData'):
+    def set_by_governance_score(self, context: 'IconScoreContext', value: 'Value'):
         """
-        Set values on system value and put these into DB.
-        Only Governance Score can set values after migration.
+        Set values on ICON Network value and put these into DB.
+        Only Governance SCORE can set values after migration.
         :param context:
-        :param system_data:
+        :param value:
         :return:
         """
         assert self._is_migrated
         # Update member variables
         # Check If value is valid
-        self._tx_unit_batch[system_data.SYSTEM_TYPE] = system_data
-        context.storage.system.put_value(context, system_data)
+        self._tx_unit_batch[value.TYPE] = value
+        context.storage.inv.put_value(context, value)
 
-    def copy(self) -> 'SystemValue':
-        """Copy system value"""
-        system_value = copy.copy(self)
-        system_value._tx_unit_batch = {}
-        system_value._cache = copy.copy(self._cache)
-        return system_value
+    def copy(self) -> 'Container':
+        """Copy container"""
+        container = copy.copy(self)
+        container._tx_unit_batch = {}
+        container._cache = copy.copy(self._cache)
+        return container
