@@ -44,7 +44,8 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey,
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG
+    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
+    BLOCK_INVOKE_TIMEOUT_S
 )
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -75,6 +76,7 @@ from .utils import print_log_with_level
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
+from .utils.timer import Timer
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -112,6 +114,7 @@ class IconServiceEngine(ContextContainer):
         self._backup_manager: Optional[BackupManager] = None
         self._backup_cleaner: Optional[BackupCleaner] = None
         self._conf: Optional[Dict[str, Union[str, int]]] = None
+        self._block_invoke_timeout_s: int = BLOCK_INVOKE_TIMEOUT_S
 
         # JSON-RPC handlers
         self._handlers = {
@@ -214,6 +217,8 @@ class IconServiceEngine(ContextContainer):
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
+
+        self._set_block_invoke_timeout(conf)
 
         # DO NOT change the values in conf
         self._conf = conf
@@ -470,7 +475,6 @@ class IconServiceEngine(ContextContainer):
         :param is_block_editable: boolean which imply whether creating base transaction or not
         :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
-
         # If the block has already been processed,
         # return the result from PrecommitDataManager
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
@@ -524,7 +528,19 @@ class IconServiceEngine(ContextContainer):
             context.block_batch.update(context.tx_batch)
             context.tx_batch.clear()
         else:
+            tx_timer = Timer()
+            tx_timer.start()
+
             for index, tx_request in enumerate(tx_requests):
+                # Adjust the number of transactions in a block to make sure that
+                # a leader can broadcast a block candidate to validators in a specific period.
+                if is_block_editable:
+                    if tx_timer.duration >= self._block_invoke_timeout_s:
+                        Logger.info(
+                            tag=self.TAG,
+                            msg=f"Stop to invoke remaining transactions: {index} / {len(tx_requests)}")
+                        break
+
                 if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
                         raise InvalidBaseTransactionException(
@@ -2388,3 +2404,13 @@ class IconServiceEngine(ContextContainer):
                 end_block_height=metadata.last_block.height - 1)
 
         Logger.debug(tag=self.TAG, msg="_finish_to_recover_rollback() end")
+
+    def _set_block_invoke_timeout(self, conf: Dict[str, Union[str, int]]):
+        try:
+            timeout_s: int = conf[ConfigKey.BLOCK_INVOKE_TIMEOUT]
+            if timeout_s > 0:
+                self._block_invoke_timeout_s = timeout_s
+        except:
+            pass
+
+        Logger.info(tag=self.TAG, msg=f"{ConfigKey.BLOCK_INVOKE_TIMEOUT}: {self._block_invoke_timeout_s}")
