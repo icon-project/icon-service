@@ -16,13 +16,7 @@
 
 from iconservice import *
 
-
-class MaliciousScoreType:
-    FREEZE = 0
-    UNFREEZE = 1
-    MIN = FREEZE
-    MAX = UNFREEZE
-
+from .network_proposal import NetworkProposal, NetworkProposalType, MaliciousScoreType
 
 TAG = 'Governance'
 DEBUG = False
@@ -107,6 +101,22 @@ class Governance(IconSystemScoreBase):
     def PRepDisqualified(self, address: Address, success: bool, reason: str):
         pass
 
+    @eventlog(indexed=0)
+    def NetworkProposalRegistered(self, title: str, description: str, type: int, value: bytes, proposer: Address):
+        pass
+
+    @eventlog(indexed=0)
+    def NetworkProposalCanceled(self, id: bytes):
+        pass
+
+    @eventlog(indexed=0)
+    def NetworkProposalVoted(self, id: bytes, vote: int, voter: Address):
+        pass
+
+    @eventlog(indexed=0)
+    def NetworkProposalApproved(self, id: bytes):
+        pass
+
     def __init__(self, db: IconScoreDatabase) -> None:
         # Todo: move all data except version and network proposal
         # Todo: double check about step costs migration logic
@@ -119,7 +129,13 @@ class Governance(IconSystemScoreBase):
 
         self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
         self._version = VarDB(self._VERSION, db, value_type=str)
+        self._network_proposal = NetworkProposal(db)
         self._service_config = VarDB(self._SERVICE_CONFIG, db, value_type=int)
+
+    def on_install(self) -> None:
+        """DB initialization on score install
+        """
+        super().on_install()
 
     def on_update(self) -> None:
         super().on_update()
@@ -191,16 +207,18 @@ class Governance(IconSystemScoreBase):
         pure_import_white_list = {key: import_white_list[key] for key in import_white_list_keys}
         pure_score_black_list = list(score_black_list)
 
-        system_values = {
-            SystemValueType.STEP_PRICE: step_price.get(),
-            SystemValueType.STEP_COSTS: pure_step_costs,
-            SystemValueType.MAX_STEP_LIMITS: pure_max_step_limits,
-            SystemValueType.REVISION_CODE: revision_code.get(),
-            SystemValueType.REVISION_NAME: revision_name.get(),
-            SystemValueType.IMPORT_WHITE_LIST: pure_import_white_list,
-            SystemValueType.SCORE_BLACK_LIST: pure_score_black_list
+        icon_network_values = {
+            IconNetworkValueType.STEP_PRICE: step_price.get(),
+            IconNetworkValueType.STEP_COSTS: pure_step_costs,
+            IconNetworkValueType.MAX_STEP_LIMITS: pure_max_step_limits,
+            IconNetworkValueType.REVISION_CODE: revision_code.get(),
+            IconNetworkValueType.REVISION_NAME: revision_name.get(),
+            IconNetworkValueType.IMPORT_WHITE_LIST: pure_import_white_list,
+            IconNetworkValueType.SCORE_BLACK_LIST: pure_score_black_list
         }
-        self.migrate_system_value(system_values)
+        self.migrate_icon_network_value(icon_network_values)
+
+
 
     @staticmethod
     def _versions(version: str):
@@ -306,7 +324,7 @@ class Governance(IconSystemScoreBase):
 
     @external(readonly=True)
     def getStepPrice(self) -> int:
-        return self.get_system_value(SystemValueType.STEP_PRICE)
+        return self.get_icon_network_value(IconNetworkValueType.STEP_PRICE)
 
     @external
     def acceptScore(self, txHash: bytes):
@@ -426,10 +444,10 @@ class Governance(IconSystemScoreBase):
         if self.address == address:
             revert("can't add myself")
 
-        score_black_list: list = self.get_system_value(SystemValueType.SCORE_BLACK_LIST)
+        score_black_list: list = self.get_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST)
         if address not in score_black_list:
             score_black_list.append(address)
-            self.set_system_value(SystemValueType.SCORE_BLACK_LIST, score_black_list)
+            self.set_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST, score_black_list)
             self.MaliciousScore(address, MaliciousScoreType.FREEZE)
         else:
             revert('Invalid address: already SCORE blacklist')
@@ -440,7 +458,7 @@ class Governance(IconSystemScoreBase):
     def _removeFromScoreBlackList(self, address: Address):
         if not address.is_contract:
             revert(f'Invalid SCORE Address: {address}')
-        score_black_list: list = self.get_system_value(SystemValueType.SCORE_BLACK_LIST)
+        score_black_list: list = self.get_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST)
 
         if address not in score_black_list:
             revert('Invalid address: not in list')
@@ -451,7 +469,7 @@ class Governance(IconSystemScoreBase):
             for i in range(len(score_black_list)):
                 if score_black_list[i] == address:
                     score_black_list[i] = top
-        self.set_system_value(SystemValueType.SCORE_BLACK_LIST, score_black_list)
+        self.set_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST, score_black_list)
         self.MaliciousScore(address, MaliciousScoreType.UNFREEZE)
 
         if DEBUG is True:
@@ -460,7 +478,7 @@ class Governance(IconSystemScoreBase):
     @external(readonly=True)
     def isInScoreBlackList(self, address: Address) -> bool:
         Logger.debug(f'isInBlackList address: {address}', TAG)
-        score_black_list: list = self.get_system_value(SystemValueType.SCORE_BLACK_LIST)
+        score_black_list: list = self.get_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST)
         return address in score_black_list
 
     def _print_black_list(self, header: str, score_black_list: list):
@@ -503,7 +521,7 @@ class Governance(IconSystemScoreBase):
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:
-        step_costs: dict = self.get_system_value(SystemValueType.STEP_COSTS)
+        step_costs: dict = self.get_icon_network_value(IconNetworkValueType.STEP_COSTS)
         result = {}
 
         for key, value in step_costs.items():
@@ -512,7 +530,7 @@ class Governance(IconSystemScoreBase):
 
     @external(readonly=True)
     def getMaxStepLimit(self, contextType: str) -> int:
-        max_step_limits: dict = self.get_system_value(SystemValueType.MAX_STEP_LIMITS)
+        max_step_limits: dict = self.get_icon_network_value(IconNetworkValueType.MAX_STEP_LIMITS)
         return max_step_limits[contextType]
 
     @external(readonly=True)
@@ -577,7 +595,7 @@ class Governance(IconSystemScoreBase):
 
     def _get_import_white_list(self) -> dict:
         whitelist = {}
-        import_white_list: dict = self.get_system_value(SystemValueType.IMPORT_WHITE_LIST)
+        import_white_list: dict = self.get_icon_network_value(IconNetworkValueType.IMPORT_WHITE_LIST)
         for key, values in import_white_list.items():
             whitelist[key] = values.split(',')
 
@@ -598,25 +616,148 @@ class Governance(IconSystemScoreBase):
                 table[flag.name] = False
         return table
 
-    @external
-    def setRevision(self, code: int, name: str):
-        # only owner can add import white list
-        if self.msg.sender != self.owner:
-            revert('Invalid sender: not owner')
+    def _set_revision(self, code: str, name: str):
+        # check message sender, only main P-Rep can add new blacklist
+        main_preps, _ = get_main_prep_info()
+        if not self._check_main_prep(self.msg.sender, main_preps):
+            revert("No permission - only for main prep")
 
-        prev_code: int = self.get_system_value(SystemValueType.REVISION_CODE)
+        code = int(code, 16)
+
+        prev_code: int = self.get_icon_network_value(IconNetworkValueType.REVISION_CODE)
         if code < prev_code:
             revert(f"can't decrease code")
 
-        self.set_system_value(SystemValueType.REVISION_CODE, code)
-        self.set_system_value(SystemValueType.REVISION_NAME, name)
+        self.set_icon_network_value(IconNetworkValueType.REVISION_CODE, code)
+        self.set_icon_network_value(IconNetworkValueType.REVISION_NAME, name)
         self.RevisionChanged(code, name)
 
     @external(readonly=True)
     def getRevision(self) -> dict:
-        return {'code': self.get_system_value(SystemValueType.REVISION_CODE),
-                'name': self.get_system_value(SystemValueType.REVISION_NAME)}
+        return {'code': self.get_icon_network_value(IconNetworkValueType.REVISION_CODE),
+                'name': self.get_icon_network_value(IconNetworkValueType.REVISION_NAME)}
 
+    @external
+    def registerProposal(self, title: str, description: str, type: int, value: bytes):
+        """ Register a Proposal with information like description, type and value by main prep
+
+        :param title: title of the proposal
+        :param description: description of the proposal
+        :param type: proposal type
+        :param value: encoded value
+        :return: None
+        """
+        main_preps, expire_block_height = get_main_prep_info()
+
+        if not self._check_main_prep(self.msg.sender, main_preps):
+            revert("No permission - only for main prep")
+
+        if expire_block_height < self.block_height:
+            revert("Invalid main P-Rep term information")
+
+        value_in_dict = json_loads(value.decode())
+        self._network_proposal.register_proposal(self.tx.hash, self.msg.sender, self.block_height, expire_block_height,
+                                                 title, description, type, value_in_dict, main_preps)
+
+        self.NetworkProposalRegistered(title, description, type, value, self.msg.sender)
+
+    @external
+    def cancelProposal(self, id: bytes):
+        """ Cancel Proposal if it have not been approved
+
+        :param id: transaction hash to generate when registering proposal
+        :return: None
+        """
+        main_preps, _ = get_main_prep_info()
+
+        if not self._check_main_prep(self.msg.sender, main_preps):
+            revert("No permission - only for main prep")
+
+        self._network_proposal.cancel_proposal(id, self.msg.sender, self.block_height)
+
+        self.NetworkProposalCanceled(id)
+
+    @external
+    def voteProposal(self, id: bytes, vote: int):
+        """ Vote for Proposal - agree or disagree
+
+        :param id: transaction hash to generate when registering proposal
+        :param vote: agree(1) or disagree(0)
+        :return: None
+        """
+        main_preps, _ = get_main_prep_info()
+
+        if not self._check_main_prep(self.msg.sender, main_preps):
+            revert("No permission - only for main prep")
+
+        approved, proposal_type, value = self._network_proposal.vote_proposal(id, self.msg.sender,
+                                                                              vote,
+                                                                              self.block_height,
+                                                                              self.tx.hash,
+                                                                              self.tx.timestamp,
+                                                                              main_preps)
+
+        self.NetworkProposalVoted(id, vote, self.msg.sender)
+
+        if approved is True:
+            self.NetworkProposalApproved(id)
+
+            # value dict has str key, value. convert str value to appropriate type to use
+            if proposal_type == NetworkProposalType.TEXT:
+                return
+            elif proposal_type == NetworkProposalType.REVISION:
+                self._set_revision(**value)
+            elif proposal_type == NetworkProposalType.MALICIOUS_SCORE:
+                self._malicious_score(**value)
+            elif proposal_type == NetworkProposalType.PREP_DISQUALIFICATION:
+                self._disqualify_prep(**value)
+            elif proposal_type == NetworkProposalType.STEP_PRICE:
+                self._set_step_price(**value)
+
+    @external(readonly=True)
+    def getProposal(self, id: bytes) -> dict:
+        """ Get Proposal info as dict
+
+        :param id: transaction hash to generate when registering proposal
+        :return: proposal information in dict
+        """
+        proposal_info = self._network_proposal.get_proposal(id, self.block_height)
+        return proposal_info
+
+    @external(readonly=True)
+    def getProposals(self, type: int = None, status: int = None) -> dict:
+        """ Get all of proposals in list
+
+        :param type: type of network proposal to filter (optional)
+        :param status: status of network proposal to filter (optional)
+        :return: proposal list in dict
+        """
+        return self._network_proposal.get_proposals(self.block_height, type, status)
+
+    def _check_main_prep(self, address: 'Address', main_preps: list) -> bool:
+        """ Check if the address is main prep
+
+        :param address: address to be checked
+        :param main_preps: list of main preps
+        :return: bool value to be checked if it is one of main preps or not
+        """
+        for prep in main_preps:
+            if prep.address == address:
+                return True
+        return False
+
+    def _malicious_score(self, address: str, type: str):
+        # check message sender, only main P-Rep can modify SCORE blacklist
+        main_preps, _ = get_main_prep_info()
+        if not self._check_main_prep(self.msg.sender, main_preps):
+            revert("No permission - only for main prep")
+
+        converted_address = Address.from_string(address)
+        converted_type = int(type, 16)
+        if converted_type == MaliciousScoreType.FREEZE:
+            self._addToScoreBlackList(converted_address)
+        elif converted_type == MaliciousScoreType.UNFREEZE:
+            self._removeFromScoreBlackList(converted_address)
 
     def _disqualify_prep(self, address: str):
         # check message sender, only main P-Rep can disqualify P-Rep
@@ -637,5 +778,53 @@ class Governance(IconSystemScoreBase):
 
         step_price = int(value, 16)
         if step_price > 0:
-            self.set_system_value(SystemValueType.STEP_PRICE, step_price)
+            self.set_icon_network_value(IconNetworkValueType.STEP_PRICE, step_price)
             self.StepPriceChanged(step_price)
+
+    # ========== for debug ==========
+    @external
+    def set_revision(self, code: str, name: str):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        code = int(code, 16)
+
+        prev_code: int = self.get_icon_network_value(IconNetworkValueType.REVISION_CODE)
+        if code < prev_code:
+            revert(f"can't decrease code")
+
+        self.set_icon_network_value(IconNetworkValueType.REVISION_CODE, code)
+        self.set_icon_network_value(IconNetworkValueType.REVISION_NAME, name)
+        self.RevisionChanged(code, name)
+
+    @external
+    def set_step_price(self, value: str):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        step_price = int(value, 16)
+        if step_price > 0:
+            self.set_icon_network_value(IconNetworkValueType.STEP_PRICE, step_price)
+            self.StepPriceChanged(step_price)
+
+    @external
+    def malicious_score(self, address: str, type: str):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        converted_address = Address.from_string(address)
+        converted_type = int(type, 16)
+        if converted_type == MaliciousScoreType.FREEZE:
+            self._addToScoreBlackList(converted_address)
+        elif converted_type == MaliciousScoreType.UNFREEZE:
+            self._removeFromScoreBlackList(converted_address)
+
+    @external
+    def disqualify_prep(self, address: str):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        address = Address.from_string(address)
+
+        success, reason = self.disqualify_prep(address)
+        self.PRepDisqualified(address, success, reason)

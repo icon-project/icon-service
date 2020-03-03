@@ -179,7 +179,7 @@ class Container(object):
     def clear_batch(self):
         self._tx_unit_batch.clear()
 
-    def migrate(self, context: 'IconScoreContext', data: Dict['IconNetworkValueType', 'Value']):
+    def migrate(self, context: 'IconScoreContext', data: List['Value']):
         """
         Migrates governance variable from SCORE DB to State DB.
         It will be called when updating governance score to version "".
@@ -188,8 +188,8 @@ class Container(object):
         :param data:
         :return:
         """
-        for type_, value in data.items():
-            context.storage.inv.put_value(context, type_, value)
+        for value in data:
+            context.storage.inv.put_value(context, value)
         context.storage.inv.put_migration_flag(context)
         self._tx_unit_batch["is_migrated"] = True
 

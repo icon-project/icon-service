@@ -74,9 +74,9 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def migrate_icon_network_value(self, data: Dict['IconNetworkValueType', Any]):
-        converted_data: dict = {}
+        converted_data: list = []
         for type_, value in data.items():
-            converted_data[type_] = INVConverter.convert_for_icon_service(type_, value)
+            converted_data.append(INVConverter.convert_for_icon_service(type_, value))
         self._context.inv_container.migrate(self._context, converted_data)
 
     def get_icon_network_value(self, type_: 'IconNetworkValueType') -> Any:
