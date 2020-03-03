@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
 import warnings
+from abc import ABC
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Any
 
 from iconcommons.logger import Logger
-
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_trace import Trace
 from ..base.block import Block
@@ -30,77 +29,21 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag)
+    Revision, PRepFlag, SystemValueType, RevisionChangedFlag)
 from ..icx.issue.regulator import Regulator
+from ..system.listener import SystemValueListener
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
-    from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
+    from .icon_score_step import IconScoreStepCounter
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
-
-_thread_local_data = threading.local()
-
-
-class ContextContainer(object):
-    """ContextContainer mixin
-
-    Every class which inherits ContextContainer can share IconScoreContext instance
-    in the current thread.
-    """
-
-    @staticmethod
-    def _get_context() -> Optional['IconScoreContext']:
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
-
-        if context_stack is not None and len(context_stack) > 0:
-            return context_stack[-1]
-        else:
-            return None
-
-    @staticmethod
-    def _push_context(context: 'IconScoreContext') -> None:
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
-
-        if context_stack is None:
-            context_stack = []
-            setattr(_thread_local_data, 'context_stack', context_stack)
-
-        context_stack.append(context)
-
-    @staticmethod
-    def _pop_context() -> 'IconScoreContext':
-        """Delete the last pushed context of the current thread
-        """
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
-
-        if context_stack is not None and len(context_stack) > 0:
-            return context_stack.pop()
-        else:
-            raise FatalException('Failed to pop a context out of context_stack')
-
-    @staticmethod
-    def _clear_context() -> None:
-        setattr(_thread_local_data, 'context_stack', None)
-
-    @staticmethod
-    def _get_context_stack_size() -> int:
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
-        return 0 if context_stack is None else len(context_stack)
+    from ..system.value import SystemValue
 
 
-class ContextGetter(object):
-    """The class which refers to IconScoreContext should inherit ContextGetter
-    """
-
-    @property
-    def _context(self) -> 'IconScoreContext':
-        return ContextContainer._get_context()
-
-
-class IconScoreContext(object):
+class IconScoreContext(SystemValueListener, ABC):
     TAG = "CTX"
 
     score_root_path: str = None
@@ -137,14 +80,12 @@ class IconScoreContext(object):
         self.tx: Optional['Transaction'] = None
         self.msg: Optional['Message'] = None
         self.current_address: Optional['Address'] = None
-        self.revision: int = 0
         self.block_batch: Optional['BlockBatch'] = None
         self.tx_batch: Optional['TransactionBatch'] = None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
         self.new_icon_score_mapper: Optional['IconScoreMapper'] = None
         self.cumulative_step_used: int = 0
-        self.step_counter: Optional['IconScoreStepCounter'] = None
         self.event_logs: Optional[List['EventLog']] = None
         self.traces: Optional[List['Trace']] = None
         self.fee_sharing_proportion = 0  # The proportion of fee by SCORE in percent (0-100)
@@ -159,7 +100,11 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
+        self._system_value: Optional['SystemValue'] = None
+
         self.regulator: Optional['Regulator'] = None
+
+        self.revision_changed_flag: 'RevisionChangedFlag' = RevisionChangedFlag.NONE
 
     @classmethod
     def set_decentralize_trigger(cls, decentralize_trigger: float):
@@ -169,6 +114,10 @@ class IconScoreContext(object):
             raise FatalException(f"Invalid min delegation percent for decentralize: {decentralize_trigger}."
                                  f"Do not exceed 100% or negative value")
         IconScoreContext.decentralize_trigger = decentralize_trigger
+
+    @property
+    def revision(self) -> int:
+        return self._system_value.revision_code
 
     @property
     def readonly(self):
@@ -186,12 +135,25 @@ class IconScoreContext(object):
     def term(self) -> Optional['Term']:
         return self._term
 
+    @property
+    def system_value(self) -> Optional['SystemValue']:
+        return self._system_value
+
+    @property
+    def step_counter(self) -> Optional['IconScoreStepCounter']:
+        return self._system_value.step_counter
+
+    def is_revision_changed(self, target_rev: int) -> bool:
+        old: 'SystemValue' = self.engine.system.system_value
+        new: 'SystemValue' = self.system_value
+
+        return old.revision_code != new.revision_code and new.revision_code.value == target_rev
+
     def is_decentralized(self) -> bool:
-        return self.engine.prep.term is not None
+        return self._term is not None
 
     def is_the_first_block_on_decentralization(self) -> bool:
-        term = self.engine.prep.term
-        return term and term.sequence == 0 and self.block.height == term.start_block_height
+        return self._term.sequence == 0 and self.block.height == self._term.start_block_height
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
@@ -336,10 +298,30 @@ class IconScoreContext(object):
 
         # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
+    def update(self, type_: 'SystemValueType', value: Any):
+        # system value update listener
+
+        if type_ == SystemValueType.STEP_PRICE:
+            self.step_counter.set_step_price(value)
+        elif type_ == SystemValueType.STEP_COSTS:
+            self.step_counter.set_step_costs(value)
+        elif type_ == SystemValueType.MAX_STEP_LIMITS:
+            self.step_counter.set_max_step_limit(value)
+        elif type_ == SystemValueType.REVISION_CODE:
+            pass
+        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+            pass
+        elif type_ == SystemValueType.IMPORT_WHITE_LIST:
+            pass
+        elif type_ == SystemValueType.IMPORT_WHITE_LIST_KEYS:
+            pass
+        else:
+            raise ValueError(f"Invalid value type: {type_.name}")
+
 
 class IconScoreContextFactory(object):
-    def __init__(self, step_counter_factory: 'IconScoreStepCounterFactory'):
-        self.step_counter_factory = step_counter_factory
+    def __init__(self):
+        pass
 
     def create(self, context_type: 'IconScoreContextType', block: 'Block'):
         context: 'IconScoreContext' = IconScoreContext(context_type)
@@ -348,24 +330,11 @@ class IconScoreContextFactory(object):
         if context_type == IconScoreContextType.DIRECT:
             return context
 
-        self._set_step_counter(context)
         self._set_context_attributes_for_processing_tx(context)
-
         return context
 
-    @staticmethod
-    def _is_step_trace_on(context: 'IconScoreContext') -> bool:
-        return context.step_trace_flag and context.type == IconScoreContextType.INVOKE
-
-    def _set_step_counter(self, context: 'IconScoreContext'):
-        step_trace_flag = self._is_step_trace_on(context)
-        if context.type == IconScoreContextType.ESTIMATION:
-            context.step_counter = self.step_counter_factory.create(IconScoreContextType.INVOKE, step_trace_flag)
-        else:
-            context.step_counter = self.step_counter_factory.create(context.type, step_trace_flag)
-
-    @staticmethod
-    def _set_context_attributes_for_processing_tx(context: 'IconScoreContext'):
+    @classmethod
+    def _set_context_attributes_for_processing_tx(cls, context: 'IconScoreContext'):
         if context.type in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
             context.block_batch = BlockBatch(Block.from_block(context.block))
             context.tx_batch = TransactionBatch()
@@ -378,4 +347,16 @@ class IconScoreContextFactory(object):
             # Readonly
             context._preps = context.engine.prep.preps
 
+        cls._set_system_value_to_context(context)
         context._term = context.engine.prep.term
+
+    @classmethod
+    def _set_system_value_to_context(cls, context: 'IconScoreContext'):
+        is_step_trace_on: bool = cls._is_step_trace_on(context)
+        system_value: 'SystemValue' = context.engine.system.system_value.create(context.type, is_step_trace_on)
+        system_value.add_listener(context)
+        context._system_value = system_value
+
+    @classmethod
+    def _is_step_trace_on(cls, context: 'IconScoreContext') -> bool:
+        return context.step_trace_flag and context.type == IconScoreContextType.INVOKE

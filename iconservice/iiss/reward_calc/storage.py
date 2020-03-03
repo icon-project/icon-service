@@ -19,7 +19,6 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
-
 from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType, make_block_produce_info_key
 from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
@@ -27,7 +26,6 @@ from ...icon_constant import (
     DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0,
     IISS_LOG_TAG, ROLLBACK_LOG_TAG
 )
-from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils import bytes_to_hex
 from ...utils.msgpack_for_db import MsgPackForDB
@@ -36,6 +34,7 @@ if TYPE_CHECKING:
     from ...base.address import Address
     from ...database.wal import IissWAL
     from ..reward_calc.msg_data import Data, DelegationInfo
+    from ...iconscore.icon_score_context import IconScoreContext
 
 
 RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
@@ -80,7 +79,7 @@ class Storage(object):
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: int = -1
 
-    def open(self, context: IconScoreContext, path: str):
+    def open(self, context: 'IconScoreContext', path: str):
         revision: int = context.revision
 
         if not os.path.exists(path):

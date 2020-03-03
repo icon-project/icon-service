@@ -16,7 +16,7 @@
 
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
-from .icon_score_context import ContextContainer
+from .context.context import ContextContainer
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
 from ..icon_constant import Revision, IconScoreContextType

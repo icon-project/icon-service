@@ -33,7 +33,9 @@ from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, interface
 from iconservice.iconscore.icon_score_base2 import InterfaceScore
-from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.context.context import ContextContainer
+from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall

@@ -24,10 +24,11 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy import DeployEngine
+from iconservice.icon_constant import IconScoreContextType, IconScoreFuncType
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
 from iconservice.iconscore.icon_score_constant import ATTR_SCORE_CALL
-from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
-from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreFuncType
+from iconservice.iconscore.icon_score_context import IconScoreContext
 
 
 def decorator(func):

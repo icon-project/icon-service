@@ -28,9 +28,9 @@ from iconservice.iconscore.icon_score_base2 import ScoreApiStepRatio
 from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _recover_key
 from iconservice.iconscore.icon_score_base2 import create_address_with_key, recover_key
 from iconservice.iconscore.icon_score_base2 import sha3_256, json_dumps, json_loads
-from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType, IconScoreContextFactory
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
+from iconservice.iconscore.icon_score_step import StepType
 from iconservice.prep import PRepEngine
 from iconservice.prep.data import PRep, Term, PRepContainer
 from iconservice.utils import ContextEngine

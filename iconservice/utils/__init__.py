@@ -126,8 +126,8 @@ def set_flag(src_flags: Flag, flag: Flag, on: bool) -> Flag:
     return src_flags
 
 
-ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
-ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc")
+ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue system")
+ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc system")
 
 
 def print_log_with_level(log_level: str, msg: str, tag: str):

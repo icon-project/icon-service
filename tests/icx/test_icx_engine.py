@@ -22,7 +22,9 @@ from unittest.mock import Mock
 from iconservice.base.address import Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.database.db import ContextDatabase
-from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType, ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import IconScoreContextType
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextStorage
 
