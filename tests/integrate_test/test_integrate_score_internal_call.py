@@ -212,3 +212,109 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
                         func_name="try_get_other_score_db",
                         params={},
                         expected_status=False)
+
+    def test_transfer_via_internal_call(self):
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
+
+        # callee SCORE = score_addr1
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
+
+        value = 2 * ICX_IN_LOOP
+
+        # increase balance of score_addr2
+        self.transfer_icx(self._admin, score_addr2, value)
+        balance: int = self.get_balance(score_addr2)
+        self.assertEqual(value, balance)
+
+        # transfer value from score_addr2 to score_addr1
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="transfer_icx_to_other_score",
+                        params={"value": hex(value)})
+
+        balance = self.get_balance(score_addr1)
+        self.assertEqual(value, balance, balance)
+        balance = self.get_balance(score_addr2)
+        self.assertEqual(0, balance, balance)
+
+        # transfer fallbacked balance(value) from score_addr2 to score_addr1 in one TX
+        self.score_call(from_=self._admin,
+                        to_=score_addr2,
+                        value=value,
+                        func_name="transfer_all_icx_to_other_score")
+
+        balance = self.get_balance(score_addr1)
+        self.assertEqual(value * 2, balance, balance)
+        balance = self.get_balance(score_addr2)
+        self.assertEqual(0, balance, balance)
+
+        # invoke intercall twice and check balance
+        self.score_call(from_=self._admin,
+                        to_=score_addr2,
+                        value=value * 2,
+                        func_name="transfer_icx_to_other_score_twice",
+                        params={"value": hex(value)})
+
+        balance = self.get_balance(score_addr1)
+        self.assertEqual(value * 4, balance, balance)
+        balance = self.get_balance(score_addr2)
+        self.assertEqual(0, balance, balance)
+
+    def test_transfer_via_internal_call_error(self):
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+
+        tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_link_score",
+                                                from_=self._accounts[0],
+                                                to_=ZERO_SCORE_ADDRESS)
+
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
+
+        # callee SCORE = score_addr1
+        self.score_call(from_=self._accounts[0],
+                        to_=score_addr2,
+                        func_name="add_score_func",
+                        params={"score_addr": str(score_addr1)})
+
+        value = 2 * ICX_IN_LOOP
+
+        # transfer without balance
+        tx_results = self.score_call(from_=self._accounts[0],
+                                     to_=score_addr2,
+                                     func_name="transfer_icx_to_other_score",
+                                     params={"value": hex(value)},
+                                     expected_status=False)
+        self.assertTrue(tx_results[0].failure.message.startswith("Out of balance"))
+
+        # increase balance of score_addr2
+        self.transfer_icx(self._admin, score_addr2, value)
+        balance: int = self.get_balance(score_addr2)
+        self.assertEqual(value, balance)
+
+        # transfer via not payable external function
+        tx_results = self.score_call(from_=self._accounts[0],
+                                     to_=score_addr2,
+                                     func_name="transfer_icx_to_other_score_fail",
+                                     params={"value": hex(value)},
+                                     expected_status=False)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not payable"))

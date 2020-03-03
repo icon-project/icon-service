@@ -30,3 +30,12 @@ class SampleScore(IconScoreBase):
     @external
     def get_db(self):
         return self.db
+
+    @external
+    @payable
+    def fallback_via_internal_call(self) -> None:
+        pass
+
+    @external
+    def fallback_via_not_payable_internal_call(self) -> None:
+        pass

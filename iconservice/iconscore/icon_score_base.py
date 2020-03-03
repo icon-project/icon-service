@@ -25,7 +25,7 @@ from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
-from .icon_score_context import ContextGetter, IconScoreContextType
+from .icon_score_context import ContextGetter, IconScoreContextType, ContextContainer
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
@@ -47,10 +47,10 @@ INDEXED_ARGS_LIMIT = 3
 
 def interface(func):
     """
-    A decorator for the functions of interface SCORE.
+    A decorator for the functions of InterfaceScore.
 
-    Declaring this decorator to the function can invoke
-    the same form of the function of the external SCORE.
+    If other SCORE has the function whose signature is the same as defined with @interface decorator,
+    the function can be invoked via InterfaceScore class instance
     """
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
@@ -68,14 +68,15 @@ def interface(func):
             raise InvalidInstanceException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
-        context = calling_obj.context
+        context = ContextContainer._get_context()
         addr_to = calling_obj.addr_to
+        amount = calling_obj.value
         addr_from: 'Address' = context.current_address
 
         if addr_to is None:
             raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')
 
-        return InternalCall.other_external_call(context, addr_from, addr_to, 0, func_name, args, kwargs)
+        return InternalCall.other_external_call(context, addr_from, addr_to, amount, func_name, args, kwargs)
 
     return __wrapper
 
@@ -638,11 +639,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         :param addr_to: :class:`.Address` the address of another SCORE
         :param func_name: function name of another SCORE
-        :param kw_dict: Arguments of the external function
-        :param amount: ICX value to enclose with. in loop.
+        :param kw_dict: arguments of the external function
+        :param amount: amount of ICX to transfer in loop
         :return: returning value of the external function
         """
-        warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
         return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
 
     @staticmethod
