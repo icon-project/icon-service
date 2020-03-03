@@ -22,13 +22,13 @@ from ..base.exception import ScoreNotFoundException
 from ..icon_constant import SystemValueType, IconServiceFlag, IconScoreContextType
 from ..iconscore.context.context import ContextContainer
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
+from ..iconscore.icon_score_result import TransactionResult
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..builtin_scores.governance.governance import Governance
     from ..precommit_data_manager import PrecommitData
-    from ..iconscore.icon_score_result import TransactionResult
 
 
 class Engine(EngineBase, ContextContainer):
@@ -51,15 +51,16 @@ class Engine(EngineBase, ContextContainer):
             SystemValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
         }
 
-    def open(self, context: 'IconScoreContext'):
-        self._system_value: 'SystemValue' = self._load_system_value(context)
+    @property
+    def system_value(self) -> 'SystemValue':
+        return self._system_value
 
-    def _load_system_value(self, context: 'IconScoreContext') -> 'SystemValue':
+    def load_system_value(self, context: 'IconScoreContext'):
         system_value: Optional['SystemValue'] = context.storage.system.get_system_value(context)
         if system_value is None:
             system_value: 'SystemValue' = SystemValue(is_migrated=False)
             self._sync_system_value_with_governance(context, system_value)
-        return system_value
+        self._system_value = system_value
 
     def legacy_system_value_update(self,
                                    context: 'IconScoreContext',
@@ -90,7 +91,8 @@ class Engine(EngineBase, ContextContainer):
             for type_ in SystemValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
                 system_value.set_from_icon_service(type_, value)
-
+        except ScoreNotFoundException:
+            pass
         finally:
             self._pop_context()
 
@@ -162,6 +164,7 @@ class Engine(EngineBase, ContextContainer):
 
     @staticmethod
     def _get_score_black_list(_, governance_score: 'Governance'):
+        # Todo: should I set default value?
         score_black_list = []
         if hasattr(governance_score, '_score_black_list'):
             score_black_list = [address for address in governance_score._score_black_list]
@@ -169,4 +172,4 @@ class Engine(EngineBase, ContextContainer):
 
     def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         # Set updated system value
-        pass
+        self._system_value: 'SystemValue' = precommit_data.system_value

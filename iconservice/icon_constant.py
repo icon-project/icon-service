@@ -103,6 +103,7 @@ BASE_TRANSACTION_INDEX = 0
 
 
 class Revision(Enum):
+    GENESIS = 0
     TWO = 2
     THREE = 3
     FOUR = 4
