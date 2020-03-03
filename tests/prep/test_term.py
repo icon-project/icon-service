@@ -33,7 +33,7 @@ from iconservice.utils import ContextStorage
 
 context = IconScoreContext(IconScoreContextType.DIRECT)
 context.storage = ContextStorage(deploy=None, fee=None, icx=Mock(spec=IcxStorage), iiss=None,
-                                 issue=None, rc=None, prep=Mock(spec=PRepStorage), meta=None, system=None)
+                                 issue=None, rc=None, prep=Mock(spec=PRepStorage), meta=None, inv=None)
 context.storage.prep.put_term = Mock()
 
 
