@@ -25,7 +25,7 @@ from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
-from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
+from tests.unittest.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
     create_transaction_req
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))

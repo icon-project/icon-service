@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import unittest
 from typing import TYPE_CHECKING, List
 
@@ -23,7 +24,7 @@ from iconservice.fee import FeeEngine
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, Revision, ICX_IN_LOOP
 from iconservice.icon_service_engine import IconServiceEngine
-from tests.integrate_test import root_clear
+from tests import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:

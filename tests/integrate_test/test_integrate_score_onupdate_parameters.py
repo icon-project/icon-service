@@ -15,6 +15,7 @@
 # limitations under the License.
 
 """on_update parameters testcase"""
+
 from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address

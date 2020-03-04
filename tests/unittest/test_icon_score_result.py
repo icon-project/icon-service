@@ -40,7 +40,7 @@ from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 from tests import create_tx_hash, create_address, \
     raise_exception_start_tag, raise_exception_end_tag
-from tests.mock_generator import generate_service_engine, generate_inner_task, \
+from tests.unittest.mock_generator import generate_service_engine, generate_inner_task, \
     create_request, ReqData, clear_inner_task
 
 

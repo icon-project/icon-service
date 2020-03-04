@@ -26,7 +26,7 @@ from iconservice.base.address import generate_score_address, GOVERNANCE_SCORE_AD
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, BUILTIN_SCORE_ADDRESS_MAPPER
 from iconservice.icon_service_engine import IconServiceEngine
-from tests.integrate_test import root_clear
+from tests import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:

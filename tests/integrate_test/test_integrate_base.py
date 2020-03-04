@@ -35,7 +35,7 @@ from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, 
 from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
 from tests import create_address, create_tx_hash, create_block_hash
-from tests.integrate_test import root_clear, create_timestamp, get_score_path
+from tests import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
