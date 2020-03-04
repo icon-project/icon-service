@@ -169,9 +169,6 @@ class Container(object):
     def import_white_list(self) -> Dict[str, List[str]]:
         return self.get_by_type(IconNetworkValueType.IMPORT_WHITE_LIST)
 
-    def is_updated(self) -> bool:
-        return bool(len(self._tx_unit_batch))
-
     def update_batch(self):
         for value in self._tx_unit_batch.values():
             self._set(value)
@@ -193,11 +190,9 @@ class Container(object):
         context.storage.inv.put_migration_flag(context)
         self._tx_unit_batch["is_migrated"] = True
 
-    def is_migration_succeed(self) -> bool:
-        return self._tx_unit_batch.get("is_migrated", False)
-
-    def update_migration(self):
-        self._is_migrated = True
+    def update_migration_if_succeed(self):
+        if self._tx_unit_batch.get("is_migrated", False):
+            self._is_migrated = True
 
     def _set(self, value: 'Value'):
         self._cache[value.TYPE] = value
