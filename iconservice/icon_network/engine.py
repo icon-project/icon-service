@@ -62,17 +62,14 @@ class Engine(EngineBase, ContextContainer):
             self._sync_inv_container_with_governance(context, container)
         self._inv_container = container
 
-    # TODO 코드정리가 필요
     def update_inv_container_by_result(self,
                                        context: 'IconScoreContext',
                                        tx_result: 'TransactionResult'):
-        if context.inv_container.is_migrated:
-            if context.inv_container.is_updated() and tx_result.status == TransactionResult.SUCCESS:
+        if tx_result.status == TransactionResult.SUCCESS:
+            if context.inv_container.is_migrated:
                 context.inv_container.update_batch()
-        else:
-            if context.inv_container.is_migration_succeed():
-                context.inv_container.update_migration()
-            elif tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
+            elif tx_result.to == GOVERNANCE_SCORE_ADDRESS:
+                context.inv_container.update_migration_if_succeed()
                 self._sync_inv_container_with_governance(context, context.inv_container)
         context.inv_container.clear_batch()
 
@@ -85,7 +82,8 @@ class Engine(EngineBase, ContextContainer):
         :param container:
         :return:
         """
-        assert not container.is_migrated
+        if container.is_migrated:
+            return
 
         try:
             self._push_context(context)
