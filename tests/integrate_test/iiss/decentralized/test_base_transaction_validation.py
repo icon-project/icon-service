@@ -25,6 +25,7 @@ from iconservice.base.exception import InvalidBaseTransactionException, FatalExc
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, Revision, \
     ISCORE_EXCHANGE_RATE, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
     PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateDoneNotification
@@ -510,3 +511,31 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         with self.assertRaises(FatalException):
             self._init_decentralized()
+
+    def test_base_transaction_has_logs_bloom_after_revision_10(self):
+        self._init_decentralized()
+
+        # TEST: Before 'ADD_LOGS_BLOOM_ON_BASE_TX' revision, base transaction should not have logs bloom
+        tx_list = [
+            self._create_dummy_tx()
+        ]
+
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        self._write_precommit_state(prev_block)
+        base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
+
+        expected_logs_bloom = None
+        self.assertEqual(expected_logs_bloom, base_tx_result.logs_bloom)
+
+        # TEST: After 'ADD_LOGS_BLOOM_ON_BASE_TX' revision, base transaction should have logs bloom
+        self.set_revision(Revision.ADD_LOGS_BLOOM_ON_BASE_TX.value)
+        tx_list = [
+            self._create_dummy_tx()
+        ]
+
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        self._write_precommit_state(prev_block)
+        base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
+
+        expected_logs_bloom = IconServiceEngine._generate_logs_bloom(base_tx_result.event_logs)
+        self.assertEqual(expected_logs_bloom.value, base_tx_result.logs_bloom.value)
