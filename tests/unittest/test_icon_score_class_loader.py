@@ -30,9 +30,7 @@ from iconservice.iconscore.context.context import ContextContainer
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import ContextEngine, ContextStorage
-from tests import create_address, create_tx_hash, rmtree
-
-TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+from tests import create_address, create_tx_hash, rmtree, TEST_ROOT_PATH
 
 
 class TestIconScoreClassLoader(unittest.TestCase):

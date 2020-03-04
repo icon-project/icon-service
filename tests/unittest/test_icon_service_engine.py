@@ -44,8 +44,6 @@ from iconservice.iconscore.icon_score_step import StepType
 from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
     raise_exception_start_tag, raise_exception_end_tag
 
-TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-
 
 def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
     context = IconScoreContext(context_type)
