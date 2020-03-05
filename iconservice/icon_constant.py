@@ -117,7 +117,7 @@ class Revision(Enum):
     # Revision 9
     FIX_EMAIL_VALIDATION = 9
     DIVIDE_NODE_ADDRESS = 9
-
+    FIX_BURN_EVENT_SIGNATURE = 9
     LATEST = 9
 
 
