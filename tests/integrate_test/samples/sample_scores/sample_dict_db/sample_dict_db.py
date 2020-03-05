@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+"""
+Example
+
+Problem with DictDB : cannot iterate
+https://forum.icon.community/t/problem-with-dictdb-cannot-iterate/484
+"""
+
 from iconservice import *
 TAG = 'IterableDictDB'
 
@@ -28,6 +35,5 @@ class IterableDictDB(IconScoreBase):
     def get_items(self) -> list:
         items = []
         for item in self._dict:
-            print("11")
             items.append(item)
         return items
