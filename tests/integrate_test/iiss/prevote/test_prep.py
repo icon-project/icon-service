@@ -117,7 +117,8 @@ class TestIntegratePrep(TestIISSBase):
                 "penalty": PenaltyReason.NONE.value,
                 "unvalidatedSequenceBlocks": 0,
                 "blockHeight": register_block_height,
-                "txIndex": i
+                "txIndex": i,
+                "nodeAddress": account.address
             }
             self.assertEqual(expected_response, response)
 
@@ -255,7 +256,8 @@ class TestIntegratePrep(TestIISSBase):
                     "email": expected_params["email"],
                     "website": expected_params["website"],
                     "details": expected_params["details"],
-                    "p2pEndpoint": expected_params["p2pEndpoint"]
+                    "p2pEndpoint": expected_params["p2pEndpoint"],
+                    "nodeAddress": address
                 }
             )
 

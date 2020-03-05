@@ -15,12 +15,12 @@
 # limitations under the License.
 
 import time
-from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
 
+from iconservice.iiss.listener import EngineListener as IISSEngineListener
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -58,16 +58,6 @@ _TAG = IISS_LOG_TAG
 QUERY_CALCULATE_REPEAT_COUNT = 3
 
 
-class EngineListener(metaclass=ABCMeta):
-    @abstractmethod
-    def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
-        pass
-
-    @abstractmethod
-    def on_set_delegation(self, context: 'IconScoreContext', delegated_accounts: List['Account']):
-        pass
-
-
 class Engine(EngineBase):
     """IISSEngine class
 
@@ -91,7 +81,7 @@ class Engine(EngineBase):
         }
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
-        self._listeners: List['EngineListener'] = []
+        self._listeners: List['IISSEngineListener'] = []
 
     def open(self, context: 'IconScoreContext',
              log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
@@ -107,12 +97,12 @@ class Engine(EngineBase):
         """
         self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path)
 
-    def add_listener(self, listener: 'EngineListener'):
-        assert isinstance(listener, EngineListener)
+    def add_listener(self, listener: 'IISSEngineListener'):
+        assert isinstance(listener, IISSEngineListener)
         self._listeners.append(listener)
 
-    def remove_listener(self, listener: 'EngineListener'):
-        assert isinstance(listener, EngineListener)
+    def remove_listener(self, listener: 'IISSEngineListener'):
+        assert isinstance(listener, IISSEngineListener)
         self._listeners.remove(listener)
 
     @staticmethod

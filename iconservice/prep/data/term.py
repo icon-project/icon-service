@@ -93,9 +93,9 @@ class Term(object):
     def is_dirty(self):
         return utils.is_any_flag_on(self._flags, TermFlag.ALL)
 
-    def on_main_prep_p2p_endpoint_changed(self):
+    def on_main_prep_changed(self, flag: 'TermFlag'):
         self._check_access_permission()
-        self._flags |= TermFlag.MAIN_PREP_P2P_ENDPOINT
+        self._flags |= flag
 
     def is_frozen(self) -> bool:
         return self._is_frozen

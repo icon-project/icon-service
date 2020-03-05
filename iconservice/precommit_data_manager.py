@@ -25,6 +25,7 @@ from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iiss.reward_calc.msg_data import TxData
+from .prep.prep_address_converter import PRepAddressConverter
 from .utils import bytes_to_hex, sha3_256
 
 if TYPE_CHECKING:
@@ -104,7 +105,8 @@ class PrecommitData(object):
                  precommit_flag: PrecommitFlag,
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
-                 main_prep_as_dict: Optional[dict]):
+                 main_prep_as_dict: Optional[dict],
+                 prep_address_converter: 'PRepAddressConverter'):
         """
 
         :param block_batch: changed states for a block
@@ -133,6 +135,8 @@ class PrecommitData(object):
 
         self.added_transactions: dict = added_transactions
         self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
+
+        self.prep_address_converter: 'PRepAddressConverter' = prep_address_converter
 
         # To prevent redundant precommit data logging
         self.already_exists = False

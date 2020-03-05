@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import threading
 import warnings
 from collections import OrderedDict
@@ -30,7 +29,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag)
+    Revision, PRepFlag, TermFlag, PRepStatus)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
+    from ..prep.prep_address_converter import PRepAddressConverter
 
 _thread_local_data = threading.local()
 
@@ -159,6 +159,7 @@ class IconScoreContext(object):
         # to use for updating term info at the end of invoke
         self._term: Optional['Term'] = None
 
+        self._prep_address_converter: Optional['PRepAddressConverter'] = None
         self.regulator: Optional['Regulator'] = None
 
     @classmethod
@@ -185,6 +186,10 @@ class IconScoreContext(object):
     @property
     def term(self) -> Optional['Term']:
         return self._term
+
+    @property
+    def prep_address_converter(self) -> Optional['PRepAddressConverter']:
+        return self._prep_address_converter
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
@@ -233,12 +238,29 @@ class IconScoreContext(object):
             if self._term is not None:
                 self._update_term(dirty_prep)
 
+            self._update_prep_address_converter(dirty_prep=dirty_prep)
+
             self._preps.replace(dirty_prep)
             # Write serialized dirty_prep data into tx_batch
             self.storage.prep.put_prep(self, dirty_prep)
             dirty_prep.freeze()
 
         self._tx_dirty_preps.clear()
+
+    def _update_prep_address_converter(self, dirty_prep: 'PRep'):
+        if not self._preps.contains(dirty_prep.address, active_prep_only=False):
+            # registerPRep
+            self._prep_address_converter.add_node_address(node=dirty_prep.node_address,
+                                                          prep=dirty_prep.address)
+        elif dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
+            # setPRep
+            old_prep = self._preps.get_by_address(dirty_prep.address)
+            self._prep_address_converter.replace_node_address(node=dirty_prep.node_address,
+                                                              prep=dirty_prep.address,
+                                                              prev_node=old_prep.node_address)
+        elif dirty_prep.status != PRepStatus.ACTIVE:
+            # unregisterPRep or disqualified by productivity penalty
+            self._prep_address_converter.delete_node_address(node=dirty_prep.node_address)
 
     def _update_term(self, dirty_prep: 'PRep'):
         """Update term info with dirty_prep
@@ -251,11 +273,11 @@ class IconScoreContext(object):
             return
 
         if dirty_prep.is_electable():
-            self._change_main_prep_p2p_endpoint(dirty_prep)
+            self._update_term_flag(dirty_prep)
         else:
             self._remove_invalid_elected_prep_from_term(dirty_prep)
 
-    def _change_main_prep_p2p_endpoint(self, dirty_prep: 'PRep'):
+    def _update_term_flag(self, dirty_prep: 'PRep'):
         """Notify the term that p2p_endpoint of a main P-Rep is changed
 
         :param dirty_prep: dirty prep
@@ -266,13 +288,15 @@ class IconScoreContext(object):
         if not self._term.is_main_prep(dirty_prep.address):
             return
 
-        if not dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
-            return
-
-        self._duplicate_term()
-        self._term.on_main_prep_p2p_endpoint_changed()
-
-        Logger.info(tag=self.TAG, msg=f"_update_main_prep_endpoint_in_term: {dirty_prep}")
+        if dirty_prep.flags & (PRepFlag.P2P_ENDPOINT | PRepFlag.NODE_ADDRESS):
+            self._duplicate_term()
+            if dirty_prep.is_flags_on(PRepFlag.P2P_ENDPOINT):
+                self._term.on_main_prep_changed(TermFlag.MAIN_PREP_P2P_ENDPOINT)
+            if dirty_prep.is_flags_on(PRepFlag.NODE_ADDRESS):
+                self._term.on_main_prep_changed(TermFlag.MAIN_PREP_NODE_ADDRESS)
+            Logger.info(tag=self.TAG, msg=f"_update_term_flag: {dirty_prep}")
+        else:
+            Logger.info(tag=self.TAG, msg=f"_update_term_flag(x): {dirty_prep}")
 
     def _remove_invalid_elected_prep_from_term(self, dirty_prep: 'PRep'):
         """Remove an invalidated elected P-Rep from the current term
@@ -374,8 +398,10 @@ class IconScoreContextFactory(object):
             # For PRep management
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
+            context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
+            context._prep_address_converter = context.engine.prep.prep_address_converter
 
         context._term = context.engine.prep.term

@@ -15,7 +15,6 @@
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
-
 from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -33,8 +32,9 @@ from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
 from ..icx.storage import Intent
-from ..iiss import IISSEngineListener
+from ..iiss.listener import EngineListener as IISSEngineListener
 from ..iiss.reward_calc import RewardCalcDataCreator
+from ..prep.prep_address_converter import PRepAddressConverter
 
 if TYPE_CHECKING:
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
@@ -72,11 +72,13 @@ class Engine(EngineBase, IISSEngineListener):
             "getInactivePReps": self.handle_get_inactive_preps
         }
 
-        self.preps = PRepContainer()
+        self.preps: 'PRepContainer' = PRepContainer()
         # self.term should be None before decentralization
         self.term: Optional['Term'] = None
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
+
+        self.prep_address_converter: 'PRepAddressConverter' = None
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
@@ -92,6 +94,8 @@ class Engine(EngineBase, IISSEngineListener):
         self._init_penalty_imposer(penalty_grace_period,
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
+
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
 
         self.preps = self._load_preps(context)
         self.term = self._load_term(context)
@@ -114,8 +118,7 @@ class Engine(EngineBase, IISSEngineListener):
                                                low_productivity_penalty_threshold,
                                                block_validation_penalty_threshold)
 
-    @classmethod
-    def _load_preps(cls, context: 'IconScoreContext') -> 'PRepContainer':
+    def _load_preps(self, context: 'IconScoreContext') -> 'PRepContainer':
         """Load preps from state db
 
         :return: new prep container instance
@@ -124,6 +127,10 @@ class Engine(EngineBase, IISSEngineListener):
         preps = PRepContainer()
 
         for prep in context.storage.prep.get_prep_iterator():
+
+            if prep.status == PRepStatus.ACTIVE:
+                self.prep_address_converter.add_node_address(node=prep.node_address, prep=prep.address)
+
             account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
 
             prep.stake = account.stake
@@ -177,6 +184,8 @@ class Engine(EngineBase, IISSEngineListener):
         if precommit_data.term is not None:
             self.term: 'Term' = precommit_data.term
 
+        self.prep_address_converter: 'PRepAddressConverter' = precommit_data.prep_address_converter
+
     def rollback(self, context: 'IconScoreContext', _block_height: int, _block_hash: bytes):
         """After rollback is called, the state of prep_engine is reverted to that of a given block
 
@@ -187,8 +196,11 @@ class Engine(EngineBase, IISSEngineListener):
         """
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
 
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
+
         self.preps = self._load_preps(context)
         self.term = self._load_term(context)
+
         Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end: {self.term}")
 
     def on_block_invoked(
@@ -300,7 +312,9 @@ class Engine(EngineBase, IISSEngineListener):
         if not new_term.is_dirty():
             return None, None
 
-        if bool(new_term.flags & (TermFlag.MAIN_PREPS | TermFlag.MAIN_PREP_P2P_ENDPOINT)):
+        if bool(new_term.flags & (TermFlag.MAIN_PREPS |
+                                  TermFlag.MAIN_PREP_P2P_ENDPOINT |
+                                  TermFlag.MAIN_PREP_NODE_ADDRESS)):
             main_preps_as_dict = \
                 self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
         else:
@@ -410,13 +424,17 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"not {value}")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
-        validate_prep_data(context, ret_params)
+        validate_prep_data(context=context,
+                           prep_address=address,
+                           tx_data=ret_params)
 
         account: 'Account' = icx_storage.get_account(context, address, Intent.STAKE | Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
         # prep.irep is set to IISS_MIN_IREP by default
+
         dirty_prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
+
         dirty_prep.stake = account.stake
         dirty_prep.delegated = account.delegated_amount
 
@@ -492,7 +510,7 @@ class Engine(EngineBase, IISSEngineListener):
         for prep_snapshot in term.main_preps:
             prep: 'PRep' = context.get_prep(prep_snapshot.address)
             preps_as_list.append({
-                ConstantKeys.PREP_ID: prep.address,
+                ConstantKeys.PREP_ID: prep.node_address,
                 ConstantKeys.P2P_ENDPOINT: prep.p2p_endpoint
             })
 
@@ -563,8 +581,7 @@ class Engine(EngineBase, IISSEngineListener):
         response: dict = prep.to_dict(PRepDictType.FULL)
         return response
 
-    @classmethod
-    def handle_set_prep(cls, context: 'IconScoreContext', params: dict):
+    def handle_set_prep(self, context: 'IconScoreContext', params: dict):
         """Update a P-Rep registration information
 
         :param context:
@@ -577,14 +594,22 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
-        validate_prep_data(context, kwargs, True)
+        validate_prep_data(context=context,
+                           prep_address=address,
+                           tx_data=ret_params,
+                           set_prep=True)
 
-        if ConstantKeys.P2P_ENDPOINT in kwargs:
-            p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]
-            del kwargs[ConstantKeys.P2P_ENDPOINT]
-            kwargs["p2p_endpoint"] = p2p_endpoint
+        if ConstantKeys.P2P_ENDPOINT in ret_params:
+            p2p_endpoint: str = ret_params[ConstantKeys.P2P_ENDPOINT]
+            del ret_params[ConstantKeys.P2P_ENDPOINT]
+            ret_params["p2p_endpoint"] = p2p_endpoint
+
+        if ConstantKeys.NODE_ADDRESS in ret_params:
+            node_address: 'Address' = ret_params[ConstantKeys.NODE_ADDRESS]
+            del ret_params[ConstantKeys.NODE_ADDRESS]
+            ret_params["node_address"] = node_address
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -596,7 +621,8 @@ class Engine(EngineBase, IISSEngineListener):
         )
 
         # Update registration info
-        dirty_prep.set(**kwargs)
+        dirty_prep.set(**ret_params)
+
         context.put_dirty_prep(dirty_prep)
 
     def handle_set_governance_variables(self,

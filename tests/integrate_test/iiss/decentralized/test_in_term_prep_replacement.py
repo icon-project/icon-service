@@ -116,7 +116,7 @@ class TestPreps(TestIISSBase):
 
     def setUp(self):
         super().setUp()
-        self.init_decentralized()
+        self.init_decentralized(network_proposal=True)
 
         # get main prep
         response: dict = self.get_main_prep_list()

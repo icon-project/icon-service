@@ -33,7 +33,8 @@ from iconservice.icx.delegation_part import DelegationPart
 from iconservice.icx.icx_account import Account
 from iconservice.icx.stake_part import StakePart
 from iconservice.icx.storage import Intent, AccountPartFlag
-from iconservice.iiss import IISSEngine, IISSEngineListener
+from iconservice.iiss import IISSEngine
+from iconservice.iiss.listener import EngineListener as IISSEngineListener
 from iconservice.utils import icx_to_loop
 
 if TYPE_CHECKING:

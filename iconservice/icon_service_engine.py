@@ -482,7 +482,7 @@ class IconServiceEngine(ContextContainer):
             else:
                 Logger.info(tag=_TAG,
                             msg=f"Block result already exists: \n"
-                                f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
+                            f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
 
             return \
                 precommit_data.block_result, \
@@ -496,10 +496,13 @@ class IconServiceEngine(ContextContainer):
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
-        prev_block_votes: List[Tuple['Address', int]] = self._get_prev_block_votes(context,
-                                                                                   prev_block_generator,
-                                                                                   prev_block_validators,
-                                                                                   prev_block_votes)
+        prev_block_votes: Optional[List[Tuple['Address', int]]] = \
+            self._get_prev_block_votes(context,
+                                       prev_block_generator,
+                                       prev_block_validators,
+                                       prev_block_votes)
+        prev_block_generator = \
+            context.prep_address_converter.get_prep_address_from_node_address(prev_block_generator)
 
         self._set_revision_to_context(context)
 
@@ -576,7 +579,8 @@ class IconServiceEngine(ContextContainer):
                                        precommit_flag,
                                        rc_state_hash,
                                        added_transactions,
-                                       main_prep_as_dict)
+                                       main_prep_as_dict,
+                                       context.prep_address_converter)
         if context.precommitdata_log_flag:
             Logger.info(tag=_TAG,
                         msg=f"Created precommit_data: \n{precommit_data}")
@@ -611,8 +615,8 @@ class IconServiceEngine(ContextContainer):
                               context: 'IconScoreContext',
                               prev_block_generator: Optional['Address'] = None,
                               prev_block_validators: Optional[List['Address']] = None,
-                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
-            -> Optional[List[Tuple['Address', int]]]:
+                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> \
+            Optional[List[Tuple['Address', int]]]:
 
         """
         If prev_block_votes is valid field, you can just return origin data but if not,
@@ -623,14 +627,41 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_votes:
         :return:
         """
+        if prev_block_generator:
+            if prev_block_votes:
+                return cls._convert_node_address_to_prep_address(context, prev_block_votes)
+            elif prev_block_validators:
+                return cls._convert_validators_to_votes(context, prev_block_generator, prev_block_validators)
 
-        if prev_block_votes:
-            return prev_block_votes
+        return None
 
-        if prev_block_generator is None or prev_block_validators is None:
-            return None
+    @classmethod
+    def _convert_node_address_to_prep_address(cls,
+                                              context: 'IconScoreContext',
+                                              prev_block_votes: Optional[List[Tuple['Address', int]]]) -> \
+            Optional[List[Tuple['Address', int]]]:
+        """Convert node_address in prev_block_votes to prep_address
+
+        """
 
         new_prev_block_votes: List[Tuple['Address', int]] = []
+
+        for node_address, vote in prev_block_votes:
+            # prep_address can be the same as node_address
+            # if P-Rep does not have its specific node_address
+            prep_address: 'Address' = \
+                context.prep_address_converter.get_prep_address_from_node_address(node_address)
+            new_prev_block_votes.append([prep_address, vote])
+
+        return new_prev_block_votes
+
+    @classmethod
+    def _convert_validators_to_votes(cls,
+                                     context: 'IconScoreContext',
+                                     prev_block_generator: 'Address',
+                                     prev_block_validators: Optional[List['Address']]) -> list:
+
+        prev_block_votes: List[Tuple['Address', int]] = []
         last_main_preps: List['Address'] = context.storage.meta.get_last_main_preps(context)
 
         for address in last_main_preps:
@@ -642,8 +673,10 @@ class IconServiceEngine(ContextContainer):
                 vote_status: 'BlockVoteStatus' = BlockVoteStatus.NONE
                 if address in prev_block_validators:
                     vote_status: 'BlockVoteStatus' = BlockVoteStatus.TRUE
-                new_prev_block_votes.append([address, vote_status.value])
-        return new_prev_block_votes
+
+                prev_block_votes.append([address, vote_status.value])
+
+        return prev_block_votes
 
     @classmethod
     def _log_step_trace(cls, context: 'IconScoreContext'):
@@ -685,6 +718,8 @@ class IconServiceEngine(ContextContainer):
 
         self._update_productivity(context, prev_block_generator, prev_block_votes)
         self._update_last_generate_block_height(context, prev_block_generator)
+
+        context.prep_address_converter.reset_prev_node_address()
 
     @classmethod
     def _check_calculate_done(cls,
@@ -755,8 +790,8 @@ class IconServiceEngine(ContextContainer):
                                                                            prev_block_votes,
                                                                            flag,
                                                                            rc_db_revision)
-
         context.update_batch()
+        context.storage.meta.put_prep_address_converter(context, context.prep_address_converter)
 
         if main_prep_as_dict is not None:
             Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")

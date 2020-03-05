@@ -56,6 +56,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.step_cost_dict = self._init_step_cost()
         prep_engine = PRepEngine()
         prep_engine.preps = Mock()
+        prep_engine.prep_address_converter = Mock()
         fee_engine = FeeEngine()
         icx_engine = IcxEngine()
         IconScoreContext.engine = ContextEngine(

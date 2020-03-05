@@ -15,7 +15,7 @@
 
 import copy
 from enum import auto, IntEnum, Enum
-from typing import TYPE_CHECKING, Tuple, Any
+from typing import TYPE_CHECKING, Tuple, Any, Optional
 
 import iso3166
 
@@ -30,13 +30,13 @@ if TYPE_CHECKING:
 
 
 class PRepDictType(Enum):
-    FULL = auto()       # getPRep
-    ABRIDGED = auto()   # getPReps
+    FULL = auto()  # getPRep
+    ABRIDGED = auto()  # getPReps
 
 
 class PRep(Sortable):
     PREFIX: bytes = b"prep"
-    _VERSION: int = 1
+    _VERSION: int = 2
     _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
     class Index(IntEnum):
@@ -65,6 +65,8 @@ class PRep(Sortable):
         PENALTY = auto()
         UNVALIDATED_SEQUENCE_BLOCKS = auto()
 
+        NODE_ADDRESS = auto()
+
         # Unused
         SIZE = auto()
 
@@ -91,7 +93,10 @@ class PRep(Sortable):
             tx_index: int = 0,
             total_blocks: int = 0,
             validated_blocks: int = 0,
-            unvalidated_sequence_blocks: int = 0):
+            unvalidated_sequence_blocks: int = 0,
+            node_address: Optional['Address'] = None,
+
+    ):
         """
         Main PRep: top 1 ~ 22 preps in descending order by delegated amount
         Sub PRep: 23 ~ 100 preps
@@ -118,6 +123,7 @@ class PRep(Sortable):
         :param total_blocks:
         :param validated_blocks:
         :param unvalidated_sequence_blocks
+        :param node_address
         """
         # key
         self._address: 'Address' = address
@@ -159,6 +165,9 @@ class PRep(Sortable):
         self._unvalidated_sequence_blocks: int = unvalidated_sequence_blocks
 
         self._is_frozen: bool = False
+
+        # node key
+        self._node_address = node_address if node_address else address
 
     def is_flags_on(self, flags: 'PRepFlag') -> bool:
         return (self._flags & flags) == flags
@@ -338,6 +347,14 @@ class PRep(Sortable):
         return self._address
 
     @property
+    def node_address(self) -> 'Address':
+        return self._node_address
+
+    @node_address.setter
+    def node_address(self, value: 'Address'):
+        self._set_property(name="_node_address", new_value=value, flags=PRepFlag.NODE_ADDRESS)
+
+    @property
     def stake(self) -> int:
         return self._stake
 
@@ -413,7 +430,8 @@ class PRep(Sortable):
             email: str = None,
             website: str = None,
             details: str = None,
-            p2p_endpoint: str = None):
+            p2p_endpoint: str = None,
+            node_address: 'Address' = None):
         """Update PRep properties on processing setPRep JSON-RPC API
         Not allowed to update some properties which can affect PRep order or are immutable
 
@@ -424,6 +442,7 @@ class PRep(Sortable):
         :param website:
         :param details:
         :param p2p_endpoint:
+        :param node_address:
         """
         self._check_access_permission()
 
@@ -434,7 +453,8 @@ class PRep(Sortable):
             "email": email,
             "website": website,
             "details": details,
-            "p2p_endpoint": p2p_endpoint
+            "p2p_endpoint": p2p_endpoint,
+            "node_address": node_address
         }
 
         for key, value in kwargs.items():
@@ -467,7 +487,12 @@ class PRep(Sortable):
         return -self._delegated, self._block_height, self._tx_index
 
     def to_bytes(self, revision: int) -> bytes:
-        version: int = 1 if revision >= Revision.DECENTRALIZATION.value else 0
+        if revision >= Revision.DIVIDE_NODE_ADDRESS.value:
+            version: int = 2
+        elif revision >= Revision.DECENTRALIZATION.value:
+            version: int = 1
+        else:
+            version: int = 0
 
         data = [
             version,
@@ -497,6 +522,9 @@ class PRep(Sortable):
         if version >= 1:
             data.extend((self.penalty.value, self._unvalidated_sequence_blocks))
 
+        if version >= 2:
+            data.append(self._node_address)
+
         return MsgPackForDB.dumps(data)
 
     @classmethod
@@ -506,6 +534,9 @@ class PRep(Sortable):
 
         if version == 0:
             items.extend((PenaltyReason.NONE, 0))
+
+        if version < 2:
+            items.append(items[cls.Index.ADDRESS])
 
         return PRep(
             # version 0
@@ -529,7 +560,10 @@ class PRep(Sortable):
 
             # version 1
             penalty=PenaltyReason(items[cls.Index.PENALTY]),
-            unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS]
+            unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS],
+
+            # version 2
+            node_address=items[cls.Index.NODE_ADDRESS],
         )
 
     @staticmethod
@@ -563,7 +597,10 @@ class PRep(Sortable):
 
             # Registration time
             block_height=block_height,
-            tx_index=tx_index
+            tx_index=tx_index,
+
+            # node key
+            node_address=data.get(ConstantKeys.NODE_ADDRESS)
         )
 
     def to_dict(self, dict_type: 'PRepDictType') -> dict:
@@ -589,7 +626,8 @@ class PRep(Sortable):
             "irepUpdateBlockHeight": self._irep_block_height,
             "lastGenerateBlockHeight": self._last_generate_block_height,
             "blockHeight": self._block_height,
-            "txIndex": self._tx_index
+            "txIndex": self._tx_index,
+            "nodeAddress": self._node_address,
         }
 
         if dict_type == PRepDictType.FULL:

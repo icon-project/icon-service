@@ -213,6 +213,7 @@ class TestTransactionResult(unittest.TestCase):
     def test_request(self, score_invoke):
         inner_task = generate_inner_task(3)
         IconScoreContext.engine.prep.preps = Mock()
+        IconScoreContext.engine.prep.prep_address_converter = Mock()
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):

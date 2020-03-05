@@ -114,7 +114,10 @@ class Revision(Enum):
     REALTIME_P2P_ENDPOINT_UPDATE = 8
     OPTIMIZE_DIRTY_PREP_UPDATE = 8
 
+    # Revision 9
     FIX_EMAIL_VALIDATION = 9
+    DIVIDE_NODE_ADDRESS = 9
+
     LATEST = 9
 
 
@@ -372,6 +375,7 @@ class PRepFlag(Flag):
     UNVALIDATED_SEQUENCE_BLOCKS = auto()
     IREP = auto()  # irep, irep_block_height
     IREP_BLOCK_HEIGHT = auto()
+    NODE_ADDRESS = auto()
 
     BLOCK_STATISTICS = TOTAL_BLOCKS | VALIDATED_BLOCKS | UNVALIDATED_SEQUENCE_BLOCKS
     ALL = 0xFFFFFFFF
@@ -387,5 +391,6 @@ class TermFlag(Flag):
     MAIN_PREPS = auto()
     SUB_PREPS = auto()
     MAIN_PREP_P2P_ENDPOINT = auto()
+    MAIN_PREP_NODE_ADDRESS = auto()
 
     ALL = 0xFFFFFFFF
