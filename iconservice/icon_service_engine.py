@@ -349,7 +349,7 @@ class IconServiceEngine(ContextContainer):
 
             self._close_component_context(context)
 
-            IconScoreClassLoader.exit(context.score_root_path)
+            IconScoreClassLoader.close(context.score_root_path)
         finally:
             self._pop_context()
             ContextDatabaseFactory.close()

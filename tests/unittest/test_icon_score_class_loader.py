@@ -13,140 +13,109 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-import inspect
-import os
-import sys
-import unittest
+import importlib
 from unittest.mock import Mock
 
-from iconservice.deploy import DeployEngine, DeployStorage
+import pytest
+
+import iconservice.iconscore.utils as utils
 from iconservice.deploy.utils import convert_path_to_package_name
-from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
-from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API
-from iconservice.iconscore.context.context import ContextContainer
-from iconservice.icon_constant import IconScoreContextType
-from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.utils import ContextEngine, ContextStorage
-from tests import create_address, create_tx_hash, rmtree, TEST_ROOT_PATH
+from tests import create_address, create_tx_hash
 
 
-class TestIconScoreClassLoader(unittest.TestCase):
-    _SCORE_ROOT_PATH = '.score'
+@pytest.fixture(scope="function")
+def mock_icon_score_class_loader(monkeypatch):
+    monkeypatch.setattr(IconScoreClassLoader, "_load_package_json", Mock())
+    monkeypatch.setattr(IconScoreClassLoader, "_get_package_info", Mock())
+    yield IconScoreClassLoader
+    monkeypatch.undo()
 
-    def setUp(self):
-        self._score_root_path = self._SCORE_ROOT_PATH
-        sys.path.append(self._score_root_path)
 
-        IconScoreContext.engine = ContextEngine(
-            icx=None,
-            deploy=Mock(spec=DeployEngine),
-            fee=None,
-            iiss=None,
-            prep=None,
-            issue=None
-        )
-        IconScoreContext.storage = ContextStorage(
-            icx=None,
-            deploy=Mock(spec=DeployStorage),
-            fee=None,
-            iiss=None,
-            prep=None,
-            issue=None,
-            rc=None,
-            meta=None
-        )
+@pytest.fixture(scope="function")
+def mock_utils(monkeypatch):
+    monkeypatch.setattr(utils, "get_score_deploy_path", Mock())
+    monkeypatch.setattr(utils, "get_package_name_by_address_and_tx_hash", Mock())
+    yield utils
+    monkeypatch.undo()
 
-        self._context = IconScoreContext(IconScoreContextType.DIRECT)
-        ContextContainer._push_context(self._context)
 
-    def tearDown(self):
-        ContextContainer._pop_context()
-        rmtree(self._score_root_path)
-        sys.path.remove(self._score_root_path)
+@pytest.fixture(scope="function")
+def mock_importlib(monkeypatch):
+    monkeypatch.setattr(importlib, "invalidate_caches", Mock())
+    monkeypatch.setattr(importlib, "import_module", Mock())
+    yield importlib
+    monkeypatch.undo()
 
-    @staticmethod
-    def __ensure_dir(dir_path):
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
 
-    def load_proj(self, proj: str) -> callable:
-        score_address = create_address(1, data=proj.encode())
-        score_path = os.path.join(self._score_root_path, score_address.to_bytes().hex())
-        os.makedirs(score_path, exist_ok=True)
+def test_run_icon_score_class_loader(mock_icon_score_class_loader, mock_utils, mock_importlib):
+    # Arrange
+    address = create_address()
+    tx_hash = create_tx_hash()
+    score_root_path = '.score'
 
-        tx_hash: bytes = create_tx_hash()
-        score_deploy_path: str = os.path.join(score_path, f'0x{tx_hash.hex()}')
+    main_file = "main_file"
+    main_score = "main_score"
+    return_main_score = "ret_main_score"
 
-        ref_path = os.path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
-        os.symlink(ref_path, score_deploy_path, target_is_directory=True)
-        return IconScoreClassLoader.run(score_address, tx_hash, self._SCORE_ROOT_PATH)
+    class Test:
+        def main_score(self):
+            return return_main_score
 
-    def test_install(self):
-        self.__ensure_dir(self._score_root_path)
+    return_get_score_deploy_path = "path"
+    return_get_package_name_by_address_and_tx_hash = "package_name"
+    return_load_package_json = {
+        "version": "0.0.1",
+        "main_file": main_file,
+        "main_score": main_score
+    }
+    return_get_package_info = (main_file, main_score)
+    return_import_module = Test()
 
-        score = self.load_proj('test_score01')
+    mock_utils.get_score_deploy_path.return_value = return_get_score_deploy_path
+    mock_utils.get_package_name_by_address_and_tx_hash.return_value = return_get_package_name_by_address_and_tx_hash
+    mock_icon_score_class_loader._load_package_json.return_value = return_load_package_json
+    mock_icon_score_class_loader._get_package_info.return_value = return_get_package_info
+    mock_importlib.import_module.return_value = return_import_module
 
-        get_api = getattr(score, ATTR_SCORE_GET_API)
-        print('test_score01', get_api())
-        score = self.load_proj('test_score02')
-        get_api = getattr(score, ATTR_SCORE_GET_API)
-        print('test_score02', get_api())
+    # Act
+    ret_module = IconScoreClassLoader.run(score_address=address,
+                                          tx_hash=tx_hash,
+                                          score_root_path=score_root_path)
 
-        ins_score = score(Mock())
+    # Assert
+    mock_utils.get_score_deploy_path.assert_called_once_with(score_root_path, address, tx_hash)
+    mock_utils.get_package_name_by_address_and_tx_hash.assert_called_once_with(address, tx_hash)
+    mock_icon_score_class_loader._load_package_json.assert_called_once_with(return_get_score_deploy_path)
+    mock_icon_score_class_loader._get_package_info.assert_called_once_with(return_load_package_json)
+    assert return_main_score == ret_module()
 
-        ins_score.print_test()
-        self.assertTrue(IconScoreBase in inspect.getmro(score))
 
-    def test_make_pkg_root_import(self):
-        address = '010cb2b5d7cca1dec18c51de595155a4468711d4f4'
-        tx_hash = '0x49485e08589256a68e02a63fa3484b16edd322a729394fbd6b543d77a7f68621'
-        score_root_path = './.score'
-        score_path = f'{score_root_path}/{address}/{tx_hash}'
-        expected_import_name: str = f'{address}.{tx_hash}'
-        index: int = len(score_root_path)
+@pytest.mark.parametrize("package_json, expected_module, expected_score", [
+    ({"version": "1.0.0", "main_module": "token", "main_score": "Token"}, "token", "Token"),
+    ({"version": "1.0.0", "main_file": "token", "main_score": "Token"}, "token", "Token"),
+    ({"version": "1.0.0", "main_file": "invalid.token", "main_module": "valid.token", "main_score": "Token"}, "valid.token", "Token"),
+])
+def test_get_package_info(package_json, expected_module, expected_score):
+    main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
+    assert expected_module == main_module
+    assert expected_score == main_score
 
-        import_name: str = convert_path_to_package_name(score_path[index:])
-        self.assertEqual(import_name, expected_import_name)
 
-        score_root_path = '/haha/hoho/hehe/score/'
-        index: int = len(score_root_path)
-        score_path = f'{score_root_path}/{address}/{tx_hash}'
-        import_name: str = convert_path_to_package_name(score_path[index:])
-        self.assertEqual(import_name, expected_import_name)
+# TODO unused test case
+def test_make_pkg_root_import():
+    address = '010cb2b5d7cca1dec18c51de595155a4468711d4f4'
+    tx_hash = '0x49485e08589256a68e02a63fa3484b16edd322a729394fbd6b543d77a7f68621'
+    score_root_path = './.score'
+    score_path = f'{score_root_path}/{address}/{tx_hash}'
+    expected_import_name: str = f'{address}.{tx_hash}'
+    index: int = len(score_root_path)
 
-    def test_get_package_info_0(self):
-        package_json = {
-            'version': '1.0.0',
-            'main_module': 'token',
-            'main_score': 'Token'
-        }
+    import_name: str = convert_path_to_package_name(score_path[index:])
+    assert import_name == expected_import_name
 
-        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
-        self.assertEqual('token', main_module)
-        self.assertEqual('Token', main_score)
-
-    def test_get_package_info_1(self):
-        package_json = {
-            'version': '1.0.0',
-            'main_file': 'token',
-            'main_score': 'Token'
-        }
-
-        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
-        self.assertEqual('token', main_module)
-        self.assertEqual('Token', main_score)
-
-    def test_get_package_info_2(self):
-        package_json = {
-            'version': '1.0.0',
-            'main_file': 'invalid.token',
-            'main_module': 'valid.token',
-            'main_score': 'Token'
-        }
-
-        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
-        self.assertEqual('valid.token', main_module)
-        self.assertEqual('Token', main_score)
+    score_root_path = '/haha/hoho/hehe/score/'
+    index: int = len(score_root_path)
+    score_path = f'{score_root_path}/{address}/{tx_hash}'
+    import_name: str = convert_path_to_package_name(score_path[index:])
+    assert import_name == expected_import_name
