@@ -28,8 +28,7 @@ from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAP
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateDoneNotification
-from tests import create_tx_hash, create_block_hash
-from tests.integrate_test import create_timestamp
+from tests import create_tx_hash, create_block_hash, create_timestamp
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 

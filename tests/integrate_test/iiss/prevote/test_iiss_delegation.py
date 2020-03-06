@@ -18,7 +18,7 @@
 """
 from typing import List, Dict
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_result import TransactionResult

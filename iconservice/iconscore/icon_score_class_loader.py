@@ -20,7 +20,7 @@ import os
 import sys
 from typing import TYPE_CHECKING
 
-from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
+import iconservice.iconscore.utils as utils
 from ..base.address import Address
 from ..base.exception import IllegalFormatException
 from ..icon_constant import PACKAGE_JSON_FILE
@@ -29,21 +29,21 @@ if TYPE_CHECKING:
     from ..base.address import Address
 
 
-class IconScoreClassLoader(object):
+class IconScoreClassLoader:
     """IconScoreBase subclass Loader
 
     """
-    @staticmethod
-    def init(score_root_path: str):
+    @classmethod
+    def init(cls, score_root_path: str):
         if score_root_path not in sys.path:
             sys.path.append(score_root_path)
 
-    @staticmethod
-    def exit(score_root_path: str):
+    @classmethod
+    def close(cls, score_root_path: str):
         sys.path.remove(score_root_path)
 
-    @staticmethod
-    def _load_package_json(score_deploy_path: str) -> dict:
+    @classmethod
+    def _load_package_json(cls, score_deploy_path: str) -> dict:
         """Loads package.json in SCORE
 
         :param score_deploy_path:
@@ -53,8 +53,8 @@ class IconScoreClassLoader(object):
         with open(pkg_json_path, 'r') as f:
             return json.load(f)
 
-    @staticmethod
-    def _get_package_info(package_json: dict) -> tuple:
+    @classmethod
+    def _get_package_info(cls, package_json: dict) -> tuple:
         """Returns main_module and main_score
 
         :param package_json: dict returned by _load_package_json()
@@ -74,8 +74,8 @@ class IconScoreClassLoader(object):
 
         return main_module, main_score
 
-    @staticmethod
-    def run(score_address: 'Address', tx_hash: bytes, score_root_path: str) -> type:
+    @classmethod
+    def run(cls, score_address: 'Address', tx_hash: bytes, score_root_path: str) -> type:
         """Load a IconScoreBase subclass and return it
 
         :param score_address:
@@ -83,8 +83,8 @@ class IconScoreClassLoader(object):
         :param score_root_path:
         :return: subclass derived from IconScoreBase
         """
-        score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
-        package_name: str = get_package_name_by_address_and_tx_hash(score_address, tx_hash)
+        score_deploy_path: str = utils.get_score_deploy_path(score_root_path, score_address, tx_hash)
+        package_name: str = utils.get_package_name_by_address_and_tx_hash(score_address, tx_hash)
 
         package_json: dict = IconScoreClassLoader._load_package_json(score_deploy_path)
         main_module, main_score = IconScoreClassLoader._get_package_info(package_json)

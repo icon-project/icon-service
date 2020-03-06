@@ -16,7 +16,6 @@
 
 """IconScoreEngine testcase
 """
-import unittest
 from typing import TYPE_CHECKING, Any, Optional, List, Tuple
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS

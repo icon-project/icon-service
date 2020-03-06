@@ -37,7 +37,7 @@ from iconservice.icx import IcxEngine
 from iconservice.prep import PRepEngine
 from iconservice.utils import ContextEngine
 from tests import create_tx_hash, create_address
-from tests.mock_generator import generate_inner_task, create_request, ReqData, clear_inner_task
+from tests.unittest.mock_generator import generate_inner_task, create_request, ReqData, clear_inner_task
 
 
 class TestIconScoreStepCounter(unittest.TestCase):

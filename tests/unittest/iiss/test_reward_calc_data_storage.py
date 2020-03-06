@@ -18,8 +18,6 @@ import os
 import unittest
 from unittest.mock import patch
 
-import pytest
-
 from iconservice.database.wal import IissWAL
 from iconservice.icon_constant import Revision, RC_DB_VERSION_0, RC_DB_VERSION_2
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -30,9 +28,9 @@ from iconservice.iiss.reward_calc.storage import get_rc_version
 from iconservice.utils import sha3_256
 from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
-from tests.iiss.mock_rc_db import MockIissDataBase
-from tests.mock_db import MockPlyvelDB
-from tests.mock_generator import KEY_VALUE_DB_PATH
+from tests.unittest.iiss.mock_rc_db import MockIissDataBase
+from tests.unittest.mock_db import MockPlyvelDB
+from tests.unittest.mock_generator import KEY_VALUE_DB_PATH
 
 
 class TestRcDataStorage(unittest.TestCase):

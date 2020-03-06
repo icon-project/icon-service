@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from iconservice.database.db import KeyValueDatabase
-from tests.mock_db import MockPlyvelDB
+from tests.unittest.mock_db import MockPlyvelDB
 
 
 class MockIissDataBase(KeyValueDatabase):

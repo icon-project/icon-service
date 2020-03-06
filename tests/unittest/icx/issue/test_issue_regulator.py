@@ -18,13 +18,11 @@ from unittest.mock import Mock, patch
 import pytest
 
 from iconservice.base.block import Block
-from iconservice.base.exception import FatalException
 from iconservice.icon_constant import IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.icx.issue.storage import RegulatorVariable
-from tests import create_block_hash
-from tests.integrate_test import create_timestamp
+from tests import create_block_hash, create_timestamp
 
 
 class TestIssueRegulator:

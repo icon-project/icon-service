@@ -38,10 +38,7 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextStorage
-from tests import create_address, create_block_hash, create_tx_hash
-
-TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
-
+from tests import create_address, create_block_hash, create_tx_hash, TEST_ROOT_PATH
 
 VALIDATE_SCORE_BLACK_LIST = IconScoreContextUtil.validate_score_blacklist
 GET_OWNER = IconScoreContextUtil.get_owner
