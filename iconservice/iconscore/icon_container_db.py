@@ -216,6 +216,9 @@ class DictDB(object):
             raise InvalidContainerAccessException('DictDB depth mismatch')
         self._db.delete(get_encoded_key(key))
 
+    def __iter__(self):
+        raise InvalidContainerAccessException("Not Supported iter function on DictDB")
+
 
 class ArrayDB(object):
     """

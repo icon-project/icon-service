@@ -339,3 +339,53 @@ class TestIconContainerDB(unittest.TestCase):
         with self.assertRaises(InvalidParamsException):
             prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
 
+
+"""
+Dict DB infinity infinite case
+implement __getitem__ function means can be iter
+https://www.python.org/dev/peps/pep-0234
+https://docs.python.org/3/reference/datamodel.html#object.__getitem__
+"""
+
+
+class TestOnlyGetItemObj:
+    """
+    Override getitem function
+    If you don't consider this case, this logic will always have an infinite loop.
+    https://stackoverflow.com/questions/926574/why-does-defining-getitem-on-a-class-make-it-iterable-in-python
+    """
+    def __init__(self, limit):
+        self._limit = limit
+
+    def __getitem__(self, key):
+        if key > self._limit:
+            raise IndexError(key)
+
+
+class TestIterObj(TestOnlyGetItemObj):
+    """
+    Override the iter function.
+    This logic prevents the above infinite loop situation.
+    https://stackoverflow.com/questions/926574/why-does-defining-getitem-on-a-class-make-it-iterable-in-python
+    """
+    def __iter__(self):
+        pass
+
+
+class TestIsAvailableToIterator(unittest.TestCase):
+    def test_getitem(self):
+        # it is possible to use foreach by using getitem
+        limit = 100_000
+        datas = TestOnlyGetItemObj(limit)
+        index = 0
+        for index, e in enumerate(datas):
+            pass
+        self.assertEqual(index, limit)
+
+    def test_iter(self):
+        # prevent infinite loop by using empty __iter function
+        limit = 100_000
+        datas = TestIterObj(limit)
+        with self.assertRaises(TypeError) as e:
+            for e in datas:
+                pass
