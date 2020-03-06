@@ -663,9 +663,10 @@ class TestIntegrateBase(TestCase):
 
     def update_governance(self,
                           version: str = "latest_version",
-                          expected_status: bool = True) -> List['TransactionResult']:
+                          expected_status: bool = True,
+                          root_path: str = "sample_builtin") -> List['TransactionResult']:
 
-        tx = self.create_deploy_score_tx("sample_builtin",
+        tx = self.create_deploy_score_tx(root_path,
                                          f"{version}/governance",
                                          self._admin,
                                          GOVERNANCE_SCORE_ADDRESS)

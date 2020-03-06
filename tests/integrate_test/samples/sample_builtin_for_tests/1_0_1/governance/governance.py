@@ -218,8 +218,6 @@ class Governance(IconSystemScoreBase):
         }
         self.migrate_icon_network_value(icon_network_values)
 
-
-
     @staticmethod
     def _versions(version: str):
         parts = []
@@ -798,14 +796,42 @@ class Governance(IconSystemScoreBase):
         self.RevisionChanged(code, name)
 
     @external
-    def set_step_price(self, value: str):
+    def set_step_price(self, stepPrice: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
-        step_price = int(value, 16)
+        step_price = int(stepPrice, 16)
         if step_price > 0:
             self.set_icon_network_value(IconNetworkValueType.STEP_PRICE, step_price)
             self.StepPriceChanged(step_price)
+
+    @external
+    def set_max_step_limit(self, contextType: str, value: str):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        value = int(value, 16)
+        if value > 0:
+            max_step_limits: dict = self.get_icon_network_value(IconNetworkValueType.MAX_STEP_LIMITS)
+            max_step_limits[contextType] = value
+            self.set_icon_network_value(IconNetworkValueType.MAX_STEP_LIMITS, max_step_limits)
+
+    @external
+    def set_step_cost(self, stepType: str, cost: str):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        cost = int(cost, 16)
+        if cost > 0:
+            step_costs: dict = self.get_icon_network_value(IconNetworkValueType.STEP_COSTS)
+            step_costs[stepType] = cost
+            self.set_icon_network_value(IconNetworkValueType.STEP_COSTS, step_costs)
+
+    @external
+    def add_to_score_black_list(self, address: 'Address'):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+        self._addToScoreBlackList(address)
 
     @external
     def malicious_score(self, address: str, type: str):
