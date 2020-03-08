@@ -25,16 +25,15 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.icon_constant import DeployType
-from iconservice.deploy import engine as isde
 from iconservice.deploy import DeployStorage
-from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo
+from iconservice.deploy import engine as isde
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
+from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo
+from iconservice.icon_constant import DeployType
 from iconservice.icon_constant import ICON_DEX_DB_NAME, IconServiceFlag
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.icx import IcxStorage
 from iconservice.utils import ContextStorage
@@ -142,6 +141,7 @@ class TestScoreDeployEngine(unittest.TestCase):
             issue=None,
             rc=None,
             meta=None,
+            inv=None
         )
 
         self.make_context()
@@ -166,11 +166,8 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.block = Block(1, create_block_hash(), 0, None, 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
-        self._context.revision = 0
         self._context.new_icon_score_mapper = {}
-        self._step_counter: IconScoreStepCounter = \
-            self.__step_counter_factory.create(IconScoreContextType.INVOKE)
-        self._context.step_counter = self._step_counter
+        IconScoreContext.revision = 0
         self._context.icx.open(self._icx_storage)
         self._context.event_logs = Mock(spec=list)
         self._context.traces = Mock(spec=list)
@@ -181,7 +178,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._deploy_storage.put_deploy_info_and_tx_params = Mock()
 
     def _is_audit_needed_setUp(self, revision: int, get_owner, is_service_flag_on: bool):
-        self._context.revision = revision
+        IconScoreContext.revision = revision
         IconScoreContextUtil.is_service_flag_on.return_value = is_service_flag_on
         IconScoreContextUtil.get_owner.return_value = get_owner
 
