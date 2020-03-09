@@ -45,7 +45,7 @@ class Engine(EngineBase, ContextContainer):
             IconNetworkValueType.STEP_PRICE: self._get_step_price_from_governance,
             IconNetworkValueType.STEP_COSTS: self._get_step_costs_from_governance,
             IconNetworkValueType.MAX_STEP_LIMITS: self._get_step_max_limits_from_governance,
-            IconNetworkValueType.REVISION_CODE: self._get_revision_from_governance_score,
+            IconNetworkValueType.REVISION_CODE: self._get_revision_code_from_governance_score,
             IconNetworkValueType.REVISION_NAME: self._get_revision_name_from_governance_score,
             IconNetworkValueType.SCORE_BLACK_LIST: self._get_score_black_list,
             IconNetworkValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
@@ -113,11 +113,11 @@ class Engine(EngineBase, ContextContainer):
         return step_price
 
     @classmethod
-    def _get_step_costs_from_governance(cls, governance_score: 'Governance') -> Dict[str, int]:
+    def _get_step_costs_from_governance(cls, _, governance_score: 'Governance') -> Dict[str, int]:
         return governance_score.getStepCosts()
 
     @classmethod
-    def _get_step_max_limits_from_governance(cls, governance_score: 'Governance') -> Dict[str, int]:
+    def _get_step_max_limits_from_governance(cls, _, governance_score: 'Governance') -> Dict[str, int]:
         # Gets the max step limit
         return {"invoke": governance_score.getMaxStepLimit("invoke"),
                 "query": governance_score.getMaxStepLimit("query")}
@@ -132,12 +132,15 @@ class Engine(EngineBase, ContextContainer):
         return service_config
 
     @classmethod
-    def _get_revision_name_from_governance_score(cls, governance_score: 'Governance') -> str:
-        # TBD, but before migration, there is no usecase of revision name. So do not need to implement
-        return ""
+    def _get_revision_name_from_governance_score(cls, _, governance_score: 'Governance') -> str:
+        # There is no use of revision name
+        revision_name: str = ""
+        if hasattr(governance_score, 'getRevision'):
+            revision_name: str = governance_score.getRevision()['name']
+        return revision_name
 
     @classmethod
-    def _get_revision_from_governance_score(cls, governance_score: 'Governance') -> int:
+    def _get_revision_code_from_governance_score(cls, _, governance_score: 'Governance') -> int:
         # Check if revision has been changed by comparing with INV engine's ICON Network value
         revision: int = 0
         if hasattr(governance_score, 'revision_code'):
@@ -145,14 +148,14 @@ class Engine(EngineBase, ContextContainer):
         return revision
 
     @classmethod
-    def _get_import_whitelist(cls, governance_score: 'Governance') -> Dict[str, list]:
+    def _get_import_whitelist(cls, _, governance_score: 'Governance') -> Dict[str, list]:
         if hasattr(governance_score, 'import_white_list_cache'):
             return governance_score.import_white_list_cache
 
         return {"iconservice": ['*']}
 
     @classmethod
-    def _get_score_black_list(cls, governance_score: 'Governance') -> List['Address']:
+    def _get_score_black_list(cls, _, governance_score: 'Governance') -> List['Address']:
         score_black_list = []
         if hasattr(governance_score, '_score_black_list'):
             score_black_list = [address for address in governance_score._score_black_list]
