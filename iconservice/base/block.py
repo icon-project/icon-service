@@ -47,7 +47,7 @@ class Block(object):
 
     def __init__(self,
                  block_height: int,
-                 block_hash: bytes,
+                 block_hash: Optional[bytes],
                  timestamp: int,
                  prev_hash: Optional[bytes],
                  cumulative_fee: int = 0) -> None:
@@ -211,4 +211,4 @@ class Block(object):
 
 
 # This predefined block is used to fix context.block.height access error before genesis block is synchronized.
-EMPTY_BLOCK = Block(block_height=-1, block_hash=bytes(64), timestamp=0, prev_hash=None)
+NULL_BLOCK = Block(block_height=-1, block_hash=None, timestamp=0, prev_hash=None)
