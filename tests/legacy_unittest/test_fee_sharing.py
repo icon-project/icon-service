@@ -26,7 +26,7 @@ from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
-from tests.unittest.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
+from tests.legacy_unittest.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
     create_transaction_req
 
 

@@ -38,7 +38,7 @@ from iconservice.icx import IcxEngine
 from iconservice.prep import PRepEngine
 from iconservice.utils import ContextEngine
 from tests import create_tx_hash, create_address
-from tests.unittest.mock_generator import generate_inner_task, create_request, ReqData, clear_inner_task
+from tests.legacy_unittest.mock_generator import generate_inner_task, create_request, ReqData, clear_inner_task
 
 import pytest
 
@@ -157,70 +157,70 @@ def test_step_tracer(step, expected):
     assert str(step_tracer) == ""
 
 
-# class TestStep:
-#
-#     @pytest.fixture
-#     def mock_context(self, monkeypatch):
-#         IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
-#         pass
-#
-#     @pytest.fixture(scope="function")
-#     def context():
-#         IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
-#         context = Mock(spec=IconScoreContext)
-#         context.attach_mock(Mock(spec=Transaction), "tx")
-#         context.attach_mock(Mock(spec=Block), "block")
-#         context.attach_mock(Mock(spec=Message), "msg")
-#         ContextContainer._push_context(context)
-#         yield context
-#         ContextContainer._pop_context()
-#
-#     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-#     def test_set_db(self, score_invoke):
-#         tx_hash = bytes.hex(create_tx_hash())
-#         from_ = create_address(AddressPrefix.EOA)
-#         to_ = create_address(AddressPrefix.CONTRACT)
-#
-#         request = create_request([
-#             ReqData(tx_hash, from_, to_, 0, 'call', {})
-#         ])
-#
-#         # noinspection PyUnusedLocal
-#         def intercept_invoke(*args, **kwargs):
-#             ContextContainer._push_context(args[0])
-#             context_db = self._inner_task._icon_service_engine._icx_context_db
-#             score = SampleScore(IconScoreDatabase(to_, context_db))
-#             score.set_db(100)
-#             ContextContainer._pop_context()
-#
-#         score_invoke.side_effect = intercept_invoke
-#
-#         # for StepType.SET
-#         result = self._inner_task_invoke(request)
-#         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
-#         # for StepType.REPLACE
-#         result = self._inner_task_invoke(request)
-#         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
-#         score_invoke.assert_called()
-#
-#         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
-#
-#         self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
-#         self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
-#         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
-#         self.assertEqual((StepType.SET, 100), call_args_for_apply_step[3][0])
-#         self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[4][0])
-#         self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[5][0])
-#         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[6][0])
-#         self.assertEqual((StepType.REPLACE, 100), call_args_for_apply_step[7][0])
-#         self.assertEqual(8, len(call_args_for_apply_step))
-#
-#         step_used_replace = self._calc_step_used(4, 4)
-#
-#         # check stepUsed value
-#         self._assert_step_used(step_used_replace, request, tx_hash)
-#
-#
+class TestStep:
+
+    @pytest.fixture
+    def mock_context(self, monkeypatch):
+        IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
+        pass
+
+    @pytest.fixture(scope="function")
+    def context():
+        IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
+        context = Mock(spec=IconScoreContext)
+        context.attach_mock(Mock(spec=Transaction), "tx")
+        context.attach_mock(Mock(spec=Block), "block")
+        context.attach_mock(Mock(spec=Message), "msg")
+        ContextContainer._push_context(context)
+        yield context
+        ContextContainer._pop_context()
+
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_set_db(self, score_invoke):
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
+
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
+        ])
+
+        # noinspection PyUnusedLocal
+        def intercept_invoke(*args, **kwargs):
+            ContextContainer._push_context(args[0])
+            context_db = self._inner_task._icon_service_engine._icx_context_db
+            score = SampleScore(IconScoreDatabase(to_, context_db))
+            score.set_db(100)
+            ContextContainer._pop_context()
+
+        score_invoke.side_effect = intercept_invoke
+
+        # for StepType.SET
+        result = self._inner_task_invoke(request)
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+        # for StepType.REPLACE
+        result = self._inner_task_invoke(request)
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+        score_invoke.assert_called()
+
+        call_args_for_apply_step = self.step_counter.apply_step.call_args_list
+
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
+        self.assertEqual((StepType.SET, 100), call_args_for_apply_step[3][0])
+        self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[4][0])
+        self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[5][0])
+        self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[6][0])
+        self.assertEqual((StepType.REPLACE, 100), call_args_for_apply_step[7][0])
+        self.assertEqual(8, len(call_args_for_apply_step))
+
+        step_used_replace = self._calc_step_used(4, 4)
+
+        # check stepUsed value
+        self._assert_step_used(step_used_replace, request, tx_hash)
+
+
 # class TestIconScoreStepCounter(unittest.TestCase):
 #
 #     def setUp(self):

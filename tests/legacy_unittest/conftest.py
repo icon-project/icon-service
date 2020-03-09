@@ -15,7 +15,7 @@ from iconservice.icon_network.data.value import (
     ImportWhiteList
 )
 from iconservice.utils import ContextStorage, ContextEngine
-from tests.unittest.mock_db import MockKeyValueDatabase
+from tests.legacy_unittest.mock_db import MockKeyValueDatabase
 
 
 def patch_several(*decorate_args):

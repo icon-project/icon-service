@@ -24,7 +24,7 @@ from iconservice.prep.data import Term, PRep
 from iconservice.prep.data.prep_container import PRepContainer
 from iconservice.prep.engine import Engine as PRepEngine
 from iconservice.utils import icx_to_loop
-from tests.unittest import utils
+from tests.legacy_unittest import utils
 
 
 def _impose_penalty_on_prep(prep: 'PRep', penalty: 'PenaltyReason'):

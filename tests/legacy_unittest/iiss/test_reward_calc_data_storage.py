@@ -28,9 +28,9 @@ from iconservice.iiss.reward_calc.storage import get_rc_version
 from iconservice.utils import sha3_256
 from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
-from tests.unittest.iiss.mock_rc_db import MockIissDataBase
-from tests.unittest.mock_db import MockPlyvelDB
-from tests.unittest.mock_generator import KEY_VALUE_DB_PATH
+from tests.legacy_unittest.iiss.mock_rc_db import MockIissDataBase
+from tests.legacy_unittest.mock_db import MockPlyvelDB
+from tests.legacy_unittest.mock_generator import KEY_VALUE_DB_PATH
 
 
 class TestRcDataStorage(unittest.TestCase):
