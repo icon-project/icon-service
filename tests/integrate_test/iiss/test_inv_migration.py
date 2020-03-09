@@ -16,12 +16,12 @@
 
 """IconScoreEngine testcase
 """
-from random import random, randint
+from random import randint
 from typing import TYPE_CHECKING
 
 from iconservice import IconNetworkValueType, Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, AddressPrefix
-from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType
+from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType, IconServiceFlag
 from iconservice.icon_network.container import ValueConverter, Container
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_step import StepType
@@ -67,6 +67,29 @@ class TestIconNetworkValue(TestIISSBase):
                         to_=GOVERNANCE_SCORE_ADDRESS,
                         func_name=func_name,
                         params={"address": str(address)},
+                        expected_status=True)
+
+    def _is_in_import_white_list(self, import_stmt: str):
+        return self.query_score(from_=None,
+                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                func_name="isInImportWhiteList",
+                                params={"importStmt": import_stmt})
+
+    def _add_import_white_list(self, import_stmt: str, is_migrated: bool):
+        if is_migrated:
+            return
+
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="addImportWhiteList",
+                        params={"importStmt": import_stmt},
+                        expected_status=True)
+
+    def _remove_import_white_list(self, import_stmt: str):
+        self.score_call(from_=self._admin,
+                        to_=GOVERNANCE_SCORE_ADDRESS,
+                        func_name="removeImportWhiteList",
+                        params={"importStmt": import_stmt},
                         expected_status=True)
 
 
@@ -124,9 +147,26 @@ class TestIconNetworkValue(TestIISSBase):
         inv_container: 'Container' = IconScoreContext.engine.inv.inv_container
         return inv_container.get_by_type(inv_type)
 
+    def _convert_service_config_from_int_to_dict(self, service_flag: int) -> dict:
+        is_service_config: dict = {}
+        for flag in IconServiceFlag:
+            if service_flag & flag == flag:
+                is_service_config[flag.name] = True
+            else:
+                is_service_config[flag.name] = False
+        return is_service_config
+
     # Todo: do not write to DB before migration
     def check_inv(self, is_migrated):
         # Actual test code
+
+        """Service Config"""
+        # TEST: service config should be same between icon-service and governance
+        gs_service_config: dict = self._get_service_config()
+        is_service_flag: int = self._get_inv_from_is(IconNetworkValueType.SERVICE_CONFIG)
+        is_service_config: dict = self._convert_service_config_from_int_to_dict(is_service_flag)
+
+        assert gs_service_config == is_service_config
 
         """Step Price"""
         # TEST: Step price should be same between icon-service and governance
@@ -136,7 +176,7 @@ class TestIconNetworkValue(TestIISSBase):
         assert is_step_price == gs_step_price
 
         # TEST: When update the step price, icon service should update accordingly
-        expected_step_price: int = 10
+        expected_step_price: int = randint(10, 20)
 
         self._set_step_price(expected_step_price, is_migrated)
         gs_step_price: int = self._get_step_price()
@@ -177,8 +217,8 @@ class TestIconNetworkValue(TestIISSBase):
         # TEST: When update the max step limits, icon service should update accordingly
         invoke_type: str = "invoke"
         query_type: str = "query"
-        expected_invoke_value = 2_600_000_000
-        expected_query_value = 60_000_000
+        expected_invoke_value = randint(2_600_000_000, 2_700_000_000)
+        expected_query_value = randint(60_000_000, 70_000_000)
 
         self._set_max_step_limit(invoke_type, expected_invoke_value, is_migrated)
         self._set_max_step_limit(query_type, expected_query_value, is_migrated)
@@ -197,8 +237,7 @@ class TestIconNetworkValue(TestIISSBase):
         is_revision_name = self._get_inv_from_is(IconNetworkValueType.REVISION_NAME)
 
         assert is_revision_code == gs_revision['code']
-        if is_migrated:
-            assert is_revision_name == gs_revision['name']
+        assert is_revision_name == gs_revision['name']
 
         # TEST: When update the revision, icon service should update accordingly
         expected_revision_value = Revision.IISS.value
@@ -211,41 +250,68 @@ class TestIconNetworkValue(TestIISSBase):
         is_revision_name = self._get_inv_from_is(IconNetworkValueType.REVISION_NAME)
 
         assert is_revision_code == gs_revision['code'] == expected_revision_value
-        if is_migrated:
-            assert is_revision_name == gs_revision['name'] == expected_revision_name
+        assert is_revision_name == gs_revision['name'] == expected_revision_name
 
         """Score Black List"""
         # TEST: Score black list should be same between icon-service and governance
-        expected_boolean: bool = False
-        dummy_score_address: 'Address' = create_address(AddressPrefix.CONTRACT)
+        expected_is_in_black_list: bool = False
+        score_address: 'Address' = create_address(AddressPrefix.CONTRACT)
 
-        gs_is_in_black_list = self._is_in_score_black_list(dummy_score_address)
-        is_is_in_black_list = dummy_score_address in self._get_inv_from_is(IconNetworkValueType.SCORE_BLACK_LIST)
+        gs_is_in_black_list = self._is_in_score_black_list(score_address)
+        is_is_in_black_list = score_address in self._get_inv_from_is(IconNetworkValueType.SCORE_BLACK_LIST)
 
-        assert is_is_in_black_list == gs_is_in_black_list == expected_boolean
+        assert is_is_in_black_list == gs_is_in_black_list == expected_is_in_black_list
 
         # TEST: When update the Score black list, icon service should update accordingly
-        expected_boolean: bool = True
+        expected_is_in_black_list: bool = True
 
-        self._add_to_score_black_list(dummy_score_address, is_migrated)
-        gs_is_in_black_list = self._is_in_score_black_list(dummy_score_address)
-        is_is_in_black_list = dummy_score_address in self._get_inv_from_is(IconNetworkValueType.SCORE_BLACK_LIST)
+        self._add_to_score_black_list(score_address, is_migrated)
+        gs_is_in_black_list = self._is_in_score_black_list(score_address)
+        is_is_in_black_list = score_address in self._get_inv_from_is(IconNetworkValueType.SCORE_BLACK_LIST)
 
-        assert is_is_in_black_list == gs_is_in_black_list == expected_boolean
+        assert is_is_in_black_list == gs_is_in_black_list == expected_is_in_black_list
 
         """Import White List"""
+        # TEST: Import white list should be same between icon-service and governance
+        expected_is_in_import_list: bool = False
+        import_stmt = "{'os': ['path']}"
+        is_import_list = self._get_inv_from_is(IconNetworkValueType.IMPORT_WHITE_LIST)
 
-        # # TEST: When service config should be same between icon-service and governance
-        # gs_service_config = self._get_service_config()
-        # is_service_config = self._get_inv_from_is(IconNetworkValueType.SERVICE_CONFIG)
-        #
-        # assert gs_service_config == is_service_config
+        gs_is_in_import_list = self._is_in_import_white_list(import_stmt)
+        is_is_in_import_list = is_import_list.get('os', None) is not None
+
+        assert is_is_in_import_list == gs_is_in_import_list == expected_is_in_import_list
+
+        # TEST: When add import white list, icon service should update accordingly
+        # After governance 0.0.6, adding import white list is removed. So do not test after migration
+        if not is_migrated:
+            expected_is_in_import_list: bool = True
+
+            self._add_import_white_list(import_stmt, is_migrated)
+            gs_is_in_import_list = self._is_in_import_white_list(import_stmt)
+            is_is_in_import_list = \
+                self._get_inv_from_is(IconNetworkValueType.IMPORT_WHITE_LIST).get('os', None) is not None
+
+            assert is_is_in_import_list == gs_is_in_import_list == expected_is_in_import_list
+
+            # Remove added import white list (kind of tear down)
+            self._remove_import_white_list(import_stmt)
 
     def test_before_migration(self):
-        # Todo: Do not update using latest gs
-        self.update_governance()
+        self.update_governance(version="0_0_6")
         self.check_inv(is_migrated=False)
 
     def test_after_migration(self):
         self.update_governance(version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests")
         self.check_inv(is_migrated=True)
+
+    def test_before_and_after_migration(self):
+        self.update_governance(version="0_0_6")
+        self.check_inv(is_migrated=False)
+
+        self.update_governance(version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests")
+        self.check_inv(is_migrated=True)
+
+    def test_when_raising_exception_during_update_should_return_to_before_migration(self):
+
+        pass

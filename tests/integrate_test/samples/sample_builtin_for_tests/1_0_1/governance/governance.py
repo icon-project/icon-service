@@ -71,9 +71,7 @@ class SystemInterface(InterfaceScore):
 class Governance(IconSystemScoreBase):
     _SCORE_STATUS = 'score_status'  # legacy
     _AUDITOR_LIST = 'auditor_list'
-    _DEPLOYER_LIST = 'deployer_list'
     _VERSION = 'version'
-    _SERVICE_CONFIG = 'service_config'
     _AUDIT_STATUS = 'audit_status'
     _REJECT_STATUS = 'reject_status'
 
@@ -118,7 +116,6 @@ class Governance(IconSystemScoreBase):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
-        # Todo: move all data except version and network proposal
         # Todo: double check about step costs migration logic
         # Todo: remove all system value
         super().__init__(db)
@@ -127,15 +124,8 @@ class Governance(IconSystemScoreBase):
         self._audit_status = DictDB(self._AUDIT_STATUS, db, value_type=bytes)
         self._reject_status = DictDB(self._REJECT_STATUS, db, value_type=bytes)
 
-        self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
         self._version = VarDB(self._VERSION, db, value_type=str)
         self._network_proposal = NetworkProposal(db)
-        self._service_config = VarDB(self._SERVICE_CONFIG, db, value_type=int)
-
-    def on_install(self) -> None:
-        """DB initialization on score install
-        """
-        super().on_install()
 
     def on_update(self) -> None:
         super().on_update()
@@ -153,6 +143,9 @@ class Governance(IconSystemScoreBase):
         if self.is_less_than_target_version('1.0.1'):
             self._migrate_v1_0_1()
         self._version.set('1.0.1')
+
+    def on_install(self) -> None:
+        pass
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -187,6 +180,8 @@ class Governance(IconSystemScoreBase):
         pass
 
     def _migrate_v1_0_1(self):
+        service_config = VarDB("service_config", self.db, value_type=int)
+
         step_types = ArrayDB('step_types', self.db, value_type=str)
         step_costs = DictDB('step_costs', self.db, value_type=int)
         step_price = VarDB('step_price', self.db, value_type=int)
@@ -204,10 +199,11 @@ class Governance(IconSystemScoreBase):
             CONTEXT_TYPE_QUERY: max_step_limits[CONTEXT_TYPE_QUERY]
         }
         pure_step_costs = {key: step_costs[key] for key in step_types}
-        pure_import_white_list = {key: import_white_list[key] for key in import_white_list_keys}
+        pure_import_white_list = {key: import_white_list[key].split(',') for key in import_white_list_keys}
         pure_score_black_list = list(score_black_list)
 
-        icon_network_values = {
+        system_values = {
+            IconNetworkValueType.SERVICE_CONFIG: service_config.get(),
             IconNetworkValueType.STEP_PRICE: step_price.get(),
             IconNetworkValueType.STEP_COSTS: pure_step_costs,
             IconNetworkValueType.MAX_STEP_LIMITS: pure_max_step_limits,
@@ -216,7 +212,7 @@ class Governance(IconSystemScoreBase):
             IconNetworkValueType.IMPORT_WHITE_LIST: pure_import_white_list,
             IconNetworkValueType.SCORE_BLACK_LIST: pure_score_black_list
         }
-        self.migrate_icon_network_value(icon_network_values)
+        self.migrate_icon_network_value(system_values)
 
     @staticmethod
     def _versions(version: str):
@@ -433,7 +429,8 @@ class Governance(IconSystemScoreBase):
     @external(readonly=True)
     def isDeployer(self, address: Address) -> bool:
         Logger.debug(f'isDeployer address: {address}', TAG)
-        return address in self._deployer_list
+        deployer_list = self.get_icon_network_value(IconNetworkValueType.DEPLOYER_LIST)
+        return address in deployer_list
 
     def _addToScoreBlackList(self, address: Address):
         if not address.is_contract:
@@ -528,6 +525,9 @@ class Governance(IconSystemScoreBase):
 
     @external(readonly=True)
     def getMaxStepLimit(self, contextType: str) -> int:
+        if contextType != CONTEXT_TYPE_INVOKE and contextType != CONTEXT_TYPE_QUERY:
+            revert(f"Invalid context type: {contextType}")
+
         max_step_limits: dict = self.get_icon_network_value(IconNetworkValueType.MAX_STEP_LIMITS)
         return max_step_limits[contextType]
 
@@ -551,9 +551,9 @@ class Governance(IconSystemScoreBase):
         except Exception as e:
             raise ValueError(f'{e}')
 
-        cache_import_white_list = self._get_import_white_list()
+        import_white_list = self.get_icon_network_value(IconNetworkValueType.IMPORT_WHITE_LIST)
         for key, value in import_stmt_dict.items():
-            old_value: list = cache_import_white_list.get(key, None)
+            old_value: list = import_white_list.get(key, None)
             if old_value is None:
                 return False
 
@@ -591,21 +591,14 @@ class Governance(IconSystemScoreBase):
         Logger.debug(f'check_import_stmt_dict: {import_stmt_dict}')
         return import_stmt_dict
 
-    def _get_import_white_list(self) -> dict:
-        whitelist = {}
-        import_white_list: dict = self.get_icon_network_value(IconNetworkValueType.IMPORT_WHITE_LIST)
-        for key, values in import_white_list.items():
-            whitelist[key] = values.split(',')
-
-        return whitelist
-
     def _set_initial_service_config(self):
-        self._service_config.set(self.get_icon_service_flag() | 8)
+        service_config = VarDB("service_config", self.db, value_type=int)
+        service_config.set(self.get_icon_service_flag() | 8)
 
     @external(readonly=True)
     def getServiceConfig(self) -> dict:
         table = {}
-        service_flag = self._service_config.get()
+        service_flag: int = self.get_icon_network_value(IconNetworkValueType.SERVICE_CONFIG)
 
         for flag in IconServiceFlag:
             if service_flag & flag == flag:
@@ -832,6 +825,7 @@ class Governance(IconSystemScoreBase):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
         self._addToScoreBlackList(address)
+
 
     @external
     def malicious_score(self, address: str, type: str):
