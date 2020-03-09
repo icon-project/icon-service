@@ -19,7 +19,6 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
-
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
@@ -29,7 +28,7 @@ from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoade
 from .base.address import Address
 from .base.address import GOVERNANCE_SCORE_ADDRESS
 from .base.address import SYSTEM_SCORE_ADDRESS
-from .base.block import Block, EMPTY_BLOCK
+from .base.block import Block
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, IconScoreException, InvalidBaseTransactionException,
     InternalServiceErrorException, DatabaseException)
@@ -64,10 +63,12 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
-from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
+from .iiss import check_decentralization_condition
+from .iiss.engine import Engine as IISSEngine
 from .iiss.reward_calc import RewardCalcStorage
 from .iiss.reward_calc.storage import IissDBNameRefactor
 from .iiss.reward_calc.storage import RewardCalcDBInfo
+from .iiss.storage import Storage as IISSStorage
 from .inner_call import inner_call
 from .inv import INVEngine, INVStorage
 from .meta import MetaDBStorage
@@ -240,7 +241,7 @@ class IconServiceEngine(ContextContainer):
 
     def _init_last_block_info(self, context: 'IconScoreContext'):
         context.storage.icx.load_last_block_info(context)
-        self._precommit_data_manager.last_block = IconScoreContext.storage.icx.last_block
+        self._precommit_data_manager.init(IconScoreContext.storage.icx.last_block)
         context.block = self._get_last_block()
 
     @classmethod
@@ -1500,7 +1501,7 @@ class IconServiceEngine(ContextContainer):
         :param block_hash: hash of block being committed
         """
         # Check for block validation before commit
-        self._precommit_data_manager.validate_precommit_block(instant_block_hash)
+        self._precommit_data_manager.validate_block_to_commit(instant_block_hash)
 
         precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
@@ -1684,8 +1685,8 @@ class IconServiceEngine(ContextContainer):
         """
         Logger.warning(tag=_TAG, msg=f"remove_precommit_state() start: height={block_height}")
 
-        self._precommit_data_manager.validate_precommit_block(instant_block_hash)
-        self._precommit_data_manager.remove_precommit_state(instant_block_hash)
+        self._precommit_data_manager.validate_block_to_commit(instant_block_hash)
+        # self._precommit_data_manager.remove_precommit_state(instant_block_hash)
 
         Logger.warning(tag=_TAG, msg="remove_precommit_state() end")
 
@@ -1821,10 +1822,7 @@ class IconServiceEngine(ContextContainer):
         self._clear_context()
 
     def _get_last_block(self) -> Optional['Block']:
-        if self._precommit_data_manager:
-            return self._precommit_data_manager.last_block
-
-        return EMPTY_BLOCK
+        return self._precommit_data_manager.last_block
 
     def inner_call(self, request: dict):
         context: 'IconScoreContext' = self._context_factory.create(
