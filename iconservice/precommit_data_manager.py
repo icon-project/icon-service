@@ -15,11 +15,12 @@
 # limitations under the License.
 
 from enum import IntFlag
-from threading import Lock
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Dict, Iterable
 
-from .base.block import Block, EMPTY_BLOCK
-from .base.exception import InvalidParamsException
+from iconcommons import Logger
+
+from .base.block import Block, NULL_BLOCK
+from .base.exception import InvalidParamsException, InternalServiceErrorException
 from .database.batch import BlockBatch
 from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
@@ -31,6 +32,9 @@ from .utils import bytes_to_hex, sha3_256
 if TYPE_CHECKING:
     from .base.address import Address
     from .prep.data import PRepContainer, Term
+
+
+_TAG = "PRECOMMIT"
 
 
 def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
@@ -102,7 +106,7 @@ class PrecommitData(object):
                  prev_block_generator: Optional['Address'],
                  prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'],
-                 precommit_flag: PrecommitFlag,
+                 precommit_flag: 'PrecommitFlag',
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
                  main_prep_as_dict: Optional[dict],
@@ -187,96 +191,197 @@ class PrecommitData(object):
 class PrecommitDataManager(object):
     """Manages multiple precommit block data
 
+    Assume that it manages only 2-depth block precommit
+    - root: confirmed block: 0-depth
+    - root.children (parent): 1-depth
+    - parent.children: 2-depth
     """
 
+    class Node(object):
+        """Inner class used to manage PrecommitData in LinkedList
+
+        """
+
+        def __init__(
+                self, block: 'Block',
+                data: 'PrecommitData' = None,
+                parent: Optional['PrecommitDataManager.Node'] = None):
+            self._block = block
+            self._data = data
+            self._parent = parent
+            self._children: Dict[bytes, 'PrecommitDataManager.Node'] = {}
+
+        @property
+        def precommit_data(self) -> 'PrecommitData':
+            return self._data
+
+        @property
+        def parent(self) -> Optional['PrecommitDataManager.Node']:
+            return self._parent
+
+        @parent.setter
+        def parent(self, node: Optional['PrecommitDataManager.Node']):
+            self._parent = node
+
+        @property
+        def block(self) -> 'Block':
+            return self._block
+
+        def add_child(self, node: 'PrecommitDataManager.Node'):
+            self._children[node.block.hash] = node
+
+        def get_child(self, block_hash: bytes) -> Optional['PrecommitDataManager.Node']:
+            return self._children.get(block_hash)
+
+        def children(self) -> Iterable['PrecommitDataManager.Node']:
+            for child in self._children.values():
+                yield child
+
+        def is_root(self) -> bool:
+            return self._parent is None
+
+        def is_leaf(self) -> bool:
+            return len(self._children) == 0
+
     def __init__(self):
-        self._lock = Lock()
-        self._precommit_data_mapper = {}
-        self._last_block: Optional['Block'] = None
+        self._root: Optional['PrecommitDataManager.Node'] = None
+        self._precommit_data_mapper: Dict[bytes, 'PrecommitDataManager.Node'] = {}
+
+    def __len__(self):
+        return len(self._precommit_data_mapper)
+
+    def init(self, block: Optional['Block']):
+        """This is called in IconServiceEngine.open(), IconServiceEngine.rollback() or self._clear()
+
+        :param block: the last confirmed(=committed) block
+        :return:
+        """
+        if not block:
+            block = NULL_BLOCK
+
+        self._precommit_data_mapper.clear()
+
+        root = PrecommitDataManager.Node(block)
+        self._precommit_data_mapper[root.block.hash] = root
+        self._set_root(root)
 
     @property
     def last_block(self) -> 'Block':
-        with self._lock:
-            return self._last_block
-
-    @last_block.setter
-    def last_block(self, block: 'Block'):
-        """Set the last confirmed block
-
-        :param block:
-        :return:
-        """
-        with self._lock:
-            self._last_block = block if block else EMPTY_BLOCK
+        return self._root.block
 
     def push(self, precommit_data: 'PrecommitData'):
         block: 'Block' = precommit_data.block_batch.block
-        self._precommit_data_mapper[block.hash] = precommit_data
+        parent: Optional['PrecommitDataManager.Node'] = self._precommit_data_mapper.get(block.prev_hash)
 
-    def get(self, block_hash: 'bytes') -> Optional['PrecommitData']:
-        precommit_data = self._precommit_data_mapper.get(block_hash)
-        return precommit_data
+        if parent is None:
+            # Genesis block has no prev(=parent) block
+            parent = self._root
+        elif not (parent and parent.block.height == block.height - 1):
+            raise InternalServiceErrorException(
+                f"Parent precommitData not found: {bytes_to_hex(block.prev_hash)}")
+
+        node = PrecommitDataManager.Node(block, precommit_data, parent)
+
+        parent.add_child(node)
+        self._precommit_data_mapper[block.hash] = node
+
+    def get(self, block_hash: bytes) -> Optional['PrecommitData']:
+        if not isinstance(block_hash, bytes):
+            return None
+
+        node = self._precommit_data_mapper.get(block_hash)
+        return node.precommit_data if node else None
 
     def commit(self, block: 'Block'):
-        with self._lock:
-            self._last_block = block
+        node = self._precommit_data_mapper.get(block.hash)
+        if node is None:
+            Logger.warning(
+                tag=_TAG,
+                msg=f"No precommit data: height={block.height} hash={bytes_to_hex(block.hash)}")
+            return
 
-        # Clear remaining precommit data which have the same block height
-        self._precommit_data_mapper.clear()
+        if not node.parent.is_root() and self._root == node.parent:
+            raise InternalServiceErrorException(f"Parent should be a root")
 
-    def remove_precommit_state(self, instant_block_hash: bytes):
-        if instant_block_hash in self._precommit_data_mapper:
-            del self._precommit_data_mapper[instant_block_hash]
+        self._remove_sibling_precommit_data(block)
+        del self._precommit_data_mapper[self._root.block.hash]
+        self._set_root(node)
 
-    def empty(self) -> bool:
-        return len(self._precommit_data_mapper) == 0
+    def _remove_sibling_precommit_data(self, block_to_commit: 'Block'):
+        """Remove the sibling blocks whose height is the same as that of the block to commit
+
+        :param block_to_commit:
+        :return:
+        """
+        def pick_up_blocks_to_remove() -> Iterable['PrecommitDataManager.Node']:
+            for parent in self._root.children():
+                if block_to_commit.hash == parent.block.hash:
+                    # DO NOT remove the confirmed block and its children
+                    continue
+
+                yield parent
+                for child in parent.children():
+                    assert parent == child.parent
+                    assert child.is_leaf()
+                    yield child
+
+        for node_to_remove in pick_up_blocks_to_remove():
+            del self._precommit_data_mapper[node_to_remove.block.hash]
+
+    # def remove_precommit_state(self, instant_block_hash: bytes):
+    #     if instant_block_hash in self._precommit_data_mapper:
+    #         del self._precommit_data_mapper[instant_block_hash]
 
     def clear(self):
-        """Clear precommit data
+        """Clear all data except for root
 
         :return:
         """
-        self._precommit_data_mapper.clear()
+        self.init(self.last_block)
 
     def validate_block_to_invoke(self, block: 'Block'):
         """Check if the block to invoke is valid before invoking it
 
         :param block: block to invoke
         """
-        if not self._is_last_block_valid():
+        if self._root.block.height < 0:
+            # Exception handling for genesis block
             return
 
-        if block.prev_hash == self._last_block.hash and \
-                block.height == self._last_block.height + 1:
-            return
+        parent: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(block.prev_hash)
+        if parent:
+            if block.prev_hash == parent.block.hash and block.height == parent.block.height + 1:
+                return
 
         raise InvalidParamsException(
             f'Failed to invoke a block: '
-            f'last_block({self._last_block}) '
+            f'prev_block({parent.block if parent else None}) '
             f'block_to_invoke({block})')
 
-    def validate_precommit_block(self, instant_block_hash: bytes):
+    def validate_block_to_commit(self, block_hash: bytes):
         """Check block validation
         before write_precommit_state() or remove_precommit_state()
+        No need to consider an instant_block_hash on 2-depth block invocation
 
-        :param instant_block_hash: hash data which is used for retrieving block instance from the pre-commit data mapper
+        :param block_hash: hash data which is used for retrieving block instance from the pre-commit data mapper
         """
-        assert isinstance(instant_block_hash, bytes)
+        assert isinstance(block_hash, bytes)
 
-        precommit_data = self._precommit_data_mapper.get(instant_block_hash)
-        if precommit_data is None:
+        node: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(block_hash)
+        if node is None:
             raise InvalidParamsException(
-                f'No precommit data: block_hash({bytes_to_hex(instant_block_hash)})')
+                f'No precommit data: block_hash={bytes_to_hex(block_hash)}')
 
-        if not self._is_last_block_valid():
+        block = node.block
+        prev_block = self._root.block
+
+        if block.height == prev_block.height + 1 \
+                and (block.height == 0 or node.block.prev_hash == prev_block.hash):
             return
 
-        precommit_block = precommit_data.block
+        raise InvalidParamsException(
+            f'Invalid precommit block: prev_block({prev_block}) block({block})')
 
-        if self._last_block.hash != precommit_block.prev_hash or \
-                self._last_block.height + 1 != precommit_block.height:
-            raise InvalidParamsException(
-                f'Invalid precommit block: last_block({self._last_block}) precommit_block({precommit_block})')
-
-    def _is_last_block_valid(self) -> bool:
-        return self._last_block.height >= 0
+    def _set_root(self, node: 'PrecommitDataManager.Node'):
+        node.parent = None
+        self._root = node

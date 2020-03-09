@@ -30,8 +30,9 @@ from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.icx.issue import IssueEngine, IssueStorage
-from iconservice.iiss import IISSEngine, IISSStorage
+from iconservice.iiss.engine import Engine as IISSEngine
 from iconservice.iiss.reward_calc import RewardCalcStorage
+from iconservice.iiss.storage import Storage as IISSStorage
 from iconservice.meta import MetaDBStorage
 from iconservice.prep import PRepEngine, PRepStorage
 from iconservice.utils import ContextEngine, ContextStorage

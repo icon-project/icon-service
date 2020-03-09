@@ -1,3 +1,4 @@
+pytest
 setproctitle==1.1.10
 plyvel>=1.0.5
 coincurve>=12.0.0

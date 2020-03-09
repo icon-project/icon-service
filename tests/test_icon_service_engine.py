@@ -22,6 +22,7 @@ import time
 import unittest
 from unittest.mock import Mock, patch
 
+import pytest
 from iconcommons.icon_config import IconConfig
 
 from iconservice.base.address import Address, AddressPrefix, MalformedAddress
@@ -767,6 +768,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.code)
         self.assertTrue(e.message.startswith('No precommit data'))
 
+    @pytest.mark.skip(reason="No more instant_block_hash is needed in LFT-2.0")
     def test_commit_change_block_hash(self):
         block_height = 1
         instant_block_hash = create_block_hash()
@@ -800,7 +802,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(self._engine._get_last_block().hash, block_hash)
         self.assertEqual(IconScoreContext.storage.icx.last_block.hash, block_hash)
 
-    def test_rollback(self):
+    @pytest.mark.skip(reason="IconServiceEngine.remove_precommit_state() is deprecated")
+    def test_remove_precommit_state(self):
         block = Block(
             block_height=1,
             block_hash=create_block_hash(),
