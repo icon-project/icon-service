@@ -19,17 +19,17 @@ from typing import TYPE_CHECKING
 
 from iconcommons.logger import Logger
 
-from .storage import IconScoreDeployInfo, DeployState
-from .utils import remove_path
-from ..base.address import Address
-from ..base.exception import AccessDeniedException
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, ZERO_TX_HASH, ICON_DEPLOY_LOG_TAG
-from ..iconscore.icon_score_context_util import IconScoreContextUtil
+from iconservice.deploy.storage import IconScoreDeployInfo, DeployState
+from iconservice.deploy.utils import remove_path
+from iconservice.base.address import Address
+from iconservice.base.exception import AccessDeniedException
+from iconservice.icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, ZERO_TX_HASH, ICON_DEPLOY_LOG_TAG
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_base import IconScoreBase
-    from ..iconscore.icon_score_context import IconScoreContext
-    from ..iconscore.icon_score_mapper_object import IconScoreInfo
+    from iconservice.iconscore.icon_score_base import IconScoreBase
+    from iconservice.iconscore.icon_score_context import IconScoreContext
+    from iconservice.iconscore.icon_score_mapper_object import IconScoreInfo
 
 
 class IconBuiltinScoreLoader(object):

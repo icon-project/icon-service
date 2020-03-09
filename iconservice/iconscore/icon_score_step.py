@@ -129,8 +129,11 @@ class OutOfStepException(IconServiceBaseException):
     """ An Exception which is thrown when steps are exhausted.
     """
 
-    def __init__(self, step_limit: int, step_used: int,
-                 requested_step: int, step_type: StepType) -> None:
+    def __init__(self,
+                 step_limit: int,
+                 step_used: int,
+                 requested_step: int,
+                 step_type: StepType):
         """Constructor
 
         :param step_limit: step limit of the transaction
@@ -172,6 +175,7 @@ class OutOfStepException(IconServiceBaseException):
         """
         return self.__step_used
 
+    # TODO unused code
     @property
     def requested_step(self) -> int:
         """
