@@ -68,8 +68,7 @@ class TestIconScoreContext(unittest.TestCase):
 
         IconScoreContext.engine.prep = prep_engine
 
-        step_counter_factory = IconScoreStepCounterFactory()
-        context_factory = IconScoreContextFactory(step_counter_factory)
+        context_factory = IconScoreContextFactory()
 
         self.context_factory = context_factory
         self.preps = preps

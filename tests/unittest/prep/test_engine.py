@@ -31,8 +31,7 @@ from iconservice.utils import icx_to_loop
 
 
 def _create_context() -> 'IconScoreContext':
-    step_counter = Mock(spec=IconScoreStepCounterFactory)
-    context_factory = IconScoreContextFactory(step_counter)
+    context_factory = IconScoreContextFactory()
     block = Block(block_height=100,
                   block_hash=os.urandom(32),
                   timestamp=0,

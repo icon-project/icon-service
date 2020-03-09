@@ -236,14 +236,14 @@ class TestTrace:
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             context, {'version': 3, 'from': from_, 'to': to_})
         raise_exception_end_tag("test_throw")
-        self.assertEqual(0, tx_result.status)
+        assert 0 == tx_result.status
 
         IconServiceEngine_charge_transaction_fee.assert_called()
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
-        self.assertEqual(TraceType.THROW, trace.trace)
-        self.assertEqual(code, trace.data[0])
-        self.assertEqual(error, trace.data[1])
+        assert TraceType.THROW == trace.trace
+        assert code == trace.data[0]
+        assert error == trace.data[1]
 
     def test_to_dict_camel(self):
         context = ContextContainer._get_context()
@@ -257,11 +257,11 @@ class TestTrace:
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         camel_dict = trace.to_dict(to_camel_case)
-        self.assertIn('scoreAddress', camel_dict)
-        self.assertIn('trace', camel_dict)
-        self.assertIn('data', camel_dict)
-        self.assertEqual(TraceType.CALL.name, camel_dict['trace'])
-        self.assertEqual(4, len(camel_dict['data']))
+        assert 'scoreAddress' in camel_dict
+        assert 'trace' in camel_dict
+        assert 'data' in camel_dict
+        assert TraceType.CALL.name == camel_dict['trace']
+        assert 4 == len(camel_dict['data'])
 
 
 class TestInterfaceScore(InterfaceScore):

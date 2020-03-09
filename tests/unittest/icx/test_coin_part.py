@@ -16,8 +16,6 @@
 # limitations under the License.
 
 
-import unittest
-
 import pytest
 
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
@@ -48,30 +46,34 @@ class TestAccountType:
 class TestCoinPart:
     def test_coin_part_revision_3(self):
         part1 = CoinPart()
-        self.assertIsNotNone(part1)
-        self.assertIs(CoinPartFlag.NONE, part1.flags)
-        self.assertTrue(part1.balance == 0)
+        assert part1 is not None
+        assert CoinPartFlag.NONE is part1.flags
+        assert part1.balance == 0
 
         part1.deposit(100)
-        self.assertEqual(100, part1.balance)
+        assert 100 == part1.balance
 
         part1.withdraw(100)
-        self.assertEqual(0, part1.balance)
+        assert 0 == part1.balance
 
         # wrong value
-        self.assertRaises(InvalidParamsException, part1.deposit, -10)
+        with pytest.raises(InvalidParamsException):
+            part1.deposit(-10)
 
         # 0 transfer is possible
         old = part1.balance
         part1.deposit(0)
-        self.assertEqual(old, part1.balance)
+        assert old == part1.balance
 
-        self.assertRaises(InvalidParamsException, part1.withdraw, -11234)
-        self.assertRaises(OutOfBalanceException, part1.withdraw, 1)
+        with pytest.raises(InvalidParamsException):
+            part1.withdraw(-11234)
+
+        with pytest.raises(OutOfBalanceException):
+            part1.withdraw(1)
 
         old = part1.balance
         part1.withdraw(0)
-        self.assertEqual(old, part1.balance)
+        assert old == part1.balance
 
     @pytest.mark.parametrize("revision", [Revision(i) for i in range(Revision.LATEST.value + 1) if i in range(3, 5)])
     def test_coin_part_from_bytes_to_bytes_revision_3_to_4(self, revision):
@@ -111,73 +113,72 @@ class TestCoinPart:
         assert part1.states == BasePartState.NONE
 
         part1._flags = set_flag(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
-        self.assertIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
+        assert CoinPartFlag.HAS_UNSTAKE in part1.flags
 
         part1._flags = set_flag(part1.flags, CoinPartFlag.HAS_UNSTAKE, False)
-        self.assertEqual(CoinPartFlag.NONE, part1.flags)
-        self.assertNotIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
+        assert CoinPartFlag.NONE == part1.flags
+        assert CoinPartFlag.HAS_UNSTAKE not in part1.flags
 
     def test_coin_part_make_key(self):
         key = CoinPart.make_key(create_address())
-        self.assertEqual(ICON_EOA_ADDRESS_BYTES_SIZE, len(key))
+        assert ICON_EOA_ADDRESS_BYTES_SIZE == len(key)
 
         key = CoinPart.make_key(create_address(1))
-        self.assertEqual(ICON_CONTRACT_ADDRESS_BYTES_SIZE, len(key))
+        assert ICON_CONTRACT_ADDRESS_BYTES_SIZE == len(key)
 
     def test_coin_part_type_property(self):
         part = CoinPart()
-        self.assertEqual(CoinPartType.GENERAL, part.type)
+        assert CoinPartType.GENERAL == part.type
 
         for coin_part_type in CoinPartType:
             part = CoinPart(coin_part_type=coin_part_type)
-            self.assertEqual(coin_part_type, part.type)
+            assert coin_part_type == part.type
 
         for coin_part_type in CoinPartType:
             part = CoinPart()
             part.type = coin_part_type
-            self.assertEqual(coin_part_type, part.type)
+            assert coin_part_type == part.type
 
-        with self.assertRaises(ValueError) as e:
+        with pytest.raises(ValueError) as e:
             part.type = len(CoinPartType) + 1
-        self.assertEqual("Invalid CoinPartType", e.exception.args[0])
+
+        assert "Invalid CoinPartType" == e.value.args[0]
 
     def test_coin_part_balance(self):
         balance = 10000
         part = CoinPart(balance=balance)
-        self.assertEqual(balance, part.balance)
+        assert balance == part.balance
 
     def test_coin_part_flags(self):
         part = CoinPart(flags=CoinPartFlag.HAS_UNSTAKE)
-        self.assertEqual(CoinPartFlag.HAS_UNSTAKE, part.flags)
+        assert CoinPartFlag.HAS_UNSTAKE == part.flags
 
     def test_coin_part_deposit(self):
         balance = 100
         part = CoinPart()
 
-        self.assertFalse(part.is_dirty())
+        assert part.is_dirty() is False
         part.deposit(balance)
-        self.assertTrue(part.is_dirty())
+        assert part.is_dirty() is True
 
-        self.assertEqual(balance, part.balance)
+        assert balance == part.balance
 
     def test_coin_part_withdraw(self):
         balance = 100
         part = CoinPart()
 
-        self.assertFalse(part.is_dirty())
+        assert part.is_dirty() is False
         part.deposit(balance)
         part.withdraw(balance)
-        self.assertTrue(part.is_dirty())
-        self.assertEqual(0, part.balance)
+        assert part.is_dirty() is True
+        assert 0 == part.balance
 
     def test_coin_part_equal(self):
         part1 = CoinPart()
         part2 = CoinPart()
-        self.assertEqual(part1, part2)
+        assert part1 == part2
 
         balance = 100
         part1.deposit(balance)
         part3 = CoinPart(balance=balance)
-        self.assertEqual(part1, part3)
-
-
+        assert part1 == part3
