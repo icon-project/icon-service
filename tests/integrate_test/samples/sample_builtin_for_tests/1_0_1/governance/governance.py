@@ -116,8 +116,6 @@ class Governance(IconSystemScoreBase):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
-        # Todo: double check about step costs migration logic
-        # Todo: remove all system value
         super().__init__(db)
         # self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
@@ -180,6 +178,7 @@ class Governance(IconSystemScoreBase):
         pass
 
     def _migrate_v1_0_1(self):
+        # Migrate and Remove all icon network variables
         service_config = VarDB("service_config", self.db, value_type=int)
 
         step_types = ArrayDB('step_types', self.db, value_type=str)
@@ -194,6 +193,9 @@ class Governance(IconSystemScoreBase):
         import_white_list_keys = ArrayDB('import_white_list_keys', self.db, value_type=str)
         score_black_list = ArrayDB('score_black_list', self.db, value_type=Address)
 
+        deployer_list = ArrayDB('deployer_list', self.db, value_type=Address)
+
+        # Convert DictDB to dict, ArrayDB to list
         pure_max_step_limits = {
             CONTEXT_TYPE_INVOKE: max_step_limits[CONTEXT_TYPE_INVOKE],
             CONTEXT_TYPE_QUERY: max_step_limits[CONTEXT_TYPE_QUERY]
@@ -202,6 +204,7 @@ class Governance(IconSystemScoreBase):
         pure_import_white_list = {key: import_white_list[key].split(',') for key in import_white_list_keys}
         pure_score_black_list = list(score_black_list)
 
+        # Migrates
         system_values = {
             IconNetworkValueType.SERVICE_CONFIG: service_config.get(),
             IconNetworkValueType.STEP_PRICE: step_price.get(),
@@ -213,6 +216,30 @@ class Governance(IconSystemScoreBase):
             IconNetworkValueType.SCORE_BLACK_LIST: pure_score_black_list
         }
         self.migrate_icon_network_value(system_values)
+
+        # Remove all icon network variables
+        service_config.remove()
+        revision_code.remove()
+        revision_name.remove()
+        step_price.remove()
+        max_step_limits.remove(CONTEXT_TYPE_QUERY)
+        max_step_limits.remove(CONTEXT_TYPE_INVOKE)
+
+        def _remove_array(array: ArrayDB):
+            while True:
+                ret = array.pop()
+                if ret is None:
+                    break
+
+        for type_ in step_types:
+            step_costs.remove(type_)
+        _remove_array(step_types)
+
+        for key in import_white_list_keys:
+            import_white_list.remove(key)
+        _remove_array(import_white_list_keys)
+        _remove_array(score_black_list)
+        _remove_array(deployer_list)
 
     @staticmethod
     def _versions(version: str):
@@ -428,9 +455,7 @@ class Governance(IconSystemScoreBase):
 
     @external(readonly=True)
     def isDeployer(self, address: Address) -> bool:
-        Logger.debug(f'isDeployer address: {address}', TAG)
-        deployer_list = self.get_icon_network_value(IconNetworkValueType.DEPLOYER_LIST)
-        return address in deployer_list
+        revert(f'Deprecated method. Do not manage deployer list anymore.')
 
     def _addToScoreBlackList(self, address: Address):
         if not address.is_contract:
@@ -455,15 +480,13 @@ class Governance(IconSystemScoreBase):
             revert(f'Invalid SCORE Address: {address}')
         score_black_list: list = self.get_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST)
 
-        if address not in score_black_list:
+        for i, listed_score_address in enumerate(score_black_list):
+            if listed_score_address == address:
+                score_black_list.pop(i)
+                break
+        else:
             revert('Invalid address: not in list')
 
-        # get the topmost value
-        top = score_black_list.pop()
-        if top != address:
-            for i in range(len(score_black_list)):
-                if score_black_list[i] == address:
-                    score_black_list[i] = top
         self.set_icon_network_value(IconNetworkValueType.SCORE_BLACK_LIST, score_black_list)
         self.MaliciousScore(address, MaliciousScoreType.UNFREEZE)
 
@@ -481,7 +504,7 @@ class Governance(IconSystemScoreBase):
         for addr in score_black_list:
             Logger.debug(f' --- {addr}', TAG)
 
-    def _set_initial_step_costs(self, step_types, step_costs):
+    def _set_initial_step_costs(self, step_types: 'ArrayDB', step_costs: 'DictDB'):
         initial_costs = {
             STEP_TYPE_DEFAULT: 100_000,
             STEP_TYPE_CONTRACT_CALL: 25_000,
@@ -825,7 +848,6 @@ class Governance(IconSystemScoreBase):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
         self._addToScoreBlackList(address)
-
 
     @external
     def malicious_score(self, address: str, type: str):
