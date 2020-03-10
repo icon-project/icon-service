@@ -17,12 +17,13 @@
 """IconScoreEngine testcase
 """
 from random import randint
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from iconservice import IconNetworkValueType, Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, AddressPrefix
 from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType, IconServiceFlag
 from iconservice.icon_network.container import ValueConverter, Container
+from iconservice.icon_network.data.value import Value
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_step import StepType
 from tests import create_address
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
 
 # is: icon service, gs: governance score
-class TestIconNetworkValue(TestIISSBase):
+class TestINVMigration(TestIISSBase):
     def _make_init_config(self) -> dict:
         config: dict = super()._make_init_config()
         config[ConfigKey.PREP_REGISTRATION_FEE] = 0
@@ -92,7 +93,6 @@ class TestIconNetworkValue(TestIISSBase):
                         params={"importStmt": import_stmt},
                         expected_status=True)
 
-
     def _get_step_costs(self):
         return self.query_score(from_=None,
                                 to_=GOVERNANCE_SCORE_ADDRESS,
@@ -143,9 +143,18 @@ class TestIconNetworkValue(TestIISSBase):
                                 to_=GOVERNANCE_SCORE_ADDRESS,
                                 func_name="getServiceConfig")
 
+    def _get_version(self):
+        return self.query_score(from_=None,
+                                to_=GOVERNANCE_SCORE_ADDRESS,
+                                func_name="getVersion")
+
     def _get_inv_from_is(self, inv_type: 'IconNetworkValueType'):
         inv_container: 'Container' = IconScoreContext.engine.inv.inv_container
         return inv_container.get_by_type(inv_type)
+
+    def _get_is_migrated_from_is(self):
+        inv_container: 'Container' = IconScoreContext.engine.inv.inv_container
+        return inv_container.is_migrated
 
     def _convert_service_config_from_int_to_dict(self, service_flag: int) -> dict:
         is_service_config: dict = {}
@@ -156,7 +165,6 @@ class TestIconNetworkValue(TestIISSBase):
                 is_service_config[flag.name] = False
         return is_service_config
 
-    # Todo: do not write to DB before migration
     def check_inv(self, is_migrated):
         # Actual test code
 
@@ -165,7 +173,6 @@ class TestIconNetworkValue(TestIISSBase):
         gs_service_config: dict = self._get_service_config()
         is_service_flag: int = self._get_inv_from_is(IconNetworkValueType.SERVICE_CONFIG)
         is_service_config: dict = self._convert_service_config_from_int_to_dict(is_service_flag)
-
         assert gs_service_config == is_service_config
 
         """Step Price"""
@@ -297,21 +304,100 @@ class TestIconNetworkValue(TestIISSBase):
             # Remove added import white list (kind of tear down)
             self._remove_import_white_list(import_stmt)
 
+    def _inv_is_stored_on_state_db(self) -> bool:
+        context: 'IconScoreContext' = IconScoreContext()
+        for type_ in IconNetworkValueType:
+            inv_value: Optional['Value'] = IconScoreContext.storage.inv._get_value(context, type_)
+            if inv_value is None:
+                return False
+        return True
+
+    def _is_migration_flag_stored_on_state_db(self) -> bool:
+        context: 'IconScoreContext' = IconScoreContext()
+        return IconScoreContext.storage.inv._get_migration_flag(context)
+
     def test_before_migration(self):
         self.update_governance(version="0_0_6")
         self.check_inv(is_migrated=False)
+
+        assert self._inv_is_stored_on_state_db() is False
+        assert self._is_migration_flag_stored_on_state_db() is False
 
     def test_after_migration(self):
         self.update_governance(version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests")
         self.check_inv(is_migrated=True)
 
+        assert self._inv_is_stored_on_state_db() is True
+        assert self._is_migration_flag_stored_on_state_db() is True
+
     def test_before_and_after_migration(self):
+        # TEST: When before upgrade GS to version 1.0.1, all INVs should be same between icon-service and governance
+        # and all INVs must not be stored on stateDB
         self.update_governance(version="0_0_6")
         self.check_inv(is_migrated=False)
 
+        assert self._inv_is_stored_on_state_db() is False
+        assert self._is_migration_flag_stored_on_state_db() is False
+
+        # TEST: When After upgrade GS to version 1.0.1, all INVs should be same between icon-service and governance
+        # and all INVs must be stored on stateDB
         self.update_governance(version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests")
         self.check_inv(is_migrated=True)
 
-    def test_when_raising_exception_during_update_should_return_to_before_migration(self):
+        assert self._inv_is_stored_on_state_db() is True
+        assert self._is_migration_flag_stored_on_state_db() is True
 
-        pass
+    # FIXME: use fixture.marks.parameterize
+    def test_when_put_insufficient_invs_on_migration_should_rollback_to_before_migration(self):
+        # TEST: Test case about raising exception during migration
+        expected_status: bool = False
+        self.update_governance(version="0_0_6")
+
+        # Act
+        self.update_governance(version="1_0_1_insufficient_invs",
+                               expected_status=expected_status,
+                               root_path="sample_builtin_for_tests")
+
+        assert self._get_is_migrated_from_is() is False
+        assert self._inv_is_stored_on_state_db() is False
+        assert self._is_migration_flag_stored_on_state_db() is False
+        assert self._get_version() == "0.0.6"
+
+        # TEST: After fail to update governance, INVs related logic should be worked
+        self.check_inv(False)
+
+    def test_when_revert_during_update_should_rollback_to_before_migration(self):
+        # TEST: Test case about raising exception during migration
+        expected_status: bool = False
+        self.update_governance(version="0_0_6")
+
+        # Act
+        self.update_governance(version="1_0_1_revert_on_update",
+                               expected_status=expected_status,
+                               root_path="sample_builtin_for_tests")
+
+        assert self._get_is_migrated_from_is() is False
+        assert self._inv_is_stored_on_state_db() is False
+        assert self._is_migration_flag_stored_on_state_db() is False
+        assert self._get_version() == "0.0.6"
+
+        # TEST: After fail to update governance, INVs related logic should be worked
+        self.check_inv(False)
+
+    def test_when_revert_end_of_updating_should_rollback_to_before_migration(self):
+        # TEST: Test case about raising exception during migration
+        expected_status: bool = False
+        self.update_governance(version="0_0_6")
+
+        # Act
+        self.update_governance(version="1_0_1_revert_at_the_end_of_update",
+                               expected_status=expected_status,
+                               root_path="sample_builtin_for_tests")
+
+        assert self._get_is_migrated_from_is() is False
+        assert self._inv_is_stored_on_state_db() is False
+        assert self._is_migration_flag_stored_on_state_db() is False
+        assert self._get_version() == "0.0.6"
+
+        # TEST: After fail to update governance, INVs related logic should be worked
+        self.check_inv(False)
