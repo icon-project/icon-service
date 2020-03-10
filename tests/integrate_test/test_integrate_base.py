@@ -526,7 +526,8 @@ class TestIntegrateBase(TestCase):
                           from_: Union['EOAAccount', 'Address', None],
                           to_: Union['EOAAccount', 'Address', 'MalformedAddress'],
                           data: bytes = None,
-                          value: int = 0) -> dict:
+                          value: int = 0,
+                          disable_pre_validate: bool = False) -> dict:
 
         addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
         addr_to: Optional['Address', 'MalformedAddress'] = self._convert_address_from_address_type(to_)
@@ -671,6 +672,19 @@ class TestIntegrateBase(TestCase):
                                          self._admin,
                                          GOVERNANCE_SCORE_ADDRESS)
         return self.process_confirm_block_tx([tx], expected_status)
+
+    def update_governance_for_audit(self,
+                                    version: str = "latest_version",
+                                    expected_status: bool = True,
+                                    root_path: str = "sample_builtin") -> List['TransactionResult']:
+
+        tx = self.create_deploy_score_tx(root_path,
+                                         f"{version}/governance",
+                                         self._admin,
+                                         GOVERNANCE_SCORE_ADDRESS)
+        ret = self.process_confirm_block_tx([tx], expected_status)
+        self.accept_score(ret[0].tx_hash)
+        return ret
 
     def transfer_icx(self,
                      from_: Union['EOAAccount', 'Address', None],
