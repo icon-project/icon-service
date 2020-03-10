@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional, List
 from .data.value import Value, VALUE_MAPPER
 from .listener import Listener
 from .. import Address
-from ..base.exception import AccessDeniedException
+from ..base.exception import AccessDeniedException, InvalidParamsException
 from ..icon_constant import IconNetworkValueType, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_step import StepType
@@ -104,10 +104,8 @@ class Container(object):
             super().__setitem__(key, value)
 
     def __init__(self, is_migrated: bool):
-        # Todo: consider if the compound data should be immutable
         # Todo: Freeze data
         # Todo: Consider about integrating set method
-        # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
         self._listener: Optional['Listener'] = None
 
@@ -185,6 +183,13 @@ class Container(object):
         :param data:
         :return:
         """
+        if len(data) != len(self._cache):
+            raise InvalidParamsException("Icon Network Values are insufficient")
+        for value in data:
+            if value.value != self._cache[value.TYPE].value:
+                raise InvalidParamsException(f"Invalid Icon Network Values: {value.TYPE} "
+                                             f"GS: {value.value} IS: {self._cache[value.TYPE].value}")
+
         for value in data:
             context.storage.inv.put_value(context, value)
         context.storage.inv.put_migration_flag(context)
