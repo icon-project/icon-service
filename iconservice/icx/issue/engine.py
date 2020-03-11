@@ -21,7 +21,7 @@ from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
 from ...base.exception import OutOfBalanceException
-from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG, Revision
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
@@ -112,7 +112,7 @@ class Engine(EngineBase):
         account: 'Account' = context.storage.icx.get_account(context, address)
         if account.balance < amount:
             raise OutOfBalanceException(f'Not enough ICX to Burn: '
-                                        f'balance({account.balance }) < intended burn amount({amount})')
+                                        f'balance({account.balance}) < intended burn amount({amount})')
         else:
             account.withdraw(amount)
             current_total_supply = context.storage.icx.get_total_supply(context)
@@ -122,8 +122,13 @@ class Engine(EngineBase):
 
     def burn(self, context: 'IconScoreContext', address: 'Address', amount: int):
         self._burn(context, address, amount)
+        event_sig: str = "ICXBurned"
+        # Before 'FIX_BURN_EVENT_SIGNATURE' revision, event signature format was correct.
+        # So fix this bugs.
+        if context.revision >= Revision.FIX_BURN_EVENT_SIGNATURE.value:
+            event_sig: str = "ICXBurned(int)"
         EventLogEmitter.emit_event_log(context,
                                        score_address=ZERO_SCORE_ADDRESS,
-                                       event_signature="ICXBurned",
+                                       event_signature=event_sig,
                                        arguments=[amount],
                                        indexed_args_count=0)

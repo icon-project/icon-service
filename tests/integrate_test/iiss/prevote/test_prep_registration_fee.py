@@ -19,8 +19,9 @@
 from typing import TYPE_CHECKING, List
 
 from iconservice import ZERO_SCORE_ADDRESS
-from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
+from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_result import TransactionResult
@@ -38,6 +39,63 @@ class TestIntegratePrepRegistration(TestIISSBase):
         # distribute icx for register
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
                             init_balance=3000 * ICX_IN_LOOP)
+
+    def _init_decentralized(self):
+        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
+        init_balance: int = minimum_delegate_amount_for_decentralization * 2
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=init_balance)
+
+        # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        stake_amount: int = minimum_delegate_amount_for_decentralization
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_stake_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                value=stake_amount)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=3000 * ICX_IN_LOOP)
+
+        # register PRep
+        tx_list: list = []
+        for account in self._accounts[:PREP_MAIN_PREPS]:
+            tx: dict = self.create_register_prep_tx(from_=account)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                     origin_delegations=[
+                                                         (
+                                                             self._accounts[i],
+                                                             minimum_delegate_amount_for_decentralization
+                                                         )
+                                                     ])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # get main prep
+        response: dict = self.get_main_prep_list()
+        expected_response: dict = {
+            "preps": [],
+            "totalDelegated": 0
+        }
+        self.assertEqual(expected_response, response)
+
+        # set Revision REV_IISS (decentralization)
+        self.set_revision(Revision.DECENTRALIZATION.value)
+
+        self.make_blocks_to_end_calculation()
 
     def test_register_prep_with_invalid_icx_value(self):
         # failure case: If not input value when calling 'registerPRep' method, should not be registered
@@ -57,7 +115,40 @@ class TestIntegratePrepRegistration(TestIISSBase):
                            value=excess_value,
                            expected_status=False)
 
-    def test_register_prep(self):
+    def test_register_prep_burn_event_log_should_be_fixed_after_revision_9(self):
+        preps: list = self.create_eoa_accounts(3)
+        self.distribute_icx(accounts=preps,
+                            init_balance=3000 * ICX_IN_LOOP)
+        config_value = self._config[ConfigKey.PREP_REGISTRATION_FEE]
+
+        # TEST: When revision is before 'DECENTRALIZATION', burn signature should not have type format
+        prep = preps[0]
+
+        reg_tx_result: 'TransactionResult' = self.register_prep(from_=prep, value=config_value)[0]
+        actual_burn_signature = reg_tx_result.event_logs[0].indexed[0]
+
+        self.assertEqual("ICXBurned", actual_burn_signature)
+
+        # TEST: When revision is between 'DECENTRALIZATION' and 'FIX_BURN_EVENT_SIGNATURE',
+        # burn signature should not have type format
+        self._init_decentralized()
+        prep = preps[1]
+
+        reg_tx_result: 'TransactionResult' = self.register_prep(from_=prep, value=config_value)[1]
+        actual_burn_signature = reg_tx_result.event_logs[0].indexed[0]
+
+        self.assertEqual("ICXBurned", actual_burn_signature)
+
+        # TEST: After 'FIX_BURN_EVENT_SIGNATURE' revision is accepted, burn signature should have type format
+        self.set_revision(Revision.FIX_BURN_EVENT_SIGNATURE.value)
+        prep = preps[2]
+
+        reg_tx_result: 'TransactionResult' = self.register_prep(from_=prep, value=config_value)[1]
+        actual_burn_signature = reg_tx_result.event_logs[0].indexed[0]
+
+        self.assertEqual("ICXBurned(int)", actual_burn_signature)
+
+    def test_register_prep_burn_signature(self):
         # success case: If input 2000 ICX as value when calling 'registerPRep' method, should be registered successfully
         expected_burned_amount = 2_000 * ICX_IN_LOOP
         expected_total_supply: int = self.get_total_supply()
