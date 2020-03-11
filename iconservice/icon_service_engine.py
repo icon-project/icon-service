@@ -959,8 +959,7 @@ class IconServiceEngine(ContextContainer):
 
         return tx_result
 
-    @classmethod
-    def _process_base_transaction(cls,
+    def _process_base_transaction(self,
                                   context: 'IconScoreContext',
                                   issue_data: dict):
 
@@ -987,6 +986,8 @@ class IconServiceEngine(ContextContainer):
 
         tx_result.status = TransactionResult.SUCCESS
         tx_result.event_logs = context.event_logs
+        if context.revision >= Revision.ADD_LOGS_BLOOM_ON_BASE_TX.value:
+            tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
         tx_result.traces = context.traces
 
         return tx_result
