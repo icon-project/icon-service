@@ -154,4 +154,4 @@ class TestIntegrateDictDBPatch(TestIntegrateBase):
                     }
                 }
             )
-        self.assertEqual(e.exception.message, "Not Supported on DictDB")
+        self.assertEqual(e.exception.message, "Iteration not supported in DictDB")
