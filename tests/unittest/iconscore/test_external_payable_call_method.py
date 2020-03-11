@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
-from functools import wraps
 from unittest.mock import Mock
 
 import pytest
@@ -31,15 +29,6 @@ from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
 from iconservice.iconscore.icon_score_constant import ATTR_SCORE_CALL
 from iconservice.iconscore.icon_score_context import IconScoreContext
-
-
-def decorator(func):
-    @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
-        res = func(calling_obj, *args, **kwargs)
-        return res
-
-    return __wrapper
 
 
 class ExternalCallClass(IconScoreBase):
@@ -117,7 +106,7 @@ class ChildCallClass(BaseCallClass):
         pass
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def context():
     IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
     context = Mock(spec=IconScoreContext)
@@ -136,7 +125,22 @@ class TestExternalPayableCall:
         (IconScoreContextType.QUERY, IconScoreFuncType.READONLY, 0, "func1", (), {}),
         (IconScoreContextType.QUERY, IconScoreFuncType.WRITABLE, 0, "func2", (), {"value": 1}),
     ])
-    def test_external_call(self, context, context_type, func_type, msg_value, func_name, args, kwargs):
+    def test_external_call1(self, context, context_type, func_type, msg_value, func_name, args, kwargs):
+        context.context_type = context_type
+        context.func_type = func_type
+        context.msg.value = msg_value
+        test_score = ExternalCallClass(Mock())
+        func = getattr(test_score, ATTR_SCORE_CALL)
+
+        func(func_name, args, kwargs)
+
+    @pytest.mark.parametrize("context_type", [t for t in IconScoreContextType])
+    @pytest.mark.parametrize("func_type", [t for t in IconScoreFuncType])
+    @pytest.mark.parametrize("msg_value", [0])
+    @pytest.mark.parametrize("func_name", ["func1", "func2"])
+    @pytest.mark.parametrize("args", [()])
+    @pytest.mark.parametrize("kwargs", [{}, {"value": 1}])
+    def test_external_call2(self, context, context_type, func_type, msg_value, func_name, args, kwargs):
         context.context_type = context_type
         context.func_type = func_type
         context.msg.value = msg_value
@@ -190,4 +194,38 @@ class TestExternalPayableCall:
         test_score = ChildCallClass(Mock())
         func = getattr(test_score, ATTR_SCORE_CALL)
 
+        func(func_name, args, kwargs)
+
+    @pytest.mark.parametrize("context_type", [context_type for context_type in IconScoreContextType])
+    @pytest.mark.parametrize("func_type", [func_type for func_type in IconScoreFuncType])
+    @pytest.mark.parametrize("msg_value, func_name, args, kwargs", [
+        (0, "func1", (), {}),
+        pytest.param(0, "func2", (), {},
+                     marks=pytest.mark.xfail(raises=MethodNotFoundException, reason="Method does not exists"))
+    ])
+    def test_inherit_call_case_2(self,
+                                 context,
+                                 context_type,
+                                 func_type, msg_value, func_name, args, kwargs):
+        context.context_type = context_type
+        context.func_type = func_type
+        context.msg.value = msg_value
+        test_score = ChildCallClass(Mock())
+        func = getattr(test_score, ATTR_SCORE_CALL)
+
+        func(func_name, args, kwargs)
+
+    @pytest.mark.parametrize("func_name", [
+        "func1",
+        pytest.param("func2", marks=pytest.mark.xfail(raises=MethodNotFoundException, reason="Method does not exists"))
+    ])
+    def test_inherit_call_case_3(self, context, func_name):
+        args = ()
+        kwargs = {}
+        context.context_type = IconScoreContextType.INVOKE
+        context.func_type = IconScoreFuncType.WRITABLE
+        context.msg.value = 0
+
+        test_score = ChildCallClass(Mock())
+        func = getattr(test_score, ATTR_SCORE_CALL)
         func(func_name, args, kwargs)
