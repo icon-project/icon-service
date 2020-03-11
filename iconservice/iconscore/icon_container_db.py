@@ -217,7 +217,7 @@ class DictDB(object):
         self._db.delete(get_encoded_key(key))
 
     def __iter__(self):
-        raise InvalidContainerAccessException("Not Supported iter function on DictDB")
+        raise InvalidContainerAccessException("Iteration not supported in DictDB")
 
 
 class ArrayDB(object):

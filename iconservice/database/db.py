@@ -16,8 +16,8 @@
 from typing import TYPE_CHECKING, Optional, Tuple, Iterable
 
 import plyvel
-
 from iconcommons.logger import Logger
+
 from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
@@ -384,13 +384,13 @@ class IconScoreDatabase(ContextGetter):
         self._context_db = context_db
         self._observer: Optional[DatabaseObserver] = None
 
-        self.prefix_hash_key: bytes = self._make_prefix_hash_key()
+        self._prefix_hash_key: bytes = self._make_prefix_hash_key()
 
     def _make_prefix_hash_key(self) -> bytes:
         data = [self.address.to_bytes()]
         if self._prefix is not None:
             data.append(self._prefix)
-        return b'|'.join(data) + b'|'
+        return b'|'.join(data)
 
     def get(self, key: bytes) -> bytes:
         """
@@ -436,7 +436,7 @@ class IconScoreDatabase(ContextGetter):
                 'prefix is None in IconScoreDatabase.get_sub_db()')
 
         if self._prefix is not None:
-            prefix = b'|'.join([self._prefix, prefix])
+            prefix = b'|'.join((self._prefix, prefix))
 
         return IconScoreSubDatabase(self.address, self, prefix)
 
@@ -469,7 +469,7 @@ class IconScoreDatabase(ContextGetter):
         :return: key bytes
         """
 
-        return b''.join((self.prefix_hash_key, key))
+        return b'|'.join((self._prefix_hash_key, key))
 
     def _validate_ownership(self):
         """Prevent a SCORE from accessing the database of another SCORE
@@ -494,13 +494,13 @@ class IconScoreSubDatabase(object):
         self._prefix = prefix
         self._score_db = score_db
 
-        self.prefix_hash_key: bytes = self._make_prefix_hash_key()
+        self._prefix_hash_key: bytes = self._make_prefix_hash_key()
 
     def _make_prefix_hash_key(self) -> bytes:
         data = []
         if self._prefix is not None:
             data.append(self._prefix)
-        return b'|'.join(data) + b'|'
+        return b'|'.join(data)
 
     def get(self, key: bytes) -> bytes:
         """
@@ -533,7 +533,7 @@ class IconScoreSubDatabase(object):
             raise InvalidParamsException("Invalid prefix")
 
         if self._prefix is not None:
-            prefix = b'|'.join([self._prefix, prefix])
+            prefix = b'|'.join((self._prefix, prefix))
 
         return IconScoreSubDatabase(self.address, self._score_db, prefix)
 
@@ -557,4 +557,4 @@ class IconScoreSubDatabase(object):
         :return: key bytes
         """
 
-        return b''.join((self.prefix_hash_key, key))
+        return b'|'.join((self._prefix_hash_key, key))
