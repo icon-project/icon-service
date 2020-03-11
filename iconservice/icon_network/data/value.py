@@ -36,6 +36,7 @@ class Value(metaclass=ABCMeta):
         pass
 
 
+# Todo: check values on __init__
 class StepCosts(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_COSTS
 

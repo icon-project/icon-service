@@ -401,3 +401,21 @@ class TestINVMigration(TestIISSBase):
 
         # TEST: After fail to update governance, INVs related logic should be worked
         self.check_inv(False)
+
+    def test_when_change_the_invs_while_migration_should_be_succeed(self):
+        # TEST: Test case about migration success
+        expected_status: bool = True
+        self.update_governance(version="0_0_6")
+
+        # Act
+        self.update_governance(version="1_0_1_change_the_value_of_invs_on_migrations",
+                               expected_status=expected_status,
+                               root_path="sample_builtin_for_tests")
+
+        assert self._get_is_migrated_from_is() is True
+        assert self._inv_is_stored_on_state_db() is True
+        assert self._is_migration_flag_stored_on_state_db() is True
+        assert self._get_version() == "1.0.1"
+
+        # TEST: After success to update governance, INVs related logic should be worked
+        self.check_inv(True)

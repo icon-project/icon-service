@@ -66,7 +66,7 @@ def generate_inv_container(is_migrated: bool, revision: int = 0):
     score_black_list: list = []
     import_white_list = {"iconservice": ['*']}
     inv_container = INVContainer(is_migrated=False)
-    inv_container._cache = {
+    inv_container._icon_network_values = {
         IconNetworkValueType.REVISION_CODE: RevisionCode(revision),
         IconNetworkValueType.SCORE_BLACK_LIST: ScoreBlackList(score_black_list),
         IconNetworkValueType.STEP_PRICE: StepPrice(step_price),
