@@ -191,3 +191,37 @@ class TestExternalPayableCall:
         func = getattr(test_score, ATTR_SCORE_CALL)
 
         func(func_name, args, kwargs)
+
+    @pytest.mark.parametrize("context_type", [context_type for context_type in IconScoreContextType])
+    @pytest.mark.parametrize("func_type", [func_type for func_type in IconScoreFuncType])
+    @pytest.mark.parametrize("msg_value, func_name, args, kwargs", [
+        (0, "func1", (), {}),
+        pytest.param(0, "func2", (), {},
+                     marks=pytest.mark.xfail(raises=MethodNotFoundException, reason="Method does not exists"))
+    ])
+    def test_inherit_call_case_2(self,
+                                 context,
+                                 context_type,
+                                 func_type, msg_value, func_name, args, kwargs):
+        context.context_type = context_type
+        context.func_type = func_type
+        context.msg.value = msg_value
+        test_score = ChildCallClass(Mock())
+        func = getattr(test_score, ATTR_SCORE_CALL)
+
+        func(func_name, args, kwargs)
+
+    @pytest.mark.parametrize("func_name", [
+        "func1",
+        pytest.param("func2", marks=pytest.mark.xfail(raises=MethodNotFoundException, reason="Method does not exists"))
+    ])
+    def test_inherit_call_case_3(self, context, func_name):
+        args = ()
+        kwargs = {}
+        context.context_type = IconScoreContextType.INVOKE
+        context.func_type = IconScoreFuncType.WRITABLE
+        context.msg.value = 0
+
+        test_score = ChildCallClass(Mock())
+        func = getattr(test_score, ATTR_SCORE_CALL)
+        func(func_name, args, kwargs)
