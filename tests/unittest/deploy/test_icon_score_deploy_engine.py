@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from unittest.mock import Mock
+from typing import Optional
+from unittest.mock import Mock, PropertyMock
 
 import pytest
 
@@ -25,16 +26,15 @@ from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.deploy import engine as isde
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo
-from iconservice.icon_constant import DeployType
+from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo, Storage
+from iconservice.icon_constant import DeployType, IconScoreContextType
 from iconservice.icon_constant import IconServiceFlag
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.icx import IcxEngine
+from iconservice.utils import ContextStorage
 from tests import create_address, create_tx_hash, create_block_hash
-
 
 EOA1 = create_address(AddressPrefix.EOA)
 EOA2 = create_address(AddressPrefix.EOA)
@@ -47,38 +47,27 @@ class MockScore(object):
 
 @pytest.fixture(scope="function")
 def context():
-    ctx = Mock(spec=IconScoreContext)
-
-    tx = Mock(spec=Transaction)
-    tx.configure_mock(tx_hash=create_tx_hash(), origin=EOA1)
-    ctx.attach_mock(tx, "tx")
-
-    block = Mock(spec=Block)
-    block.configure_mock(height=0, block_hash=create_block_hash(), timestamp=0,
-                         prev_hash=None, cumulative_fee=0)
-    ctx.attach_mock(block, "block")
-
-    msg = Mock(spec=Message)
-    msg.configure_mock(sender=EOA1, value=0)
-    ctx.attach_mock(msg, "msg")
-
-    icon_score_mapper = Mock(spec=IconScoreMapper)
-    ctx.attach_mock(icon_score_mapper, "icon_score_mapper")
-
-    ctx.attach_mock(Mock(spec=IcxEngine), "icx")
+    ctx = IconScoreContext(IconScoreContextType.DIRECT)
+    ctx.tx = Transaction(tx_hash=create_tx_hash(), origin=EOA1)
+    ctx.block = Block(block_height=0, block_hash=create_block_hash(), timestamp=0, prev_hash=None)
+    ctx.msg = Message(sender=EOA1, value=0)
+    ctx.icon_score_mapper = IconScoreMapper()
     ctx.new_icon_score_mapper = {}
-    ctx.revision = 0
-
-    ctx.attach_mock(Mock(spec=list), "event_logs")
-    ctx.attach_mock(Mock(spec=list), "traces")
-    ctx.attach_mock(Mock(spec=Address), "current_address")
+    ctx.event_logs = []
+    ctx.traces = []
+    ctx.current_address = EOA1
+    IconScoreContext.storage = ContextStorage(deploy=Mock(spec=Storage), fee=None, icx=None,iiss=None, prep=None,
+                                              issue=None, meta=None, rc=None, inv=None)
 
     ContextContainer._push_context(ctx)
     yield ctx
     ContextContainer._pop_context()
 
 
-def test_invoke(context, mocker):
+@pytest.mark.parametrize("to,score_address,expect",
+                         [(GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS, pytest.raises(AssertionError)),
+                          (GOVERNANCE_SCORE_ADDRESS, None, pytest.raises(AssertionError))])
+def test_invoke(context, mocker, to, score_address, expect):
     """case when icon_score_address is in (None, ZERO_ADDRESS)"""
     mocker.patch.object(IconScoreContextUtil, "validate_score_blacklist")
     mocker.patch.object(IconScoreContextUtil, "is_service_flag_on")
@@ -89,192 +78,67 @@ def test_invoke(context, mocker):
 
     score_deploy_engine.open()
 
-    with pytest.raises(AssertionError):
-        score_deploy_engine.invoke(context, GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS, {})
-    IconScoreContextUtil.validate_score_blacklist.assert_not_called()
-    context.storage.deploy.put_deploy_info_and_tx_params.assert_not_called()
-    score_deploy_engine._is_audit_needed.assert_not_called()
-    score_deploy_engine.deploy.assert_not_called()
-
-    with pytest.raises(AssertionError):
-        score_deploy_engine.invoke(context, GOVERNANCE_SCORE_ADDRESS, None, {})
+    with expect:
+        score_deploy_engine.invoke(context, to, score_address, {})
     IconScoreContextUtil.validate_score_blacklist.assert_not_called()
     context.storage.deploy.put_deploy_info_and_tx_params.assert_not_called()
     score_deploy_engine._is_audit_needed.assert_not_called()
     score_deploy_engine.deploy.assert_not_called()
 
 
-def test_is_audit_needed_case1(context, mocker):
+def set_is_audit_needed(m, is_service_flag_one_return_value: bool, get_owner_return_value: Address, revision: int):
+    m.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=is_service_flag_one_return_value)
+    m.patch.object(IconScoreContextUtil, "get_owner", return_value=get_owner_return_value)
+    m.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
+
+
+@pytest.mark.parametrize("audit_flag", [True, False])
+def test_is_audit_needed_case_revision0(context, mocker, audit_flag):
     """case when revision0, owner, audit false"""
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=False)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
+    set_is_audit_needed(mocker, audit_flag, EOA1, 0)
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
 
     result = score_deploy_engine._is_audit_needed(context, SCORE_ADDRESS)
     IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
     IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
+    assert result is audit_flag
+    mocker.stopall()
 
 
-def test_is_audit_needed_case2(context, mocker):
-    """case when revision0, owner x, audit false"""
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=False)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA2)
+@pytest.mark.parametrize("owner", [EOA1, EOA2])
+@pytest.mark.parametrize("score_address", [SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS])
+@pytest.mark.parametrize("audit_flag", [True, False])
+def test_is_audit_needed_case_revision_gt2(context, mocker, audit_flag, owner, score_address):
+    """
+    case when revision >= 2
+    tx sender = EOA1
+    """
+    set_is_audit_needed(mocker, audit_flag, owner, 2)
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
+    is_owner = owner == EOA1
+    is_system_score = score_address == GOVERNANCE_SCORE_ADDRESS
 
-    result = score_deploy_engine._is_audit_needed(context, SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
+    result = score_deploy_engine._is_audit_needed(context, score_address)
+    IconScoreContextUtil.get_owner.assert_called_with(context, score_address)
     IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
+    assert result is (audit_flag and not (is_system_score and is_owner))
+    mocker.stopall()
 
 
-def test_is_audit_needed_case3(context, mocker):
-    """case when revision0, owner, audit true"""
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=True)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is True
+def set_deploy_case_tx_param(m, get_deploy_tx_param_return_value: Optional[IconScoreDeployTXParams]):
+    m.patch.object(isde.Engine, "_score_deploy")
+    m.patch.object(IconScoreContext.storage.deploy, "update_score_info")
+    m.patch.object(IconScoreContext.storage.deploy, "get_deploy_tx_params",
+                   return_value=get_deploy_tx_param_return_value)
 
 
-def test_is_audit_needed_case4(context, mocker):
-    """case when revision0, owner x, audit true"""
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=True)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA2)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is True
-
-
-def test_is_audit_needed_case5(context, mocker):
-    """case when revision2, transaction requested by owner, audit true, system_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=True)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
-
-
-def test_is_audit_needed_case6(context, mocker):
-    """case when revision2, transaction requested by stranger, audit true, system_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=True)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA2)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is True
-
-
-def test_is_audit_needed_case7(context, mocker):
-    """case when revision2, transaction requested by owner, audit false, system_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=False)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
-
-
-def test_is_audit_needed_case8(context, mocker):
-    """case when revision2, transaction requested by stranger, audit false, system_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=False)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
-
-
-def test_is_audit_needed_case9(context, mocker):
-    """case when revision2, transaction requested by owner, audit true, normal_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=True)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is True
-
-
-def test_is_audit_needed_case10(context, mocker):
-    """case when revision2, transaction requested by stranger, audit true, normal_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=True)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA2)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is True
-
-
-def test_is_audit_needed_case11(context, mocker):
-    """case when revision2, transaction requested by owner, audit false, normal_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=False)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
-
-
-def test_is_audit_needed_case12(context, mocker):
-    """case when revision2, transaction requested by stranger, audit false, normal_score"""
-    context.revision = 2
-    mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=False)
-    mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=EOA1)
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-
-    result = score_deploy_engine._is_audit_needed(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.get_owner.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS)
-    IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
-    assert result is False
-
-
-def test_deploy_case1(context):
+def test_deploy_case_tx_param_none(context, mocker):
     """case when tx_param is None"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
-    score_deploy_engine._score_deploy = Mock()
-    context.storage.deploy.update_score_info = Mock()
-    context.storage.deploy.get_deploy_tx_params = Mock(return_value=None)
+    set_deploy_case_tx_param(mocker, get_deploy_tx_param_return_value=None)
 
     with pytest.raises(InvalidParamsException) as e:
         score_deploy_engine.deploy(context, context.tx.hash)
@@ -283,23 +147,23 @@ def test_deploy_case1(context):
     assert e.value.code == ExceptionCode.INVALID_PARAMETER
     score_deploy_engine._score_deploy.assert_not_called()
     context.storage.deploy.update_score_info.assert_not_called()
+    mocker.stopall()
 
 
-def test_deploy_case2(context):
+def test_deploy_case_tx_param_not_none(context, mocker):
     """case when tx_param is not None"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
     tx_params = Mock(spec=IconScoreDeployTXParams)
     tx_params.configure_mock(score_address=GOVERNANCE_SCORE_ADDRESS)
-    score_deploy_engine._score_deploy = Mock()
-    context.storage.deploy.update_score_info = Mock()
-    context.storage.deploy.get_deploy_tx_params = Mock(return_value=tx_params)
+    set_deploy_case_tx_param(mocker, get_deploy_tx_param_return_value=tx_params)
 
     score_deploy_engine.deploy(context, context.tx.hash)
 
     score_deploy_engine._score_deploy.assert_called_with(context, tx_params)
     context.storage.deploy. \
         update_score_info.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
+    mocker.stopall()
 
 
 def test_score_deploy_case1(context):
@@ -321,7 +185,6 @@ def test_score_deploy_case2(context):
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
     score_deploy_engine._on_deploy = Mock()
-    score_deploy_engine._on_deploy = Mock()
     context.legacy_tbears_mode = False
     tx_params = Mock(spec=IconScoreDeployTXParams)
     tx_params.configure_mock(deploy_data={'contentType': 'application/tbears', 'content': '0x1234'})
@@ -338,7 +201,6 @@ def test_score_deploy_case3(context):
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
     score_deploy_engine._on_deploy = Mock()
-    score_deploy_engine._on_deploy = Mock()
     context.legacy_tbears_mode = False
     tx_params = Mock(spec=IconScoreDeployTXParams)
     tx_params.configure_mock(deploy_data={'contentType': 'application/zip', 'content': '0x1234'})
@@ -353,7 +215,6 @@ def test_score_deploy_case4(context):
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
     score_deploy_engine._on_deploy = Mock()
-    score_deploy_engine._on_deploy = Mock()
     context.legacy_tbears_mode = False
     tx_params = Mock(spec=IconScoreDeployTXParams)
     tx_params.configure_mock(deploy_data={'contentType': 'wrong/content', 'content': '0x1234'})
@@ -365,56 +226,39 @@ def test_score_deploy_case4(context):
     score_deploy_engine._on_deploy.assert_not_called()
 
 
-def test_write_score_to_filesystem_case1(context):
+@pytest.mark.parametrize("deploy_data, call_method",
+                         [
+                             ({"contentType": "application/tbears", 'content': '0x1234'},
+                              "_write_score_to_score_deploy_path_on_tbears_mode"),
+                             ({"contentType": "application/zip", 'content': '0x1234'},
+                              "_write_score_to_score_deploy_path"),
+                         ])
+def test_write_score_to_filesystem(context, mocker, deploy_data, call_method):
     """tbears mode"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
     content = '0x1234'
-    deploy_data = {'contentType': 'application/tbears', 'content': content}
-    score_deploy_engine._write_score_to_score_deploy_path_on_tbears_mode = Mock()
+    mocker.patch.object(isde.Engine, call_method)
 
     score_deploy_engine._write_score_to_filesystem(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, deploy_data)
-    score_deploy_engine._write_score_to_score_deploy_path_on_tbears_mode.\
-        assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, content)
+    method = getattr(score_deploy_engine, call_method)
+    method.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, content)
+    mocker.stopall()
 
 
-def test_write_score_to_filesystem_case2(context):
-    """normal mode"""
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-    content = '0x1234'
-    deploy_data = {'contentType': 'application/zip', 'content': content}
-    score_deploy_engine._write_score_to_score_deploy_path = Mock()
-
-    score_deploy_engine._write_score_to_filesystem(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, deploy_data)
-    score_deploy_engine._write_score_to_score_deploy_path. \
-        assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, content)
-
-
-def test_create_score_info_case1(context, mocker):
+@pytest.mark.parametrize("get_score_info_return_value", [None, 'dummy'])
+def test_create_score_info(context, mocker, get_score_info_return_value):
     """case when current_score_info is None"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
-    mocker.patch.object(IconScoreContextUtil, "get_score_info", return_value=None)
+    score_info = None if get_score_info_return_value is None else Mock(score_db=get_score_info_return_value)
     mocker.patch.object(IconScoreContextUtil, "create_score_info")
+    mocker.patch.object(IconScoreContextUtil, "get_score_info", return_value=score_info)
 
     score_deploy_engine._create_score_info(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
-    IconScoreContextUtil.create_score_info.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
-
-
-def test_create_score_info_case2(context, mocker):
-    """case when current_score_info is not None"""
-    db = 'db'
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-    mocker.patch.object(IconScoreContextUtil, "get_score_info", return_value=None)
-    mocker.patch.object(IconScoreContextUtil, "create_score_info")
-    score_info_mock = Mock()
-    score_info_mock.configure_mock(score_db=db)
-    IconScoreContextUtil.get_score_info.return_value = score_info_mock
-
-    score_deploy_engine._create_score_info(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
-    IconScoreContextUtil.create_score_info.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, db)
+    IconScoreContextUtil.create_score_info.\
+        assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, get_score_info_return_value)
+    mocker.stopall()
 
 
 def test_write_score_to_score_deploy_path_on_tbears_mode(context, mocker):
@@ -433,20 +277,24 @@ def test_write_score_to_score_deploy_path_on_tbears_mode(context, mocker):
     isde.get_score_path.assert_called_with(context.score_root_path, GOVERNANCE_SCORE_ADDRESS)
     os.makedirs.assert_called_with(score_path, exist_ok=True)
     os.symlink.assert_called_with(None, score_deploy_path, target_is_directory=True)
+    mocker.stopall()
+
+
+def set_write_score_to_score_deploy_path(m, score_path: str, score_deploy_path: str, revision: int):
+    m.patch.object(IconScoreDeployer, "deploy")
+    m.patch.object(IconScoreDeployer, "deploy_legacy")
+    m.patch("iconservice.deploy.engine.remove_path")
+    m.patch("iconservice.deploy.engine.get_score_deploy_path", return_value=score_deploy_path)
+    m.patch.object(os.path, "join", return_value=score_path)
+    m.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
 
 
 def test_write_score_to_score_deploy_path_case1(context, mocker):
     """case when revision3"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
-    score_path = 'score_path'
-    score_deploy_path = 'score_deploy_path'
-    mocker.patch.object(IconScoreDeployer, "deploy")
-    mocker.patch("iconservice.deploy.engine.remove_path")
-    mocker.patch("iconservice.deploy.engine.get_score_deploy_path", return_value=score_deploy_path)
-    mocker.patch.object(os.path, "join", return_value=score_path)
-    context.revision = 3
-    isde.get_score_deploy_path.return_value = 'score_deploy_path'
+    score_path, score_deploy_path = "score_path", "score_deploy_path"
+    set_write_score_to_score_deploy_path(mocker, score_path, score_deploy_path, 3)
 
     score_deploy_engine._write_score_to_score_deploy_path(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
 
@@ -455,39 +303,32 @@ def test_write_score_to_score_deploy_path_case1(context, mocker):
                                     f"0x{context.tx.hash.hex()}")
     isde.remove_path.assert_called_with(score_path)
     IconScoreDeployer.deploy.assert_called_with(score_deploy_path, None, 3)
+    mocker.stopall()
 
 
 def test_write_score_to_score_deploy_path_case2(context, mocker):
     """case when revision2"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
-    score_path = 'score_path'
-    score_deploy_path = 'score_deploy_path'
-    mocker.patch.object(IconScoreDeployer, "deploy")
-    mocker.patch("iconservice.deploy.engine.remove_path")
-    mocker.patch("iconservice.deploy.engine.get_score_deploy_path", return_value=score_deploy_path)
-    mocker.patch.object(os.path, "join", return_value=score_path)
-    context.revision = 2
+    score_path, score_deploy_path = "score_path", "score_deploy_path"
+    set_write_score_to_score_deploy_path(mocker, score_path, score_deploy_path, 2)
+
     score_deploy_engine._write_score_to_score_deploy_path(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
 
     isde.get_score_deploy_path.assert_called_with(context.score_root_path, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
     os.path.join.assert_not_called()
     isde.remove_path.assert_not_called()
     IconScoreDeployer.deploy.assert_called_with(score_deploy_path, None, 2)
+    mocker.stopall()
 
 
 def test_write_score_to_score_deploy_path_case3(context, mocker):
     """case when revision0"""
     score_deploy_engine = isde.Engine()
     score_deploy_engine.open()
-    score_path = 'score_path'
-    score_deploy_path = 'score_deploy_path'
-    isde.get_score_deploy_path.return_value = 'score_deploy_path'
-    mocker.patch.object(IconScoreDeployer, "deploy")
-    mocker.patch.object(IconScoreDeployer, "deploy_legacy")
-    mocker.patch("iconservice.deploy.engine.remove_path")
-    mocker.patch("iconservice.deploy.engine.get_score_deploy_path", return_value=score_deploy_path)
-    mocker.patch.object(os.path, "join", return_value=score_path)
+    score_path, score_deploy_path = "score_path", "score_deploy_path"
+    set_write_score_to_score_deploy_path(mocker, score_path, score_deploy_path, 0)
+
     score_deploy_engine._write_score_to_score_deploy_path(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
 
     isde.get_score_deploy_path.assert_called_with(context.score_root_path, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
@@ -495,6 +336,7 @@ def test_write_score_to_score_deploy_path_case3(context, mocker):
     isde.remove_path.assert_not_called()
     IconScoreDeployer.deploy.assert_not_called()
     IconScoreDeployer.deploy_legacy.assert_called_with(score_deploy_path, None)
+    mocker.stopall()
 
 
 def test_initialize_score_case1(mocker):
@@ -513,6 +355,7 @@ def test_initialize_score_case1(mocker):
     TypeConverter.make_annotations_from_method.assert_called_with(on_install)
     TypeConverter.convert_data_params.assert_called_with('annotations', params)
     on_install.assert_called_with(**params)
+    mocker.stopall()
 
 
 def test_initialize_score_case2(mocker):
@@ -531,6 +374,7 @@ def test_initialize_score_case2(mocker):
     TypeConverter.make_annotations_from_method.assert_called_with(on_update)
     TypeConverter.convert_data_params.assert_called_with('annotations', params)
     on_update.assert_called_with(**params)
+    mocker.stopall()
 
 
 def test_initialize_score_case3(mocker):
@@ -553,6 +397,7 @@ def test_initialize_score_case3(mocker):
     TypeConverter.make_annotations_from_method.assert_not_called()
     TypeConverter.convert_data_params.assert_not_called()
     on_strange.assert_not_called()
+    mocker.stopall()
 
 
 def test_on_deploy(context, mocker):
