@@ -16,3 +16,4 @@
 
 from .storage import Storage as INVStorage
 from .engine import Engine as INVEngine
+from .container import Container as INVContainer
