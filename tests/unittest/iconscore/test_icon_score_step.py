@@ -95,26 +95,26 @@ class TestGetDeployContentSize:
 
     @pytest.mark.parametrize("revision", [r.value for r in Revision if r.value < Revision.THREE.value])
     @pytest.mark.parametrize("input_data", [c for c in INPUT])
-    def test_get_deploy_content_size_less_than_revision3(self,
-                                                         mock_get_data_size_recursively,
-                                                         revision, input_data):
+    def test_get_deploy_content_size_less_than_revision_three(self,
+                                                              mock_get_data_size_recursively,
+                                                              revision, input_data):
         get_deploy_content_size(revision, input_data)
         mock_get_data_size_recursively.assert_called_once_with(input_data)
 
     @pytest.mark.parametrize("revision", [r.value for r in Revision if r.value > Revision.THREE.value])
     @pytest.mark.parametrize("input_data", [VALID_CONTENTS_DATA])
-    def test_valid_get_deploy_content_size_greater_than_revision3(self,
-                                                                  mock_get_data_size_recursively,
-                                                                  revision, input_data):
+    def test_valid_get_deploy_content_size_greater_than_revision_three(self,
+                                                                       mock_get_data_size_recursively,
+                                                                       revision, input_data):
         actual = get_deploy_content_size(revision, input_data)
         mock_get_data_size_recursively.assert_not_called()
         assert actual == len(input_data[2:]) // 2
 
     @pytest.mark.parametrize("revision", [r.value for r in Revision if r.value > Revision.THREE.value])
     @pytest.mark.parametrize("input_data", [i for i in INPUT])
-    def test_invalid_get_deploy_content_size_greater_than_revision3(self,
-                                                                    mock_get_data_size_recursively,
-                                                                    revision, input_data):
+    def test_invalid_get_deploy_content_size_greater_than_revision_three(self,
+                                                                         mock_get_data_size_recursively,
+                                                                         revision, input_data):
         with pytest.raises(InvalidRequestException) as e:
             get_deploy_content_size(revision, input_data)
 
