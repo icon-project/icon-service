@@ -15,60 +15,65 @@
 # limitations under the License.
 
 import importlib
-from unittest.mock import Mock
+from unittest import mock
 
 import pytest
 
 import iconservice.iconscore.utils as utils
-from iconservice.deploy.utils import convert_path_to_package_name
 from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from tests import create_address, create_tx_hash
 
 
 class TestSCORELoader:
-    score_deploy_path = "path"
-    package_name = "package_name"
-    main_file = "main_file_value"
-    main_score = "main_score_value"
-    ins_ret_value = "ins_ret_value"
+    VERSION = "version"
+    MAIN_MODULE = "main_module"
+    MAIN_FILE = "main_file"
+    MAIN_SCORE = "main_score"
 
     @pytest.fixture
-    def mock_utils(self, monkeypatch):
-        monkeypatch.setattr(utils, "get_score_deploy_path", Mock(return_value=self.score_deploy_path))
-        monkeypatch.setattr(utils, "get_package_name_by_address_and_tx_hash", Mock(return_value=self.package_name))
-        yield utils
-        monkeypatch.undo()
+    def mock_utils(self, mocker):
+        mocker.patch.object(utils, "get_score_deploy_path")
+        mocker.patch.object(utils, "get_package_name_by_address_and_tx_hash")
+        return utils
 
     @pytest.fixture
-    def mock_icon_score_class_loader(self, monkeypatch):
-        package_json = {
-            "version": "0.0,1",
-            "main_file": self.main_file,
-            "main_score": self.main_score
-        }
-        package_info = self.main_file, self.main_score
-
-        monkeypatch.setattr(IconScoreClassLoader, "_load_package_json", Mock(return_value=package_json))
-        monkeypatch.setattr(IconScoreClassLoader, "_get_package_info", Mock(return_value=package_info))
-        yield IconScoreClassLoader
-        monkeypatch.undo()
+    def mock_icon_score_class_loader(self, mocker):
+        mocker.patch.object(IconScoreClassLoader, "_load_package_json")
+        mocker.patch.object(IconScoreClassLoader, "_get_package_info")
+        return IconScoreClassLoader
 
     @pytest.fixture
-    def mock_importlib(self, monkeypatch):
+    def mock_importlib(self, mocker):
+        mocker.patch.object(importlib, "invalidate_caches")
+        mocker.patch.object(importlib, "import_module")
+        return importlib
 
-        ins = Mock()
-        ins.attach_mock(Mock(return_value=self.ins_ret_value), self.main_score)
-
-        monkeypatch.setattr(importlib, "invalidate_caches", Mock())
-        monkeypatch.setattr(importlib, "import_module", Mock(return_value=ins))
-        yield importlib
-        monkeypatch.undo()
-
-    def test_run(self, mock_utils, mock_icon_score_class_loader, mock_importlib):
+    @pytest.mark.parametrize("deploy_path, package_name, main_file, main_score, ins_ret_value", [
+        (".path", "addr.hash", "file", "Score", "ret_value"),
+    ])
+    def test_run(self,
+                 mock_utils, mock_icon_score_class_loader, mock_importlib,
+                 deploy_path, package_name, main_file, main_score, ins_ret_value):
         # Arrange
         address = create_address()
         tx_hash = create_tx_hash()
         score_root_path = ".score"
+
+        # mock
+        mock_utils.get_score_deploy_path.return_value = deploy_path
+        mock_utils.get_package_name_by_address_and_tx_hash.return_value = package_name
+
+        package_json = {
+            self.VERSION: mock.ANY,
+            self.MAIN_FILE: main_file,
+            self.MAIN_SCORE: main_score
+        }
+        mock_icon_score_class_loader._load_package_json.return_value = package_json
+        mock_icon_score_class_loader._get_package_info.return_value = main_file, main_score
+
+        ins = mock.Mock()
+        ins.attach_mock(mock.Mock(return_value=ins_ret_value), main_score)
+        mock_importlib.import_module.return_value = ins
 
         # Act
         ret_module = IconScoreClassLoader.run(score_address=address,
@@ -78,37 +83,19 @@ class TestSCORELoader:
         # Assert
         mock_utils.get_score_deploy_path.assert_called_once_with(score_root_path, address, tx_hash)
         mock_utils.get_package_name_by_address_and_tx_hash.assert_called_once_with(address, tx_hash)
-        mock_icon_score_class_loader._load_package_json.assert_called_once_with(mock_utils.get_score_deploy_path.return_value)
-        mock_icon_score_class_loader._get_package_info.assert_called_once_with(IconScoreClassLoader._load_package_json.return_value)
+        mock_icon_score_class_loader._load_package_json.assert_called_once_with(deploy_path)
+        mock_icon_score_class_loader._get_package_info.assert_called_once_with(package_json)
+        mock_importlib.invalidate_caches.assert_called_once()
+        mock_importlib.import_module.assert_called_once_with(f".{main_file}", package_name)
 
-        assert self.ins_ret_value == ret_module()
+        assert ins_ret_value == ret_module()
 
-
-@pytest.mark.parametrize("package_json, expected_module, expected_score", [
-    ({"version": "1.0.0", "main_module": "token", "main_score": "Token"}, "token", "Token"),
-    ({"version": "1.0.0", "main_file": "token", "main_score": "Token"}, "token", "Token"),
-    ({"version": "1.0.0", "main_file": "invalid.token", "main_module": "valid.token", "main_score": "Token"}, "valid.token", "Token"),
-])
-def test_get_package_info(package_json, expected_module, expected_score):
-    main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
-    assert expected_module == main_module
-    assert expected_score == main_score
-
-
-# TODO unused test case
-def test_make_pkg_root_import():
-    address = '010cb2b5d7cca1dec18c51de595155a4468711d4f4'
-    tx_hash = '0x49485e08589256a68e02a63fa3484b16edd322a729394fbd6b543d77a7f68621'
-    score_root_path = './.score'
-    score_path = f'{score_root_path}/{address}/{tx_hash}'
-    expected_import_name: str = f'{address}.{tx_hash}'
-    index: int = len(score_root_path)
-
-    import_name: str = convert_path_to_package_name(score_path[index:])
-    assert import_name == expected_import_name
-
-    score_root_path = '/haha/hoho/hehe/score/'
-    index: int = len(score_root_path)
-    score_path = f'{score_root_path}/{address}/{tx_hash}'
-    import_name: str = convert_path_to_package_name(score_path[index:])
-    assert import_name == expected_import_name
+    @pytest.mark.parametrize("package_json, expected_module, expected_score", [
+        ({VERSION: mock.ANY, MAIN_MODULE: "token", MAIN_SCORE: "Token"}, "token", "Token"),
+        ({VERSION: mock.ANY, MAIN_FILE: "token", MAIN_SCORE: "Token"}, "token", "Token"),
+        ({VERSION: mock.ANY, MAIN_FILE: "invalid.token", MAIN_MODULE: "valid.token", MAIN_SCORE: "Token"}, "valid.token", "Token"),
+    ])
+    def test_get_package_info(self, package_json, expected_module, expected_score):
+        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
+        assert expected_module == main_module
+        assert expected_score == main_score

@@ -23,6 +23,8 @@ from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
 from iconservice.rollback.rollback_manager import RollbackManager
+from iconservice.score_loader.icon_builtin_score_loader import IconBuiltinScoreLoader
+from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
@@ -38,7 +40,6 @@ from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader, WALDBType
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
-from iconservice.score_loader.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
@@ -49,7 +50,6 @@ from .icon_constant import (
 from .icon_network import INVEngine, INVStorage
 from .iconscore.context.context import ContextContainer
 from .iconscore.icon_pre_validator import IconPreValidator
-from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
@@ -80,7 +80,6 @@ from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
-    from iconcommons.icon_config import IconConfig
     from .prep.data import Term
     from .iiss.storage import RewardRate
 
@@ -125,7 +124,7 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
 
-    def open(self, conf: 'IconConfig'):
+    def open(self, conf: dict):
         """Get necessary parameters and initialize diverse objects
 
         :param conf:

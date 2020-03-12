@@ -119,6 +119,9 @@ def context():
 
 
 class TestExternalPayableCall:
+
+    # Todo: compare exception case between 'test_external_call1' and 'test_external_call2'
+
     @pytest.mark.parametrize("context_type, func_type, msg_value, func_name, args, kwargs", [
         (IconScoreContextType.INVOKE, IconScoreFuncType.READONLY, 0, "func1", (), {}),
         (IconScoreContextType.INVOKE, IconScoreFuncType.WRITABLE, 0, "func2", (), {"value": 1}),
@@ -206,7 +209,8 @@ class TestExternalPayableCall:
     def test_inherit_call_case_2(self,
                                  context,
                                  context_type,
-                                 func_type, msg_value, func_name, args, kwargs):
+                                 func_type,
+                                 msg_value, func_name, args, kwargs):
         context.context_type = context_type
         context.func_type = func_type
         context.msg.value = msg_value
