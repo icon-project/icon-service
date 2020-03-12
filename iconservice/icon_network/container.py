@@ -91,8 +91,6 @@ class ValueConverter(object):
 
 class Container(object):
     class BatchDict(dict):
-        MIGRATION_KEY = "is_migrated"
-
         def __init__(self):
             super().__init__()
             self._migration_trigger: bool = False
