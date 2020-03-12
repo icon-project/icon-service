@@ -56,7 +56,7 @@ def context():
     ctx.event_logs = []
     ctx.traces = []
     ctx.current_address = EOA1
-    IconScoreContext.storage = ContextStorage(deploy=Mock(spec=Storage), fee=None, icx=None,iiss=None, prep=None,
+    IconScoreContext.storage = ContextStorage(deploy=Mock(spec=Storage), fee=None, icx=None, iiss=None, prep=None,
                                               issue=None, meta=None, rc=None, inv=None)
 
     ContextContainer._push_context(ctx)
@@ -166,64 +166,49 @@ def test_deploy_case_tx_param_not_none(context, mocker):
     mocker.stopall()
 
 
-def test_score_deploy_case1(context):
-    """test for tbears mode, legacy_tbears_mode is True"""
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-    score_deploy_engine._on_deploy = Mock()
-    context.legacy_tbears_mode = True
-    tx_params = Mock(spec=IconScoreDeployTXParams)
-    tx_params.configure_mock(deploy_data={'contentType': 'application/tbears', 'content': '0x1234'})
+class TestScoreDeploy:
+    content = f"0x{b'content'.hex()}"
 
-    score_deploy_engine._score_deploy(context, tx_params)
+    @pytest.fixture
+    def mock_engine(self):
+        engine = isde.Engine()
+        engine._on_deploy = Mock()
+        return engine
 
-    score_deploy_engine._on_deploy.assert_called_with(context, tx_params)
+    @pytest.mark.parametrize("tbears_mode", [True, False])
+    def test_score_deploy_tbears_mode(self,
+                                      context, mock_engine,
+                                      tbears_mode):
+        context.legacy_tbears_mode = tbears_mode
 
+        if tbears_mode:
+            deploy_data = {'contentType': 'application/tbears', 'content': self.content}
+        else:
+            deploy_data = {'contentType': 'application/zip', 'content': self.content}
 
-def test_score_deploy_case2(context):
-    """test for tbears mode, and legacy_tbears_mode is False"""
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-    score_deploy_engine._on_deploy = Mock()
-    context.legacy_tbears_mode = False
-    tx_params = Mock(spec=IconScoreDeployTXParams)
-    tx_params.configure_mock(deploy_data={'contentType': 'application/tbears', 'content': '0x1234'})
+        tx_params = Mock(spec=IconScoreDeployTXParams)
+        tx_params.configure_mock(deploy_data=deploy_data)
 
-    with pytest.raises(InvalidParamsException) as e:
-        score_deploy_engine._score_deploy(context, tx_params)
-    assert e.value.code == ExceptionCode.INVALID_PARAMETER
-    assert e.value.message == "Invalid contentType: application/tbears"
-    score_deploy_engine._on_deploy.assert_not_called()
+        mock_engine._score_deploy(context, tx_params)
+        mock_engine._on_deploy.assert_called_with(context, tx_params)
 
+    @pytest.mark.parametrize("content_type", [
+        "application/tbears",
+        "wrong/content"
+    ])
+    def test_score_deploy_invalid_content_type(self,
+                                               context, mock_engine,
+                                               content_type):
+        context.legacy_tbears_mode = False
 
-def test_score_deploy_case3(context):
-    """test for zip mode"""
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-    score_deploy_engine._on_deploy = Mock()
-    context.legacy_tbears_mode = False
-    tx_params = Mock(spec=IconScoreDeployTXParams)
-    tx_params.configure_mock(deploy_data={'contentType': 'application/zip', 'content': '0x1234'})
+        tx_params = Mock(spec=IconScoreDeployTXParams)
+        tx_params.configure_mock(deploy_data={'contentType': content_type, 'content': self.content})
 
-    score_deploy_engine._score_deploy(context, tx_params)
-
-    score_deploy_engine._on_deploy.assert_called_with(context, tx_params)
-
-
-def test_score_deploy_case4(context):
-    """test for wrong contentType"""
-    score_deploy_engine = isde.Engine()
-    score_deploy_engine.open()
-    score_deploy_engine._on_deploy = Mock()
-    context.legacy_tbears_mode = False
-    tx_params = Mock(spec=IconScoreDeployTXParams)
-    tx_params.configure_mock(deploy_data={'contentType': 'wrong/content', 'content': '0x1234'})
-
-    with pytest.raises(InvalidParamsException) as e:
-        score_deploy_engine._score_deploy(context, tx_params)
-    assert e.value.code == ExceptionCode.INVALID_PARAMETER
-    assert e.value.message == 'Invalid contentType: wrong/content'
-    score_deploy_engine._on_deploy.assert_not_called()
+        with pytest.raises(InvalidParamsException) as e:
+            mock_engine._score_deploy(context, tx_params)
+        assert e.value.code == ExceptionCode.INVALID_PARAMETER
+        assert e.value.message == f"Invalid contentType: {content_type}"
+        mock_engine._on_deploy.assert_not_called()
 
 
 @pytest.mark.parametrize("deploy_data, call_method",
@@ -256,7 +241,7 @@ def test_create_score_info(context, mocker, get_score_info_return_value):
     mocker.patch.object(IconScoreContextUtil, "get_score_info", return_value=score_info)
 
     score_deploy_engine._create_score_info(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
-    IconScoreContextUtil.create_score_info.\
+    IconScoreContextUtil.create_score_info. \
         assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, get_score_info_return_value)
     mocker.stopall()
 
