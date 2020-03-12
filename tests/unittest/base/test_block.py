@@ -43,7 +43,7 @@ def test_Block_from_bytes_to_bytes_None_hash():
     _test_block_from_bytes_to_bytes_msg_pack(block_hash, prev_block_hash)
 
 
-def _test_block_from_bytes_to_bytes_struct( block_hash: bytes, prev_block_hash: Optional[bytes]):
+def _test_block_from_bytes_to_bytes_struct(block_hash: bytes, prev_block_hash: Optional[bytes]):
     revision = 0
     cumulative_fee = 10
     block1 = Block(1, block_hash, 100, prev_block_hash, cumulative_fee)
@@ -60,7 +60,7 @@ def _test_block_from_bytes_to_bytes_struct( block_hash: bytes, prev_block_hash: 
     assert block2.cumulative_fee == 0
 
 
-def _test_block_from_bytes_to_bytes_msg_pack( block_hash: bytes, prev_block_hash: Optional[bytes]):
+def _test_block_from_bytes_to_bytes_msg_pack(block_hash: bytes, prev_block_hash: Optional[bytes]):
     revision = Revision.IISS.value
     cumulative_fee = 10
     block1 = Block(1, block_hash, 100, prev_block_hash, cumulative_fee)
