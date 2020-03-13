@@ -60,7 +60,7 @@ class TestAddress:
         addr2 = Address.from_bytes(buf)
         assert addr1 == addr2
 
-    def test_address_from_to_bytes_OTHER(self):
+    def test_address_from_to_bytes_eoa_20length_eq_21length_from_bytes(self):
         addr1 = create_address()
         buf = addr1.to_bytes()
         prefix: int = 0
@@ -106,7 +106,7 @@ class TestAddress:
                "cx0000000000000000000000000000000000000400"
 
     @pytest.mark.parametrize("prefix", [prefix for prefix in AddressPrefix])
-    def test_from_bytes_including_prefix(self, prefix):
+    def test_from_bytes_including_prefix_valid(self, prefix):
         value: int = random.randint(0, 0xffffffff)
         input_data: bytes = value.to_bytes(4, 'big')
         data: bytes = hashlib.sha3_256(input_data).digest()
@@ -120,7 +120,12 @@ class TestAddress:
         assert prefix == address.prefix
         assert body == address.body
 
-        # test with longer or shorter data
+    @pytest.mark.parametrize("prefix", [prefix for prefix in AddressPrefix])
+    def test_from_bytes_including_prefix_invalid(self, prefix):
+        value: int = random.randint(0, 0xffffffff)
+        input_data: bytes = value.to_bytes(4, 'big')
+        data: bytes = hashlib.sha3_256(input_data).digest()
+
         size = random.randint(1, 32)
         if size == 20:
             size += 1
