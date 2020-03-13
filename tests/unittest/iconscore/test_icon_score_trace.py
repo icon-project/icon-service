@@ -89,24 +89,17 @@ def mapped_test_score(score_db, context):
 
 
 class TestTrace:
-    def test_transfer(self, context, mapped_test_score):
+    @pytest.mark.parametrize("func_name", ["send", "transfer"])
+    def test_transfer_and_send_should_have_same_trace(self, mapped_test_score, func_name):
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
         to_ = create_address(AddressPrefix.EOA)
         amount = 100
-        mapped_test_score.icx.transfer(to_, amount)
-        context.traces.append.assert_called()
-        trace = context.traces.append.call_args[0][0]
-        assert trace.trace == TraceType.CALL
-        assert trace.data[0] == to_
-        assert trace.data[3] == amount
 
-    def test_send(self, mapped_test_score):
-        context = ContextContainer._get_context()
-        context.type = IconScoreContextType.INVOKE
-        to_ = create_address(AddressPrefix.EOA)
-        amount = 100
-        mapped_test_score.icx.send(to_, amount)
+        # Call send or transfer method
+        func = getattr(mapped_test_score.icx, func_name)
+        func(to_, amount)
+
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         assert trace.trace == TraceType.CALL
@@ -139,15 +132,16 @@ class TestTrace:
         mapped_test_score.test_interface_call(score_address, to_, amount)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
+
         assert trace.trace == TraceType.CALL
         assert trace.data[0] == score_address
         assert trace.data[1] == 'interfaceCall'
         assert trace.data[2][0] == to_
         assert trace.data[2][1] == amount
 
-    def test_revert(self, monkeypatch):
-        monkeypatch.setattr(IconServiceEngine, '_charge_transaction_fee', Mock())
-        monkeypatch.setattr(IconScoreEngine, 'invoke', Mock())
+    def test_revert(self, mocker):
+        mocker.patch.object(IconServiceEngine, "_charge_transaction_fee")
+        mocker.patch.object(IconScoreEngine, "invoke")
 
         context = ContextContainer._get_context()
 
@@ -195,19 +189,15 @@ class TestTrace:
         assert trace.data[0] == code
         assert trace.data[1] == reason
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.'
-           '_charge_transaction_fee')
-    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    def test_throw(self, score_invoke, IconServiceEngine_charge_transaction_fee):
+    def test_throw(self, mocker):
+        mocker.patch.object(IconServiceEngine, "_charge_transaction_fee")
+        mocker.patch.object(IconScoreEngine, "invoke")
         context = ContextContainer._get_context()
 
-        self._icon_service_engine = IconServiceEngine()
-        self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
-        self._icon_service_engine._icon_score_deploy_engine = \
-            Mock(spec=DeployEngine)
-
-        self._icon_service_engine._icon_pre_validator = Mock(
-            spec=IconPreValidator)
+        icon_service_engine = IconServiceEngine()
+        icon_service_engine._icx_engine = Mock(spec=IcxEngine)
+        icon_service_engine._icon_score_deploy_engine = Mock(spec=DeployEngine)
+        icon_service_engine._icon_pre_validator = Mock(spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
         context.clear_batch = Mock()
         context.update_batch = Mock()
@@ -221,31 +211,30 @@ class TestTrace:
         def intercept_charge_transaction_fee(*args, **kwargs):
             return {}, Mock(spec=int)
 
-        IconServiceEngine_charge_transaction_fee.side_effect = \
-            intercept_charge_transaction_fee
+        IconServiceEngine._charge_transaction_fee.side_effect = intercept_charge_transaction_fee
 
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
+        icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
         error = Mock(spec=str)
         code = ExceptionCode.INVALID_PARAMETER
         mock_exception = Mock(side_effect=InvalidParamsException(error))
-        score_invoke.side_effect = mock_exception
+        IconScoreEngine.invoke.side_effect = mock_exception
 
         raise_exception_start_tag("test_throw")
-        tx_result = self._icon_service_engine._handle_icx_send_transaction(
+        tx_result = icon_service_engine._handle_icx_send_transaction(
             context, {'version': 3, 'from': from_, 'to': to_})
         raise_exception_end_tag("test_throw")
         assert 0 == tx_result.status
 
-        IconServiceEngine_charge_transaction_fee.assert_called()
+        IconServiceEngine._charge_transaction_fee.assert_called()
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         assert TraceType.THROW == trace.trace
         assert code == trace.data[0]
         assert error == trace.data[1]
 
-    def test_to_dict_camel(self):
+    def test_to_dict_camel(self, mapped_test_score):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         func_name = "testCall"
@@ -253,7 +242,7 @@ class TestTrace:
         amount = 100
         params = {'to': to_, 'amount': amount}
 
-        self._score.call(score_address, func_name, params)
+        mapped_test_score.call(score_address, func_name, params)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         camel_dict = trace.to_dict(to_camel_case)
