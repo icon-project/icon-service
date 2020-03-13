@@ -27,8 +27,8 @@ from tests import create_address
 
 class TestAddress:
     @pytest.mark.parametrize("prefix,expected_prefix,expected_prefix_constant",
-                             [(0, AddressPrefix.EOA, ICON_EOA_ADDRESS_PREFIX)],
-                             (1, AddressPrefix.CONTRACT, ICON_CONTRACT_ADDRESS_PREFIX))
+                             [(0, AddressPrefix.EOA, ICON_EOA_ADDRESS_PREFIX),
+                              (1, AddressPrefix.CONTRACT, ICON_CONTRACT_ADDRESS_PREFIX)])
     def test_get_prefix(self, prefix, expected_prefix, expected_prefix_constant):
         addr = create_address(prefix=prefix)
         assert str(addr.prefix) == expected_prefix_constant

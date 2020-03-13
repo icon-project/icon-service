@@ -37,7 +37,7 @@ from iconservice.prep import PRepEngine, PRepStorage
 from iconservice.icon_network import INVEngine, INVStorage
 from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_block_hash, rmtree
-from tests.legacy_unittest.conftest import generate_inv_container
+from tests.conftest import generate_inv_container
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
 ICX_ENGINE_PATH = 'iconservice.icx.engine'
