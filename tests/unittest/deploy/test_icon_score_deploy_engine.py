@@ -41,11 +41,7 @@ EOA2 = create_address(AddressPrefix.EOA)
 SCORE_ADDRESS = create_address(AddressPrefix.CONTRACT)
 
 
-class MockScore(object):
-    pass
-
-
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_engine():
     engine = isde.Engine()
     return engine
@@ -143,7 +139,7 @@ def test_write_score_to_score_deploy_path_on_tbears_mode(mock_engine, context, m
 def test_on_deploy(mock_engine, context, mocker):
     """Case when deploy_info is not None, zip, revision0, score validator flag False, SCORE is not None"""
     mocker.patch.object(IconScoreContextUtil, 'validate_score_package')
-    mock_score = MockScore()
+    mock_score = Mock()
     mock_score.owner = EOA1
     deploy_params = {"a": 1}
     deploy_data = {"params": deploy_params}
@@ -157,12 +153,12 @@ def test_on_deploy(mock_engine, context, mocker):
 
     backup_msg, backup_tx = context.msg, context.tx
 
-    mock_engine._write_score_to_filesystem = Mock()
+    mocker.patch.object(mock_engine, "_write_score_to_filesystem")
     score_info = Mock()
     score_info.configure_mock(get_score=Mock(return_value=mock_score))
-    mock_engine._create_score_info = Mock(return_value=score_info)
+    mocker.patch.object(mock_engine, "_create_score_info", return_value=score_info)
     context.storage.deploy.get_deploy_info = Mock(return_value=deploy_info)
-    mock_engine._initialize_score = Mock()
+    mocker.patch.object(mock_engine, "_initialize_score")
 
     mock_engine._on_deploy(context, tx_params)
 
@@ -176,6 +172,7 @@ def test_on_deploy(mock_engine, context, mocker):
 
     assert context.msg == backup_msg
     assert context.tx == backup_tx
+    mocker.stopall()
 
 
 class TestIsAuditNeeded:
@@ -275,6 +272,7 @@ class TestScoreDeploy:
 
         mock_engine._score_deploy(context, tx_params)
         mock_engine._on_deploy.assert_called_with(context, tx_params)
+        mocker.stopall()
 
     @pytest.mark.parametrize("content_type", [
         "application/tbears",
@@ -293,6 +291,7 @@ class TestScoreDeploy:
         assert e.value.code == ExceptionCode.INVALID_PARAMETER
         assert e.value.message == f"Invalid contentType: {content_type}"
         mock_engine._on_deploy.assert_not_called()
+        mocker.stopall()
 
 
 class TestWriteScoreToScoreDeployPath:
@@ -351,7 +350,7 @@ class TestWriteScoreToScoreDeployPath:
 
 
 class TestInitializeScore:
-    mock_score = MockScore()
+    mock_score = Mock()
     on_install = None
     on_update = None
     on_invalid = None
