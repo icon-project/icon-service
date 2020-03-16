@@ -15,8 +15,7 @@
 # limitations under the License.
 
 import os
-import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -33,7 +32,6 @@ from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 from tests.legacy_unittest.iiss.mock_rc_db import MockIissDataBase
 from tests.legacy_unittest.mock_db import MockPlyvelDB
-from tests.legacy_unittest.mock_generator import KEY_VALUE_DB_PATH
 
 DUMMY_BLOCK_HEIGHT = 1
 CONFIG_MAIN_PREP_COUNT = 28
