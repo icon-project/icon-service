@@ -58,8 +58,9 @@ class TestIconContainerDB:
         ((4, 3, 1), int, 11),
         ((4, 3, 2), int, 12),
         (5, Address, ADDRESS),
+        (6, int, 0)
     ])
-    def test_success_list(self, score_db, args, value_type, expected_value):
+    def test_nested_list(self, score_db, args, value_type, expected_value):
         test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], self.ADDRESS]
         ContainerUtil.put_to_db(score_db, 'test_list', test_list)
 
@@ -68,81 +69,81 @@ class TestIconContainerDB:
         else:
             assert ContainerUtil.get_from_db(score_db, 'test_list', args, value_type=value_type) == expected_value
 
-    def test_success_dict(self):
-        addr1 = create_address(AddressPrefix.CONTRACT)
-        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}, 4: addr1}
-        ContainerUtil.put_to_db(self.db, 'test_dict', test_dict)
+    @pytest.mark.parametrize("args, value_type, expected_value", [
+        (1, str, 'a'),
+        ((2, 0), str, 'a'),
+        ((2, 1), str, 'b'),
+        ((2, 2, 0), str, 'c'),
+        ((2, 2, 1), str, 'd'),
+        ((3, 'a'), int, 1),
+        (4, Address, ADDRESS),
+    ])
+    def test_nested_dict(self, score_db, args, value_type, expected_value):
+        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}, 4: self.ADDRESS}
+        ContainerUtil.put_to_db(score_db, 'test_dict', test_dict)
 
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 1, value_type=str), 'a')
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 0, value_type=str), 'a')
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 1, value_type=str), 'b')
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 0, value_type=str), 'c')
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 1, value_type=str), 'd')
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'a', value_type=int), 1)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 4, value_type=Address), addr1)
+        if isinstance(args, tuple):
+            assert ContainerUtil.get_from_db(score_db, 'test_dict', *args, value_type=value_type) == expected_value
+        else:
+            assert ContainerUtil.get_from_db(score_db, 'test_dict', args, value_type=value_type) == expected_value
 
-    def test_success_tuple(self):
-        addr1 = create_address(AddressPrefix.CONTRACT)
-        test_tuple = tuple([1, 2, 3, addr1])
-        ContainerUtil.put_to_db(self.db, 'test_tuple', test_tuple)
+    @pytest.mark.parametrize("args, value_type, expected_value", [
+        (0, int, 1),
+        (1, int, 2),
+        (2, int, 3),
+        (3, Address, ADDRESS),
+    ])
+    def test_tuple(self, score_db, args, value_type, expected_value):
+        test_tuple = tuple([1, 2, 3, self.ADDRESS])
+        ContainerUtil.put_to_db(score_db, 'test_tuple', test_tuple)
 
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 0, value_type=int), 1)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 1, value_type=int), 2)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 2, value_type=int), 3)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 3, value_type=Address), addr1)
+        assert ContainerUtil.get_from_db(score_db, 'test_tuple', args, value_type=value_type) == expected_value
 
-    def test_fail_container(self):
-        testlist = [[]]
-        ContainerUtil.put_to_db(self.db, 'test_list', testlist)
-
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 1, value_type=int), 0)
-
-    def test_success_dict_depth1(self):
-        name = 'test_dict'
-        test_dict = DictDB(name, self.db, value_type=int)
-
+    @staticmethod
+    def _check_the_db_prefix_format(name):
         prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
-        self.assertEqual(b'\x01|' + name.encode(), prefix)
+        assert prefix == b'\x01|' + name.encode()
+
+    def test_dict_depth1(self, score_db):
+        name = 'test_dict'
+        test_dict = DictDB(name, score_db, value_type=int)
+        self._check_the_db_prefix_format(name)
 
         test_dict['a'] = 1
         test_dict['b'] = 2
 
         test_dict['b'] += 1
 
-        self.assertEqual(test_dict['a'], 1)
-        self.assertEqual(test_dict['b'], 3)
+        assert test_dict['a'] == 1
+        assert test_dict['b'] == 3
 
-    def test_success_dict_other_Key(self):
+    def test_dict_other_Key(self, score_db):
         name = 'test_dict'
-        test_dict = DictDB(name, self.db, depth=2, value_type=int)
-
-        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
-        self.assertEqual(b'\x01|' + name.encode(), prefix)
+        test_dict = DictDB(name, score_db, depth=2, value_type=int)
+        self._check_the_db_prefix_format(name)
 
         addr1 = create_address(1)
         addr2 = create_address(0)
         test_dict['a'][addr1] = 1
         test_dict['a'][addr2] = 2
 
-        self.assertEqual(test_dict['a'][addr1], 1)
-        self.assertEqual(test_dict['a'][addr2], 2)
+        assert test_dict['a'][addr1] == 1
+        assert test_dict['a'][addr2] == 2
 
-    def test_success_dict_depth2(self):
+    def test_dict_depth2(self, score_db):
         name = 'test_dict'
-        test_dict = DictDB(name, self.db, depth=3, value_type=int)
-
-        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
-        self.assertEqual(b'\x01|' + name.encode(), prefix)
+        test_dict = DictDB(name, score_db, depth=3, value_type=int)
+        self._check_the_db_prefix_format(name)
 
         test_dict['a']['b']['c'] = 1
         test_dict['a']['b']['d'] = 2
         test_dict['a']['b']['e'] = 3
         test_dict['a']['b']['f'] = 4
 
-        self.assertEqual(test_dict['a']['b']['c'], 1)
+        assert test_dict['a']['b']['c'] == 1
 
-    def test_success_array1(self):
-        test_array = ArrayDB('test_array', self.db, value_type=int)
+    def test_success_array1(self, score_db):
+        test_array = ArrayDB('test_array', score_db, value_type=int)
 
         range_size = 3
 
@@ -150,19 +151,19 @@ class TestIconContainerDB:
             test_array.put(i)
 
         for i in range(range_size):
-            self.assertEqual(test_array[i], i)
+            assert test_array[i] == i
 
         cant_find_value = range_size
-        self.assertFalse(cant_find_value in test_array)
-        self.assertEqual(range_size, len(test_array))
+        assert (cant_find_value in test_array) is False
+        assert len(test_array) == range_size
 
         for e, i in zip(test_array, range(range_size)):
-            self.assertEqual(e, i)
+            assert e == i
 
-        self.assertEqual(test_array[-1], range(range_size)[-1])
+        assert test_array[-1] == range(range_size)[-1]
 
-    def test_success_array2(self):
-        test_array = ArrayDB('test_array', self.db, value_type=int)
+    def test_success_array2(self, score_db):
+        test_array = ArrayDB('test_array', score_db, value_type=int)
 
         range_size = 3
         expect_array = []
@@ -172,10 +173,10 @@ class TestIconContainerDB:
             test_array.put(i)
 
         for index, e in enumerate(test_array):
-            self.assertEqual(e, expect_array[index])
+            assert e == expect_array[index]
 
-    def test_success_array3(self):
-        test_array = ArrayDB('test_array', self.db, value_type=int)
+    def test_success_array3(self, score_db):
+        test_array = ArrayDB('test_array', score_db, value_type=int)
 
         range_size = 3
         expect_array = []
@@ -194,18 +195,18 @@ class TestIconContainerDB:
         else:
             pass
 
-    def test_success_array4(self):
-        test_array = ArrayDB('test_array', self.db, value_type=int)
+    def test_success_array4(self, score_db):
+        test_array = ArrayDB('test_array', score_db, value_type=int)
 
         test_array.put(1)
         test_array.put(2)
 
-        with self.assertRaises(InvalidParamsException):
+        with pytest.raises(InvalidParamsException):
             var = test_array[2]
             print(var)
 
-    def test_negative_index_access_in_array_db(self):
-        array = ArrayDB('array', self.db, value_type=int)
+    def test_negative_index_access_in_array_db(self, score_db):
+        array = ArrayDB('array', score_db, value_type=int)
 
         size = 10
         for i in range(size):
@@ -214,128 +215,119 @@ class TestIconContainerDB:
         negative_index = -1
         for _ in range(size):
             index = size + negative_index
-            self.assertEqual(array[index], array[negative_index])
+            assert array[index] == array[negative_index]
             negative_index -= 1
 
-    def test_success_variable(self):
-        test_var = VarDB('test_var', self.db, value_type=int)
-        self.assertNotEqual(test_var._db, self.db)
-        self.assertEqual(test_var._db._prefix, b'\x02')
+    @pytest.mark.parametrize("value_type, expected_value", [
+        (int, 10 ** 19 + 1),
+        (Address, create_address(AddressPrefix.CONTRACT)),
+        (Address, create_address(AddressPrefix.EOA))
+    ])
+    def test_var_db(self, score_db, value_type, expected_value):
+        test_var = VarDB('test_var', score_db, value_type=value_type)
+        assert test_var._db != score_db
+        assert test_var._db._prefix == b'\x02'
 
-        test_var.set(10 ** 19 + 1)
+        test_var.set(expected_value)
 
-        self.assertEqual(test_var.get(), 10 ** 19 + 1)
+        assert test_var.get() == expected_value
 
-        test_var2 = VarDB(2,
-                          self.db, value_type=Address)
-        address = create_address(AddressPrefix.CONTRACT)
-        test_var2.set(address)
-        data = test_var2.get()
-        self.assertEqual(data, address)
+    @pytest.mark.parametrize("collection, key_or_index", [
+        ({"dummy_key": "dummy_value"}, "not_exists_key"),
+        (["dummy_list"], 3)
+    ])
+    @pytest.mark.parametrize("value_type, expected_value", [
+        (int, 0),
+        (str, ""),
+        (bytes, None),
+        (Address, None)
+    ])
+    def test_default_value_of_container_db(self, score_db, value_type, expected_value, collection, key_or_index):
+        # TEST: Check the default value of collection object (dict, list)
+        ContainerUtil.put_to_db(score_db, 'test_collection', collection)
+        actual_value = ContainerUtil.get_from_db(score_db, 'test_collection', key_or_index, value_type=value_type)
 
-        test_var4 = VarDB(4,
-                          self.db, value_type=Address)
+        assert actual_value == expected_value
 
-        address3 = create_address(AddressPrefix.CONTRACT)
-        test_var4.set(address3)
-        self.assertEqual(test_var4.get(), address3)
-
-    def test_default_val_db(self):
-        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}}
-        ContainerUtil.put_to_db(self.db, 'test_dict', test_dict)
-
-        # dict_db
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'b', value_type=int), 0)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=str), "")
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=bytes), None)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=Address), None)
-
-        # list_db
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=str), '')
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=int), 0)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=bytes), None)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=Address), None)
-
+    @pytest.mark.parametrize("value_type, expected_value", [
+        (int, 0),
+        (str, ""),
+        (bytes, None),
+        (Address, None)
+    ])
+    def test_default_value_of_var_db(self, score_db, value_type, expected_value):
         # var_db
-        test_var = VarDB('test_var', self.db, value_type=int)
-        self.assertEqual(test_var.get(), 0)
-        test_var2 = VarDB('test_var2', self.db, value_type=str)
-        self.assertEqual(test_var2.get(), "")
-        test_var3 = VarDB('test_var3', self.db, value_type=bytes)
-        self.assertEqual(test_var3.get(), None)
-        test_var4 = VarDB('test_var4', self.db, value_type=Address)
-        self.assertEqual(test_var4.get(), None)
+        test_var = VarDB('test_var', score_db, value_type=value_type)
+        assert test_var.get() == expected_value
 
-    def test_array_db(self):
+    def test_array_db(self, score_db):
         name = "TEST"
-        testarray = ArrayDB(name, self.db, value_type=int)
-        self.assertNotEqual(testarray._db, self.db)
-        self.assertEqual(
-            testarray._db._prefix,
-            ContainerUtil.create_db_prefix(ArrayDB, name))
+        testarray = ArrayDB(name, score_db, value_type=int)
+        assert testarray._db != score_db
+        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name)
 
         testarray.put(1)
         testarray.put(3)
         testarray.put(5)
         testarray.put(7)
-        self.assertEqual(4, len(testarray))
-        self.assertEqual(7, testarray.pop())
-        self.assertEqual(5, testarray.pop())
-        self.assertEqual(2, len(testarray))
+        assert len(testarray) == 4
+        assert testarray.pop() == 7
+        assert testarray.pop() == 5
+        assert len(testarray) == 2
 
-    def test_array_db2(self):
+    def test_array_db2(self, score_db):
         name = "TEST"
-        testarray = ArrayDB(name, self.db, value_type=int)
-        self.assertNotEqual(testarray._db, self.db)
-        self.assertEqual(
-            testarray._db._prefix,
-            ContainerUtil.create_db_prefix(ArrayDB, name))
+        testarray = ArrayDB(name, score_db, value_type=int)
+        assert testarray._db != score_db
+        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name)
 
         testarray.put(1)
         testarray.put(2)
         testarray.put(3)
         testarray.put(4)
 
-        self.assertEqual(1, testarray[0])
-        self.assertEqual(2, testarray[1])
-        self.assertEqual(3, testarray[2])
-        self.assertEqual(4, testarray[3])
+        assert testarray[0] == 1
+        assert testarray[1] == 2
+        assert testarray[2] == 3
+        assert testarray[3] == 4
 
-        self.assertEqual(4, testarray[-1])
-        self.assertEqual(3, testarray[-2])
-        self.assertEqual(2, testarray[-3])
-        self.assertEqual(1, testarray[-4])
+        assert testarray[-1] == 4
+        assert testarray[-2] == 3
+        assert testarray[-3] == 2
+        assert testarray[-4] == 1
 
         testarray[0] = 5
         testarray[1] = 6
         testarray[2] = 7
         testarray[3] = 8
 
-        self.assertEqual(5, testarray[0])
-        self.assertEqual(6, testarray[1])
-        self.assertEqual(7, testarray[2])
-        self.assertEqual(8, testarray[3])
+        assert testarray[0] == 5
+        assert testarray[1] == 6
+        assert testarray[2] == 7
+        assert testarray[3] == 8
 
         testarray[-1] = 4
         testarray[-2] = 3
         testarray[-3] = 2
         testarray[-4] = 1
 
-        self.assertEqual(4, testarray[-1])
-        self.assertEqual(3, testarray[-2])
-        self.assertEqual(2, testarray[-3])
-        self.assertEqual(1, testarray[-4])
+        assert testarray[-1] == 4
+        assert testarray[-2] == 3
+        assert testarray[-3] == 2
+        assert testarray[-4] == 1
 
-        with self.assertRaises(InvalidParamsException):
+        with pytest.raises(InvalidParamsException):
             testarray[5] = 1
             a = testarray[5]
 
-    def test_container_util(self):
-        prefix: bytes = ContainerUtil.create_db_prefix(ArrayDB, 'a')
-        self.assertEqual(b'\x00|a', prefix)
+    @pytest.mark.parametrize("prefix, score_db_cls, expected_prefix", [
+        ('a', ArrayDB, b'\x00|a'),
+        ('dictdb', DictDB, b'\x01|dictdb'),
+    ])
+    def test_container_util(self, prefix, score_db_cls, expected_prefix):
+        actual_prefix: bytes = ContainerUtil.create_db_prefix(score_db_cls, prefix)
+        assert actual_prefix == expected_prefix
 
-        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, 'dictdb')
-        self.assertEqual(b'\x01|dictdb', prefix)
-
-        with self.assertRaises(InvalidParamsException):
-            prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
+    def test_when_create_var_db_prefix_using_container_util_should_raise_error(self):
+        with pytest.raises(InvalidParamsException):
+            ContainerUtil.create_db_prefix(VarDB, 'vardb')
