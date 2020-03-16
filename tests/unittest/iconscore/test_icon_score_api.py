@@ -51,7 +51,7 @@ def create_msg_hash(tx: dict, excluded_keys: tuple) -> bytes:
     return msg_hash
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def settable_inv_container():
     default_service_config: int = 0
     default_step_costs = {
