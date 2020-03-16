@@ -28,17 +28,17 @@ def mock_config_get(_, key):
     return key
 
 
+# FIXME TODO
 class TestIconServiceEngine:
 
-    # @pytest.mark.skip("TODO")
-    def test_open(self, mocker):
-        mocker.patch_object(IconServiceEngine, "_make_service_flag", autospec=True)
-
+    def mock_conf(self, mocker):
         conf = mock.Mock()
         conf.attach_mock(mock.Mock(side_effect=lambda key: key), "__getitem__")
+        return conf
 
-
+    # @pytest.mark.skip("TODO")
+    def test_open(self, mocker, mock_conf):
+        mocker.patch_object(IconServiceEngine, "_make_service_flag", autospec=True)
 
         engine = IconServiceEngine()
-        engine.open(conf)
-        pass
+        engine.open(mock_conf)

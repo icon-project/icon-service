@@ -21,11 +21,11 @@ import pytest
 
 import iconservice.iconscore.icon_score_step as step_module
 from iconservice.base.exception import InvalidRequestException
-from iconservice.icon_constant import Revision, IconScoreContextType
+from iconservice.icon_constant import Revision, IconScoreContextType, MAX_EXTERNAL_CALL_COUNT
 from iconservice.icon_network.container import Container as INVContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, get_data_size_recursively, get_deploy_content_size, AutoValueEnum, StepTracer, \
-    get_input_data_size, IconScoreStepCounterFactory
+    get_input_data_size, IconScoreStepCounterFactory, IconScoreStepCounter, OutOfStepException
 
 
 @pytest.fixture
@@ -277,14 +277,128 @@ class TestIconScoreStepCounterFactory:
 
 
 class TestIconScoreStepCounter:
-    @pytest.mark.skip('TODO')
-    def test_apply_step(self):
-        pass
+    PIVOT_VALUE = 100
 
-    @pytest.mark.skip('TODO')
-    def test_consume_step(self):
-        pass
+    @pytest.fixture
+    def mock_step_counter(self):
+        counter = IconScoreStepCounter(step_price=mock.ANY,
+                                       step_costs=mock.ANY,
+                                       max_step_limit=mock.ANY,
+                                       step_trace_flag=mock.ANY)
+        return counter
 
-    @pytest.mark.skip('TODO')
-    def test_reset(self):
-        pass
+    @pytest.fixture
+    def mock_step_counter_for_apply_step(self, mock_step_counter):
+        def _data(external_call_count, step_costs_get_return_value):
+            mock_step_counter._external_call_count = external_call_count
+            mock_step_counter._step_costs.get = mock.Mock(return_value=step_costs_get_return_value)
+            mock_step_counter.consume_step = mock.Mock()
+            return mock_step_counter
+        return _data
+
+    @pytest.mark.parametrize("mock_step_counter_step_costs_return_value", [0, 1])
+    @pytest.mark.parametrize("mock_step_counter_external_call_count", [
+        MAX_EXTERNAL_CALL_COUNT - 1,
+        MAX_EXTERNAL_CALL_COUNT
+    ])
+    @pytest.mark.parametrize("step_type", [t for t in StepType])
+    @pytest.mark.parametrize("count", [0, 1])
+    def test_apply_step(self,
+                        mock_step_counter_for_apply_step,
+                        mock_step_counter_step_costs_return_value,
+                        mock_step_counter_external_call_count,
+                        step_type,
+                        count):
+        mock_step_counter_for_apply_step = \
+            mock_step_counter_for_apply_step(external_call_count=mock_step_counter_external_call_count,
+                                             step_costs_get_return_value=mock_step_counter_step_costs_return_value)
+
+        if step_type == StepType.CONTRACT_CALL and \
+                mock_step_counter_external_call_count > MAX_EXTERNAL_CALL_COUNT - 1:
+            # raise exception
+            with pytest.raises(InvalidRequestException) as e:
+                mock_step_counter_for_apply_step.apply_step(step_type, count)
+            assert e.value.args[0] == 'Too many external calls'
+        else:
+            expected_step = mock_step_counter_for_apply_step._step_costs.get(step_type, 0) * count
+            mock_step_counter_for_apply_step.apply_step(step_type, count)
+            mock_step_counter_for_apply_step.consume_step.assert_called_once_with(step_type, expected_step)
+
+    @pytest.fixture
+    def mock_step_counter_for_consume_step(self, mock_step_counter):
+        def _data(max_step_used, step_used, step_limit):
+            mock_step_counter._max_step_used = max_step_used
+            mock_step_counter._step_used = step_used
+            mock_step_counter._step_limit = step_limit
+            mock_step_counter._trace_step = mock.Mock()
+            return mock_step_counter
+        return _data
+
+    @pytest.mark.parametrize("mock_step_counter_step_used", {PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1})
+    @pytest.mark.parametrize("mock_step_counter_step_limit", {PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1})
+    @pytest.mark.parametrize("mock_step_counter_max_step_used", {PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1})
+    @pytest.mark.parametrize("step_type", [t for t in StepType])
+    @pytest.mark.parametrize("step", [0, 2])
+    def test_consume_step(self,
+                          mock_step_counter_for_consume_step,
+                          mock_step_counter_step_used,
+                          mock_step_counter_step_limit,
+                          mock_step_counter_max_step_used,
+                          step_type,
+                          step):
+        mock_step_counter_for_consume_step = \
+            mock_step_counter_for_consume_step(max_step_used=mock_step_counter_max_step_used,
+                                               step_used=mock_step_counter_step_used,
+                                               step_limit=mock_step_counter_step_limit)
+
+        expected_step_used = mock_step_counter_step_used + step
+
+        if expected_step_used > mock_step_counter_step_limit:
+            with pytest.raises(OutOfStepException) as e:
+                mock_step_counter_for_consume_step.consume_step(step_type=step_type,
+                                                                step=step)
+
+            assert e.value.args[0] == mock_step_counter_step_limit
+            assert e.value.args[1] == mock_step_counter_step_used
+            assert e.value.args[2] == step
+            assert e.value.args[3] == step_type
+        else:
+            step_used = mock_step_counter_for_consume_step.consume_step(step_type=step_type,
+                                                                        step=step)
+            mock_step_counter_for_consume_step._trace_step.assert_called_once_with(step_type, step)
+            assert step_used == expected_step_used
+
+    @pytest.fixture
+    def mock_step_counter_for_reset(self, mock_step_counter):
+        def _data(max_step_limit, mock_step_tracer, dirty_value):
+            mock_step_counter._step_limit = dirty_value
+            mock_step_counter._step_used = dirty_value
+            mock_step_counter._external_call_count = dirty_value
+            mock_step_counter._max_step_used = dirty_value
+
+            mock_step_counter._max_step_limit = max_step_limit
+            if mock_step_tracer:
+                mock_step_tracer.attach_mock(mock.Mock(), "reset")
+            mock_step_counter._step_tracer = mock_step_tracer
+            return mock_step_counter
+        return _data
+
+    @pytest.mark.parametrize("step_limit", [PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1])
+    @pytest.mark.parametrize("max_step_limit", [PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1])
+    @pytest.mark.parametrize("mock_step_tracer", [None, mock.Mock()])
+    def test_reset(self,
+                   mock_step_counter_for_reset,
+                   step_limit, max_step_limit, mock_step_tracer):
+
+        dirty_value = self.PIVOT_VALUE
+        mock_step_counter_for_reset = mock_step_counter_for_reset(max_step_limit=max_step_limit,
+                                                                  mock_step_tracer=mock_step_tracer,
+                                                                  dirty_value=dirty_value)
+        mock_step_counter_for_reset.reset(step_limit)
+        assert mock_step_counter_for_reset._step_limit == min(step_limit, max_step_limit)
+        assert mock_step_counter_for_reset._step_used == 0
+        assert mock_step_counter_for_reset._external_call_count == 0
+        assert mock_step_counter_for_reset._max_step_used == 0
+
+        if mock_step_counter_for_reset._step_tracer:
+            mock_step_counter_for_reset._step_tracer.reset.assert_called()
