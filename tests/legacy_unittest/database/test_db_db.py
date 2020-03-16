@@ -292,7 +292,7 @@ class TestIconScoreDatabase(unittest.TestCase):
     def test_address(self):
         self.assertEqual(self.address, self.db.address)
 
-    @patch('iconservice.iconscore.icon_score_context.ContextGetter._context')
+    @patch('iconservice.iconscore.context.context.ContextGetter._context')
     def test_put_and_get(self, context):
         context.current_address = self.address
         db = self.db
