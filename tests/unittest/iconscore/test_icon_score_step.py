@@ -277,6 +277,7 @@ class TestIconScoreStepCounterFactory:
 
 
 class TestIconScoreStepCounter:
+    PIVOT_VALUE = 100
 
     @pytest.fixture
     def mock_step_counter(self):
@@ -333,9 +334,9 @@ class TestIconScoreStepCounter:
             return mock_step_counter
         return _data
 
-    @pytest.mark.parametrize("mock_step_counter_step_used", {100 - 1, 100, 100 + 1})
-    @pytest.mark.parametrize("mock_step_counter_step_limit", {100 - 1, 100, 100 + 1})
-    @pytest.mark.parametrize("mock_step_counter_max_step_used", {100 - 1, 100, 100 + 1})
+    @pytest.mark.parametrize("mock_step_counter_step_used", {PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1})
+    @pytest.mark.parametrize("mock_step_counter_step_limit", {PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1})
+    @pytest.mark.parametrize("mock_step_counter_max_step_used", {PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1})
     @pytest.mark.parametrize("step_type", [t for t in StepType])
     @pytest.mark.parametrize("step", [0, 2])
     def test_consume_step(self,
@@ -382,14 +383,14 @@ class TestIconScoreStepCounter:
             return mock_step_counter
         return _data
 
-    @pytest.mark.parametrize("step_limit", [100 - 1, 100, 100 + 1])
-    @pytest.mark.parametrize("max_step_limit", [100 - 1, 100, 100 + 1])
+    @pytest.mark.parametrize("step_limit", [PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1])
+    @pytest.mark.parametrize("max_step_limit", [PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1])
     @pytest.mark.parametrize("mock_step_tracer", [None, mock.Mock()])
     def test_reset(self,
                    mock_step_counter_for_reset,
                    step_limit, max_step_limit, mock_step_tracer):
 
-        dirty_value = 100
+        dirty_value = self.PIVOT_VALUE
         mock_step_counter_for_reset = mock_step_counter_for_reset(max_step_limit=max_step_limit,
                                                                   mock_step_tracer=mock_step_tracer,
                                                                   dirty_value=dirty_value)
