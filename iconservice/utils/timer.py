@@ -22,7 +22,7 @@ class Timer(object):
 
     @property
     def duration(self) -> float:
-        return time.time() - self._start_time_s
+        return time.monotonic() - self._start_time_s
 
     def start(self):
-        self._start_time_s = time.time()
+        self._start_time_s = time.monotonic()
