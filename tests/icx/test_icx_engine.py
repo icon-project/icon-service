@@ -15,70 +15,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import shutil
-import unittest
 from unittest.mock import Mock
+
+import pytest
 
 from iconservice.base.address import Address, MalformedAddress
 from iconservice.base.block import Block
-from iconservice.database.db import ContextDatabase
-from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icon_constant import IconScoreContextType
-from iconservice.iconscore.context.context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextStorage
 
+TOTAL_SUPPLY = 10 ** 20  # 100 icx
 
-class TestIcxEngine(unittest.TestCase, ContextContainer):
-    def setUp(self):
 
-        self.db_name = 'engine.db'
-        db = ContextDatabase.from_path(self.db_name)
-        self.engine = IcxEngine()
-        self.storage = IcxStorage(db)
-        self.from_ = Address.from_string('hx' + 'a' * 40)
-        self.to = Address.from_string('hx' + 'b' * 40)
-        self.genesis_address = Address.from_string('hx' + '0' * 40)
-        self.fee_treasury_address = Address.from_string('hx' + '1' * 40)
-        self.total_supply = 10 ** 20  # 100 icx
-        self.fee_treasury_address_icx_amount = 0
+@pytest.fixture(scope="function")
+def icx_engine():
+    engine = IcxEngine()
+    engine.open()
+    yield engine
+    engine.close()
 
-        self.context = IconScoreContext(IconScoreContextType.DIRECT)
 
-        block = Mock(spec=Block)
-        block.attach_mock(Mock(return_value=0), 'height')
-        self.context.block = block
+@pytest.fixture(scope="function")
+def genesis_address():
+    return Address.from_string('hx' + '0' * 40)
 
-        self.engine.open()
 
-        accounts: list = [
-            {'address': self.genesis_address, 'balance': self.total_supply},
-            {'address': self.fee_treasury_address, 'balance': 0}
-        ]
-        self.context.storage = ContextStorage(
-            deploy=None,
-            fee=None,
-            icx=self.storage,
-            iiss=None,
-            prep=None,
-            issue=None,
-            rc=None,
-            meta=None
-        )
-        self.storage.put_genesis_accounts(self.context, accounts)
+@pytest.fixture(scope="function")
+def fee_treasury_address():
+    return Address.from_string('hx' + '1' * 40)
 
-    def tearDown(self):
-        self._clear_context()
-        self.storage.close(self.context)
 
-        # Remove a state db for test
-        shutil.rmtree(self.db_name)
+@pytest.fixture(scope="function")
+def context_with_icx_storage(context_db, genesis_address, fee_treasury_address):
+    accounts: list = [
+        {'address': genesis_address, 'balance': TOTAL_SUPPLY},
+        {'address': fee_treasury_address, 'balance': 0}
+    ]
+    storage = IcxStorage(context_db)
+    context = IconScoreContext(IconScoreContextType.DIRECT)
+    block = Mock(spec=Block)
+    block.attach_mock(Mock(return_value=0), 'height')
+    context.block = block
+    context.storage = ContextStorage(icx=storage)
+    storage.put_genesis_accounts(context, accounts)
+    yield context
+    storage.close(context)
 
-    def test_get_balance(self):
+
+class TestIcxEngine:
+    def test_get_balance(self,
+                         context_with_icx_storage,
+                         icx_engine):
         address = Address.from_string('hx0123456789012345678901234567890123456789')
-        balance = self.engine.get_balance(self.context, address)
+        balance = icx_engine.get_balance(context_with_icx_storage, address)
 
-        self.assertEqual(0, balance)
+        assert balance == 0
 
     def test_get_charge_fee(self):
         pass
@@ -86,132 +79,65 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
     def test_get_account(self):
         pass
 
-    def test_transfer(self):
-        context = self.context
+    def test_transfer(self,
+                      context_with_icx_storage,
+                      icx_engine,
+                      genesis_address,
+                      fee_treasury_address):
+        context = context_with_icx_storage
         amount = 10 ** 18  # 1 icx
-        _from = self.genesis_address
+        _from = genesis_address
+        to = Address.from_string('hx' + 'b' * 40)
 
-        self.engine.transfer(context=context,
-                             from_=_from,
-                             to=self.to,
-                             amount=amount)
+        icx_engine.transfer(context=context,
+                            from_=_from,
+                            to=to,
+                            amount=amount)
 
-        from_balance = self.engine.get_balance(
-            context, self.genesis_address)
-        fee_treasury_balance = self.engine.get_balance(
-            context, self.fee_treasury_address)
-        to_balance = self.engine.get_balance(
-            context, self.to)
+        from_balance = icx_engine.get_balance(
+            context, genesis_address)
+        fee_treasury_balance = icx_engine.get_balance(
+            context, fee_treasury_address)
+        to_balance = icx_engine.get_balance(
+            context, to)
 
-        self.assertEqual(amount, to_balance)
-        self.assertEqual(0, fee_treasury_balance)
-        self.assertEqual(
-            self.total_supply,
-            from_balance + to_balance + fee_treasury_balance)
-
-    # todo: move these tests to test_icx_issue_engine
-    # def test_issue(self):
-    #     context = self.context
-    #     issue_amount = 10 ** 18
-    #     to = self.fee_treasury_address
-    #
-    #     # failure case: when input amount equal 0 or less than 0, should raise AssertionError
-    #     for invalid_amount in range(-2, 1):
-    #         self.assertRaises(AssertionError, self.engine.issue, context, to, invalid_amount)
-    #
-    #     # success case: when input amount more than 0, icx should be issued
-    #     self.engine.issue(context, to, issue_amount)
-    #     actual_total_supply = self.engine.get_total_supply(context)
-    #     self.assertEqual(self.total_supply + issue_amount, actual_total_supply)
-    #
-    #     actual_treasury_icx_amount = self.engine.get_balance(context,
-    #                                                          self.fee_treasury_address)
-    #
-    #     self.assertEqual(self.fee_treasury_address_icx_amount + issue_amount,
-    #                      actual_treasury_icx_amount)
+        assert to_balance == amount
+        assert fee_treasury_balance == 0
+        assert from_balance + to_balance + fee_treasury_balance == TOTAL_SUPPLY
 
 
-class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
-    def setUp(self):
-        empty_address = MalformedAddress.from_string('')
-        short_address_without_hx = MalformedAddress.from_string('12341234')
-        short_address = MalformedAddress.from_string('hx1234512345')
-        long_address_without_hx = MalformedAddress.from_string(
-            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
-        long_address = MalformedAddress.from_string(
-            'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
-        self.malformed_addresses = [
-            empty_address,
-            short_address_without_hx, short_address,
-            long_address_without_hx, long_address]
+class TestIcxEngineForMalformedAddress:
+    MALFORMED_STRING_LIST = [
+        '',  # empty
+        '12341234',  # short without hx
+        'hx1234512345',  # short
+        'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf',  # long without hx
+        'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf'  # long
+    ]
 
-        self.db_name = 'engine.db'
-        db = ContextDatabase.from_path(self.db_name)
-        self.engine = IcxEngine()
-        self._from = Address.from_string('hx' + 'a' * 40)
-        self.to = Address.from_string('hx' + 'b' * 40)
-        self.genesis_address = Address.from_string('hx' + '0' * 40)
-        self.fee_treasury_address = Address.from_string('hx' + '1' * 40)
-        self.total_supply = 10 ** 20  # 100 icx
+    @pytest.mark.parametrize("malformed_address",
+                             [MalformedAddress.from_string(string) for string in MALFORMED_STRING_LIST])
+    def test_get_balance(self, context_with_icx_storage, icx_engine, malformed_address):
+        balance = icx_engine.get_balance(context_with_icx_storage, malformed_address)
+        assert balance == 0
 
-        self.context = IconScoreContext(IconScoreContextType.DIRECT)
-        block = Mock(spec=Block)
-        block.attach_mock(Mock(return_value=0), 'height')
-        self.context.block = block
-
-        self.storage = IcxStorage(db)
-        self.engine.open()
-
-        accounts: list = [
-            {'address': self.genesis_address, 'balance': self.total_supply},
-            {'address': self.fee_treasury_address, 'balance': 0}
-        ]
-        self.context.storage = ContextStorage(
-            deploy=None,
-            fee=None,
-            icx=self.storage,
-            iiss=None,
-            prep=None,
-            issue=None,
-            rc=None,
-            meta=None
-        )
-        self.storage.put_genesis_accounts(self.context, accounts)
-
-    def tearDown(self):
-        self.storage.close(self.context)
-        self.engine = None
-
-        # Remove a state db for test
-        shutil.rmtree(self.db_name)
-
-    def test_get_balance(self):
-        for address in self.malformed_addresses:
-            balance = self.engine.get_balance(self.context, address)
-            self.assertEqual(0, balance)
-
-    def test_transfer(self):
-        context = self.context
+    def test_transfer(self,
+                      context_with_icx_storage,
+                      icx_engine,
+                      genesis_address,
+                      fee_treasury_address):
         amount = 10 ** 18  # 1 icx
-        from_ = self.genesis_address
+        for i, to in enumerate([MalformedAddress.from_string(string) for string in self.MALFORMED_STRING_LIST]):
+            icx_engine.transfer(context=context_with_icx_storage,
+                                from_=genesis_address,
+                                to=to,
+                                amount=amount)
 
-        for i, to in enumerate(self.malformed_addresses):
-            self.engine.transfer(context=context,
-                                 from_=from_,
-                                 to=to,
-                                 amount=amount)
+            from_balance = icx_engine.get_balance(context_with_icx_storage, genesis_address)
+            fee_treasury_balance = icx_engine.get_balance(
+                context_with_icx_storage, fee_treasury_address)
+            to_balance = icx_engine.get_balance(context_with_icx_storage, to)
 
-            from_balance = self.engine.get_balance(context, from_)
-            fee_treasury_balance = self.engine.get_balance(
-                context, self.fee_treasury_address)
-            to_balance = self.engine.get_balance(context, to)
-
-            self.assertEqual(amount, to_balance)
-            self.assertEqual(0, fee_treasury_balance)
-            self.assertEqual(
-                from_balance + fee_treasury_balance + amount * (i + 1),
-                self.total_supply)
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert to_balance == amount
+            assert fee_treasury_balance == 0
+            assert TOTAL_SUPPLY == from_balance + fee_treasury_balance + amount * (i + 1)
