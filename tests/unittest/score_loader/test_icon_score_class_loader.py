@@ -21,60 +21,54 @@ import pytest
 
 import iconservice.iconscore.utils as utils
 from iconservice.deploy.utils import convert_path_to_package_name
-from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
+from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from tests import create_address, create_tx_hash
 
 
-class TestIconSCOREClassLoader:
-    score_deploy_path = ["path1"]
-    package_name = ["package_name1"]
-    main_file = ["main_file_value1"]
-    main_score = ["main_score_value1"]
-    ins_ret_value = ["ins_ret_value1"]
+class TestSCORELoader:
+    score_deploy_path = "path"
+    package_name = "package_name"
+    main_file = "main_file_value"
+    main_score = "main_score_value"
+    ins_ret_value = "ins_ret_value"
 
-    @pytest.fixture(params=[
-        (x, y) for x, y in zip(score_deploy_path, package_name)
-    ])
-    def mock_utils(self, monkeypatch, request):
-        monkeypatch.setattr(utils, "get_score_deploy_path", Mock(return_value=request.param[0]))
-        monkeypatch.setattr(utils, "get_package_name_by_address_and_tx_hash", Mock(return_value=request.param[1]))
+    @pytest.fixture
+    def mock_utils(self, monkeypatch):
+        monkeypatch.setattr(utils, "get_score_deploy_path", Mock(return_value=self.score_deploy_path))
+        monkeypatch.setattr(utils, "get_package_name_by_address_and_tx_hash", Mock(return_value=self.package_name))
         yield utils
         monkeypatch.undo()
 
-    @pytest.fixture(params=[
-        (x, y) for x, y in zip(main_file, main_score)
-    ])
-    def mock_icon_score_class_loader(self, monkeypatch, request):
+    @pytest.fixture
+    def mock_icon_score_class_loader(self, monkeypatch):
         package_json = {
             "version": "0.0,1",
-            "main_file": request.param[0],
-            "main_score": request.param[1]
+            "main_file": self.main_file,
+            "main_score": self.main_score
         }
-        package_info = request.param[0], request.param[1]
+        package_info = self.main_file, self.main_score
 
         monkeypatch.setattr(IconScoreClassLoader, "_load_package_json", Mock(return_value=package_json))
         monkeypatch.setattr(IconScoreClassLoader, "_get_package_info", Mock(return_value=package_info))
         yield IconScoreClassLoader
         monkeypatch.undo()
 
-    @pytest.fixture(params=[
-        (x, y) for x, y in zip(main_score, ins_ret_value)
-    ])
-    def mock_importlib(self, monkeypatch, request):
+    @pytest.fixture
+    def mock_importlib(self, monkeypatch):
 
         ins = Mock()
-        monkeypatch.setattr(ins, request.param[0], Mock(return_value=request.param[1]))
+        ins.attach_mock(Mock(return_value=self.ins_ret_value), self.main_score)
 
         monkeypatch.setattr(importlib, "invalidate_caches", Mock())
         monkeypatch.setattr(importlib, "import_module", Mock(return_value=ins))
         yield importlib
         monkeypatch.undo()
 
-    @pytest.mark.parametrize("index, address, tx_hash, score_root_path", [
-        [index, create_address(), create_tx_hash(), '.score'] for index in range(1)
-    ])
-    def test_run_icon_score_class_loader(self, mock_utils, mock_icon_score_class_loader, mock_importlib,
-                                         index, address, tx_hash, score_root_path):
+    def test_run(self, mock_utils, mock_icon_score_class_loader, mock_importlib):
+        # Arrange
+        address = create_address()
+        tx_hash = create_tx_hash()
+        score_root_path = ".score"
 
         # Act
         ret_module = IconScoreClassLoader.run(score_address=address,
@@ -87,7 +81,7 @@ class TestIconSCOREClassLoader:
         mock_icon_score_class_loader._load_package_json.assert_called_once_with(mock_utils.get_score_deploy_path.return_value)
         mock_icon_score_class_loader._get_package_info.assert_called_once_with(IconScoreClassLoader._load_package_json.return_value)
 
-        assert self.ins_ret_value[index] == ret_module()
+        assert self.ins_ret_value == ret_module()
 
 
 @pytest.mark.parametrize("package_json, expected_module, expected_score", [

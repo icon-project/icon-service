@@ -36,7 +36,7 @@ from iconservice.icx import IcxEngine
 from iconservice.icx import IcxStorage
 from iconservice.icx.coin_part import CoinPartType
 from iconservice.utils import ContextStorage, ContextEngine
-from tests.unittest.mock_generator import clear_inner_task
+from tests.legacy_unittest.mock_generator import clear_inner_task
 
 
 def create_context_db():

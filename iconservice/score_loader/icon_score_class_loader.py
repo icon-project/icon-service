@@ -21,12 +21,12 @@ import sys
 from typing import TYPE_CHECKING
 
 import iconservice.iconscore.utils as utils
-from ..base.address import Address
-from ..base.exception import IllegalFormatException
-from ..icon_constant import PACKAGE_JSON_FILE
+from iconservice.base.address import Address
+from iconservice.base.exception import IllegalFormatException
+from iconservice.icon_constant import PACKAGE_JSON_FILE
 
 if TYPE_CHECKING:
-    from ..base.address import Address
+    from iconservice.base.address import Address
 
 
 class IconScoreClassLoader:

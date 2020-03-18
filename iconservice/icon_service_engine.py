@@ -38,7 +38,7 @@ from .database.factory import ContextDatabaseFactory
 from .database.wal import WriteAheadLogReader, WALDBType
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
-from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
+from iconservice.score_loader.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
@@ -49,7 +49,7 @@ from .icon_constant import (
 from .icon_network import INVEngine, INVStorage
 from .iconscore.context.context import ContextContainer
 from .iconscore.icon_pre_validator import IconPreValidator
-from .iconscore.icon_score_class_loader import IconScoreClassLoader
+from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil

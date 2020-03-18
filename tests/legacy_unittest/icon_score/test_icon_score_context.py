@@ -24,7 +24,7 @@ from iconservice.prep.data import Term, PRep
 from iconservice.prep.data.prep_container import PRepContainer
 from iconservice.prep.engine import Engine as PRepEngine
 from iconservice.utils import icx_to_loop
-from tests.unittest import utils
+from tests.legacy_unittest import utils
 
 
 def _impose_penalty_on_prep(prep: 'PRep', penalty: 'PenaltyReason'):
@@ -68,8 +68,7 @@ class TestIconScoreContext(unittest.TestCase):
 
         IconScoreContext.engine.prep = prep_engine
 
-        step_counter_factory = IconScoreStepCounterFactory()
-        context_factory = IconScoreContextFactory(step_counter_factory)
+        context_factory = IconScoreContextFactory()
 
         self.context_factory = context_factory
         self.preps = preps

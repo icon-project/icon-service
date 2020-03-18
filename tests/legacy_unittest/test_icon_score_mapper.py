@@ -20,7 +20,7 @@ from unittest.mock import Mock
 
 from iconservice.deploy import DeployStorage
 from iconservice.iconscore.icon_score_base import IconScoreBase
-from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
+from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 
