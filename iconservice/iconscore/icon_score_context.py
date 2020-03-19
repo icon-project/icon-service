@@ -16,7 +16,7 @@
 import threading
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Iterable, Generator
 
 from iconcommons.logger import Logger
 
@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
     from ..prep.prep_address_converter import PRepAddressConverter
+    from ..database.batch import Batch
 
 _thread_local_data = threading.local()
 
@@ -138,8 +139,10 @@ class IconScoreContext(object):
         self.msg: Optional['Message'] = None
         self.current_address: Optional['Address'] = None
         self.revision: int = 0
-        self.block_batch: Optional['BlockBatch'] = None
         self.tx_batch: Optional['TransactionBatch'] = None
+        self.block_batch: Optional['BlockBatch'] = None
+        self._prev_block_batches: Optional[List['BlockBatch']] = \
+            [] if context_type == IconScoreContextType.INVOKE else None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
         self.new_icon_score_mapper: Optional['IconScoreMapper'] = None
@@ -190,6 +193,17 @@ class IconScoreContext(object):
     @property
     def prep_address_converter(self) -> Optional['PRepAddressConverter']:
         return self._prep_address_converter
+
+    def get_batches(self) -> Iterable['Batch']:
+        # If its type is not IconScoreContextType.INVOKE, self._prev_block_batches is always None.
+        if self._prev_block_batches is None:
+            assert self.type != IconScoreContextType.INVOKE
+            return
+
+        yield self.tx_batch
+        yield self.block_batch
+        for prev_block_batch in self._prev_block_batches:
+            yield prev_block_batch
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
@@ -365,12 +379,16 @@ class IconScoreContextFactory(object):
     def __init__(self, step_counter_factory: 'IconScoreStepCounterFactory'):
         self.step_counter_factory = step_counter_factory
 
-    def create(self, context_type: 'IconScoreContextType', block: 'Block'):
+    def create(self, context_type: 'IconScoreContextType',
+               block: 'Block', prev_block_batches: Iterable['Batch'] = None):
         context: 'IconScoreContext' = IconScoreContext(context_type)
         context.block = block
 
         if context_type == IconScoreContextType.DIRECT:
             return context
+
+        if prev_block_batches:
+            context._prev_block_batches = [batch for batch in prev_block_batches]
 
         self._set_step_counter(context)
         self._set_context_attributes_for_processing_tx(context)
@@ -393,6 +411,7 @@ class IconScoreContextFactory(object):
         if context.type in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
             context.block_batch = BlockBatch(Block.from_block(context.block))
             context.tx_batch = TransactionBatch()
+
             context.new_icon_score_mapper = IconScoreMapper()
 
             # For PRep management

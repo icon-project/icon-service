@@ -495,7 +495,10 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
+        context: 'IconScoreContext' = self._context_factory.create(
+            IconScoreContextType.INVOKE,
+            block=block,
+            prev_block_batches=self._precommit_data_manager.get_block_batches(block.prev_hash))
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
         prev_block_votes: Optional[List[Tuple['Address', int]]] = \
