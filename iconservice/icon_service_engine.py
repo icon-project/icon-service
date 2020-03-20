@@ -534,12 +534,11 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
-                if is_block_editable:
-                    if tx_timer.duration >= self._block_invoke_timeout_s:
-                        Logger.info(
-                            tag=self.TAG,
-                            msg=f"Stop to invoke remaining transactions: {index} / {len(tx_requests)}")
-                        break
+                if is_block_editable and not self._continue_to_invoke(tx_request, tx_timer):
+                    Logger.info(
+                        tag=self.TAG,
+                        msg=f"Stop to invoke remaining transactions: {index} / {len(tx_requests)}")
+                    break
 
                 if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
@@ -2414,3 +2413,26 @@ class IconServiceEngine(ContextContainer):
             pass
 
         Logger.info(tag=self.TAG, msg=f"{ConfigKey.BLOCK_INVOKE_TIMEOUT}: {self._block_invoke_timeout_s}")
+
+    def _continue_to_invoke(self, tx_request: Dict, tx_timer: 'Timer') -> bool:
+        """If this is a block created by a leader,
+        check to continue transaction invoking with block_invoke_timeout
+
+        :param tx_request:
+        :param tx_timer:
+        :return:
+        """
+        to: Optional['Address'] = tx_request["params"].get("to")
+
+        # Skip EOA to EOA coin transfer in execution time check
+        if to and to.is_contract:
+            if tx_timer.duration >= self._block_invoke_timeout_s:
+                Logger.info(
+                    tag=self.TAG,
+                    msg=f"Stop transaction invoking: "
+                        f"duration={tx_timer.duration} "
+                        f"block_invoke_timeout={self._block_invoke_timeout_s}"
+                )
+                return False
+
+        return True
