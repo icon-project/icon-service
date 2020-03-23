@@ -614,13 +614,12 @@ class Engine(EngineBase, IISSEngineListener):
         response: dict = prep.to_dict(PRepDictType.FULL)
         return response
 
-
     @classmethod
     def handle_set_prep(cls, context: 'IconScoreContext', **kwargs):
         """Update a P-Rep registration information
 
         :param context:
-        :param params:
+        :param kwargs:
         :return:
         """
         if context.msg.sender.is_contract:
@@ -699,7 +698,6 @@ class Engine(EngineBase, IISSEngineListener):
         """Unregister a P-Rep
 
         :param context:
-        :param _params:
         :return:
         """
         if context.msg.sender.is_contract:

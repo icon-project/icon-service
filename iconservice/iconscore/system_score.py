@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 from iconcommons.logger import Logger
 
+
 from .icon_score_base import IconScoreBase, interface, external, payable
 from .icon_score_base2 import InterfaceScore
 from ..base.address import Address
@@ -30,6 +31,8 @@ from ..utils import to_camel_case
 
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase
+    from ..iconscore.icon_score_context import IconScoreContext
+    from ..iiss.storage import RewardRate
 
 
 class SystemScore(IconScoreBase):
@@ -45,53 +48,32 @@ class SystemScore(IconScoreBase):
     @payable
     @external
     def setStake(self, value: int = 0) -> None:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.iiss.invoke(context, method, params)
+        self._context.engine.iiss.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getStake(self, address: Address) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.iiss.query(context, method, params)
+        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
 
     @external
     def setDelegation(self, delegations: list = None) -> None:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.iiss.invoke(context, method, params)
+        self._context.engine.iiss.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getDelegation(self, address: Address) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.iiss.query(context, method, params)
+        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
 
     @payable
     @external
     def claimIScore(self) -> None:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.iiss.invoke(context, method, params)
+        self._context.engine.iiss.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def queryIScore(self, address: Address) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.iiss.query(context, method, params)
+        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def estimateUnstakeLockPeriod(self) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.iiss.query(context, method, params)
+        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getIISSInfo(self) -> dict:
@@ -101,74 +83,44 @@ class SystemScore(IconScoreBase):
     @external
     def registerPRep(self, name: str, country: str, city: str, email: str, website: str,
                      details: str, p2pEndpoint: str, nodeAddress: "Address" = None):
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.prep.invoke(context, method, params)
+        self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
     def unregisterPRep(self):
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.prep.invoke(context, method, params)
+        self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
     def setPRep(self, name: str = None, country: str = None, city: str = None, email: str = None,
                 website: str = None, details: str = None, p2pEndpoint: str = None, nodeAddress: "Address" = None):
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.prep.invoke(context, method, params)
+        self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
     def setGovernanceVariables(self, irep: int = None):
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        context.engine.prep.invoke(context, method, params)
+        self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getPRep(self, address: Address) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.prep.query(context, method, params)
+        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getPReps(self, startRanking: int = None, endRanking: int = None) -> list:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.prep.query(context, method, params)
+        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getMainPReps(self) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.prep.query(context, method, params)
+        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getSubPReps(self) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.prep.query(context, method, params)
+        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getPRepTerm(self) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.prep.query(context, method, params)
+        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getInactivePReps(self) -> dict:
-        params = self._get_params(locals())
-        context = self._context
-        method = currentframe().f_code.co_name
-        return context.engine.prep.query(context, method, params)
+        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
     def getScoreDepositInfo(self, address: Address) -> dict:
@@ -182,9 +134,13 @@ class SystemScore(IconScoreBase):
         )
         return None if deposit_info is None else deposit_info.to_dict(to_camel_case)
 
-    def _get_params(self, kw_args: dict) -> dict:
-        params = {}
-        params.update(kw_args)
+    def _get_params(self, locals_params: dict) -> tuple:
+        method = currentframe().f_back.f_code.co_name
+        params: dict = self._del_self_in_params(locals_params)
+        return self._context, method, params
+
+    def _del_self_in_params(self, kw_args: dict) -> dict:
+        params = dict(kw_args)
         del params["self"]
 
         return params
