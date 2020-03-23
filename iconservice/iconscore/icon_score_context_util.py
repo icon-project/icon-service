@@ -42,8 +42,6 @@ class IconScoreContextUtil(object):
     def is_score_active(context: 'IconScoreContext', score_address: 'Address') -> bool:
         if not score_address.is_contract:
             return False
-        # if score_address == SYSTEM_SCORE_ADDRESS:
-        #     return True
 
         deploy_info: 'IconScoreDeployInfo' = \
             context.storage.deploy.get_deploy_info(context, score_address)

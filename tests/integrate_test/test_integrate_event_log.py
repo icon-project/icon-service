@@ -213,24 +213,6 @@ class TestIntegrateEventLog(TestIntegrateBase):
         pass
 
     def test_event_log_parameters_on_deploy(self):
-        # # failure case: define dict type parameter
-        # tx_results: List['TransactionResult'] = self.deploy_score(
-        #     score_root="sample_event_log_scores",
-        #     score_name="sample_invalid_params_type_event_log_score_dict",
-        #     from_=self._accounts[0],
-        #     to_=SYSTEM_SCORE_ADDRESS,
-        #     expected_status=False)
-        # self.assertEqual(tx_results[0].failure.message, "Unsupported type for 'value: <class 'dict'>'")
-        #
-        # # failure case: define list type parameter
-        # tx_results: List['TransactionResult'] = self.deploy_score(
-        #     score_root="sample_event_log_scores",
-        #     score_name="sample_invalid_params_type_event_log_score_array",
-        #     from_=self._accounts[0],
-        #     to_=SYSTEM_SCORE_ADDRESS,
-        #     expected_status=False)
-        # self.assertEqual(tx_results[0].failure.message, "Unsupported type for 'value: <class 'list'>'")
-
         # failure case: omit type hint
         tx_results: List['TransactionResult'] = self.deploy_score(
             score_root="sample_event_log_scores",
