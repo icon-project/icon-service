@@ -21,7 +21,7 @@ from .icon_score_class_loader import IconScoreClassLoader
 from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
 from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
-from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
@@ -42,8 +42,6 @@ class IconScoreContextUtil(object):
     def is_score_active(context: 'IconScoreContext', score_address: 'Address') -> bool:
         if not score_address.is_contract:
             return False
-        if score_address == ZERO_SCORE_ADDRESS:
-            return True
 
         deploy_info: 'IconScoreDeployInfo' = \
             context.storage.deploy.get_deploy_info(context, score_address)
@@ -176,7 +174,7 @@ class IconScoreContextUtil(object):
         """
         if not score_address.is_contract:
             return
-        if score_address == ZERO_SCORE_ADDRESS:
+        if score_address == SYSTEM_SCORE_ADDRESS:
             return
 
         # Gets the governance SCORE

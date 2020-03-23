@@ -19,7 +19,7 @@
 
 from typing import TYPE_CHECKING, Any, List, Union, Optional
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_tx_hash
@@ -65,7 +65,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         return self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                            score_name="install/sample_score",
                                            from_=self._accounts[0],
-                                           to_=ZERO_SCORE_ADDRESS,
+                                           to_=SYSTEM_SCORE_ADDRESS,
                                            timestamp_us=timestamp,
                                            deploy_params={'value': hex(value * ICX_IN_LOOP)})
 
@@ -108,7 +108,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
                       score_name: str,
                       value: int,
                       expected_status: bool = True,
-                      to_: Optional['Address'] = ZERO_SCORE_ADDRESS,
+                      to_: Optional['Address'] = SYSTEM_SCORE_ADDRESS,
                       data: bytes = None) -> List['TransactionResult']:
         return self.deploy_score(score_root="sample_deploy_scores",
                                  score_name=score_name,
@@ -251,7 +251,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 1. deploy with str content
         tx = self._create_invalid_deploy_tx(from_=self._accounts[0],
-                                            to_=ZERO_SCORE_ADDRESS,
+                                            to_=SYSTEM_SCORE_ADDRESS,
                                             content='invalid')
 
         raise_exception_start_tag("test_score_no_zip")
@@ -265,7 +265,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 2. deploy with int content
         tx = self._create_invalid_deploy_tx(from_=self._accounts[0],
-                                            to_=ZERO_SCORE_ADDRESS,
+                                            to_=SYSTEM_SCORE_ADDRESS,
                                             content=1000)
 
         raise_exception_start_tag("test_score_no_zip")
@@ -278,7 +278,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 3. deploy content with hex(no prefix)
         tx = self._create_invalid_deploy_tx(from_=self._accounts[0],
-                                            to_=ZERO_SCORE_ADDRESS,
+                                            to_=SYSTEM_SCORE_ADDRESS,
                                             content='1a2c3b')
 
         raise_exception_start_tag("test_score_no_zip")
@@ -291,7 +291,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 3. deploy content with hex(upper case)
         tx = self._create_invalid_deploy_tx(from_=self._accounts[0],
-                                            to_=ZERO_SCORE_ADDRESS,
+                                            to_=SYSTEM_SCORE_ADDRESS,
                                             content='0x1A2c3b')
 
         raise_exception_start_tag("test_score_no_zip")
@@ -394,7 +394,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         tx1 = self.create_deploy_score_tx("sample_deploy_scores",
                                           "install/sample_score",
                                           self._accounts[0],
-                                          ZERO_SCORE_ADDRESS,
+                                          SYSTEM_SCORE_ADDRESS,
                                           deploy_params={'value': hex(value1)},
                                           is_sys=True)
 
@@ -416,7 +416,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         tx = self.create_deploy_score_tx("sample_deploy_scores",
                                          "install/sample_score",
                                          self._accounts[0],
-                                         ZERO_SCORE_ADDRESS,
+                                         SYSTEM_SCORE_ADDRESS,
                                          deploy_params={'value': hex(value1)})
 
         prev_block, hash_list = self.make_and_req_block([tx], block_height=block_height)
@@ -439,7 +439,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         tx = self.create_deploy_score_tx("sample_deploy_scores",
                                          "install/sample_score",
                                          self._accounts[0],
-                                         ZERO_SCORE_ADDRESS,
+                                         SYSTEM_SCORE_ADDRESS,
                                          deploy_params={'value': hex(value1)})
 
         prev_block, hash_list = self.make_and_req_block([tx], block_height=block_height)

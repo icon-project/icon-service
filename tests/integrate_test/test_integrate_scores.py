@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List, Any
 
 from iconservice import IconServiceFlag
 from iconservice.base.address import Address
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, ScoreNotFoundException
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
@@ -167,7 +167,7 @@ class TestIntegrateScores(TestIntegrateBase):
         tx2: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                                 score_name="install/sample_score",
                                                 from_=self._accounts[1],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         prev_block, hash_list = self.make_and_req_block([tx1, tx2])
         self._write_precommit_state(prev_block)

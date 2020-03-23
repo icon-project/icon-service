@@ -352,12 +352,12 @@ type_convert_templates[ParamType.IISS_GET_STAKE] = {
     ConstantKeys.ADDRESS: ValueType.ADDRESS
 }
 
-type_convert_templates[ParamType.IISS_SET_DELEGATION] = {
-    ConstantKeys.DELEGATIONS: [{
+type_convert_templates[ParamType.IISS_SET_DELEGATION] = [
+    {
         ConstantKeys.ADDRESS: ValueType.ADDRESS,
         ConstantKeys.VALUE: ValueType.INT
-    }]
-}
+    }
+]
 
 type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
 

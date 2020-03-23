@@ -17,7 +17,7 @@ import unittest
 from functools import wraps
 from unittest.mock import Mock, patch
 
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import AddressPrefix, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
@@ -64,10 +64,8 @@ CREATE_SCORE_INFO_PATCHER = patch('iconservice.iconscore.icon_score_context_util
 DEPLOY_PATCHER = patch('iconservice.deploy.icon_score_deployer.IconScoreDeployer.deploy')
 DEPLOY_LEGACY_PATCHER = patch('iconservice.deploy.icon_score_deployer.IconScoreDeployer.deploy_legacy')
 REMOVE_PATH_PATCHER = patch('iconservice.deploy.engine.remove_path')
-MAKE_ANNOTATIONS_FROM_METHOD_PATCHER = patch('iconservice.base.type_converter.'
-                                             'TypeConverter.make_annotations_from_method', return_value="annotations")
-CONVERT_DATA_PARAMS_PATCHER = patch('iconservice.base.type_converter.'
-                                    'TypeConverter.convert_data_params')
+ADJUST_PARAMS_TO_METHOD_PATCHER = patch('iconservice.base.type_converter.'
+                                        'TypeConverter.adjust_params_to_method')
 ZIP_TYPE = "application/zip"
 TBEARS_TYPE = "application/tbears"
 
@@ -204,7 +202,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._invoke_setUp(True)
 
         with self.assertRaises(AssertionError):
-            self._score_deploy_engine.invoke(self._context, GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS, {})
+            self._score_deploy_engine._invoke(self._context, GOVERNANCE_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS, {})
         IconScoreContextUtil.validate_score_blacklist.assert_not_called()
         IconScoreContextUtil.validate_deployer.assert_not_called()
         self._deploy_storage.put_deploy_info_and_tx_params.assert_not_called()
@@ -212,7 +210,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._score_deploy_engine.deploy.assert_not_called()
 
         with self.assertRaises(AssertionError):
-            self._score_deploy_engine.invoke(self._context, GOVERNANCE_SCORE_ADDRESS, None, {})
+            self._score_deploy_engine._invoke(self._context, GOVERNANCE_SCORE_ADDRESS, None, {})
         IconScoreContextUtil.validate_score_blacklist.assert_not_called()
         IconScoreContextUtil.validate_deployer.assert_not_called()
         self._deploy_storage.put_deploy_info_and_tx_params.assert_not_called()
@@ -224,7 +222,7 @@ class TestScoreDeployEngine(unittest.TestCase):
     def test_invoke_case2(self):
         self._invoke_setUp(False)
 
-        self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
+        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
         IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
         self._deploy_storage.put_deploy_info_and_tx_params.\
@@ -237,7 +235,7 @@ class TestScoreDeployEngine(unittest.TestCase):
     def test_invoke_case3(self):
         self._invoke_setUp(True)
 
-        self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
+        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
         IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
         self._deploy_storage.put_deploy_info_and_tx_params.\
@@ -250,7 +248,7 @@ class TestScoreDeployEngine(unittest.TestCase):
     def test_invoke_case4(self):
         self._invoke_setUp(False)
 
-        self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
+        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
         IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
         self._deploy_storage.put_deploy_info_and_tx_params. \
@@ -263,7 +261,7 @@ class TestScoreDeployEngine(unittest.TestCase):
     def test_invoke_case5(self):
         self._invoke_setUp(True)
 
-        self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
+        self._score_deploy_engine._invoke(self._context, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
         IconScoreContextUtil.validate_deployer.assert_called_with(self._context, self._context.tx.origin)
         self._score_deploy_engine.deploy.assert_not_called()
@@ -607,7 +605,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         IconScoreDeployer.deploy_legacy.assert_called_with(score_deploy_path, None)
 
     # case on_install
-    @patch_several(MAKE_ANNOTATIONS_FROM_METHOD_PATCHER, CONVERT_DATA_PARAMS_PATCHER)
+    @patch_several(ADJUST_PARAMS_TO_METHOD_PATCHER)
     def test_initialize_score_case1(self):
         mock_score = MockScore()
         on_install = Mock()
@@ -616,12 +614,11 @@ class TestScoreDeployEngine(unittest.TestCase):
         params = {"param1": '0x1', "param2": "string"}
 
         self._score_deploy_engine._initialize_score(deploy_type, mock_score, params)
-        TypeConverter.make_annotations_from_method.assert_called_with(on_install)
-        TypeConverter.convert_data_params.assert_called_with('annotations', params)
+        TypeConverter.adjust_params_to_method.assert_called_with(on_install, params)
         on_install.assert_called_with(**params)
 
     # case on_update
-    @patch_several(MAKE_ANNOTATIONS_FROM_METHOD_PATCHER, CONVERT_DATA_PARAMS_PATCHER)
+    @patch_several(ADJUST_PARAMS_TO_METHOD_PATCHER)
     def test_initialize_score_case2(self):
         mock_score = MockScore()
         on_update = Mock()
@@ -630,12 +627,11 @@ class TestScoreDeployEngine(unittest.TestCase):
         params = {"param1": '0x1', "param2": "string"}
 
         self._score_deploy_engine._initialize_score(deploy_type, mock_score, params)
-        TypeConverter.make_annotations_from_method.assert_called_with(on_update)
-        TypeConverter.convert_data_params.assert_called_with('annotations', params)
+        TypeConverter.adjust_params_to_method.assert_called_with(on_update, params)
         on_update.assert_called_with(**params)
 
     # case strange method name
-    @patch_several(MAKE_ANNOTATIONS_FROM_METHOD_PATCHER, CONVERT_DATA_PARAMS_PATCHER)
+    @patch_several(ADJUST_PARAMS_TO_METHOD_PATCHER)
     def test_initialize_score_case3(self):
         mock_score = MockScore()
         on_strange = Mock()
@@ -648,8 +644,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f"Invalid deployType: {deploy_type}")
-        TypeConverter.make_annotations_from_method.assert_not_called()
-        TypeConverter.convert_data_params.assert_not_called()
+        TypeConverter.adjust_params_to_method.assert_not_called()
         on_strange.assert_not_called()
 
     @staticmethod

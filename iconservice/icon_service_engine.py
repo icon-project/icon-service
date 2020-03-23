@@ -24,13 +24,13 @@ from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
 from iconservice.rollback.rollback_manager import RollbackManager
-from .base.address import Address, generate_score_address, generate_score_address_for_tbears
-from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from .base.address import Address
+from .base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
-    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException,
-    MethodNotFoundException, InternalServiceErrorException, DatabaseException)
+    AccessDeniedException, IconScoreException, InvalidBaseTransactionException,
+    InternalServiceErrorException, DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
@@ -43,9 +43,9 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, Revision, BASE_TRANSACTION_INDEX,
-    IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG
+    Revision, BASE_TRANSACTION_INDEX,
+    IISS_DB, IISS_INITIAL_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG
 )
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -82,7 +82,6 @@ if TYPE_CHECKING:
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
     from .prep.data import Term
-    from .iiss.storage import RewardRate
 
 _TAG = "ISE"
 
@@ -224,7 +223,7 @@ class IconServiceEngine(ContextContainer):
                                                 icx=IcxEngine(),
                                                 iiss=IISSEngine(),
                                                 prep=PRepEngine(),
-                                                issue=IssueEngine())
+                                                issue=IssueEngine(),)
 
         storage: 'ContextStorage' = ContextStorage(deploy=DeployStorage(self._icx_context_db),
                                                    fee=FeeStorage(self._icx_context_db),
@@ -974,7 +973,7 @@ class IconServiceEngine(ContextContainer):
 
         if context.engine.prep.term.start_block_height == context.block.height:
             EventLogEmitter.emit_event_log(context,
-                                           score_address=ZERO_SCORE_ADDRESS,
+                                           score_address=SYSTEM_SCORE_ADDRESS,
                                            event_signature='TermStarted(int,int,int)',
                                            arguments=[context.engine.prep.term.sequence,
                                                       context.engine.prep.term.start_block_height,
@@ -1083,7 +1082,7 @@ class IconServiceEngine(ContextContainer):
             content_size = get_deploy_content_size(context.revision, data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
             # When installing SCORE.
-            if to == ZERO_SCORE_ADDRESS:
+            if to == SYSTEM_SCORE_ADDRESS:
                 context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             # When updating SCORE.
             else:
@@ -1308,83 +1307,12 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        if self._check_new_process(params):
-            if context.revision < Revision.IISS.value:
-                raise InvalidParamsException(f"Method Not Found")
+        icon_score_address: Address = params['to']
+        data_type = params.get('dataType', None)
+        data = params.get('data', None)
 
-            data: dict = params['data']
-            if self._check_iiss_process(params):
-                return context.engine.iiss.query(context, data)
-            elif self._check_prep_process(params):
-                return context.engine.prep.query(context, data)
-            elif self._check_debug_process(params):
-                return self._handle_get_iiss_info(context, data)
-            else:
-                raise InvalidParamsException("Invalid Method")
-        else:
-            icon_score_address: Address = params['to']
-            data_type = params.get('dataType', None)
-            data = params.get('data', None)
-
-            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-            return IconScoreEngine.query(context,
-                                         icon_score_address,
-                                         data_type,
-                                         data)
-
-    @staticmethod
-    def _create_rc_result(context: 'IconScoreContext', start_block: int, end_block: int) -> dict:
-        rc_result = dict()
-        if start_block < 0 or end_block < 0:
-            return rc_result
-
-        # (iscore, block_height, rc_state_hash)
-        iscore, request_block_height, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
-        if iscore == -1:
-            return rc_result
-
-        if request_block_height != end_block:
-            Logger.warning(f"Response block height is not matched to the request: "
-                           f"response block height:{request_block_height} "
-                           f"request block height:{end_block}", _TAG)
-            return rc_result
-
-        rc_result['iscore'] = iscore
-        rc_result['estimatedICX'] = iscore // ISCORE_EXCHANGE_RATE
-        rc_result['startBlockHeight'] = start_block
-        rc_result['endBlockHeight'] = end_block
-        rc_result['stateHash'] = rc_state_hash
-
-        return rc_result
-
-    def _handle_get_iiss_info(self, context: 'IconScoreContext', _params: dict) -> dict:
-        response = dict()
-        term = context.engine.prep.term
-
-        response['blockHeight'] = context.block.height
-        reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
-        response['variable'] = dict()
-        response['variable']['irep'] = term.irep if term else 0
-        response['variable']['rrep'] = reward_rate.reward_prep
-
-        calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)
-
-        next_calculation: int = calc_end_block
-        if calc_start_block < 0 or context.block.height != next_calculation:
-            next_calculation: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
-            if next_calculation is None:
-                next_calculation = -1
-        response['nextCalculation'] = next_calculation + 1
-
-        term_start_block, term_end_block = context.storage.meta.get_last_term_info(context)
-
-        if term_end_block < 0 or context.block.height != term_end_block:
-            term_end_block: int = term.end_block_height if term else -1
-        response['nextPRepTerm'] = term_end_block + 1
-
-        response['rcResult'] = self._create_rc_result(context, calc_start_block, calc_end_block)
-
-        return response
+        context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+        return IconScoreEngine.query(context, icon_score_address, data_type, data)
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -1475,116 +1403,15 @@ class IconServiceEngine(ContextContainer):
         input_size = get_input_data_size(context.revision, params.get('data', None))
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
-        # TODO Branch IISS Engine
-        if self._check_new_process(params):
-
-            if context.revision < Revision.IISS.value:
-                """
-                raise InvalidParamsException(f"Method Not Found")
-                above code is what I want to raise
-                
-                but Main Net block sync fail issue happened when it mismatched updating version case.
-                https://tracker.icon.foundation/transaction/0x76c4c323c6787b2d44565cdaab2a3fc78c37136339a7f0b4faf3fb03fec64939#internaltransactions
-                so we must change raise contents like that.
-                """
-                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-                raise ScoreNotFoundException(f'SCORE not found: {ZERO_SCORE_ADDRESS}')
-
-            self._process_new_transaction(context, params, tx_result)
-        else:
-            self._process_icx_transaction(context, params, tx_result)
-
-    @staticmethod
-    def _check_new_process(params: dict) -> bool:
-        """Check if data in params is related to IISS
-
-        :param params: tx params
-        :return: True(IISS tx), False(None IISS tx)
-        """
-
-        to: Optional['Address'] = params.get('to')
-        if to != ZERO_SCORE_ADDRESS:
-            return False
-
-        data_type: Optional[str] = params.get('dataType')
-        if data_type != 'call':
-            return False
-
-        data: Optional[dict] = params.get('data')
-        if data is None or not isinstance(data, dict):
-            return False
-
-        method_name: Optional[str] = data.get("method")
-        if method_name in NEW_METHOD_TABLE:
-            return True
-        else:
-            raise MethodNotFoundException(f"Method not found: {method_name}")
-
-    @staticmethod
-    def _check_iiss_process(params: dict) -> bool:
-        data: Optional[dict] = params.get('data')
-        method_name: Optional[str] = data.get("method")
-        return method_name in IISS_METHOD_TABLE
-
-    @staticmethod
-    def _check_prep_process(params: dict) -> bool:
-        data: Optional[dict] = params.get('data')
-        method_name: Optional[str] = data.get("method")
-        return method_name in PREP_METHOD_TABLE
-
-    @staticmethod
-    def _check_debug_process(params: dict) -> bool:
-        data: Optional[dict] = params.get('data')
-        method_name: Optional[str] = data.get("method")
-        return method_name in DEBUG_METHOD_TABLE
-
-    def _process_icx_transaction(self,
-                                 context: 'IconScoreContext',
-                                 params: dict,
-                                 tx_result: 'TransactionResult') -> None:
-        """
-        Processes the icx transaction
-
-        :param params: JSON-RPC params
-        :return: SCORE address if 'deploy' command. otherwise None
-        """
-
         to: Address = params['to']
-
         data_type: str = params.get('dataType')
-        if data_type in (None, 'call', 'message'):
+
+        # Can't transfer ICX to system SCORE
+        if data_type in (None, 'call', 'message') and to != SYSTEM_SCORE_ADDRESS:
             self._transfer_coin(context, params)
 
         if to.is_contract:
             tx_result.score_address = self._handle_score_invoke(context, to, params)
-
-    def _process_new_transaction(self,
-                                 context: 'IconScoreContext',
-                                 params: dict,
-                                 _tx_result: 'TransactionResult') -> None:
-        """
-        Processes the iiss transaction
-
-        :param context:
-        :param params: JSON-RPC params
-        :param _tx_result:
-        """
-
-        to: Address = params['to']
-        data: dict = params['data']
-
-        assert to == ZERO_SCORE_ADDRESS, "Invalid to Address"
-
-        # Only 'registerPRep' method is allowed to set value
-        if context.msg.value > 0 and data.get("method") != "registerPRep":
-            raise InvalidParamsException(f"Do not allow to set value in this method: {data.get('method')}")
-
-        if self._check_iiss_process(params):
-            context.engine.iiss.invoke(context, data)
-        elif self._check_prep_process(params):
-            context.engine.prep.invoke(context, data)
-        else:
-            raise InvalidParamsException("Invalid method")
 
     @classmethod
     def _transfer_coin(cls,
@@ -1669,37 +1496,10 @@ class IconServiceEngine(ContextContainer):
         data: dict = params.get('data')
 
         if data_type == 'deploy':
-            if to == ZERO_SCORE_ADDRESS:
-
-                # SCORE install
-                content_type = data.get('contentType')
-
-                if content_type == 'application/tbears':
-                    path: str = data.get('content')
-                    score_address = generate_score_address_for_tbears(path)
-                else:
-                    score_address = generate_score_address(context.tx.origin,
-                                                           context.tx.timestamp,
-                                                           context.tx.nonce)
-                    deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
-                    if deploy_info is not None:
-                        raise AccessDeniedException(f'SCORE address already in use: {score_address}')
-                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
-            else:
-                # SCORE update
-                score_address = to
-                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
-
-            content_size = get_deploy_content_size(context.revision, data.get('content', None))
-            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
-
-            context.engine.deploy.invoke(context=context,
-                                         to=to,
-                                         icon_score_address=score_address,
-                                         data=data)
-            return score_address
+            return context.engine.deploy.invoke(context, to, data)
         elif data_type == 'deposit':
             self._deposit_handler.handle_deposit_request(context, data)
+            return None
         else:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)

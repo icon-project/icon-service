@@ -19,7 +19,7 @@
 
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -34,11 +34,11 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="get_api",
                                                 score_name="get_api1",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="get_api",
                                                 score_name="get_api2",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -166,11 +166,11 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="get_api",
                                                 score_name="get_api1",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="get_api",
                                                 score_name="get_api2",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address

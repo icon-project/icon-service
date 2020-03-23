@@ -23,7 +23,7 @@ from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CA
     ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.address import Address, ZERO_SCORE_ADDRESS
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 
@@ -84,9 +84,7 @@ class IconScoreEngine(object):
 
     @staticmethod
     def _validate_score_blacklist(context: 'IconScoreContext', icon_score_address: 'Address'):
-        if icon_score_address is None or \
-                icon_score_address is ZERO_SCORE_ADDRESS or \
-                not icon_score_address.is_contract:
+        if icon_score_address is None or not icon_score_address.is_contract:
             raise InvalidParamsException(f"Invalid score address: ({icon_score_address})")
 
         IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
@@ -124,8 +122,7 @@ class IconScoreEngine(object):
         validate_external_method(func_name)
 
         score_func = getattr(icon_score, func_name)
-        annotation_params = TypeConverter.make_annotations_from_method(score_func)
-        TypeConverter.convert_data_params(annotation_params, tmp_params)
+        TypeConverter.adjust_params_to_method(score_func, tmp_params)
         return tmp_params
 
     @staticmethod

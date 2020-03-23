@@ -17,7 +17,7 @@
 import unittest
 from unittest.mock import Mock, ANY, patch, MagicMock
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException, OutOfBalanceException
 from iconservice.deploy import DeployEngine
@@ -43,7 +43,7 @@ class TestTransactionValidator(unittest.TestCase):
             fee=None,
             iiss=None,
             prep=None,
-            issue=None
+            issue=None,
         )
         IconScoreContext.storage = ContextStorage(
             icx=Mock(spec=IcxStorage),
@@ -522,7 +522,7 @@ class TestTransactionValidator(unittest.TestCase):
 
         generate_score_address.reset_mock()
         IconScoreContext.storage.deploy.get_deploy_info.reset_mock()
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS}
+        params = {'dataType': 'deploy', 'to': SYSTEM_SCORE_ADDRESS}
         with self.assertRaises(InvalidParamsException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
@@ -532,7 +532,7 @@ class TestTransactionValidator(unittest.TestCase):
 
         generate_score_address.reset_mock()
         IconScoreContext.storage.deploy.get_deploy_info.reset_mock()
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {}}
+        params = {'dataType': 'deploy', 'to': SYSTEM_SCORE_ADDRESS, 'data': {}}
         with self.assertRaises(InvalidParamsException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
@@ -543,7 +543,7 @@ class TestTransactionValidator(unittest.TestCase):
         generate_score_address.reset_mock()
         IconScoreContext.storage.deploy.get_deploy_info.reset_mock()
         content_type = 'invalid'
-        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
+        params = {'to': SYSTEM_SCORE_ADDRESS, 'data': {'contentType': content_type}}
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         self.assertEqual(e.exception.code, ExceptionCode.ILLEGAL_FORMAT)
@@ -554,7 +554,7 @@ class TestTransactionValidator(unittest.TestCase):
         generate_score_address.reset_mock()
         IconScoreContext.storage.deploy.get_deploy_info.reset_mock()
         content_type = 'application/tbears'
-        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
+        params = {'to': SYSTEM_SCORE_ADDRESS, 'data': {'contentType': content_type}}
         self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         generate_score_address.assert_not_called()
         IconScoreContext.storage.deploy.get_deploy_info.assert_not_called()
@@ -562,7 +562,7 @@ class TestTransactionValidator(unittest.TestCase):
         generate_score_address.reset_mock()
         IconScoreContext.storage.deploy.get_deploy_info.reset_mock()
         content_type = 'application/zip'
-        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
+        params = {'to': SYSTEM_SCORE_ADDRESS, 'data': {'contentType': content_type}}
         with self.assertRaises(InvalidParamsException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
@@ -574,7 +574,7 @@ class TestTransactionValidator(unittest.TestCase):
         IconScoreContext.storage.deploy.get_deploy_info.reset_mock()
         content_type = 'application/zip'
         _from = create_address()
-        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from}
+        params = {'to': SYSTEM_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from}
         with self.assertRaises(InvalidParamsException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
@@ -590,7 +590,7 @@ class TestTransactionValidator(unittest.TestCase):
         content_type = 'application/zip'
         _from = create_address()
         timestamp = 12345
-        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from,
+        params = {'to': SYSTEM_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from,
                   'timestamp': timestamp}
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
@@ -607,7 +607,7 @@ class TestTransactionValidator(unittest.TestCase):
         content_type = 'application/zip'
         _from = create_address()
         timestamp = 12345
-        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from,
+        params = {'to': SYSTEM_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from,
                   'timestamp': timestamp}
         self.validator._validate_new_score_address_on_deploy_transaction(self.context, params)
         generate_score_address.assert_called_once_with(_from, timestamp, ANY)
@@ -642,12 +642,12 @@ class TestTransactionValidator(unittest.TestCase):
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
         self.validator._is_score_active.assert_called_once_with(self.context, address)
 
-        address = ZERO_SCORE_ADDRESS
+        address = SYSTEM_SCORE_ADDRESS
         self.validator._is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
         self.validator._is_score_active.assert_called_once_with(self.context, address)
 
-        address = ZERO_SCORE_ADDRESS
+        address = SYSTEM_SCORE_ADDRESS
         self.validator._is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
         self.validator._is_score_active.assert_called_once_with(self.context, address)

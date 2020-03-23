@@ -20,9 +20,11 @@ from iconcommons import Logger
 from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_path
 from ..base.ComponentBase import EngineBase
-from ..base.address import Address
-from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException
+from ..base.address import (
+    Address, SYSTEM_SCORE_ADDRESS,
+    generate_score_address_for_tbears, generate_score_address,
+)
+from ..base.exception import AccessDeniedException, InvalidParamsException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
 from ..icon_constant import DeployType
@@ -30,6 +32,7 @@ from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, Revision
 from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
+from ..iconscore.icon_score_step import StepType, get_deploy_content_size
 from ..iconscore.utils import get_score_deploy_path
 from ..utils import is_builtin_score
 
@@ -45,31 +48,60 @@ class Engine(EngineBase):
     """It handles transactions to install, update and audit a SCORE
     """
 
-    def invoke(self,
-               context: 'IconScoreContext',
-               to: 'Address',
-               icon_score_address: 'Address',
-               data: dict) -> None:
+    def invoke(self, context: 'IconScoreContext', to: 'Address', data: dict) -> 'Address':
         """Handle data contained in icx_sendTransaction message
         :param context:
-        :param to:
-        :param icon_score_address:
-            cx0000000000000000000000000000000000000000 on install
-            otherwise score address to update
+        :param to: If 'to' is SYSTEM_SCORE_ADDRESS, install SCORE. Otherwise update SCORE
         :param data: SCORE deploy data
+        :return SCORE address
         """
+        if to == SYSTEM_SCORE_ADDRESS:
+            # SCORE install
+            content_type = data.get("contentType")
+            if content_type == "application/tbears":
+                path: str = data.get("content")
+                score_address = generate_score_address_for_tbears(path)
+            else:
+                score_address = generate_score_address(
+                    context.tx.origin, context.tx.timestamp, context.tx.nonce
+                )
+            deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
+            if deploy_info is not None:
+                raise AccessDeniedException(
+                    f"SCORE address already in use: {score_address}"
+                )
+
+            context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
+        else:
+            # SCORE update
+            score_address = to
+            context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
+
+        content_size = get_deploy_content_size(
+            context.revision, data.get("content", None)
+        )
+        context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
+
+        self._invoke(
+            context=context, to=to, icon_score_address=score_address, data=data
+        )
+
+        return score_address
+
+    def _invoke(self, context: "IconScoreContext", to: "Address",
+                icon_score_address: "Address", data: dict) -> None:
         assert icon_score_address is not None
-        assert icon_score_address != ZERO_SCORE_ADDRESS
+        assert icon_score_address != SYSTEM_SCORE_ADDRESS
         assert icon_score_address.is_contract
 
-        if icon_score_address in (None, ZERO_SCORE_ADDRESS):
+        if icon_score_address in (None, SYSTEM_SCORE_ADDRESS):
             raise InvalidParamsException(f'Invalid SCORE address: {icon_score_address}')
 
         try:
             IconScoreContextUtil.validate_deployer(context, context.tx.origin)
 
             deploy_type: 'DeployType' = \
-                DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
+                DeployType.INSTALL if to == SYSTEM_SCORE_ADDRESS else DeployType.UPDATE
 
             context.storage.deploy.put_deploy_info_and_tx_params(
                 context, icon_score_address, deploy_type,
@@ -286,6 +318,5 @@ class Engine(EngineBase):
         else:
             raise InvalidParamsException(f'Invalid deployType: {deploy_type}')
 
-        annotations = TypeConverter.make_annotations_from_method(on_init)
-        TypeConverter.convert_data_params(annotations, params)
+        TypeConverter.adjust_params_to_method(on_init, params)
         on_init(**params)

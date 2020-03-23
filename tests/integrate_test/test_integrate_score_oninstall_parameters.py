@@ -17,7 +17,7 @@
 """on_install parameters testcase"""
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.exception import ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -34,7 +34,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         tx = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                          score_name=f"install/sample_token",
                                          from_=self._accounts[0],
-                                         to_=ZERO_SCORE_ADDRESS,
+                                         to_=SYSTEM_SCORE_ADDRESS,
                                          deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)})
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx])
         score_addr1 = tx_results[0].score_address
@@ -58,32 +58,30 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         tx = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                          score_name=f"install/sample_token",
                                          from_=self._accounts[0],
-                                         to_=ZERO_SCORE_ADDRESS,
+                                         to_=SYSTEM_SCORE_ADDRESS,
                                          deploy_params={"init_supply": hex(init_supply),
                                                         "decimal": hex(decimal),
                                                         "additional_param": hex(123)})
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx], expected_status=False)
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertTrue(tx_results[0].failure.message.find("on_install() got an unexpected keyword argument "
-                                                           "'additional_param'") != -1)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
     def test_missing_parameters_oninstall(self):
         tx1 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                           score_name=f"install/sample_token",
                                           from_=self._accounts[0],
-                                          to_=ZERO_SCORE_ADDRESS,
+                                          to_=SYSTEM_SCORE_ADDRESS,
                                           deploy_params={"decimal": hex(18)})
 
         tx2 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                           score_name=f"install/sample_token",
                                           from_=self._accounts[0],
-                                          to_=ZERO_SCORE_ADDRESS,
+                                          to_=SYSTEM_SCORE_ADDRESS,
                                           deploy_params={"init_supply": hex(1000)})
 
         tx3 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                           score_name=f"install/sample_token",
                                           from_=self._accounts[0],
-                                          to_=ZERO_SCORE_ADDRESS,
+                                          to_=SYSTEM_SCORE_ADDRESS,
                                           deploy_params={})
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2, tx3], expected_status=False)
 
@@ -102,21 +100,21 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         tx1 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                           score_name=f"install/sample_token",
                                           from_=self._accounts[0],
-                                          to_=ZERO_SCORE_ADDRESS,
+                                          to_=SYSTEM_SCORE_ADDRESS,
                                           deploy_params={"init_supply": str(self._accounts[0].address),
                                                          "decimal": hex(18)})
 
         tx2 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                           score_name=f"install/sample_token",
                                           from_=self._accounts[0],
-                                          to_=ZERO_SCORE_ADDRESS,
+                                          to_=SYSTEM_SCORE_ADDRESS,
                                           deploy_params={"init_supply": str(self._accounts[0].address),
                                                          "decimal": hex(18)})
 
         tx3 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                           score_name=f"install/sample_token",
                                           from_=self._accounts[0],
-                                          to_=ZERO_SCORE_ADDRESS,
+                                          to_=SYSTEM_SCORE_ADDRESS,
                                           deploy_params={"init_supply": hex(1000),
                                                          "decimal": hex(18),
                                                          "address_param": f"hx{'1234' * 5}"})
@@ -133,7 +131,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
                                                                   score_name=f"install/sample_legacy_kwargs_params",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr = tx_results[0].score_address
 
         query_request = {
@@ -152,7 +150,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.deploy_score(score_root="sample_deploy_scores",
                           score_name=f"install/sample_legacy_kwargs_params",
                           from_=self._accounts[0],
-                          to_=ZERO_SCORE_ADDRESS,
+                          to_=SYSTEM_SCORE_ADDRESS,
                           expected_status=False)
         raise_exception_end_tag("sample_invalid_kwargs_parameter_value_oninstall")
 

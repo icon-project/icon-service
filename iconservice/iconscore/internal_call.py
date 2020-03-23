@@ -16,7 +16,6 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
-from . import system_call_handler
 from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_CALL
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
@@ -70,10 +69,7 @@ class InternalCall(object):
             if amount > 0:
                 InternalCall.emit_event_log_for_icx_transfer(context, addr_from, addr_to, amount)
 
-            if addr_to == system_call_handler.SYSTEM_ADDRESS:
-                return system_call_handler.handle_system_call(
-                    context, addr_from, amount, func_name, arg_params, kw_params)
-            elif addr_to.is_contract:
+            if addr_to.is_contract:
                 return InternalCall._other_score_call(
                     context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 

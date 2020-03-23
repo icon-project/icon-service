@@ -24,7 +24,7 @@ from unittest.mock import Mock
 from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
@@ -695,7 +695,7 @@ class TestIntegrateBase(TestCase):
                      deploy_params: dict = None,
                      step_limit: int = DEFAULT_DEPLOY_STEP_LIMIT,
                      expected_status: bool = True,
-                     to_: Union['EOAAccount', 'Address'] = ZERO_SCORE_ADDRESS,
+                     to_: Union['EOAAccount', 'Address'] = SYSTEM_SCORE_ADDRESS,
                      data: bytes = None) -> List['TransactionResult']:
 
         tx = self.create_deploy_score_tx(score_root=score_root,

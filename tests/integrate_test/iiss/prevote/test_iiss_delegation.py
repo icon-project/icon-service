@@ -18,7 +18,7 @@
 """
 from typing import List, Dict
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_result import TransactionResult
@@ -151,7 +151,7 @@ class TestIISSDelegate(TestIISSBase):
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={"invalid": delegations})
         self.process_confirm_block_tx([tx], expected_status=False)
@@ -160,7 +160,7 @@ class TestIISSDelegate(TestIISSBase):
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={
                                                  "delegations": delegations,
@@ -172,7 +172,7 @@ class TestIISSDelegate(TestIISSBase):
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={
                                                  "delegations1": delegations,
@@ -182,7 +182,7 @@ class TestIISSDelegate(TestIISSBase):
 
         # set delegation 3
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={})
         self.process_confirm_block_tx([tx])

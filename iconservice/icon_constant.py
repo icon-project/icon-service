@@ -14,6 +14,7 @@
 
 from enum import IntFlag, unique, IntEnum, Enum, auto, Flag
 
+SYSTEM_ADDRESS = "cx0000000000000000000000000000000000000000"
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
 ICON_DEPLOY_LOG_TAG = "DEPLOY"
@@ -56,9 +57,12 @@ ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
 
-BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': GOVERNANCE_ADDRESS}
+BUILTIN_SCORE_ADDRESS_MAPPER = {
+    'governance': GOVERNANCE_ADDRESS,
+    'system': SYSTEM_ADDRESS
+}
 
-ZERO_TX_HASH = bytes(32)
+ZERO_TX_HASH = bytes(DEFAULT_BYTE_SIZE)
 
 
 class IssueDataKey:
@@ -239,41 +243,12 @@ INVALID_CLAIM_TX = [
     b'\xb9\xee\xb25\xf7\x15\xb1f\xcfK\x91\xff\xcf\x8c\xc4\x8a\x81\x918\x96\x08m0\x10O\xfc\x0c\xf4~\xed\x1c\xbd'
 ]
 
-IISS_METHOD_TABLE = [
-    "setStake",
-    "getStake",
-    "setDelegation",
-    "getDelegation",
-    "claimIScore",
-    "queryIScore",
-    "estimateUnstakeLockPeriod"
-]
-
-PREP_METHOD_TABLE = [
-    "registerPRep",
-    "unregisterPRep",
-    "setPRep",
-    "setGovernanceVariables",
-    "getPRep",
-    "getMainPReps",
-    "getSubPReps",
-    "getPReps",
-    "getPRepTerm",
-    "getInactivePReps"
-]
-
-DEBUG_METHOD_TABLE = [
-    "getIISSInfo"
-]
-
 HASH_TYPE_TABLE = [
     "blockHash",
     "txHash",
     "prevBlockHash",
     "rootHash"
 ]
-
-NEW_METHOD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE + DEBUG_METHOD_TABLE
 
 IISS_MAX_DELEGATIONS = 10
 PREP_MAIN_PREPS = 22

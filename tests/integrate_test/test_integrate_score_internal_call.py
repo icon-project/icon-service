@@ -20,7 +20,7 @@
 import unittest
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, DatabaseException, StackOverflowException
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
@@ -38,13 +38,13 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS,
+                                                to_=SYSTEM_SCORE_ADDRESS,
                                                 deploy_params={'value': hex(value1)})
 
         tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -82,13 +82,13 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS,
+                                                to_=SYSTEM_SCORE_ADDRESS,
                                                 deploy_params={'value': hex(value1)})
 
         tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_score_cross",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -126,12 +126,12 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_loop",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_loop",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -179,13 +179,13 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS,
+                                                to_=SYSTEM_SCORE_ADDRESS,
                                                 deploy_params={'value': hex(value1)})
 
         tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -217,12 +217,12 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -279,12 +279,12 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx2: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
                                                 score_name="sample_link_score",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address

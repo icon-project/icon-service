@@ -132,7 +132,7 @@ class TestIntegratePrep(TestIISSBase):
         response: dict = self.get_prep_list()
         expected_response: dict = {
             "blockHeight": self._block_height,
-            "startRanking": 0,
+            "startRanking": 1,
             "totalDelegated": 0,
             "totalStake": 0,
             "preps": []
@@ -177,6 +177,10 @@ class TestIntegratePrep(TestIISSBase):
         response: dict = self.get_prep_list(2, 2)
         actual_preps: list = response['preps']
         self.assertEqual(1, len(actual_preps))
+
+        response: dict = self.get_prep_list()
+        actual_preps: list = response['preps']
+        self.assertEqual(prep_count, len(actual_preps))
 
         response: dict = self.get_prep_list(start_ranking=1)
         actual_preps: list = response['preps']

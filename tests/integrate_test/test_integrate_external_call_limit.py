@@ -18,7 +18,7 @@
 """
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidRequestException, StackOverflowException
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -38,11 +38,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_termination",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -75,11 +75,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_termination",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -113,11 +113,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_termination",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -140,11 +140,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_termination",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -169,11 +169,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_termination",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -202,11 +202,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_termination",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -237,11 +237,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_reflex",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -264,11 +264,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_reflex",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address
@@ -290,11 +290,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_start",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_score_external_call_limit",
                                                 score_name="sample_score_call_reflex",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         start_score: 'Address' = tx_results[0].score_address

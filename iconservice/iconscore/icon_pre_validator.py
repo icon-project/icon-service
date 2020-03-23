@@ -17,7 +17,7 @@
 from typing import TYPE_CHECKING, Any
 
 from .icon_score_step import get_input_data_size
-from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
 from ..utils import is_lowercase_hex_string
@@ -281,7 +281,7 @@ class IconPreValidator:
         """
 
         to: 'Address' = params['to']
-        if to != ZERO_SCORE_ADDRESS:
+        if to != SYSTEM_SCORE_ADDRESS:
             return
 
         try:
@@ -317,7 +317,7 @@ class IconPreValidator:
 
     def _is_inactive_score(self, context: 'IconScoreContext', address: 'Address') -> bool:
         is_contract = address.is_contract
-        is_zero_score_address = address == ZERO_SCORE_ADDRESS
+        is_zero_score_address = address == SYSTEM_SCORE_ADDRESS
         is_score_active = self._is_score_active(context, address)
         _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
         return _is_inactive_score

@@ -21,7 +21,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -77,7 +77,7 @@ class TestIISSClaim(TestIISSBase):
         # claim iscore
         tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
         self.assertEqual(1, len(tx_results[0].event_logs))
-        self.assertEqual(ZERO_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
         self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
         self.assertEqual([iscore, icx], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_called()
@@ -117,7 +117,7 @@ class TestIISSClaim(TestIISSBase):
         # claim iscore
         tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
         self.assertEqual(1, len(tx_results[0].event_logs))
-        self.assertEqual(ZERO_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
         self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
         self.assertEqual([icx, iscore], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_not_called()
@@ -125,7 +125,7 @@ class TestIISSClaim(TestIISSBase):
     def _query_iscore_with_invalid_params(self):
         params = {
             "version": self._version,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
                 "method": "queryIScore"
@@ -133,7 +133,7 @@ class TestIISSClaim(TestIISSBase):
         }
 
         # query iscore without an address
-        with pytest.raises(InvalidParamsException):
+        with pytest.raises(TypeError):
             self.icon_service_engine.query("icx_call", params)
 
         # query iscore with an empty string as an address
