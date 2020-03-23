@@ -32,7 +32,7 @@ from ..base.exception import (
     OutOfBalanceException, FatalException, InternalServiceErrorException
 )
 from ..base.type_converter import TypeConverter
-from ..base.type_converter_templates import ConstantKeys, ParamType
+from ..base.type_converter_templates import ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
     IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision
 from ..iconscore.icon_score_context import IconScoreContext
@@ -396,7 +396,7 @@ class Engine(EngineBase):
 
     @classmethod
     def _convert_params_of_set_delegation(cls,
-                                          delegations: dict) -> Tuple[int, List[Tuple['Address', int]]]:
+                                          delegations: list) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
@@ -414,7 +414,7 @@ class Engine(EngineBase):
         if len(delegations) > IISS_MAX_DELEGATIONS:
             raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
 
-        temp_delegations: dict = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
+        temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
         delegated_addresses = set()

@@ -97,7 +97,7 @@ class IconBuiltinScoreLoader(object):
             remove_path(score_deploy_path)
             # Copy builtin score source files from iconservice package to score_deploy_path.
             copytree(score_source_path_in_iconservice, score_deploy_path)
-        except FileExistsError as e:
+        except FileExistsError:
             pass
 
         try:

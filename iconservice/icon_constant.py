@@ -62,7 +62,7 @@ BUILTIN_SCORE_ADDRESS_MAPPER = {
     'system': SYSTEM_ADDRESS
 }
 
-ZERO_TX_HASH = bytes(32)
+ZERO_TX_HASH = bytes(DEFAULT_BYTE_SIZE)
 
 
 class IssueDataKey:

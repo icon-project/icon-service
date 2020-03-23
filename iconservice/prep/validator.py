@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import iso3166
 

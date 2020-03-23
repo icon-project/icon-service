@@ -661,7 +661,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         context.put_dirty_prep(dirty_prep)
 
-    def handle_set_governance_variables(self, context: 'IconScoreContext', irep: str):
+    def handle_set_governance_variables(self, context: 'IconScoreContext', irep: int):
         """Handles setGovernanceVariables JSON-RPC API request
         """
         if context.msg.sender.is_contract:
