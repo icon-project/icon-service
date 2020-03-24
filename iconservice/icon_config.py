@@ -49,6 +49,7 @@ default_icon_config = {
     # If you want to change as TERM_PERIOD, you also must change REVISION.
     # so we determined that only TERM_PERIOD changed without IISS_CALCULATE_PERIOD.
     ConfigKey.ICON_RC_DIR_PATH: "",
+    ConfigKey.ICON_RC_MONITOR: True,
     ConfigKey.IISS_CALCULATE_PERIOD: IISS_DAY_BLOCK,
     ConfigKey.TERM_PERIOD: TERM_PERIOD,
     ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP,

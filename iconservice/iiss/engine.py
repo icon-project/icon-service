@@ -111,18 +111,19 @@ class Engine(EngineBase):
         self._listeners: List['IISSEngineListener'] = []
 
     def open(self, context: 'IconScoreContext',
-             log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
+             log_dir: str, data_path: str, socket_path: str, ipc_timeout: int,
+             icon_rc_path: str, icon_rc_monitor: bool):
         """
-
         :param context:
         :param log_dir:
         :param data_path:
         :param socket_path:
         :param ipc_timeout:
         :param icon_rc_path: ex) "/usr/local/bin"
+        :param icon_rc_monitor: Boolean which determines Opening RC monitor channel
         :return:
         """
-        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path)
+        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path, icon_rc_monitor)
 
     def add_listener(self, listener: 'IISSEngineListener'):
         assert isinstance(listener, IISSEngineListener)
@@ -226,12 +227,13 @@ class Engine(EngineBase):
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height, cb_data.state_hash)
         Logger.info(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
-    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
+    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int,
+                                icon_rc_path: str, icon_rc_monitor: bool):
         self._reward_calc_proxy = RewardCalcProxy(calc_done_callback=self.calculate_done_callback,
                                                   ready_callback=self.ready_callback,
                                                   ipc_timeout=ipc_timeout,
                                                   icon_rc_path=icon_rc_path)
-        self._reward_calc_proxy.open(log_dir=log_dir, sock_path=socket_path, iiss_db_path=data_path)
+        self._reward_calc_proxy.open(log_dir=log_dir, sock_path=socket_path, iiss_db_path=data_path,)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):

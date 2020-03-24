@@ -83,7 +83,7 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
-    def open(self, log_dir: str, sock_path: str, iiss_db_path: str):
+    def open(self, log_dir: str, sock_path: str, iiss_db_path: str, icon_rc_monitor: bool):
         Logger.debug(tag=_TAG, msg="open() start")
 
         self._loop = asyncio.get_event_loop()
@@ -92,7 +92,8 @@ class RewardCalcProxy(object):
                                            notify_handler=self.notify_handler)
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
-        self.start_reward_calc(log_dir=log_dir, sock_path=sock_path, iiss_db_path=iiss_db_path)
+        self.start_reward_calc(log_dir=log_dir, sock_path=sock_path, iiss_db_path=iiss_db_path,
+                               icon_rc_monitor=icon_rc_monitor)
         self._ready_future = self._loop.create_future()
 
         Logger.debug(tag=_TAG, msg="open() end")
@@ -537,12 +538,13 @@ class RewardCalcProxy(object):
         elif isinstance(response, CalculateDoneNotification):
             self.calculate_done_handler(response=response)
 
-    def start_reward_calc(self, log_dir: str, sock_path: str, iiss_db_path: str):
+    def start_reward_calc(self, log_dir: str, sock_path: str, iiss_db_path: str, icon_rc_monitor: bool):
         """ Start reward calculator process
 
         :param log_dir: log directory
         :param sock_path: unix domain socket path for IPC
         :param iiss_db_path: IISS data DB path
+        :param icon_rc_monitor: Boolean which determines Opening RC monitor channel (default True)
         :return: void
         """
         Logger.debug(tag=_TAG, msg=f'run reward calc')
@@ -556,13 +558,14 @@ class RewardCalcProxy(object):
             args = [
                 reward_calculator_path,
                 "-client",
-                "-monitor",
                 "-db-count", "16",
                 "-db", f"{iscore_db_path}",
                 "-iissdata", f"{iiss_db_path}",
                 "-ipc-addr", f"{sock_path}",
                 "-log-file", f"{log_path}",
             ]
+            if icon_rc_monitor is True:
+                args.append("-monitor")
 
             Logger.info(tag=_TAG, msg=f"cmd={' '.join(args)}")
             self._reward_calc = Popen(args)

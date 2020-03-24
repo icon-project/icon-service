@@ -208,7 +208,8 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD],
                                      conf[ConfigKey.BLOCK_VALIDATION_PENALTY_THRESHOLD],
                                      conf[ConfigKey.IPC_TIMEOUT],
-                                     conf[ConfigKey.ICON_RC_DIR_PATH])
+                                     conf[ConfigKey.ICON_RC_DIR_PATH],
+                                     conf[ConfigKey.ICON_RC_MONITOR])
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -257,7 +258,8 @@ class IconServiceEngine(ContextContainer):
                                 low_productivity_penalty_threshold: int,
                                 block_validation_penalty_threshold: int,
                                 ipc_timeout: int,
-                                icon_rc_path: str):
+                                icon_rc_path: str,
+                                icon_rc_monitor: bool):
         # storages MUST be prepared prior to engines because engines use them on open()
         IconScoreContext.storage.deploy.open(context)
         IconScoreContext.storage.fee.open(context)
@@ -276,7 +278,8 @@ class IconServiceEngine(ContextContainer):
                                           rc_data_path,
                                           rc_socket_path,
                                           ipc_timeout,
-                                          icon_rc_path)
+                                          icon_rc_path,
+                                          icon_rc_monitor)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
                                           irep,
