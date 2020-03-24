@@ -97,11 +97,3 @@ class Engine(EngineBase):
             context.storage.icx.put_account(context, to_account)
 
         return True
-
-    def get_treasury_account(self, context: 'IconScoreContext') -> 'Account':
-        """Returns the instance of treasury account
-
-        :param context:
-        :return: Account
-        """
-        return context.storage.icx.get_account(context, context.storage.icx.fee_treasury)
