@@ -14,6 +14,7 @@ from iconservice.icon_network.data.value import (
     ServiceConfig,
     ImportWhiteList
 )
+from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils import ContextStorage, ContextEngine
 from tests.legacy_unittest.mock_db import MockKeyValueDatabase
 
@@ -40,24 +41,26 @@ def patch_several(*decorate_args):
     return decorate
 
 
+# FIXME: Set valid step costs
 def generate_inv_container(is_migrated: bool, revision: int = 0):
     is_migrated: bool = False
     service_config: int = 0
     step_costs = {
-        'default': 1_000_000,
-        'contractCall': 15_000,
-        'contractCreate': 200_000,
-        'contractUpdate': 80_000,
-        'contractDestruct': -70_000,
-        'contractSet': 30_000,
+        'default': 0,
+        'contractCall': 0,
+        'contractCreate': 0,
+        'contractUpdate': 0,
+        'contractDestruct': 0,
+        'contractSet': 0,
         'get': 0,
-        'set': 200,
-        'replace': 50,
+        'set': 0,
+        'replace': 0,
         'delete': -150,
-        'input': 200,
-        'eventLog': 100,
+        'input': 0,
+        'eventLog': 0,
         'apiCall': 0
     }
+    step_costs = {StepType(key): val for key, val in step_costs.items()}
     max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
         IconScoreContextType.QUERY: 50_000_000

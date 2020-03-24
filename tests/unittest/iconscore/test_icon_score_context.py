@@ -108,6 +108,8 @@ def settable_inv_container():
         'eventLog': 100,
         'apiCall': 0
     }
+    default_step_costs = {StepType(key): val for key, val in default_step_costs.items()}
+
     default_max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
         IconScoreContextType.QUERY: 50_000_000
