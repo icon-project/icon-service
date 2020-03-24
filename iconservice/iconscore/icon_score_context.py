@@ -352,7 +352,7 @@ class IconScoreContextFactory(object):
         pass
 
     def create(self, context_type: 'IconScoreContextType', block: 'Block'):
-        context: 'IconScoreContext' = IconScoreContext(context_type)
+        context: 'IconScoreContext' = self._create_context(context_type)
         context.block = block
 
         if context_type == IconScoreContextType.DIRECT:
@@ -360,6 +360,10 @@ class IconScoreContextFactory(object):
 
         self._set_context_attributes_for_processing_tx(context)
         return context
+
+    @classmethod
+    def _create_context(cls, context_type: 'IconScoreContextType') -> 'IconScoreContext':
+        return IconScoreContext(context_type)
 
     @classmethod
     def _set_context_attributes_for_processing_tx(cls, context: 'IconScoreContext'):

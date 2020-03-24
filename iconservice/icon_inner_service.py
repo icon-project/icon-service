@@ -42,7 +42,7 @@ _TAG = "MQ"
 
 
 class IconScoreInnerTask(object):
-    def __init__(self, conf: 'IconConfig'):
+    def __init__(self, conf: dict):
         self._conf = conf
         self._thread_flag = ENABLE_THREAD_FLAG
 

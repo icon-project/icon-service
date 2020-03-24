@@ -41,7 +41,11 @@ def get_input_data_size(revision: int, input_data: Any) -> int:
     if revision >= Revision.FOUR.value and input_data is None:
         return 0
 
-    data = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
+    return get_data_size_using_json_dumps(input_data)
+
+
+def get_data_size_using_json_dumps(data) -> int:
+    data = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
     return len(data.encode())
 
 
@@ -129,8 +133,11 @@ class OutOfStepException(IconServiceBaseException):
     """ An Exception which is thrown when steps are exhausted.
     """
 
-    def __init__(self, step_limit: int, step_used: int,
-                 requested_step: int, step_type: StepType) -> None:
+    def __init__(self,
+                 step_limit: int,
+                 step_used: int,
+                 requested_step: int,
+                 step_type: StepType):
         """Constructor
 
         :param step_limit: step limit of the transaction
@@ -172,6 +179,7 @@ class OutOfStepException(IconServiceBaseException):
         """
         return self.__step_used
 
+    # TODO unused code
     @property
     def requested_step(self) -> int:
         """
@@ -206,6 +214,10 @@ class StepTracer(object):
     @property
     def cumulative_step(self) -> int:
         return self._cumulative_step
+
+    @property
+    def steps(self) -> List[Tuple[StepType, int, int]]:
+        return self._steps
 
     def reset(self):
         self._cumulative_step = 0

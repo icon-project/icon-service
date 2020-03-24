@@ -22,8 +22,7 @@ from typing import TYPE_CHECKING, Any, List, Union, Optional
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ICX_IN_LOOP
-from tests import raise_exception_start_tag, raise_exception_end_tag, create_tx_hash
-from tests.integrate_test import create_timestamp
+from tests import raise_exception_start_tag, raise_exception_end_tag, create_tx_hash, create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, DEFAULT_DEPLOY_STEP_LIMIT
 
 if TYPE_CHECKING:

@@ -16,6 +16,7 @@
 
 """IconScoreEngine testcase
 """
+
 from iconcommons import IconConfig
 
 from iconservice.icon_config import default_icon_config

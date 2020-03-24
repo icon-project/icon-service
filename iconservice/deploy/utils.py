@@ -35,14 +35,3 @@ def remove_path(path: str):
         os.remove(path)
     elif os.path.isdir(path):
         shutil.rmtree(path)
-
-
-def convert_path_to_package_name(path: str, delimiter: str = '/') -> str:
-    """
-    Ex) /a/b/c/d/ -> a.b.c.d
-
-    :param path:
-    :param delimiter:
-    :return:
-    """
-    return path.strip(delimiter).replace(delimiter, '.')

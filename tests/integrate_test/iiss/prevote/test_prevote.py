@@ -18,8 +18,7 @@ from unittest.mock import Mock
 
 from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import MethodNotFoundException, ServiceNotReadyException, FatalException
-from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP, IconScoreContextType
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 

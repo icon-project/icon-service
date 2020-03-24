@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional, List
 from .data.value import Value, VALUE_MAPPER
 from .listener import Listener
 from .. import Address
-from ..base.exception import AccessDeniedException
+from ..base.exception import AccessDeniedException, InvalidParamsException
 from ..icon_constant import IconNetworkValueType, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_step import StepType
@@ -90,7 +90,11 @@ class ValueConverter(object):
 
 
 class Container(object):
-    class CacheDict(dict):
+    class BatchDict(dict):
+        def __init__(self):
+            super().__init__()
+            self._migration_trigger: bool = False
+
         def __setitem__(self, key, value):
             if value is None:
                 return
@@ -103,16 +107,20 @@ class Container(object):
 
             super().__setitem__(key, value)
 
+        def trigger_migration(self):
+            self._migration_trigger: bool = True
+
+        def is_migration_triggered(self):
+            return self._migration_trigger
+
     def __init__(self, is_migrated: bool):
-        # Todo: consider if the compound data should be immutable
         # Todo: Freeze data
         # Todo: Consider about integrating set method
-        # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
         self._listener: Optional['Listener'] = None
 
-        self._tx_unit_batch: dict = {}
-        self._cache = self.CacheDict({
+        self._tx_unit_batch = self.BatchDict()
+        self._icon_network_values: dict = {
             IconNetworkValueType.REVISION_CODE: None,
             IconNetworkValueType.REVISION_NAME: None,
             IconNetworkValueType.SCORE_BLACK_LIST: None,
@@ -121,7 +129,7 @@ class Container(object):
             IconNetworkValueType.MAX_STEP_LIMITS: None,
             IconNetworkValueType.SERVICE_CONFIG: None,
             IconNetworkValueType.IMPORT_WHITE_LIST: None
-        })
+        }
 
     def add_listener(self, listener: 'Listener'):
         assert isinstance(listener, Listener)
@@ -135,7 +143,7 @@ class Container(object):
         return self._is_migrated
 
     def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
-        return self._tx_unit_batch.get(type_, self._cache[type_]).value
+        return self._tx_unit_batch.get(type_, self._icon_network_values[type_]).value
 
     @property
     def service_config(self) -> int:
@@ -185,17 +193,22 @@ class Container(object):
         :param data:
         :return:
         """
+        if len(data) != len(self._icon_network_values):
+            raise InvalidParamsException("Icon Network Values are insufficient")
+
         for value in data:
             context.storage.inv.put_value(context, value)
+            self._tx_unit_batch[value.TYPE] = value
         context.storage.inv.put_migration_flag(context)
-        self._tx_unit_batch["is_migrated"] = True
+        self._tx_unit_batch.trigger_migration()
 
     def update_migration_if_succeed(self):
-        if self._tx_unit_batch.get("is_migrated", False):
+        if self._tx_unit_batch.is_migration_triggered():
             self._is_migrated = True
+            self.update_batch()
 
     def _set(self, value: 'Value'):
-        self._cache[value.TYPE] = value
+        self._icon_network_values[value.TYPE] = value
         if self._listener is not None:
             self._listener.update_icon_network_value(value)
 
@@ -233,6 +246,6 @@ class Container(object):
     def copy(self) -> 'Container':
         """Copy container"""
         container = copy.copy(self)
-        container._tx_unit_batch = {}
-        container._cache = copy.copy(self._cache)
+        container._tx_unit_batch = self.BatchDict()
+        container._icon_network_values = copy.copy(self._icon_network_values)
         return container

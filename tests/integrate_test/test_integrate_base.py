@@ -35,7 +35,7 @@ from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, 
 from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
 from tests import create_address, create_tx_hash, create_block_hash
-from tests.integrate_test import root_clear, create_timestamp, get_score_path
+from tests import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -526,7 +526,8 @@ class TestIntegrateBase(TestCase):
                           from_: Union['EOAAccount', 'Address', None],
                           to_: Union['EOAAccount', 'Address', 'MalformedAddress'],
                           data: bytes = None,
-                          value: int = 0) -> dict:
+                          value: int = 0,
+                          disable_pre_validate: bool = False) -> dict:
 
         addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
         addr_to: Optional['Address', 'MalformedAddress'] = self._convert_address_from_address_type(to_)
@@ -663,13 +664,27 @@ class TestIntegrateBase(TestCase):
 
     def update_governance(self,
                           version: str = "latest_version",
-                          expected_status: bool = True) -> List['TransactionResult']:
+                          expected_status: bool = True,
+                          root_path: str = "sample_builtin") -> List['TransactionResult']:
 
-        tx = self.create_deploy_score_tx("sample_builtin",
+        tx = self.create_deploy_score_tx(root_path,
                                          f"{version}/governance",
                                          self._admin,
                                          GOVERNANCE_SCORE_ADDRESS)
         return self.process_confirm_block_tx([tx], expected_status)
+
+    def update_governance_for_audit(self,
+                                    version: str = "latest_version",
+                                    expected_status: bool = True,
+                                    root_path: str = "sample_builtin") -> List['TransactionResult']:
+
+        tx = self.create_deploy_score_tx(root_path,
+                                         f"{version}/governance",
+                                         self._admin,
+                                         GOVERNANCE_SCORE_ADDRESS)
+        ret = self.process_confirm_block_tx([tx], expected_status)
+        self.accept_score(ret[0].tx_hash)
+        return ret
 
     def transfer_icx(self,
                      from_: Union['EOAAccount', 'Address', None],

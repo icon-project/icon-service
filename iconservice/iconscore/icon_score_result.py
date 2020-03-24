@@ -100,7 +100,7 @@ class TransactionResult(object):
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
-    def to_dict(self, casing: Optional = None) -> dict:
+    def to_dict(self, casing: Optional[callable] = None) -> dict:
         """
         Returns properties as `dict`
         :return: a dict

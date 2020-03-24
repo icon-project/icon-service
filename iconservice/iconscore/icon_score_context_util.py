@@ -17,11 +17,12 @@
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from .icon_score_class_loader import IconScoreClassLoader
+from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
 from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory

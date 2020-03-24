@@ -18,7 +18,11 @@
 """
 from typing import List, Dict
 
+<<<<<<< HEAD
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS, Address
+=======
+from iconservice.base.address import ZERO_SCORE_ADDRESS
+>>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425)
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_result import TransactionResult

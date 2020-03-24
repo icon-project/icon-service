@@ -21,6 +21,7 @@ from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException, IconServiceBaseException
 from ..icon_constant import IconNetworkValueType
 from ..icon_network.container import ValueConverter as INVConverter
+from ..icon_network.data.value import Value
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
 
@@ -85,7 +86,7 @@ class IconSystemScoreBase(IconScoreBase):
         return converted_value
 
     def set_icon_network_value(self, type_: 'IconNetworkValueType', value: Any):
-        converted_value: Any = INVConverter.convert_for_icon_service(type_, value)
+        converted_value: 'Value' = INVConverter.convert_for_icon_service(type_, value)
         self._context.inv_container.set_by_governance_score(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
