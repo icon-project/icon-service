@@ -283,6 +283,14 @@ class Storage(StorageBase):
                        stake_part=stake_part,
                        delegation_part=delegation_part)
 
+    def get_treasury_account(self, context: 'IconScoreContext') -> 'Account':
+        """Returns the instance of treasury account
+
+        :param context:
+        :return: Account
+        """
+        return context.storage.icx.get_account(context, context.storage.icx.fee_treasury)
+
     def _get_part(self, context: 'IconScoreContext',
                   part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
                   address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
