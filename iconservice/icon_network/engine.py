@@ -70,10 +70,10 @@ class Engine(EngineBase, ContextContainer):
             if context.inv_container.is_updated() and tx_result.status == TransactionResult.SUCCESS:
                 context.inv_container.update_batch()
         else:
-            if tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
-                self._sync_inv_container_with_governance(context, context.inv_container)
             if context.inv_container.is_migration_succeed():
                 context.inv_container.update_migration()
+            elif tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
+                self._sync_inv_container_with_governance(context, context.inv_container)
         context.inv_container.clear_batch()
 
     def _sync_inv_container_with_governance(self,
