@@ -34,7 +34,8 @@ from ..base.exception import (
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision
+    IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
+    RevisionChangedFlag
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent

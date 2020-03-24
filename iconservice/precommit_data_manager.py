@@ -25,6 +25,7 @@ from .icon_constant import Revision
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iiss.reward_calc.msg_data import TxData
 from .prep.prep_address_converter import PRepAddressConverter
+from .system.value import SystemValue
 from .utils import bytes_to_hex, sha3_256
 
 if TYPE_CHECKING:
@@ -76,6 +77,7 @@ class PrecommitData(object):
     def __init__(self,
                  revision: int,
                  rc_db_revision: int,
+                 system_value: 'SystemValue',
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
@@ -95,6 +97,8 @@ class PrecommitData(object):
         :param score_mapper: newly deployed scores in a block
 
         """
+        self.system_value: 'SystemValue' = system_value
+        # Todo: check if remove the revision
         self.revision: int = revision
         self.rc_db_revision: int = rc_db_revision
         self.block_batch = block_batch

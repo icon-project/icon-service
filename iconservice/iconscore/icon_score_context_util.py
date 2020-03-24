@@ -190,7 +190,10 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:
-        service_flag = context.system_value.service_config
+        if context.system_value:
+            service_flag = context.system_value.service_config
+        else:
+            service_flag = context.icon_service_flag
         return IconScoreContextUtil._is_flag_on(service_flag, flag)
 
     @staticmethod

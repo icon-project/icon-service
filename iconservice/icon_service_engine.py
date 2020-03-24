@@ -104,7 +104,6 @@ class IconServiceEngine(ContextContainer):
 
         """
         self._icx_context_db = None
-        self._step_counter_factory = None
         self._icon_pre_validator = None
         self._deposit_handler = None
         self._context_factory = None
@@ -192,8 +191,6 @@ class IconServiceEngine(ContextContainer):
         # Clean up stale backup files
         self._backup_cleaner.run_on_init(context.block.height)
 
-        self._open_system_component_context(context)
-
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
@@ -211,6 +208,8 @@ class IconServiceEngine(ContextContainer):
 
         self._load_builtin_scores(context,
                                   Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
+
+        context.engine.system.load_system_value(context)
 
         # DO NOT change the values in conf
         self._conf = conf
@@ -243,12 +242,6 @@ class IconServiceEngine(ContextContainer):
         context.block = self._get_last_block()
 
     @classmethod
-    def _open_system_component_context(cls,
-                                       context: 'IconScoreContext'):
-        IconScoreContext.storage.system.open(context)
-        IconScoreContext.engine.system.open(context)
-
-    @classmethod
     def _open_component_context(cls,
                                 context: 'IconScoreContext',
                                 log_dir: str,
@@ -273,9 +266,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.meta.open(context)
         IconScoreContext.storage.rc.open(context, rc_data_path)
-
-        # move to _open_system_component_context
-        # IconScoreContext.storage.system.open(context)
+        IconScoreContext.storage.system.open(context)
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -293,9 +284,7 @@ class IconServiceEngine(ContextContainer):
                                           low_productivity_penalty_threshold,
                                           block_validation_penalty_threshold)
         IconScoreContext.engine.issue.open(context)
-
-        # move to _open_system_component_context
-        # IconScoreContext.engine.system.open(context)
+        IconScoreContext.engine.system.open(context)
 
     @classmethod
     def _close_component_context(cls, context: 'IconScoreContext'):
@@ -315,7 +304,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.issue.close(context)
         IconScoreContext.storage.meta.close(context)
         IconScoreContext.storage.rc.close()
-        IconScoreContext.storage.system.close()
+        IconScoreContext.storage.system.close(context)
 
     @classmethod
     def get_ready_future(cls):
@@ -539,6 +528,7 @@ class IconServiceEngine(ContextContainer):
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(context.revision,
                                        rc_db_revision,
+                                       context.system_value,
                                        context.block_batch,
                                        block_result,
                                        context.rc_block_batch,
@@ -1123,14 +1113,14 @@ class IconServiceEngine(ContextContainer):
             self._push_context(context)
 
             step_price: int = context.step_counter.step_price
-            minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+            minimum_step: int = context.system_value.step_costs[StepType.DEFAULT]
 
             if 'data' in params:
                 # minimum_step is the sum of
                 # default STEP cost and input STEP costs if data field exists
                 data = params['data']
                 input_size = get_input_data_size(context.revision, data)
-                minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
+                minimum_step += input_size * context.system_value.step_costs[StepType.INPUT]
 
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
@@ -1658,8 +1648,8 @@ class IconServiceEngine(ContextContainer):
             IconScoreContext.icon_score_mapper.update(new_icon_score_mapper)
 
         self._icx_context_db.write_batch(context, state_wal)
-
         context.storage.icx.set_last_block(precommit_data.block_batch.block)
+        context.engine.system.commit(context, precommit_data)
         self._precommit_data_manager.commit(precommit_data.block_batch.block)
 
     @staticmethod

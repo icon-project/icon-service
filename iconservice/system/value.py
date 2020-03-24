@@ -16,16 +16,13 @@ import copy
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional, List
 
+from .listener import SystemValueListener
 from .. import Address
+from ..icon_constant import SystemValueType, IconScoreContextType, Revision
 from ..iconscore.icon_score_step import IconScoreStepCounter
-
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..icon_constant import SystemValueType, IconScoreContextType, Revision
-    from .listener import SystemValueListener
-    from ..system import SystemStorage
-
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
@@ -48,7 +45,7 @@ class SystemValue:
         self._max_step_limits: Optional[dict] = None
 
         # Todo: Integrate to revision
-        self._revision_code: Optional[Revision] = None
+        self._revision_code: Optional[int] = None
         self._revision_name: Optional[str] = None
 
         self._score_black_list: Optional[list] = None
@@ -60,11 +57,11 @@ class SystemValue:
         self._listener = listener
 
     @property
-    def is_migrated(self):
+    def is_migrated(self) -> bool:
         return self._is_migrated
 
     @property
-    def service_config(self):
+    def service_config(self) -> int:
         return self._service_config
 
     @property
@@ -76,7 +73,7 @@ class SystemValue:
         return self._step_price
 
     @property
-    def step_costs(self):
+    def step_costs(self) -> dict:
         return self._step_costs
 
     @property
@@ -84,7 +81,7 @@ class SystemValue:
         return self._max_step_limits
 
     @property
-    def revision_code(self):
+    def revision_code(self) -> int:
         return self._revision_code
 
     @property
@@ -125,7 +122,9 @@ class SystemValue:
 
     def _set(self, value_type: 'SystemValueType', value: Any):
         if value_type == SystemValueType.REVISION_CODE:
-            self._revision_code = Revision(value)
+            self._revision_code = value
+        elif value_type == SystemValueType.REVISION_NAME:
+            self._revision_name = value
         elif value_type == SystemValueType.SCORE_BLACK_LIST:
             self._score_black_list = value
         elif value_type == SystemValueType.STEP_PRICE:

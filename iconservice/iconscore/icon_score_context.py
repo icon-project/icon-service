@@ -119,7 +119,10 @@ class IconScoreContext(SystemValueListener, ABC):
 
     @property
     def revision(self) -> int:
-        return self._system_value.revision_code
+        if self._system_value:
+            return self._system_value.revision_code
+        else:
+            return 0
 
     @property
     def readonly(self):
@@ -319,16 +322,19 @@ class IconScoreContext(SystemValueListener, ABC):
 
     def update(self, type_: 'SystemValueType', value: Any):
         # system value update listener
-
-        if type_ == SystemValueType.STEP_PRICE:
+        if type_ == SystemValueType.REVISION_CODE:
+            pass
+        elif type_ == SystemValueType.REVISION_NAME:
+            pass
+        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+            pass
+        elif type_ == SystemValueType.STEP_PRICE:
             self.step_counter.set_step_price(value)
         elif type_ == SystemValueType.STEP_COSTS:
             self.step_counter.set_step_costs(value)
         elif type_ == SystemValueType.MAX_STEP_LIMITS:
-            self.step_counter.set_max_step_limit(value)
-        elif type_ == SystemValueType.REVISION_CODE:
-            pass
-        elif type_ == SystemValueType.SCORE_BLACK_LIST:
+            self.step_counter.set_max_step_limit(value.get(self.type))
+        elif type_ == SystemValueType.SERVICE_CONFIG:
             pass
         elif type_ == SystemValueType.IMPORT_WHITE_LIST:
             pass
