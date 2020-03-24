@@ -233,7 +233,10 @@ class Engine(EngineBase):
                                                   ready_callback=self.ready_callback,
                                                   ipc_timeout=ipc_timeout,
                                                   icon_rc_path=icon_rc_path)
-        self._reward_calc_proxy.open(log_dir=log_dir, sock_path=socket_path, iiss_db_path=data_path, icon_rc_monitor=icon_rc_monitor)
+        self._reward_calc_proxy.open(log_dir=log_dir,
+                                     sock_path=socket_path,
+                                     iiss_db_path=data_path,
+                                     icon_rc_monitor=icon_rc_monitor)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):
