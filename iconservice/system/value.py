@@ -11,27 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import copy
-from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+
 from ..iconscore.icon_score_step import IconScoreStepCounter
-from ..system import SystemStorage
+
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icon_constant import SystemValueType, IconScoreContextType, Revision
+    from .listener import SystemValueListener
+    from ..system import SystemStorage
 
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
 ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
-
-
-class SystemValueListener(metaclass=ABCMeta):
-    @abstractmethod
-    def update(self, type_: 'SystemValueType', value: Any):
-        pass
 
 
 class SystemValue:
@@ -117,8 +114,8 @@ class SystemValue:
         :return:
         """
         for key, value in data.items():
-            SystemStorage.put_value(context, key.value, value)
-        SystemStorage.put_migration_flag(context)
+            context.storage.system.put_value(context, key.value, value)
+        context.storage.system.put_migration_flag(context)
         self._is_migrated = True
 
     def _set(self, value_type: 'SystemValueType', value: Any):
@@ -176,7 +173,7 @@ class SystemValue:
         # Update member variables
         # Check If value is valid
         self._set(value_type, value)
-        SystemStorage.put_value(context, value_type, value)
+        context.storage.system.put_value(context, value_type, value)
 
     def copy(self):
         """Copy system value"""
