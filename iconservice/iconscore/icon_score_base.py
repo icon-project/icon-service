@@ -26,7 +26,6 @@ from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
-from .icon_score_context import IconScoreContextType
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType

@@ -18,11 +18,10 @@ from shutil import copytree
 from typing import TYPE_CHECKING
 
 from iconcommons.logger import Logger
-
-from iconservice.deploy.storage import IconScoreDeployInfo, DeployState
-from iconservice.deploy.utils import remove_path
 from iconservice.base.address import Address
 from iconservice.base.exception import AccessDeniedException
+from iconservice.deploy.storage import IconScoreDeployInfo, DeployState
+from iconservice.deploy.utils import remove_path
 from iconservice.icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, ZERO_TX_HASH, ICON_DEPLOY_LOG_TAG
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 

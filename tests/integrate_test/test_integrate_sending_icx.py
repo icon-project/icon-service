@@ -19,10 +19,6 @@
 
 from typing import TYPE_CHECKING, List
 
-<<<<<<< HEAD
-from iconservice.base.address import SYSTEM_SCORE_ADDRESS
-=======
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425)
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 

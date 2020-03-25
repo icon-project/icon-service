@@ -18,9 +18,9 @@
 import os
 from enum import IntEnum
 
+from .db import KeyValueDatabase, ContextDatabase
 from ..base.address import Address
 from ..icon_constant import ICON_DEX_DB_NAME
-from .db import KeyValueDatabase, ContextDatabase
 
 
 class ContextDatabaseFactory(object):

@@ -18,7 +18,6 @@ import shutil
 from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 from iconcommons.logger import Logger
-
 from .backup_manager import get_backup_filename
 from ..base.exception import InvalidParamsException, InternalServiceErrorException
 from ..database.db import KeyValueDatabase

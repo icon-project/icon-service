@@ -14,6 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .storage import Storage as INVStorage
-from .engine import Engine as INVEngine
 from .container import Container as INVContainer
+from .engine import Engine as INVEngine
+from .storage import Storage as INVStorage

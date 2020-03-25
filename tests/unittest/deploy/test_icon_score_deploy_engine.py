@@ -81,7 +81,7 @@ def test_invoke(context, mocker, to, score_address, expect):
     score_deploy_engine.open()
 
     with expect:
-        score_deploy_engine.invoke(context, to, score_address, {})
+        score_deploy_engine._invoke(context, to, score_address, {})
     IconScoreContextUtil.validate_score_blacklist.assert_not_called()
     context.storage.deploy.put_deploy_info_and_tx_params.assert_not_called()
     score_deploy_engine._is_audit_needed.assert_not_called()
@@ -357,8 +357,7 @@ class TestInitializeScore:
     params = {"param1": "0x1", "param2": "string"}
 
     def set_test(self, mocker):
-        mocker.patch.object(TypeConverter, "make_annotations_from_method", return_value="annotations")
-        mocker.patch.object(TypeConverter, "convert_data_params")
+        mocker.patch.object(TypeConverter, "adjust_params_to_method", return_value="annotations")
         self.mock_score.on_install = self.on_install = Mock()
         self.mock_score.on_update = self.on_update = Mock()
         self.mock_score.on_invalid = self.on_invalid = Mock()
@@ -370,8 +369,7 @@ class TestInitializeScore:
         self.set_test(mocker)
 
         mock_engine._initialize_score(deploy_type, self.mock_score, self.params)
-        TypeConverter.make_annotations_from_method.assert_called_with(self.on_install)
-        TypeConverter.convert_data_params.assert_called_with('annotations', self.params)
+        TypeConverter.adjust_params_to_method.assert_called_with(self.on_install, self.params)
         self.on_install.assert_called_with(**self.params)
         self.on_update.assert_not_called()
         self.on_invalid.assert_not_called()
@@ -384,8 +382,7 @@ class TestInitializeScore:
         self.set_test(mocker)
 
         mock_engine._initialize_score(deploy_type, self.mock_score, self.params)
-        TypeConverter.make_annotations_from_method.assert_called_with(self.on_update)
-        TypeConverter.convert_data_params.assert_called_with('annotations', self.params)
+        TypeConverter.adjust_params_to_method.assert_called_with(self.on_update, self.params)
         self.on_install.assert_not_called()
         self.on_update.assert_called_with(**self.params)
         self.on_invalid.assert_not_called()
@@ -402,8 +399,7 @@ class TestInitializeScore:
 
         assert e.value.code == ExceptionCode.INVALID_PARAMETER
         assert e.value.message == f"Invalid deployType: {deploy_type}"
-        TypeConverter.make_annotations_from_method.assert_not_called()
-        TypeConverter.convert_data_params.assert_not_called()
+        TypeConverter.adjust_params_to_method.assert_not_called()
         self.on_install.assert_not_called()
         self.on_update.assert_not_called()
         self.on_invalid.assert_not_called()

@@ -20,7 +20,6 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
-
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
 from .icon_score_trace import Trace
@@ -31,8 +30,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    Revision, PRepFlag, TermFlag, PRepStatus,
-    Revision, PRepFlag, RevisionChangedFlag,
+    TermFlag, PRepStatus,
     Revision, PRepFlag, IconNetworkValueType, RevisionChangedFlag)
 from ..icon_network.data.value import Value as IconNetworkValue
 from ..icon_network.listener import Listener as INVListener
@@ -148,6 +146,7 @@ class IconScoreContext(INVListener, ABC):
     def prep_address_converter(self) -> Optional['PRepAddressConverter']:
         return self._prep_address_converter
 
+    @property
     def inv_container(self) -> Optional['INVContainer']:
         return self._inv_container
 

@@ -17,7 +17,6 @@
 from typing import List, Optional
 
 from iconcommons import Logger
-
 from .prep import PRep, PRepStatus
 from .sorted_list import SortedList
 from ... import utils

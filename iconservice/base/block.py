@@ -13,14 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from enum import unique, IntEnum
 from struct import Struct
 from typing import Optional
 
 from .exception import InvalidParamsException
 from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, Revision
-from ..utils.msgpack_for_db import MsgPackForDB
 from ..utils import bytes_to_hex
+from ..utils.msgpack_for_db import MsgPackForDB
 
 
 @unique

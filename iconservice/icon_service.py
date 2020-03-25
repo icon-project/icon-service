@@ -17,15 +17,15 @@
 import argparse
 import asyncio
 import os
+import setproctitle
 import signal
 import sys
 
 import pkg_resources
-import setproctitle
 from earlgrey import MessageQueueService, aio_pika
+
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
-
 from iconservice.base.exception import FatalException
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey

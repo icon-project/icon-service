@@ -18,11 +18,7 @@
 
 from typing import TYPE_CHECKING, List
 
-<<<<<<< HEAD
-from iconservice.base.address import SYSTEM_SCORE_ADDRESS, Address
-=======
-from iconservice.base.address import ZERO_SCORE_ADDRESS
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425)
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase

@@ -27,7 +27,6 @@ from enum import Flag
 from typing import Any, Union, Optional
 
 from iconcommons import Logger
-
 from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICX_IN_LOOP
 
 

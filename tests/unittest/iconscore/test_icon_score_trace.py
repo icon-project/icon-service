@@ -43,63 +43,6 @@ from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case, ContextEngine, ContextStorage
-<<<<<<< HEAD:tests/test_icon_score_trace.py
-from tests import raise_exception_start_tag, raise_exception_end_tag, create_address, \
-    OTHER_CALL
-
-
-class TestTrace(unittest.TestCase):
-
-    def setUp(self):
-        db = Mock(spec=IconScoreDatabase)
-        db.address = create_address(AddressPrefix.CONTRACT)
-        context = IconScoreContext()
-        context.icon_score_deploy_engine = Mock()
-        traces = Mock(spec=list)
-
-        context.tx = Mock(spec=Transaction)
-        context.block = Mock(spec=Block)
-        context.cumulative_step_used = Mock(spec=int)
-        context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.step_counter = Mock(spec=IconScoreStepCounter)
-        context.event_logs = []
-        context.traces = traces
-        context.tx_batch = TransactionBatch()
-
-        ContextContainer._push_context(context)
-
-        InternalCall._other_score_call = Mock()
-
-        IconScoreContext.engine = ContextEngine(
-            icx=Mock(spec=IcxEngine),
-            deploy=Mock(spec=DeployEngine),
-            fee=None,
-            iiss=None,
-            prep=None,
-            issue=None,
-        )
-        IconScoreContext.storage = ContextStorage(
-            icx=None,
-            deploy=Mock(spec=DeployStorage),
-            fee=None,
-            iiss=None,
-            prep=None,
-            issue=None,
-            rc=None,
-            meta=None
-        )
-
-        context.icon_score_mapper = Mock()
-        context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))
-        self._score = TestScore(db)
-
-    def tearDown(self):
-        InternalCall._other_score_call = OTHER_CALL
-        ContextContainer._clear_context()
-        self._mock_icon_score = None
-
-    def test_transfer(self):
-=======
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 
 
@@ -148,7 +91,6 @@ def mapped_test_score(score_db, context):
 class TestTrace:
     @pytest.mark.parametrize("func_name", ["send", "transfer"])
     def test_transfer_and_send_should_have_same_trace(self, mapped_test_score, func_name):
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425):tests/unittest/iconscore/test_icon_score_trace.py
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
         to_ = create_address(AddressPrefix.EOA)

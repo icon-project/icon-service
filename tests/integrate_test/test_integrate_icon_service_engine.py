@@ -19,38 +19,19 @@
 import hashlib
 import time
 import unittest
-from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, MalformedAddress, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode, InvalidParamsException, IconScoreException
+from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.type_converter import TypeConverter
 from iconservice.base.type_converter_templates import ParamType
-<<<<<<< HEAD:tests/test_icon_service_engine.py
-from iconservice.database.batch import BlockBatch, TransactionBatch
-from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import IconServiceFlag, ConfigKey, RCCalculateResult
-from iconservice.icon_service_engine import IconServiceEngine
-=======
 from iconservice.icon_constant import ConfigKey
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425):tests/integrate_test/test_integrate_icon_service_engine.py
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_result import TransactionResult
-<<<<<<< HEAD:tests/test_icon_service_engine.py
-from iconservice.iconscore.icon_score_step import IconScoreStepCounter
-from iconservice.iconscore.icon_score_step import StepType
-from iconservice.iiss.reward_calc.ipc.message import CalculateDoneNotification
-from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
-from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
-    raise_exception_start_tag, raise_exception_end_tag
-
-TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-=======
 from iconservice.utils import icx_to_loop
 from tests import create_block_hash, create_address, create_tx_hash, \
-    raise_exception_start_tag, raise_exception_end_tag, create_timestamp
+    create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425):tests/integrate_test/test_integrate_icon_service_engine.py
 
 
 class TestIconServiceEngine(TestIntegrateBase):
@@ -94,87 +75,17 @@ class TestIconServiceEngine(TestIntegrateBase):
             self.genesis_block,
             [tx]
         )
-<<<<<<< HEAD:tests/test_icon_service_engine.py
-        # engine._load_builtin_scores = Mock()
-        # engine._init_global_value_by_governance_score = Mock()
-        self._mock_ipc()
-        engine.open(conf)
-        self._engine = engine
-=======
         self.icon_service_engine.commit(self.genesis_block.height, self.genesis_block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block_hash
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425):tests/integrate_test/test_integrate_icon_service_engine.py
 
         return invoke_response
 
     def setUp(self):
         super().setUp()
         self._to = create_address(AddressPrefix.EOA)
-<<<<<<< HEAD:tests/test_icon_service_engine.py
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT)
-        self._total_supply = 100 * 10 ** 18
-
-        accounts = [
-            {
-                'name': 'god',
-                'address': self._genesis_address,
-                'balance': self._total_supply
-            },
-            {
-                'name': 'treasury',
-                'address': self._treasury_address,
-                'balance': 0
-            }
-        ]
-
-        block = Block(0, create_block_hash(), 0, None, 0)
-        tx = {'method': '',
-              'params': {'txHash': create_tx_hash()},
-              'genesisData': {'accounts': accounts}}
-        tx_lists = [tx]
-
-        self._engine.invoke(block, tx_lists)
-        self._engine.commit(block.height, block.hash, None)
-        self.genesis_block = block
-
-    def mock_calculate(self, _path, _block_height):
-        context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
-        calc_period: int = context.storage.iiss.get_calc_period(context)
-        response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, 0, b'mocked_response')
-        self._calculate_done_callback(response)
-
-    @classmethod
-    def _mock_ipc(cls, mock_calculate: callable = mock_calculate):
-        RewardCalcProxy.open = Mock()
-        RewardCalcProxy.start = Mock()
-        RewardCalcProxy.stop = Mock()
-        RewardCalcProxy.close = Mock()
-        RewardCalcProxy.get_version = Mock()
-        RewardCalcProxy.calculate = mock_calculate
-        RewardCalcProxy.claim_iscore = Mock()
-        RewardCalcProxy.query_iscore = Mock()
-        RewardCalcProxy.commit_block = Mock()
-        RewardCalcProxy.commit_claim = Mock()
-        RewardCalcProxy.query_calculate_result = Mock(return_value=(RCCalculateResult.SUCCESS, 0, 0, bytes()))
-
-    def tearDown(self):
-        self._engine.close()
-
-        rmtree(self._score_root_path)
-        rmtree(self._state_db_root_path)
-
-    def test_make_flag(self):
-        table = {ConfigKey.SERVICE_FEE: True,
-                 ConfigKey.SERVICE_AUDIT: False,
-                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
-        flag = self._engine._make_service_flag(table)
-        self.assertEqual(flag, IconServiceFlag.FEE)
-=======
         self._governance_address = GOVERNANCE_SCORE_ADDRESS
         self._score_address = create_address(AddressPrefix.CONTRACT)
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425):tests/integrate_test/test_integrate_icon_service_engine.py
 
     def test_query(self):
         method = 'icx_getBalance'

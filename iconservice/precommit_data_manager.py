@@ -22,10 +22,10 @@ from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
+from .icon_network.container import Container as INVContainer
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iiss.reward_calc.msg_data import TxData
 from .prep.prep_address_converter import PRepAddressConverter
-from .icon_network.container import Container as INVContainer
 from .utils import bytes_to_hex, sha3_256
 
 if TYPE_CHECKING:
@@ -97,10 +97,10 @@ class PrecommitData(object):
         :param score_mapper: newly deployed scores in a block
 
         """
-        self.inv_container: 'INVContainer' = inv_container
         # Todo: check if remove the revision
         self.revision: int = revision
         self.rc_db_revision: int = rc_db_revision
+        self.inv_container: 'INVContainer' = inv_container
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch

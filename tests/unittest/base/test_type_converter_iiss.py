@@ -48,25 +48,22 @@ def test_set_delegation():
     address2 = create_address()
     value2 = 2 * 10 ** 18
 
-    request = {
-        ConstantKeys.DELEGATIONS: [
-            {
-                ConstantKeys.ADDRESS: str(address1),
-                ConstantKeys.VALUE: hex(value1)
-            },
-            {
-                ConstantKeys.ADDRESS: str(address2),
-                ConstantKeys.VALUE: hex(value2)
-            }
-        ]
-    }
+    request = [
+        {
+            ConstantKeys.ADDRESS: str(address1),
+            ConstantKeys.VALUE: hex(value1)
+        },
+        {
+            ConstantKeys.ADDRESS: str(address2),
+            ConstantKeys.VALUE: hex(value2)
+        }
+    ]
 
     ret_params = TypeConverter.convert(request, ParamType.IISS_SET_DELEGATION)
-    ret_delegations = ret_params[ConstantKeys.DELEGATIONS]
-    assert address1 == ret_delegations[0][ConstantKeys.ADDRESS]
-    assert value1 == ret_delegations[0][ConstantKeys.VALUE]
-    assert address2 == ret_delegations[1][ConstantKeys.ADDRESS]
-    assert value2 == ret_delegations[1][ConstantKeys.VALUE]
+    assert address1 == ret_params[0][ConstantKeys.ADDRESS]
+    assert value1 == ret_params[0][ConstantKeys.VALUE]
+    assert address2 == ret_params[1][ConstantKeys.ADDRESS]
+    assert value2 == ret_params[1][ConstantKeys.VALUE]
 
 
 def test_get_delegation():

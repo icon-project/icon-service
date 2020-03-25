@@ -14,15 +14,15 @@
 # limitations under the License.
 
 import random
-import unittest
+from unittest import mock
 from unittest.mock import Mock
 
 import pytest
 
-from iconservice.icon_constant import IconScoreContextType, PRepFlag, TermFlag, Revision, PRepGrade, PenaltyReason, \
-    PRepStatus, IconNetworkValueType
-from iconservice.icon_network.data.value import *
+from iconservice.icon_constant import PRepFlag, TermFlag, Revision, PRepGrade, PenaltyReason, \
+    PRepStatus
 from iconservice.icon_network import INVContainer, INVEngine
+from iconservice.icon_network.data.value import *
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.prep.data import Term, PRep
 from iconservice.prep.data.prep_container import PRepContainer
@@ -44,52 +44,6 @@ def _impose_penalty_on_prep(prep: 'PRep', penalty: 'PenaltyReason'):
     prep.status = PRepStatus.ACTIVE if penalty == PenaltyReason.BLOCK_VALIDATION else PRepStatus.DISQUALIFIED
 
 
-<<<<<<< HEAD:tests/icon_score/test_icon_score_context.py
-class TestIconScoreContext(unittest.TestCase):
-    MAIN_PREPS = 22
-    ELECTED_PREPS = 100
-    TOTAL_PREPS = 110
-    TERM_PERIOD = 43120
-
-    def setUp(self) -> None:
-        IconScoreContext.engine = Mock()
-        IconScoreContext.storage = Mock()
-
-        preps = utils.create_dummy_preps(
-            size=self.TOTAL_PREPS, main_preps=self.MAIN_PREPS, elected_preps=self.ELECTED_PREPS)
-        preps.freeze()
-        assert preps.is_frozen()
-        assert not preps.is_dirty()
-
-        term = Term(sequence=0,
-                    start_block_height=100,
-                    period=self.TERM_PERIOD,
-                    irep=icx_to_loop(50000),
-                    total_supply=preps.total_delegated,
-                    total_delegated=preps.total_delegated)
-        term.set_preps(preps, self.MAIN_PREPS, self.ELECTED_PREPS)
-        term.freeze()
-        assert term.is_frozen()
-        assert not term.is_dirty()
-
-        prep_engine = PRepEngine()
-        prep_engine.preps = preps
-        prep_engine.term = term
-        prep_engine.prep_address_converter = Mock()
-
-        IconScoreContext.engine.prep = prep_engine
-
-        step_counter_factory = IconScoreStepCounterFactory()
-        context_factory = IconScoreContextFactory(step_counter_factory)
-
-        self.context_factory = context_factory
-        self.preps = preps
-        self.term = term
-
-    def test_update_dirty_prep_batch_with_p2p_endpoint_changed_main_prep(self):
-        old_preps: 'PRepContainer' = self.preps
-        old_term: 'Term' = self.term
-=======
 @pytest.fixture(scope="module")
 def settable_inv_container():
     default_service_config: int = 0
@@ -109,7 +63,6 @@ def settable_inv_container():
         'apiCall': 0
     }
     default_step_costs = {StepType(key): val for key, val in default_step_costs.items()}
-
     default_max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
         IconScoreContextType.QUERY: 50_000_000
@@ -151,6 +104,7 @@ def prep_engine():
     prep_engine = PRepEngine()
     prep_engine.preps = preps
     prep_engine.term = term
+    prep_engine.prep_address_converter = mock.Mock()()
 
     return prep_engine
 
@@ -172,7 +126,6 @@ class TestIconScoreContext:
     def test_update_dirty_prep_batch_with_p2p_endpoint_changed_main_prep(self, prep_engine, context_factory):
         old_preps: 'PRepContainer' = prep_engine.preps
         old_term: 'Term' = prep_engine.term
->>>>>>> ec96bbb0... IS-1013: Convert tests framework from unittest to pytest (#425):tests/unittest/iconscore/test_icon_score_context.py
 
         block = utils.create_dummy_block()
         context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)

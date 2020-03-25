@@ -23,16 +23,14 @@ from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
 from iconservice.rollback.rollback_manager import RollbackManager
-from .base.address import Address
-from .base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.score_loader.icon_builtin_score_loader import IconBuiltinScoreLoader
 from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
-from .base.address import Address, generate_score_address, generate_score_address_for_tbears
-from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from .base.address import Address
+from .base.address import GOVERNANCE_SCORE_ADDRESS
+from .base.address import SYSTEM_SCORE_ADDRESS
 from .base.block import Block, EMPTY_BLOCK
 from .base.exception import (
-    ExceptionCode, IconServiceBaseException, ScoreNotFoundException,
-    AccessDeniedException, IconScoreException, InvalidBaseTransactionException,
+    ExceptionCode, IconServiceBaseException, IconScoreException, InvalidBaseTransactionException,
     InternalServiceErrorException, DatabaseException)
 from .base.message import Message
 from .base.transaction import Transaction
@@ -48,9 +46,6 @@ from .icon_constant import (
     Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
-    Revision, BASE_TRANSACTION_INDEX,
-    IISS_DB, IISS_INITIAL_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    ISCORE_EXCHANGE_RATE, STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
     RevisionChangedFlag)
 from .icon_network import INVEngine, INVStorage
 from .iconscore.context.context import ContextContainer
@@ -257,7 +252,7 @@ class IconServiceEngine(ContextContainer):
                                 block_validation_penalty_threshold: int,
                                 ipc_timeout: int,
                                 icon_rc_path: str):
-
+        # storages MUST be prepared prior to engines because engines use them on open()
         IconScoreContext.storage.deploy.open(context)
         IconScoreContext.storage.fee.open(context)
         IconScoreContext.storage.icx.open(context)

@@ -23,7 +23,7 @@ from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CA
     ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.address import Address, SYSTEM_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.exception import ScoreNotFoundException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 

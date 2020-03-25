@@ -18,8 +18,8 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Any, TYPE_CHECKING, Optional, Tuple
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
-from iconcommons.logger import Logger
 
+from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBaseTransactionException, \
@@ -32,7 +32,6 @@ from iconservice.utils import check_error_response, to_camel_case, BytesToHexJSO
 
 if TYPE_CHECKING:
     from earlgrey import RobustConnection
-    from iconcommons.icon_config import IconConfig
 
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'

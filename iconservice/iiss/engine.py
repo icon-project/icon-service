@@ -19,7 +19,6 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
-
 from iconservice.iiss.listener import EngineListener as IISSEngineListener
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification

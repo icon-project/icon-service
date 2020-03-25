@@ -18,7 +18,6 @@ from enum import Flag
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
-
 from iconservice.database.db import KeyValueDatabase
 from iconservice.database.wal import WriteAheadLogWriter
 from iconservice.icon_constant import ROLLBACK_LOG_TAG

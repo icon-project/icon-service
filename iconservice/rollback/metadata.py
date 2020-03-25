@@ -18,7 +18,6 @@ __all__ = "Metadata"
 from typing import Optional
 
 from iconcommons.logger import Logger
-
 from ..base.block import Block
 from ..icon_constant import ROLLBACK_LOG_TAG
 from ..icon_constant import Revision

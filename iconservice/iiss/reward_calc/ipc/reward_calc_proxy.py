@@ -22,7 +22,6 @@ from subprocess import Popen
 from typing import TYPE_CHECKING, Optional, Callable, Any, Tuple
 
 from iconcommons.logger import Logger
-
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer

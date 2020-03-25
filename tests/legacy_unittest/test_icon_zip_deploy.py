@@ -34,7 +34,6 @@ from iconservice.deploy.utils import remove_path
 from iconservice.icon_constant import DeployState
 from iconservice.icon_constant import ZERO_TX_HASH
 from iconservice.iconscore.context.context import ContextContainer
-from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
