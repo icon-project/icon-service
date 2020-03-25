@@ -384,3 +384,21 @@ class TermFlag(Flag):
     MAIN_PREP_NODE_ADDRESS = auto()
 
     ALL = 0xFFFFFFFF
+
+
+class RevisionChangedFlag(Flag):
+    # Empty
+    NONE = 0x0
+    # Set when STEP price changed on the block
+    # STEP_PRICE_CHANGED = 0x10
+    # Set when STEP costs changed on the block
+    # STEP_COST_CHANGED = 0x20
+    # Set when Max STEP limits changed on the block
+    # STEP_MAX_LIMIT_CHANGED = 0x40
+    # STEP changed flag mask
+    # STEP_ALL_CHANGED = 0xf0
+
+    # CHANGE REVISION
+    GENESIS_IISS_CALC = 0x100
+    IISS_CALC = 0x200
+    DECENTRALIZATION = 0x400

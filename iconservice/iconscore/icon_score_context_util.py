@@ -177,14 +177,11 @@ class IconScoreContextUtil(object):
         if score_address == SYSTEM_SCORE_ADDRESS:
             return
 
-        # Gets the governance SCORE
-        governance_score =\
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        if governance_score is not None and governance_score.isInScoreBlackList(score_address):
+        if score_address in context.system_value.score_black_list:
             raise AccessDeniedException(f'SCORE in blacklist: {score_address}')
 
     @staticmethod
+    # TODO remove
     def validate_deployer(context: 'IconScoreContext', deployer: 'Address') -> None:
         """Check if a given deployer is allowed to deploy a SCORE
 
