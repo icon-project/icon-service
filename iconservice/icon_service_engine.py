@@ -1501,7 +1501,9 @@ class IconServiceEngine(ContextContainer):
             self._deposit_handler.handle_deposit_request(context, data)
             return None
         else:
-            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            # do not charge CONNTRAC_CALL step to system SCORE call
+            if to != SYSTEM_SCORE_ADDRESS:
+                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
             return None
 
