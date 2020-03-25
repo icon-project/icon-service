@@ -62,7 +62,7 @@ class StepCosts:
     _STEP_TYPES = 'step_types'
     _STEP_COSTS = 'step_costs'
 
-    def __init__(self, db: IconScoreDatabase):
+    def __init__(self, db: 'IconScoreDatabase'):
         self._step_types = ArrayDB(self._STEP_TYPES, db, value_type=str)
         self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
 

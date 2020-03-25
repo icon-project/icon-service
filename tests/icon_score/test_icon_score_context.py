@@ -20,7 +20,6 @@ from unittest.mock import Mock
 from iconservice.icon_constant import IconScoreContextType, PRepFlag, TermFlag, Revision, PRepGrade, PenaltyReason, \
     PRepStatus
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.prep.data import Term, PRep
 from iconservice.prep.data.prep_container import PRepContainer
 from iconservice.prep.engine import Engine as PRepEngine

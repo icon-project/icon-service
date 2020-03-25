@@ -26,8 +26,8 @@ from iconservice.deploy.utils import convert_path_to_package_name
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
 from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API
-from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContextType
+from iconservice.iconscore.context.context import ContextContainer
+from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_address, create_tx_hash, rmtree

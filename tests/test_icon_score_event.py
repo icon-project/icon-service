@@ -27,8 +27,9 @@ from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
-from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContext, IconScoreContextType, IconScoreFuncType
+from iconservice.iconscore.context.context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import int_to_bytes, ContextEngine, ContextStorage

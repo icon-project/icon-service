@@ -28,11 +28,12 @@ from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
 from iconservice.iconscore.icon_score_base2 import sha3_256
-from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import \
-    StepType, IconScoreStepCounter, IconScoreStepCounterFactory
+    StepType, IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.prep import PRepEngine
 from iconservice.utils import ContextEngine

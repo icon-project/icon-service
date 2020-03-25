@@ -35,7 +35,6 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType, IconS
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx import IcxEngine
 from iconservice.icx import IcxStorage
 from iconservice.utils import ContextStorage
@@ -167,7 +166,6 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.block = Block(1, create_block_hash(), 0, None, 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
-        self.__step_counter_factory = IconScoreStepCounterFactory()
         self._context.revision = 0
         self._context.new_icon_score_mapper = {}
         self._step_counter: IconScoreStepCounter = \
