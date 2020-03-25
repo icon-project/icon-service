@@ -346,34 +346,6 @@ class IconServiceEngine(ContextContainer):
             raise ScoreNotFoundException('Governance SCORE not found')
         return governance_score
 
-    @staticmethod
-    def _get_step_price_from_governance(context: 'IconScoreContext', governance) -> int:
-        step_price = 0
-        # Gets the step price if the fee flag is on
-        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
-            step_price = governance.getStepPrice()
-
-        return step_price
-
-    @staticmethod
-    def _get_step_costs_from_governance(governance) -> dict:
-        step_costs = {}
-        # Gets the step costs
-        for key, value in governance.getStepCosts().items():
-            try:
-                step_costs[StepType(key)] = value
-            except ValueError:
-                # Pass the unknown step type
-                pass
-
-        return step_costs
-
-    @staticmethod
-    def _get_step_max_limits_from_governance(governance) -> dict:
-        # Gets the max step limit
-        return {IconScoreContextType.INVOKE: governance.getMaxStepLimit("invoke"),
-                IconScoreContextType.QUERY: governance.getMaxStepLimit("query")}
-
     def _validate_deployer_whitelist(self, context: 'IconScoreContext', params: dict):
         data_type = params.get('dataType')
 
@@ -500,7 +472,7 @@ class IconServiceEngine(ContextContainer):
                 context.update_batch()
 
                 # for migration governance SCORE
-                context.engine.system.legacy_system_value_update(context, tx_result)
+                context.engine.system.update_system_value_by_result(context, tx_result)
 
                 if context.is_revision_changed(Revision.IISS.value):
                     context.revision_changed_flag |= RevisionChangedFlag.GENESIS_IISS_CALC
@@ -1113,14 +1085,14 @@ class IconServiceEngine(ContextContainer):
             self._push_context(context)
 
             step_price: int = context.step_counter.step_price
-            minimum_step: int = context.system_value.step_costs[StepType.DEFAULT]
+            minimum_step: int = context.system_value.step_costs.get(StepType.DEFAULT, 0)
 
             if 'data' in params:
                 # minimum_step is the sum of
                 # default STEP cost and input STEP costs if data field exists
                 data = params['data']
                 input_size = get_input_data_size(context.revision, data)
-                minimum_step += input_size * context.system_value.step_costs[StepType.INPUT]
+                minimum_step += input_size * context.system_value.step_costs.get(StepType.INPUT, 0)
 
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 

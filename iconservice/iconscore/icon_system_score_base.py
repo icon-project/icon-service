@@ -21,6 +21,7 @@ from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException, IconServiceBaseException
 from ..icon_constant import SystemValueType
 from ..iconscore.icon_score_base import IconScoreBase
+from ..system.value import SystemDataConverter
 from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
@@ -73,16 +74,19 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def migrate_system_value(self, data: Dict['SystemValueType', Any]):
-        # Todo: TBD!!
-        pass
+        converted_data: dict = {}
+        for type_, value in data.items():
+            converted_data[type_] = SystemDataConverter.convert_for_icon_service(type_, value)
+        self._context.system_value.migrate(self._context, converted_data)
 
     def get_system_value(self, type_: 'SystemValueType') -> Any:
-        # Todo: TBD!!
-        pass
+        value: Any = self._context.system_value.get_by_type(type_)
+        converted_value: Any = SystemDataConverter.convert_for_governance_score(type_, value)
+        return converted_value
 
     def set_system_value(self, type_: 'SystemValueType', value: Any):
-        # Todo: TBD!!
-        pass
+        converted_value: Any = SystemDataConverter.convert_for_icon_service(type_, value)
+        self._context.system_value.set_by_governance_score(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True
