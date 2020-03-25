@@ -13,21 +13,20 @@
 # limitations under the License.
 
 
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
+from .data.system_data import SystemData, SYSTEM_DATA_MAPPER
 from .value import SystemValue
 from ..base.ComponentBase import StorageBase
 from ..database.db import ContextDatabase
 from ..icon_constant import SystemValueType
 from ..utils.msgpack_for_db import MsgPackForDB
 
-
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 
 class Storage(StorageBase):
-    PREFIX: bytes = b'gv'
     MIGRATION_FLAG: bytes = b'mf'
 
     def __init__(self, db: 'ContextDatabase'):
@@ -47,25 +46,25 @@ class Storage(StorageBase):
 
         system_value: 'SystemValue' = SystemValue(is_migrated)
         for type_ in SystemValueType:
-            value: Optional[Any] = self._get_value(context, type_)
-            if value is not None:
-                system_value.set_from_icon_service(type_, value, is_open=True)
+            system_data: 'SystemData' = self._get_value(context, type_)
+            if system_data is not None:
+                system_value.set_by_icon_service(system_data, is_open=True)
         return system_value
 
+    def put_migration_flag(self, context: 'IconScoreContext'):
+        self._db.put(context, self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
+
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
-        return bool(self._db.get(context, self.PREFIX + self.MIGRATION_FLAG))
+        return bool(self._db.get(context, self.MIGRATION_FLAG))
 
-    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional[Any]:
+    def put_value(self, context: 'IconScoreContext', system_data: 'SystemData'):
+        self._db.put(context, system_data.make_key(), system_data.to_bytes())
+
+    def _get_value(self, context: 'IconScoreContext', type_: 'SystemValueType') -> Optional['SystemData']:
         assert isinstance(type_, SystemValueType)
-        value: Optional[Any] = self._db.get(context, self.PREFIX + type_.value)
-        if value is not None:
-            value = MsgPackForDB.loads(value)
-        return value
+        value: Optional[bytes] = self._db.get(context, SystemData.PREFIX + type_.value)
+        if value is None:
+            return None
 
-    def put_migration_flag(self, context: 'IconScoreContext') -> bool:
-        return bool(self._db.put(context, self.PREFIX + self.MIGRATION_FLAG, MsgPackForDB.dumps(True)))
-
-    def put_value(self, context: 'IconScoreContext', type_: 'SystemValueType', value: Any):
-        assert isinstance(type_, SystemValueType)
-        # Todo: Check if the value is valid (type check)
-        self._db.put(context, self.PREFIX + type_.value, MsgPackForDB.dumps(value))
+        system_data: 'SystemData' = SYSTEM_DATA_MAPPER[type_].from_bytes(value)
+        return system_data

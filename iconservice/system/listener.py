@@ -13,13 +13,11 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
-    from ..icon_constant import SystemValueType
+from .data.system_data import SystemData
 
 
 class SystemValueListener(metaclass=ABCMeta):
     @abstractmethod
-    def update(self, type_: 'SystemValueType', value: Any):
+    def update_system_value(self, system_data: 'SystemData'):
         pass

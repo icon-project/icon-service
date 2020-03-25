@@ -14,99 +14,174 @@
 
 import copy
 from collections import namedtuple
-from typing import TYPE_CHECKING, Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List
 
+from .data.system_data import SystemData, SYSTEM_DATA_MAPPER
 from .listener import SystemValueListener
 from .. import Address
-from ..icon_constant import SystemValueType, IconScoreContextType, Revision
-from ..iconscore.icon_score_step import IconScoreStepCounter
-
-if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
+from ..base.exception import AccessDeniedException
+from ..icon_constant import SystemValueType, IconScoreContextType
+from ..iconscore.icon_score_context import IconScoreContext
+from ..iconscore.icon_score_step import StepType
 
 SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
-ImportWhiteList = namedtuple('ImportWhiteList', ['white_list', 'keys'])
 
 
-class SystemValue:
+class SystemDataConverter(object):
+    @staticmethod
+    def convert_for_icon_service(type_: 'SystemValueType', value: Any) -> 'SystemData':
+        """
+        Convert system value data type for icon service.
+        Some data need to be converted for enhancing efficiency.
+        :param type_:
+        :param value:
+        :return:
+        """
+        converted_value: Any = value
+        if type_ == SystemValueType.MAX_STEP_LIMITS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                if isinstance(key, str):
+                    if key == "invoke":
+                        converted_value[IconScoreContextType.INVOKE] = value
+                    elif key == "query":
+                        converted_value[IconScoreContextType.QUERY] = value
+                else:
+                    raise ValueError(f"Invalid data type: "
+                                     f"system value: {SystemValueType.name} "
+                                     f"key type: {type(key)}")
+        elif type_ == SystemValueType.STEP_COSTS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                if isinstance(key, str):
+                    try:
+                        converted_value[StepType(key)] = value
+                    except ValueError:
+                        # Pass the unknown step type
+                        pass
+                else:
+                    raise ValueError(f"Invalid data type: "
+                                     f"system value: {SystemValueType.name} "
+                                     f"key type: {type(key)}")
+        return SYSTEM_DATA_MAPPER[type_](converted_value)
+
+    @staticmethod
+    def convert_for_governance_score(type_: 'SystemValueType', value: Any) -> Any:
+        """
+        Convert system value data type for governance score
+        Some data which have been converted for enhancing efficiency need to be converted.
+
+        :param type_:
+        :param value:
+        :return:
+        """
+        converted_value: Any = value
+        if type_ == SystemValueType.MAX_STEP_LIMITS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                assert isinstance(key, IconScoreContextType)
+                converted_value[key.name.lower()] = value
+        elif type_ == SystemValueType.STEP_COSTS:
+            converted_value: dict = {}
+            for key, value in value.items():
+                assert isinstance(key, StepType)
+                converted_value[key.value] = value
+        return converted_value
+
+
+class SystemDict(dict):
+    def __setitem__(self, key, value):
+        if value is None:
+            return
+        if not isinstance(key, SystemValueType) or key not in SystemValueType:
+            raise ValueError(f"Invalid system value type: {key}")
+        if not isinstance(value, SystemData):
+            raise ValueError(f"Invalid value type: {type(value)}")
+        if key != value.SYSTEM_TYPE:
+            raise ValueError(f"Do not match key and value")
+
+        super().__setitem__(key, value)
+
+
+class SystemValue(object):
 
     def __init__(self, is_migrated: bool):
         # Todo: consider if the compound data should be immutable
-        # Todo: consider about transaction failure
+        # Todo: Freeze data
+        # Todo: Consider about integrating set method
+        # Todo: Integrate to revision
         self._is_migrated: bool = is_migrated
         self._listener: Optional['SystemValueListener'] = None
 
-        self._service_config: Optional[int] = None
-        self._deployer_list: Optional[List['Address']] = None
+        self._tx_unit_batch: dict = {}
+        self._cache: SystemDict['SystemValueType', Optional['SystemData']] = SystemDict({
+            SystemValueType.REVISION_CODE: None,
+            SystemValueType.REVISION_NAME: None,
+            SystemValueType.SCORE_BLACK_LIST: None,
+            SystemValueType.STEP_PRICE: None,
+            SystemValueType.STEP_COSTS: None,
+            SystemValueType.MAX_STEP_LIMITS: None,
+            SystemValueType.SERVICE_CONFIG: None,
+            SystemValueType.IMPORT_WHITE_LIST: None
+        })
 
-        # Todo: raise Exception when trying to get variable which is not set (i.e. None)
-        self._step_price: Optional[int] = None
-        self._step_costs: Optional[dict] = None
-        self._max_step_limits: Optional[dict] = None
-
-        # Todo: Integrate to revision
-        self._revision_code: Optional[int] = None
-        self._revision_name: Optional[str] = None
-
-        self._score_black_list: Optional[list] = None
-        self._import_white_list: Optional[list] = None
-
-    # Todo: should change type hint to 'IconScoreContext'? and should check if context.type is invoke?
     def add_listener(self, listener: 'SystemValueListener'):
         assert isinstance(listener, SystemValueListener)
+        assert isinstance(listener, IconScoreContext)
+        if listener.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+            raise AccessDeniedException(f"Method not allowed: context={listener.type.name}")
         self._listener = listener
 
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
+    def get_by_type(self, type_: 'SystemValueType') -> Any:
+        return self._tx_unit_batch.get(type_, self._cache[type_]).value
+
     @property
     def service_config(self) -> int:
-        return self._service_config
+        return self.get_by_type(SystemValueType.SERVICE_CONFIG)
 
     @property
-    def deployer_list(self):
-        return self._deployer_list
+    def step_price(self) -> int:
+        return self.get_by_type(SystemValueType.STEP_PRICE)
 
     @property
-    def step_price(self):
-        return self._step_price
+    def step_costs(self) -> Dict['StepType', int]:
+        return self.get_by_type(SystemValueType.STEP_COSTS)
 
     @property
-    def step_costs(self) -> dict:
-        return self._step_costs
-
-    @property
-    def max_step_limits(self):
-        return self._max_step_limits
+    def max_step_limits(self) -> Dict['IconScoreContextType', int]:
+        return self.get_by_type(SystemValueType.MAX_STEP_LIMITS)
 
     @property
     def revision_code(self) -> int:
-        return self._revision_code
+        return self.get_by_type(SystemValueType.REVISION_CODE)
 
     @property
-    def revision_name(self):
-        return self._revision_name
+    def revision_name(self) -> str:
+        return self.get_by_type(SystemValueType.REVISION_NAME)
 
     @property
-    def score_black_list(self):
-        return self._score_black_list
+    def score_black_list(self) -> List['Address']:
+        return self.get_by_type(SystemValueType.SCORE_BLACK_LIST)
 
     @property
-    def import_white_list(self):
-        return self._import_white_list
+    def import_white_list(self) -> Dict[str, List[str]]:
+        return self.get_by_type(SystemValueType.IMPORT_WHITE_LIST)
 
-    def create_step_counter(self,
-                            context_type: 'IconScoreContextType',
-                            step_trace_flag: bool) -> 'IconScoreStepCounter':
-        step_price: int = self._step_price
-        # Copying a `dict` so as not to change step costs when processing a transaction.
-        step_costs: dict = self._step_costs.copy()
-        max_step_limit: int = self._max_step_limits.get(context_type, 0)
+    def is_updated(self) -> bool:
+        return bool(len(self._tx_unit_batch))
 
-        return IconScoreStepCounter(step_price, step_costs, max_step_limit, step_trace_flag)
+    def update_batch(self):
+        for value in self._tx_unit_batch.values():
+            self._set(value)
 
-    def migrate(self, context: 'IconScoreContext', data: Dict['SystemValueType', Any]):
+    def clear_batch(self):
+        self._tx_unit_batch.clear()
+
+    def migrate(self, context: 'IconScoreContext', data: Dict['SystemValueType', 'SystemData']):
         """
         Migrates governance variablie from Governance score to Governance Value.
         It will be called when updating governance score to version "".
@@ -115,70 +190,56 @@ class SystemValue:
         :param data:
         :return:
         """
-        for key, value in data.items():
-            context.storage.system.put_value(context, key.value, value)
+        for type_, system_data in data.items():
+            context.storage.system.put_value(context, type_, system_data)
         context.storage.system.put_migration_flag(context)
+        self._tx_unit_batch["is_migrated"] = True
+
+    def is_migration_succeed(self) -> bool:
+        return self._tx_unit_batch.get("is_migrated", False)
+
+    def update_migration(self):
         self._is_migrated = True
 
-    def _set(self, value_type: 'SystemValueType', value: Any):
-        if value_type == SystemValueType.REVISION_CODE:
-            self._revision_code = value
-        elif value_type == SystemValueType.REVISION_NAME:
-            self._revision_name = value
-        elif value_type == SystemValueType.SCORE_BLACK_LIST:
-            self._score_black_list = value
-        elif value_type == SystemValueType.STEP_PRICE:
-            self._step_price = value
-        elif value_type == SystemValueType.STEP_COSTS:
-            self._step_costs = value
-        elif value_type == SystemValueType.MAX_STEP_LIMITS:
-            self._max_step_limits = value
-        elif value_type == SystemValueType.SERVICE_CONFIG:
-            self._service_config = value
-        elif value_type == SystemValueType.IMPORT_WHITE_LIST:
-            self._import_white_list = value
-        else:
-            raise ValueError(f"Invalid value type: {value_type.name}")
+    def _set(self, system_data: 'SystemData'):
+        self._cache[system_data.SYSTEM_TYPE] = system_data
         if self._listener is not None:
-            self._listener.update(value_type, value)
+            self._listener.update_system_value(system_data)
 
-    #Todo: set method 통합
-    def set_from_icon_service(self, value_type: 'SystemValueType', value: Any, is_open: bool = False):
+    def set_by_icon_service(self, system_data: 'SystemData', is_open: bool = False):
         """
         Set value on system value instance from icon service.
         There are two cases of calling this method.
         First: Before migration
         Second: Initiating 'system value' when opening icon service (i.e. first initiation)
 
-        :param value_type:
-        :param value:
+        :param system_data:
         :param is_open:
         :return:
         """
-        assert isinstance(value_type, SystemValueType)
         if not self._is_migrated or is_open is True:
-            self._set(value_type, value)
+            self._set(system_data)
         else:
             raise PermissionError(f"Invalid case of setting system value from icon-service"
                                   f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_from_governance_score(self, context: 'IconScoreContext', value_type: 'SystemValueType', value: Any):
+    def set_by_governance_score(self, context: 'IconScoreContext', system_data: 'SystemData'):
         """
         Set values on system value and put these into DB.
         Only Governance Score can set values after migration.
         :param context:
-        :param value_type:
-        :param value:
+        :param system_data:
         :return:
         """
-        # Todo: Only GS can access. IS can not call directly (Inspect caller)
         assert self._is_migrated
-        assert isinstance(value_type, SystemValueType)
         # Update member variables
         # Check If value is valid
-        self._set(value_type, value)
-        context.storage.system.put_value(context, value_type, value)
+        self._tx_unit_batch[system_data.SYSTEM_TYPE] = system_data
+        context.storage.system.put_value(context, system_data)
 
-    def copy(self):
+    def copy(self) -> 'SystemValue':
         """Copy system value"""
-        return copy.copy(self)
+        system_value = copy.copy(self)
+        system_value._tx_unit_batch = {}
+        system_value._cache = copy.copy(self._cache)
+        return system_value

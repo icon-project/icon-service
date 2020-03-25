@@ -13,9 +13,10 @@
 # limitations under the License.
 
 
-from typing import Optional, TYPE_CHECKING, Any
+from typing import Optional, TYPE_CHECKING, Any, Dict, List
 
-from .value import SystemValue
+from .value import SystemValue, SystemDataConverter
+from .. import Address
 from ..base.ComponentBase import EngineBase
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException
@@ -23,7 +24,6 @@ from ..icon_constant import SystemValueType, IconServiceFlag, IconScoreContextTy
 from ..iconscore.context.context import ContextContainer
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_result import TransactionResult
-from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -62,17 +62,18 @@ class Engine(EngineBase, ContextContainer):
             self._sync_system_value_with_governance(context, system_value)
         self._system_value = system_value
 
-    def legacy_system_value_update(self,
-                                   context: 'IconScoreContext',
-                                   tx_result: 'TransactionResult'):
-
+    def update_system_value_by_result(self,
+                                      context: 'IconScoreContext',
+                                      tx_result: 'TransactionResult'):
         if context.system_value.is_migrated:
-            return
-
-        if tx_result.to != GOVERNANCE_SCORE_ADDRESS or tx_result.status != TransactionResult.SUCCESS:
-            return
-
-        self._sync_system_value_with_governance(context, context.system_value)
+            if context.system_value.is_updated() and tx_result.status == TransactionResult.SUCCESS:
+                context.system_value.update_batch()
+        else:
+            if tx_result.to == GOVERNANCE_SCORE_ADDRESS or tx_result.status == TransactionResult.SUCCESS:
+                self._sync_system_value_with_governance(context, context.system_value)
+            if context.system_value.is_migration_succeed():
+                context.system_value.update_migration()
+        context.system_value.clear_batch()
 
     def _sync_system_value_with_governance(self,
                                            context: 'IconScoreContext',
@@ -90,11 +91,19 @@ class Engine(EngineBase, ContextContainer):
             governance_score = self._get_governance_score(context)
             for type_ in SystemValueType:
                 value: Any = self._get_gs_data_mapper[type_](context, governance_score)
-                system_value.set_from_icon_service(type_, value)
+                system_value.set_by_icon_service(SystemDataConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass
         finally:
             self._pop_context()
+
+    @staticmethod
+    def _get_governance_score(context: 'IconScoreContext') -> 'Governance':
+        governance_score = \
+            IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ScoreNotFoundException('Governance SCORE not found')
+        return governance_score
 
     @staticmethod
     def _get_step_price_from_governance(context: 'IconScoreContext', governance_score: 'Governance') -> int:
@@ -106,27 +115,17 @@ class Engine(EngineBase, ContextContainer):
         return step_price
 
     @staticmethod
-    def _get_step_costs_from_governance(_, governance_score: 'Governance') -> dict:
-        step_costs = {}
-        # Gets the step costs
-        for key, value in governance_score.getStepCosts().items():
-            try:
-                step_costs[StepType(key)] = value
-            except ValueError:
-                # Pass the unknown step type
-                pass
-
-        return step_costs
+    def _get_step_costs_from_governance(_, governance_score: 'Governance') -> Dict[str, int]:
+        return governance_score.getStepCosts()
 
     @staticmethod
-    def _get_step_max_limits_from_governance(_, governance_score: 'Governance') -> dict:
+    def _get_step_max_limits_from_governance(_, governance_score: 'Governance') -> Dict[str, int]:
         # Gets the max step limit
-        return {IconScoreContextType.INVOKE: governance_score.getMaxStepLimit("invoke"),
-                IconScoreContextType.QUERY: governance_score.getMaxStepLimit("query")}
-
+        return {"invoke": governance_score.getMaxStepLimit("invoke"),
+                "query": governance_score.getMaxStepLimit("query")}
 
     @staticmethod
-    def _get_service_flag(context: 'IconScoreContext', governance_score: 'Governance'):
+    def _get_service_flag(context: 'IconScoreContext', governance_score: 'Governance') -> int:
         service_config = context.icon_service_flag
         try:
             service_config = governance_score.service_config
@@ -135,12 +134,12 @@ class Engine(EngineBase, ContextContainer):
         return service_config
 
     @staticmethod
-    def _get_revision_name_from_governance_score(_, governance_score: 'Governance'):
+    def _get_revision_name_from_governance_score(_, governance_score: 'Governance') -> str:
         # TBD, but before migration, there is no usecase of revision name. So do not need to implement
         return
 
     @staticmethod
-    def _get_revision_from_governance_score(_, governance_score: 'Governance'):
+    def _get_revision_from_governance_score(_, governance_score: 'Governance') -> int:
         # Check if revision has been changed by comparing with system engine's system value
         revision: int = 0
         if hasattr(governance_score, 'revision_code'):
@@ -148,23 +147,14 @@ class Engine(EngineBase, ContextContainer):
         return revision
 
     @staticmethod
-    def _get_governance_score(context: 'IconScoreContext') -> 'Governance':
-        governance_score = \
-            IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-        if governance_score is None:
-            raise ScoreNotFoundException('Governance SCORE not found')
-        return governance_score
-
-    @staticmethod
-    def _get_import_whitelist(_, governance_score: 'Governance'):
+    def _get_import_whitelist(_, governance_score: 'Governance') -> Dict[str, list]:
         if hasattr(governance_score, 'import_white_list_cache'):
             return governance_score.import_white_list_cache
 
         return {"iconservice": ['*']}
 
     @staticmethod
-    def _get_score_black_list(_, governance_score: 'Governance'):
-        # Todo: should I set default value?
+    def _get_score_black_list(_, governance_score: 'Governance') -> List['Address']:
         score_black_list = []
         if hasattr(governance_score, '_score_black_list'):
             score_black_list = [address for address in governance_score._score_black_list]
