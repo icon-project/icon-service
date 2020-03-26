@@ -87,32 +87,3 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         expected_flag = IconServiceFlag.FEE | IconServiceFlag.AUDIT | \
                         IconServiceFlag.SCORE_PACKAGE_VALIDATOR | IconServiceFlag.DEPLOYER_WHITE_LIST
         self.assertEqual(context.icon_service_flag, expected_flag)
-
-    def test_service_configuration_when_rc_monitor_setting_is_true(self):
-        self.config.update_conf({ConfigKey.ICON_RC_MONITOR: True})
-        self.icon_service_engine = IconServiceEngine()
-
-        self.icon_service_engine.open(self.config)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        rc_open_command: list = context.engine.iiss._reward_calc_proxy._reward_calc.args
-        assert '-monitor' in rc_open_command
-
-    def test_service_configuration_when_rc_monitor_setting_is_false(self):
-        self.config.update_conf({ConfigKey.ICON_RC_MONITOR: False})
-        self.icon_service_engine = IconServiceEngine()
-
-        self.icon_service_engine.open(self.config)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        rc_open_command: list = context.engine.iiss._reward_calc_proxy._reward_calc.args
-        assert '-monitor' not in rc_open_command
-
-    def test_service_configuration_default_rc_monitor_setting(self):
-        self.icon_service_engine = IconServiceEngine()
-
-        self.icon_service_engine.open(self.config)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        rc_open_command: list = context.engine.iiss._reward_calc_proxy._reward_calc.args
-        assert '-monitor' in rc_open_command
