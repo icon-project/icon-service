@@ -216,8 +216,9 @@ class ContextDatabase(object):
 
         Search order
         1. TransactionBatch
-        2. BlockBatch
-        3. StateDB
+        2. Current BlockBatch
+        3. Prev BlockBatch
+        4. StateDB
 
         :param context:
         :param key:

@@ -141,6 +141,7 @@ class IconScoreContext(object):
         self.revision: int = 0
         self.tx_batch: Optional['TransactionBatch'] = None
         self.block_batch: Optional['BlockBatch'] = None
+        # For 2-depth block invocation
         self._prev_block_batches: Optional[List['BlockBatch']] = \
             [] if context_type == IconScoreContextType.INVOKE else None
         self.rc_block_batch: list = []
@@ -195,15 +196,18 @@ class IconScoreContext(object):
         return self._prep_address_converter
 
     def get_batches(self) -> Iterable['Batch']:
-        # If its type is not IconScoreContextType.INVOKE, self._prev_block_batches is always None.
-        if self._prev_block_batches is None:
-            assert self.type != IconScoreContextType.INVOKE
-            return
+        """Used to support 2-depth block invocation
+        It is called in ContextDatabase.get_from_batch() on estimation or invoke
 
+        Searching order: tx_batch -> block_batch -> prev_block_batch -> state_db
+        """
         yield self.tx_batch
         yield self.block_batch
-        for prev_block_batch in self._prev_block_batches:
-            yield prev_block_batch
+
+        # If contex.type is not INVOKE, self._prev_block_batches is None
+        if self._prev_block_batches:
+            for prev_block_batch in self._prev_block_batches:
+                yield prev_block_batch
 
     def is_decentralized(self) -> bool:
         return self.engine.prep.term is not None
@@ -387,6 +391,7 @@ class IconScoreContextFactory(object):
         if context_type == IconScoreContextType.DIRECT:
             return context
 
+        # For 2-depth block invocation
         if prev_block_batches:
             context._prev_block_batches = [batch for batch in prev_block_batches]
 
