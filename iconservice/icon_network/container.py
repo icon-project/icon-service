@@ -99,7 +99,7 @@ class Container(object):
             if value is None:
                 return
             if not isinstance(key, IconNetworkValueType) or key not in IconNetworkValueType:
-                raise ValueError(f"Invalid value type: {key}")
+                raise ValueError(f"Invalid value key: {key}")
             if not isinstance(value, Value):
                 raise ValueError(f"Invalid value type: {type(value)}")
             if key != value.TYPE:
