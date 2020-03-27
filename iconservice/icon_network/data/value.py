@@ -71,7 +71,7 @@ class StepCosts(Value):
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: dict = items[1]
-        converted_value: Dict[StepType, int] = {StepType(key): value for key, val in value.items()}
+        converted_value: Dict[StepType, int] = {StepType(key): val for key, val in value.items()}
 
         assert version == 0
         return cls(converted_value, need_check_value=False)
@@ -146,7 +146,7 @@ class MaxStepLimits(Value):
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: dict = items[1]
-        converted_value: Dict[IconScoreContextType, int] = {IconScoreContextType(key): value
+        converted_value: Dict[IconScoreContextType, int] = {IconScoreContextType(key): val
                                                             for key, val in value.items()}
 
         assert version == 0
