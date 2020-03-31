@@ -226,6 +226,7 @@ class PrecommitDataManager(object):
 
     def __init__(self):
         self._root: Optional['PrecommitDataManager.Node'] = None
+        # block_hash : PrecommitDataManager.Node instance
         self._precommit_data_mapper: Dict[bytes, 'PrecommitDataManager.Node'] = {}
 
     def __len__(self):
@@ -366,3 +367,13 @@ class PrecommitDataManager(object):
     def _set_root(self, node: 'PrecommitDataManager.Node'):
         node.parent = None
         self._root = node
+
+    def get_block_batches(self, block_hash: bytes) -> Iterable['BlockBatch']:
+        node = self._precommit_data_mapper.get(block_hash)
+        if not node:
+            return
+
+        while not node.is_root():
+            yield node.precommit_data.block_batch
+            # parent means previous block node
+            node = node.parent

@@ -17,7 +17,7 @@
 import warnings
 from abc import ABC
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Iterable
 
 from iconcommons.logger import Logger
 from .icon_score_mapper import IconScoreMapper
@@ -43,6 +43,8 @@ if TYPE_CHECKING:
     from ..utils import ContextEngine, ContextStorage
     from ..prep.prep_address_converter import PRepAddressConverter
     from ..inv.container import Container as INVContainer
+    from ..database.batch import Batch
+
 
 
 class IconScoreContext(ABC):
@@ -84,6 +86,10 @@ class IconScoreContext(ABC):
         self.current_address: Optional['Address'] = None
         self.block_batch: Optional['BlockBatch'] = None
         self.tx_batch: Optional['TransactionBatch'] = None
+        self.block_batch: Optional['BlockBatch'] = None
+        # For 2-depth block invocation
+        self._prev_block_batches: Optional[List['BlockBatch']] = \
+            [] if context_type == IconScoreContextType.INVOKE else None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
         self.new_icon_score_mapper: Optional['IconScoreMapper'] = None
@@ -153,6 +159,20 @@ class IconScoreContext(ABC):
         new: 'INVContainer' = self.inv_container
 
         return old.revision_code != new.revision_code and new.revision_code == target_rev
+
+    def get_batches(self) -> Iterable['Batch']:
+        """Used to support 2-depth block invocation
+        It is called in ContextDatabase.get_from_batch() on estimation or invoke
+
+        Searching order: tx_batch -> block_batch -> prev_block_batch -> state_db
+        """
+        yield self.tx_batch
+        yield self.block_batch
+
+        # If contex.type is not INVOKE, self._prev_block_batches is None
+        if self._prev_block_batches:
+            for prev_block_batch in self._prev_block_batches:
+                yield prev_block_batch
 
     def is_decentralized(self) -> bool:
         return self._term is not None
@@ -347,13 +367,19 @@ class IconScoreContextFactory(object):
     def __init__(self):
         pass
 
-    def create(self, context_type: 'IconScoreContextType', block: 'Block'):
+    def create(self,
+               context_type: 'IconScoreContextType',
+               block: 'Block',
+               prev_block_batches: Iterable['Batch'] = None):
         context: 'IconScoreContext' = self._create_context(context_type)
         context.block = block
 
         if context_type == IconScoreContextType.DIRECT:
             return context
 
+        # For 2-depth block invocation
+        if prev_block_batches:
+            context._prev_block_batches = [batch for batch in prev_block_batches]
         self._set_context_attributes_for_processing_tx(context)
         return context
 
@@ -366,6 +392,7 @@ class IconScoreContextFactory(object):
         if context.type in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
             context.block_batch = BlockBatch(Block.from_block(context.block))
             context.tx_batch = TransactionBatch()
+
             context.new_icon_score_mapper = IconScoreMapper()
 
             # For PRep management
