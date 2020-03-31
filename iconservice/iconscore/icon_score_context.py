@@ -390,14 +390,15 @@ class IconScoreContextFactory(object):
     @classmethod
     def set_step_counter(cls, context: 'IconScoreContext'):
         is_step_trace_on: bool = cls._is_step_trace_on(context)
+
         if context.type == IconScoreContextType.ESTIMATION:
-            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.inv_container,
-                                                                                   IconScoreContextType.INVOKE,
-                                                                                   is_step_trace_on)
+            context_type: 'IconScoreContextType' = IconScoreContextType.INVOKE
         else:
-            context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.inv_container,
-                                                                                   context.type,
-                                                                                   is_step_trace_on)
+            context_type: 'IconScoreContextType' = context.type
+            
+        context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.inv_container,
+                                                                               context_type,
+                                                                               is_step_trace_on)
 
     @classmethod
     def _is_step_trace_on(cls, context: 'IconScoreContext') -> bool:
