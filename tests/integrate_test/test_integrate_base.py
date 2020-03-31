@@ -227,6 +227,36 @@ class TestIntegrateBase(TestCase):
         self.add_tx_result(tx_results)
         return block, self.get_hash_list_from_tx_list(tx_list)
 
+    def make_and_req_block_for_2_depth_invocation(self,
+                           tx_list: list,
+                           prev_block: 'Block',
+                           prev_block_generator: Optional['Address'] = None,
+                           prev_block_validators: Optional[List['Address']] = None,
+                           prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
+    ) -> Tuple['Block', List[bytes]]:
+        block_height: int = prev_block.height + 1
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, prev_block.hash, 0)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+
+        is_block_editable = False
+        self.icon_service_engine._set_revision_to_context(context)
+        if context.is_decentralized():
+            is_block_editable = True
+
+        tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            prev_block_votes=prev_block_votes,
+                                            is_block_editable=is_block_editable)
+
+        self.add_tx_result(tx_results)
+        return block, self.get_hash_list_from_tx_list(tx_list)
+
     def debug_make_and_req_block(self,
                                  tx_list: list,
                                  prev_block_generator: Optional['Address'] = None,
