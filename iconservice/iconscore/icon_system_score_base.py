@@ -18,7 +18,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.exception import AccessDeniedException, IconServiceBaseException
+from ..base.exception import AccessDeniedException, IconServiceBaseException, InvalidParamsException
 from ..icon_constant import IconNetworkValueType
 from ..icon_network.container import ValueConverter as INVConverter
 from ..icon_network.data.value import Value
@@ -80,12 +80,21 @@ class IconSystemScoreBase(IconScoreBase):
             converted_data.append(INVConverter.convert_for_icon_service(type_, value))
         self._context.inv_container.migrate(self._context, converted_data)
 
+    @classmethod
+    def _check_inv_type(cls, type_: 'IconNetworkValueType'):
+        if type_ not in IconNetworkValueType:
+            raise InvalidParamsException(f"Invalid INV type: {type_}")
+
     def get_icon_network_value(self, type_: 'IconNetworkValueType') -> Any:
+        self._check_inv_type(type_)
+
         value: Any = self._context.inv_container.get_by_type(type_)
         converted_value: Any = INVConverter.convert_for_governance_score(type_, value)
         return converted_value
 
     def set_icon_network_value(self, type_: 'IconNetworkValueType', value: Any):
+        self._check_inv_type(type_)
+
         converted_value: 'Value' = INVConverter.convert_for_icon_service(type_, value)
         self._context.inv_container.set_by_governance_score(self._context, converted_value)
 

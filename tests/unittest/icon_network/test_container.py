@@ -113,17 +113,18 @@ class TestBatchDict:
 
         assert e.value.args[0].startswith("Invalid value type")
 
-    @pytest.mark.parametrize("key", [type_key for type_key in IconNetworkValueType])
-    def test_key_value_mismatch(self, key, dummy_invs):
-        batch_dict = INVContainer.BatchDict()
-
-        for icon_network_value in dummy_invs.values():
-            if icon_network_value.TYPE == key:
-                batch_dict[key] = icon_network_value
-            else:
-                with pytest.raises(ValueError) as e:
-                    batch_dict[key] = icon_network_value
-                assert e.value.args[0] == "Do not match key and value"
+    # This test is deprecated as do not check wheather the key and value match
+    # @pytest.mark.parametrize("key", [type_key for type_key in IconNetworkValueType])
+    # def test_key_value_mismatch(self, key, dummy_invs):
+    #     batch_dict = INVContainer.BatchDict()
+    #
+    #     for icon_network_value in dummy_invs.values():
+    #         if icon_network_value.TYPE == key:
+    #             batch_dict[key] = icon_network_value
+    #         else:
+    #             with pytest.raises(ValueError) as e:
+    #                 batch_dict[key] = icon_network_value
+    #             assert e.value.args[0] == "Do not match key and value"
 
 
 class TestContainer:

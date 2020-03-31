@@ -46,7 +46,7 @@ class Storage(StorageBase):
 
         container: 'Container' = Container(is_migrated)
         for type_ in IconNetworkValueType:
-            value: 'Value' = self._get_value(context, type_)
+            value: Optional['Value'] = self._get_value(context, type_)
             if value is not None:
                 container.set_by_icon_service(value, is_open=True)
         return container

@@ -63,7 +63,12 @@ class ValueConverter(object):
                     raise ValueError(f"Invalid data type: "
                                      f"value: {type_.name} "
                                      f"key type: {type(key)}")
-        return VALUE_MAPPER[type_](converted_value)
+        try:
+            value: 'Value' = VALUE_MAPPER[type_](converted_value)
+        except KeyError:
+            raise InvalidParamsException(f"Invalid INV key: {type_}")
+
+        return value
 
     @staticmethod
     def convert_for_governance_score(type_: 'IconNetworkValueType', value: Any) -> Any:
@@ -102,8 +107,6 @@ class Container(object):
                 raise ValueError(f"Invalid value key: {key}")
             if not isinstance(value, Value):
                 raise ValueError(f"Invalid value type: {type(value)}")
-            if key != value.TYPE:
-                raise ValueError(f"Do not match key and value")
 
             super().__setitem__(key, value)
 
