@@ -403,7 +403,10 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.INVOKE, block=block)
+        context: 'IconScoreContext' = self._context_factory.create(
+            IconScoreContextType.INVOKE,
+            block=block,
+            prev_block_batches=self._precommit_data_manager.get_block_batches(block.prev_hash))
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
         prev_block_votes: Optional[List[Tuple['Address', int]]] = \
@@ -1242,11 +1245,9 @@ class IconServiceEngine(ContextContainer):
         """
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
-            tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-            tmp_context.block = self._get_last_block()
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= Revision.THREE.value else tmp_context,
+                context,
                 params,
                 step_price=context.step_counter.step_price)
 
