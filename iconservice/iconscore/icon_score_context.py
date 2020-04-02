@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Optional, List
 
 from iconcommons.logger import Logger
 from .icon_score_mapper import IconScoreMapper
-from .icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
+from .icon_score_step import IconScoreStepCounter
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.exception import FatalException, AccessDeniedException
@@ -31,9 +31,7 @@ from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     TermFlag, PRepStatus,
-    Revision, PRepFlag, IconNetworkValueType, RevisionChangedFlag)
-from ..icon_network.data.value import Value as IconNetworkValue
-from ..icon_network.listener import Listener as INVListener
+    Revision, PRepFlag, RevisionChangedFlag)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -47,7 +45,7 @@ if TYPE_CHECKING:
     from ..icon_network.container import Container as INVContainer
 
 
-class IconScoreContext(INVListener, ABC):
+class IconScoreContext(ABC):
     TAG = "CTX"
 
     score_root_path: str = None
@@ -324,26 +322,25 @@ class IconScoreContext(INVListener, ABC):
 
         # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
-    def update_icon_network_value(self, value: 'IconNetworkValue'):
-        # ICON Network value update listener
-        if value.TYPE == IconNetworkValueType.REVISION_CODE:
-            pass
-        elif value.TYPE == IconNetworkValueType.REVISION_NAME:
-            pass
-        elif value.TYPE == IconNetworkValueType.SCORE_BLACK_LIST:
-            pass
-        elif value.TYPE == IconNetworkValueType.STEP_PRICE:
-            self.step_counter.set_step_price(value.value)
-        elif value.TYPE == IconNetworkValueType.STEP_COSTS:
-            self.step_counter.set_step_costs(value.value)
-        elif value.TYPE == IconNetworkValueType.MAX_STEP_LIMITS:
-            self.step_counter.set_max_step_limit(value.value.get(self.type))
-        elif value.TYPE == IconNetworkValueType.SERVICE_CONFIG:
-            pass
-        elif value.TYPE == IconNetworkValueType.IMPORT_WHITE_LIST:
-            pass
+    def create_step_counter(self, step_limit: Optional[int] = None):
+        if self.type == IconScoreContextType.ESTIMATION:
+            context_type: 'IconScoreContextType' = IconScoreContextType.INVOKE
         else:
-            raise ValueError(f"Invalid value type: {value.TYPE.name}")
+            context_type: 'IconScoreContextType' = self.type
+
+        max_step_limit: int = self._inv_container.max_step_limits.get(context_type)
+        if step_limit:
+            step_limit: int = min(step_limit, max_step_limit)
+        else:
+            step_limit: int = max_step_limit
+
+        self.step_counter = IconScoreStepCounter(step_price=self._inv_container.step_price,
+                                                 step_costs=self._inv_container.step_costs,
+                                                 step_limit=step_limit,
+                                                 step_trace_flag=self._is_step_trace_on())
+
+    def _is_step_trace_on(self) -> bool:
+        return self.step_trace_flag and self.type == IconScoreContextType.INVOKE
 
 
 class IconScoreContextFactory(object):
@@ -375,7 +372,6 @@ class IconScoreContextFactory(object):
             context._preps = context.engine.prep.preps.copy(mutable=True)
             context._tx_dirty_preps = OrderedDict()
             container: 'INVContainer' = context.engine.inv.inv_container.copy()
-            container.add_listener(context)
             context._inv_container = container
             context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
         else:
@@ -383,23 +379,5 @@ class IconScoreContextFactory(object):
             context._preps = context.engine.prep.preps
             context._inv_container = context.engine.inv.inv_container
             context._prep_address_converter = context.engine.prep.prep_address_converter
-            
-        cls.set_step_counter(context)
+
         context._term = context.engine.prep.term
-
-    @classmethod
-    def set_step_counter(cls, context: 'IconScoreContext'):
-        is_step_trace_on: bool = cls._is_step_trace_on(context)
-
-        if context.type == IconScoreContextType.ESTIMATION:
-            context_type: 'IconScoreContextType' = IconScoreContextType.INVOKE
-        else:
-            context_type: 'IconScoreContextType' = context.type
-            
-        context.step_counter = IconScoreStepCounterFactory.create_step_counter(context.inv_container,
-                                                                               context_type,
-                                                                               is_step_trace_on)
-
-    @classmethod
-    def _is_step_trace_on(cls, context: 'IconScoreContext') -> bool:
-        return context.step_trace_flag and context.type == IconScoreContextType.INVOKE

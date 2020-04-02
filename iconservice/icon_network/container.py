@@ -14,12 +14,11 @@
 
 import copy
 from collections import namedtuple
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List
 
 from .data.value import Value, VALUE_MAPPER
-from .listener import Listener
 from .. import Address
-from ..base.exception import AccessDeniedException, InvalidParamsException
+from ..base.exception import InvalidParamsException
 from ..icon_constant import IconNetworkValueType, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_step import StepType
@@ -120,9 +119,8 @@ class Container(object):
         # Todo: Freeze data
         # Todo: Consider about integrating set method
         self._is_migrated: bool = is_migrated
-        self._listener: Optional['Listener'] = None
 
-        self._tx_unit_batch = self.BatchDict()
+        self._tx_batch = self.BatchDict()
         self._icon_network_values: dict = {
             IconNetworkValueType.REVISION_CODE: None,
             IconNetworkValueType.REVISION_NAME: None,
@@ -134,19 +132,12 @@ class Container(object):
             IconNetworkValueType.IMPORT_WHITE_LIST: None
         }
 
-    def add_listener(self, listener: 'Listener'):
-        assert isinstance(listener, Listener)
-        assert isinstance(listener, IconScoreContext)
-        if listener.type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
-            raise AccessDeniedException(f"Method not allowed: context={listener.type.name}")
-        self._listener = listener
-
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
     def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
-        return self._tx_unit_batch.get(type_, self._icon_network_values[type_]).value
+        return self._tx_batch.get(type_, self._icon_network_values[type_]).value
 
     @property
     def service_config(self) -> int:
@@ -181,11 +172,11 @@ class Container(object):
         return self.get_by_type(IconNetworkValueType.IMPORT_WHITE_LIST)
 
     def update_batch(self):
-        for value in self._tx_unit_batch.values():
+        for value in self._tx_batch.values():
             self._set(value)
 
     def clear_batch(self):
-        self._tx_unit_batch.clear()
+        self._tx_batch.clear()
 
     def migrate(self, context: 'IconScoreContext', data: List['Value']):
         """
@@ -201,19 +192,17 @@ class Container(object):
 
         for value in data:
             context.storage.inv.put_value(context, value)
-            self._tx_unit_batch[value.TYPE] = value
+            self._tx_batch[value.TYPE] = value
         context.storage.inv.put_migration_flag(context)
-        self._tx_unit_batch.trigger_migration()
+        self._tx_batch.trigger_migration()
 
     def update_migration_if_succeed(self):
-        if self._tx_unit_batch.is_migration_triggered():
+        if self._tx_batch.is_migration_triggered():
             self._is_migrated = True
             self.update_batch()
 
     def _set(self, value: 'Value'):
         self._icon_network_values[value.TYPE] = value
-        if self._listener is not None:
-            self._listener.update_icon_network_value(value)
 
     def set_by_icon_service(self, value: 'Value', is_open: bool = False):
         """
@@ -243,12 +232,12 @@ class Container(object):
         assert self._is_migrated
         # Update member variables
         # Check If value is valid
-        self._tx_unit_batch[value.TYPE] = value
+        self._tx_batch[value.TYPE] = value
         context.storage.inv.put_value(context, value)
 
     def copy(self) -> 'Container':
         """Copy container"""
         container = copy.copy(self)
-        container._tx_unit_batch = self.BatchDict()
+        container._tx_batch = self.BatchDict()
         container._icon_network_values = copy.copy(self._icon_network_values)
         return container

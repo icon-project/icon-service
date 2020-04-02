@@ -879,7 +879,7 @@ class IconServiceEngine(ContextContainer):
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
-        step_limit: int = params.get('stepLimit', context.step_counter.max_step_limit)
+        step_limit: int = params.get('stepLimit')
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -892,7 +892,7 @@ class IconServiceEngine(ContextContainer):
         context.current_address = to
         context.event_logs = []
         context.traces = []
-        context.step_counter.reset(step_limit)
+        context.create_step_counter(step_limit=step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
         context.fee_sharing_proportion = 0
@@ -928,7 +928,7 @@ class IconServiceEngine(ContextContainer):
 
         return context.step_counter.step_used
 
-    def _estimate_step_by_execution(self, request, context, step_limit) -> int:
+    def _estimate_step_by_execution(self, request, context) -> int:
         """Processes the transaction and estimates step.
 
         :param request:
@@ -955,7 +955,7 @@ class IconServiceEngine(ContextContainer):
 
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = context.storage.icx.get_account(context, from_)
-        account.deposit(step_limit * context.step_counter.step_price + params.get('value', 0))
+        account.deposit(context.step_counter.step_limit * context.step_counter.step_price + params.get('value', 0))
         context.storage.icx.put_account(context, account)
         return self._call(context, method, params)
 
@@ -979,9 +979,7 @@ class IconServiceEngine(ContextContainer):
         :return: The amount of step
         """
         context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
-        # Fills the step_limit as the max step limit to proceed the transaction.
-        step_limit: int = context.step_counter.max_step_limit
-        context.step_counter.reset(step_limit)
+        context.create_step_counter()
 
         params: dict = request['params']
         data_type: str = params.get('dataType')
@@ -992,7 +990,7 @@ class IconServiceEngine(ContextContainer):
             return self._estimate_step_by_request(request, context)
         else:
             # Processes the transaction and estimates step.
-            return self._estimate_step_by_execution(request, context, step_limit)
+            return self._estimate_step_by_execution(request, context)
 
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
@@ -1011,15 +1009,16 @@ class IconServiceEngine(ContextContainer):
             IconScoreContextType.QUERY,
             block=self._get_last_block()
         )
-        step_limit: int = context.step_counter.max_step_limit
 
         if params:
             from_: 'Address' = params.get('from', None)
             context.msg = Message(sender=from_)
-            step_limit: int = params.get('stepLimit', step_limit)
+            step_limit: Optional[int] = params.get('stepLimit')
+        else:
+            step_limit = None
 
         context.traces = []
-        context.step_counter.reset(step_limit)
+        context.create_step_counter(step_limit=step_limit)
 
         ret = self._call(context, method, params)
         return ret
@@ -1047,6 +1046,7 @@ class IconServiceEngine(ContextContainer):
         to: 'Address' = params.get('to')
 
         context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
+        context.create_step_counter()
 
         try:
             self._push_context(context)

@@ -45,8 +45,8 @@ class Engine(EngineBase, ContextContainer):
             IconNetworkValueType.STEP_PRICE: self._get_step_price_from_governance,
             IconNetworkValueType.STEP_COSTS: self._get_step_costs_from_governance,
             IconNetworkValueType.MAX_STEP_LIMITS: self._get_step_max_limits_from_governance,
-            IconNetworkValueType.REVISION_CODE: self._get_revision_code_from_governance_score,
-            IconNetworkValueType.REVISION_NAME: self._get_revision_name_from_governance_score,
+            IconNetworkValueType.REVISION_CODE: self._get_revision_code_from_governance,
+            IconNetworkValueType.REVISION_NAME: self._get_revision_name_from_governance,
             IconNetworkValueType.SCORE_BLACK_LIST: self._get_score_black_list,
             IconNetworkValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
         }
@@ -132,7 +132,7 @@ class Engine(EngineBase, ContextContainer):
         return service_config
 
     @classmethod
-    def _get_revision_name_from_governance_score(cls, _, governance_score: 'Governance') -> str:
+    def _get_revision_name_from_governance(cls, _, governance_score: 'Governance') -> str:
         # There is no use of revision name
         revision_name: str = ""
         if hasattr(governance_score, 'getRevision'):
@@ -140,7 +140,7 @@ class Engine(EngineBase, ContextContainer):
         return revision_name
 
     @classmethod
-    def _get_revision_code_from_governance_score(cls, _, governance_score: 'Governance') -> int:
+    def _get_revision_code_from_governance(cls, _, governance_score: 'Governance') -> int:
         # Check if revision has been changed by comparing with INV engine's ICON Network value
         revision: int = 0
         if hasattr(governance_score, 'revision_code'):

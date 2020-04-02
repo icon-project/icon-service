@@ -39,12 +39,10 @@ class TestIntegrateStep(TestIntegrateBase):
     def setUp(self):
         super().setUp()
         self.create_context = IconScoreContextFactory._create_context
-        self.is_step_trace_on = IconScoreContextFactory._is_step_trace_on
 
     def tearDown(self):
         super().tearDown()
         IconScoreContextFactory._create_context = self.create_context
-        IconScoreContextFactory._is_step_trace_on = self.is_step_trace_on
 
     def _deploy_score(self,
                       to_: Optional['Address'] = ZERO_SCORE_ADDRESS) -> tuple:
@@ -226,8 +224,8 @@ class TestIntegrateStep(TestIntegrateBase):
 
         # mock context
         context = IconScoreContext(IconScoreContextType.QUERY)
+        context._is_step_trace_on = mock.Mock(return_value=True)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
-        IconScoreContextFactory._is_step_trace_on = mock.Mock(return_value=True)
 
         self.query_score(from_=self._accounts[0],
                          to_=score_addr,

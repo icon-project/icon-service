@@ -230,23 +230,6 @@ class StepTracer(object):
         self._steps.append((step_type, step, cumulative_step))
 
 
-class IconScoreStepCounterFactory(object):
-    """Creates a step counter for the transaction
-    """
-
-    @classmethod
-    def create_step_counter(cls,
-                            container: 'INVContainer',
-                            context_type: 'IconScoreContextType',
-                            step_trace_flag: bool) -> 'IconScoreStepCounter':
-        step_price: int = container.step_price
-        # Copying a `dict` so as not to change step costs when processing a transaction.
-        step_costs: dict = container.step_costs
-        max_step_limit: int = container.max_step_limits.get(context_type, 0)
-
-        return IconScoreStepCounter(step_price, step_costs, max_step_limit, step_trace_flag)
-
-
 class IconScoreStepCounter(object):
     """ Counts steps in a transaction
     """
@@ -254,18 +237,18 @@ class IconScoreStepCounter(object):
     def __init__(self,
                  step_price: int,
                  step_costs: dict,
-                 max_step_limit: int,
+                 step_limit: int,
                  step_trace_flag: bool = False) -> None:
         """Constructor
 
         :param step_price: step price
         :param step_costs: a dict of base step costs
-        :param max_step_limit: max step limit for current context type
+        :param step_limit: step limit for current context type
         """
+
         self._step_price = step_price
         self._step_costs: dict = step_costs
-        self._max_step_limit: int = max_step_limit
-        self._step_limit: int = 0
+        self._step_limit: int = step_limit
         self._step_used: int = 0
         self._external_call_count: int = 0
         self._max_step_used: int = 0
@@ -278,14 +261,6 @@ class IconScoreStepCounter(object):
         :return: step price
         """
         return self._step_price
-
-    @property
-    def max_step_limit(self) -> int:
-        """
-        Returns max step limit for current context
-        :return: max step limit
-        """
-        return self._max_step_limit
 
     @property
     def step_limit(self) -> int:
@@ -350,40 +325,6 @@ class IconScoreStepCounter(object):
     def _trace_step(self, step_type: StepType, step: int):
         if self._step_tracer is not None:
             self._step_tracer.add(step_type, step, self._step_used)
-
-    def reset(self, step_limit: int):
-        """
-
-        :return:
-        """
-        self._step_limit: int = min(step_limit, self._max_step_limit)
-        self._step_used: int = 0
-        self._external_call_count: int = 0
-        self._max_step_used: int = 0
-
-        if self._step_tracer:
-            self._step_tracer.reset()
-
-    def set_step_price(self, step_price: int):
-        """Sets the step price
-
-        :param step_price: step price
-        """
-        self._step_price = step_price
-
-    def set_step_costs(self, step_costs: dict):
-        """Sets the step costs dict
-
-        :param step_costs: step costs dict
-        """
-        self._step_costs = step_costs
-
-    def set_max_step_limit(self, max_step_limit: int):
-        """Sets the max step limit for current context
-
-        :param max_step_limit: max step limit
-        """
-        self._max_step_limit = max_step_limit
 
     def get_step_cost(self, step_type: StepType) -> int:
         return self._step_costs.get(step_type, 0)

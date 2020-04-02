@@ -25,7 +25,7 @@ from iconservice.icon_constant import Revision, IconScoreContextType, MAX_EXTERN
 from iconservice.icon_network.container import Container as INVContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, get_data_size_recursively, get_deploy_content_size, AutoValueEnum, StepTracer, \
-    get_input_data_size, IconScoreStepCounterFactory, IconScoreStepCounter, OutOfStepException
+    get_input_data_size, IconScoreStepCounter, OutOfStepException
 
 
 @pytest.fixture
@@ -250,32 +250,6 @@ class TestStepTracer:
         assert str(step_tracer) == expected
 
 
-class TestIconScoreStepCounterFactory:
-    @pytest.mark.parametrize("max_step_limits", [{}] + [{t: mock.ANY} for t in IconScoreContextType])
-    @pytest.mark.parametrize("context_type", [t for t in IconScoreContextType])
-    @pytest.mark.parametrize("step_trace_flag", [True, False])
-    def test_create_step_counter(self,
-                                 max_step_limits,
-                                 context_type, step_trace_flag):
-        step_price = mock.ANY
-        step_costs = {}
-
-        container = mock.Mock(spec=INVContainer)
-        type(container).step_price = mock.PropertyMock(return_value=step_price)
-        type(container).step_costs = mock.PropertyMock(return_value=step_costs)
-        type(container).max_step_limits = mock.PropertyMock(return_value=max_step_limits)
-        actual = IconScoreStepCounterFactory.create_step_counter(container,
-                                                                 context_type,
-                                                                 step_trace_flag)
-        assert step_price == actual.step_price
-        assert step_costs == actual._step_costs
-        assert max_step_limits.get(context_type, 0) == actual.max_step_limit
-        if step_trace_flag:
-            assert actual.step_tracer is not None
-        else:
-            assert actual.step_tracer is None
-
-
 class TestIconScoreStepCounter:
     PIVOT_VALUE = 100
 
@@ -283,7 +257,7 @@ class TestIconScoreStepCounter:
     def mock_step_counter(self):
         counter = IconScoreStepCounter(step_price=mock.ANY,
                                        step_costs=mock.ANY,
-                                       max_step_limit=mock.ANY,
+                                       step_limit=mock.ANY,
                                        step_trace_flag=mock.ANY)
         return counter
 
@@ -367,38 +341,3 @@ class TestIconScoreStepCounter:
                                                                         step=step)
             mock_step_counter_for_consume_step._trace_step.assert_called_once_with(step_type, step)
             assert step_used == expected_step_used
-
-    @pytest.fixture
-    def mock_step_counter_for_reset(self, mock_step_counter):
-        def _data(max_step_limit, mock_step_tracer, dirty_value):
-            mock_step_counter._step_limit = dirty_value
-            mock_step_counter._step_used = dirty_value
-            mock_step_counter._external_call_count = dirty_value
-            mock_step_counter._max_step_used = dirty_value
-
-            mock_step_counter._max_step_limit = max_step_limit
-            if mock_step_tracer:
-                mock_step_tracer.attach_mock(mock.Mock(), "reset")
-            mock_step_counter._step_tracer = mock_step_tracer
-            return mock_step_counter
-        return _data
-
-    @pytest.mark.parametrize("step_limit", [PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1])
-    @pytest.mark.parametrize("max_step_limit", [PIVOT_VALUE - 1, PIVOT_VALUE, PIVOT_VALUE + 1])
-    @pytest.mark.parametrize("mock_step_tracer", [None, mock.Mock()])
-    def test_reset(self,
-                   mock_step_counter_for_reset,
-                   step_limit, max_step_limit, mock_step_tracer):
-
-        dirty_value = self.PIVOT_VALUE
-        mock_step_counter_for_reset = mock_step_counter_for_reset(max_step_limit=max_step_limit,
-                                                                  mock_step_tracer=mock_step_tracer,
-                                                                  dirty_value=dirty_value)
-        mock_step_counter_for_reset.reset(step_limit)
-        assert mock_step_counter_for_reset._step_limit == min(step_limit, max_step_limit)
-        assert mock_step_counter_for_reset._step_used == 0
-        assert mock_step_counter_for_reset._external_call_count == 0
-        assert mock_step_counter_for_reset._max_step_used == 0
-
-        if mock_step_counter_for_reset._step_tracer:
-            mock_step_counter_for_reset._step_tracer.reset.assert_called()

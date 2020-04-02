@@ -35,7 +35,6 @@ from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLog
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 from tests import create_tx_hash, create_address, \
@@ -62,10 +61,7 @@ class TestScoreResult(unittest.TestCase):
         self._mock_context.event_logs = []
         self._mock_context.traces = []
         self._mock_context._inv_container = IconScoreContext.engine.inv.inv_container.copy()
-        self._mock_context.step_counter = \
-            IconScoreStepCounterFactory.create_step_counter(self._mock_context.inv_container,
-                                                            IconScoreContextType.INVOKE,
-                                                            step_trace_flag=False)
+        self._mock_context.create_step_counter()
         self._mock_context.current_address = Mock(spec=Address)
 
     def tearDown(self):

@@ -73,7 +73,7 @@ def inv_container(dummy_invs):
     for value in dummy_invs.values():
         container.set_by_icon_service(value)
 
-    assert len(container._tx_unit_batch) == 0
+    assert len(container._tx_batch) == 0
     return container
 
 
@@ -139,8 +139,8 @@ class TestContainer:
                 inv_container.migrate(context, insufficient_inv_list)
 
             assert e.value.message == "Icon Network Values are insufficient"
-            assert len(inv_container._tx_unit_batch) == 0
-            assert inv_container._tx_unit_batch.is_migration_triggered() is False
+            assert len(inv_container._tx_batch) == 0
+            assert inv_container._tx_batch.is_migration_triggered() is False
             context.storage.inv.put_migration_flag.assert_not_called()
 
     def test_migration_success(self, context, dummy_invs, inv_container):
@@ -148,8 +148,8 @@ class TestContainer:
 
         inv_container.migrate(context, dummy_inv_list)
 
-        assert len(inv_container._tx_unit_batch) == len(dummy_inv_list)
-        assert inv_container._tx_unit_batch.is_migration_triggered() is True
+        assert len(inv_container._tx_batch) == len(dummy_inv_list)
+        assert inv_container._tx_batch.is_migration_triggered() is True
         context.storage.inv.put_migration_flag.assert_called()
 
     @staticmethod
@@ -225,26 +225,14 @@ class TestContainer:
         assert inv_container.revision_code == dummy_inv_value.value
         context.storage.inv.put_value.assert_called()
 
-    @pytest.mark.parametrize("context_type", [context_type for context_type in IconScoreContextType])
-    def test_listener_check_requirements(self, context, inv_container, context_type):
-        context.type = context_type
-
-        if context_type not in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
-            with pytest.raises(AccessDeniedException):
-                inv_container.add_listener(context)
-            assert inv_container._listener is None
-        else:
-            inv_container.add_listener(context)
-            assert inv_container._listener is not None
-
     def test_copy_container(self, inv_container):
-        inv_container._tx_unit_batch[RevisionCode.TYPE] = RevisionCode(5)
+        inv_container._tx_batch[RevisionCode.TYPE] = RevisionCode(5)
 
         copied_container = inv_container.copy()
 
         assert id(copied_container) != id(inv_container)
-        assert id(copied_container._tx_unit_batch) != id(inv_container._tx_unit_batch)
-        assert len(copied_container._tx_unit_batch) == 0 != len(inv_container._tx_unit_batch)
+        assert id(copied_container._tx_batch) != id(inv_container._tx_batch)
+        assert len(copied_container._tx_batch) == 0 != len(inv_container._tx_batch)
         assert id(copied_container._icon_network_values) != id(inv_container._icon_network_values)
         for type_, value in inv_container._icon_network_values.items():
             # Do not copy each value (as just set the value when there is change)

@@ -14,15 +14,23 @@ class Value(metaclass=ABCMeta):
     # All subclass must have 'TYPE' constant variable
     TYPE: 'IconNetworkValueType' = None
 
+    def __init__(self):
+        self._value = None
+
     @property
-    @abstractmethod
     def value(self) -> Any:
         """
+        ================================================
+        =================== WARNING!!! =================
+        ================================================
+
         Return Icon Network Value.
         If return data is mutable (e.g. dict), should copy (or deepcopy if need) and return.
         :return:
         """
-        pass
+        if not isinstance(self._value, (int, str, bool, bytes, Address)):
+            raise TypeError(f"you must implement copy: {type(self._value)}")
+        return self._value
 
     def make_key(self) -> bytes:
         key: bytes = self.TYPE.value
@@ -32,8 +40,9 @@ class Value(metaclass=ABCMeta):
     def to_bytes(self) -> bytes:
         pass
 
+    @classmethod
     @abstractmethod
-    def from_bytes(self, bytes_: bytes) -> 'Value':
+    def from_bytes(cls, bytes_: bytes) -> 'Value':
         pass
 
 
@@ -41,6 +50,8 @@ class StepCosts(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_COSTS
 
     def __init__(self, value: Dict[StepType, int], need_check_value: bool = True):
+        super().__init__()
+
         if need_check_value:
             self._check_value_is_valid(value)
 
@@ -81,16 +92,14 @@ class StepPrice(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_PRICE
 
     def __init__(self, value: int):
+        super().__init__()
+
         if not isinstance(value, int):
             raise TypeError(f"Invalid step price type. must be integer: {type(value)}")
         if value < 0:
             raise InvalidParamsException(f"Invalid step price. should not be negative value {value}")
 
         self._value: int = value
-
-    @property
-    def value(self) -> int:
-        return self._value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -111,9 +120,12 @@ class MaxStepLimits(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.MAX_STEP_LIMITS
 
     def __init__(self, value: Dict[IconScoreContextType, int], need_check_value: bool = True):
+        super().__init__()
+
         if need_check_value:
             self._check_value_is_valid(value)
             self._supplements_value(value)
+
         self._value: Dict[IconScoreContextType, int] = value
 
     @classmethod
@@ -157,8 +169,11 @@ class ScoreBlackList(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.SCORE_BLACK_LIST
 
     def __init__(self, value: List['Address'], need_check_value: bool = True):
+        super().__init__()
+
         if need_check_value:
             self._check_value_is_valid(value)
+
         self._value: List['Address'] = value
 
     @classmethod
@@ -193,11 +208,9 @@ class RevisionCode(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.REVISION_CODE
 
     def __init__(self, value: int):
-        self._value: int = value
+        super().__init__()
 
-    @property
-    def value(self) -> int:
-        return self._value
+        self._value: int = value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -218,11 +231,9 @@ class RevisionName(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.REVISION_NAME
 
     def __init__(self, value: str):
-        self._value: str = value
+        super().__init__()
 
-    @property
-    def value(self) -> str:
-        return self._value
+        self._value: str = value
 
     def to_bytes(self) -> bytes:
         version: int = 0
@@ -243,6 +254,8 @@ class ImportWhiteList(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.IMPORT_WHITE_LIST
 
     def __init__(self, value: Dict[str, List[str]], need_check_value: bool = True):
+        super().__init__()
+
         if need_check_value:
             self._check_value_is_valid(value)
         self._value: Dict[str, List[str]] = value
@@ -286,13 +299,11 @@ class ServiceConfig(Value):
     TYPE: 'IconNetworkValueType' = IconNetworkValueType.SERVICE_CONFIG
 
     def __init__(self, value: int):
+        super().__init__()
+
         if value < 0 or value > sum(IconServiceFlag):
             raise InvalidParamsException(f"Invalid service config value: {value}")
         self._value: int = value
-
-    @property
-    def value(self) -> int:
-        return self._value
 
     def to_bytes(self) -> bytes:
         version: int = 0
