@@ -69,6 +69,15 @@ class StepCosts(Value):
 
     @property
     def value(self) -> Dict[StepType, int]:
+        """
+        ================================================
+        =================== WARNING!!! =================
+        ================================================
+
+        Return Icon Network Value.
+        If return data is mutable (e.g. dict), should copy (or deepcopy if need) and return.
+        :return:
+        """
         return copy(self._value)
 
     def to_bytes(self) -> bytes:
@@ -145,6 +154,15 @@ class MaxStepLimits(Value):
 
     @property
     def value(self) -> Dict[IconScoreContextType, int]:
+        """
+        ================================================
+        =================== WARNING!!! =================
+        ================================================
+
+        Return Icon Network Value.
+        If return data is mutable (e.g. dict), should copy (or deepcopy if need) and return.
+        :return:
+        """
         return copy(self._value)
 
     def to_bytes(self) -> bytes:
@@ -187,6 +205,15 @@ class ScoreBlackList(Value):
 
     @property
     def value(self) -> List['Address']:
+        """
+        ================================================
+        =================== WARNING!!! =================
+        ================================================
+
+        Return Icon Network Value.
+        If return data is mutable (e.g. dict), should copy (or deepcopy if need) and return.
+        :return:
+        """
         return copy(self._value)
 
     def to_bytes(self) -> bytes:
@@ -278,6 +305,15 @@ class ImportWhiteList(Value):
 
     @property
     def value(self) -> Dict[str, List[str]]:
+        """
+        ================================================
+        =================== WARNING!!! =================
+        ================================================
+
+        Return Icon Network Value.
+        If return data is mutable (e.g. dict), should copy (or deepcopy if need) and return.
+        :return:
+        """
         return deepcopy(self._value)
 
     def to_bytes(self) -> bytes:
