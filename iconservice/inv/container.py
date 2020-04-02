@@ -70,7 +70,7 @@ class ValueConverter(object):
         return value
 
     @staticmethod
-    def convert_for_governance_score(type_: 'IconNetworkValueType', value: Any) -> Any:
+    def convert_for_governance(type_: 'IconNetworkValueType', value: Any) -> Any:
         """
         Convert IconNetwork value data type for governance score
         Some data which have been converted for enhancing efficiency need to be converted.
@@ -178,12 +178,11 @@ class Container(object):
     def clear_batch(self):
         self._tx_batch.clear()
 
-    def migrate(self, context: 'IconScoreContext', data: List['Value']):
+    def migrate(self, data: List['Value']):
         """
         Migrates governance variable from SCORE DB to State DB.
         It will be called when updating governance score to version "".
         This method is called only once.
-        :param context:
         :param data:
         :return:
         """
@@ -191,9 +190,7 @@ class Container(object):
             raise InvalidParamsException("Icon Network Values are insufficient")
 
         for value in data:
-            context.storage.inv.put_value(context, value)
             self._tx_batch[value.TYPE] = value
-        context.storage.inv.put_migration_flag(context)
         self._tx_batch.trigger_migration()
 
     def update_migration_if_succeed(self):
@@ -204,7 +201,7 @@ class Container(object):
     def _set(self, value: 'Value'):
         self._icon_network_values[value.TYPE] = value
 
-    def set_by_icon_service(self, value: 'Value', is_open: bool = False):
+    def set_inv(self, value: 'Value', is_open: bool = False):
         """
         Set value on system value instance from icon service.
         There are two cases of calling this method.
@@ -221,11 +218,10 @@ class Container(object):
             raise PermissionError(f"Invalid case of setting ICON Network value from icon-service"
                                   f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_by_governance_score(self, context: 'IconScoreContext', value: 'Value'):
+    def set_tx_batch(self, value: 'Value'):
         """
         Set values on ICON Network value and put these into DB.
         Only Governance SCORE can set values after migration.
-        :param context:
         :param value:
         :return:
         """
@@ -233,7 +229,6 @@ class Container(object):
         # Update member variables
         # Check If value is valid
         self._tx_batch[value.TYPE] = value
-        context.storage.inv.put_value(context, value)
 
     def copy(self) -> 'Container':
         """Copy container"""

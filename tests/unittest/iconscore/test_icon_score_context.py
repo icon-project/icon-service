@@ -21,8 +21,8 @@ import pytest
 
 from iconservice.icon_constant import PRepFlag, TermFlag, Revision, PRepGrade, PenaltyReason, \
     PRepStatus
-from iconservice.icon_network import INVContainer, INVEngine
-from iconservice.icon_network.data.value import *
+from iconservice.inv import INVContainer, INVEngine
+from iconservice.inv.data.value import *
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.prep.data import Term, PRep
 from iconservice.prep.data.prep_container import PRepContainer
@@ -112,7 +112,7 @@ def prep_engine():
 @pytest.fixture
 def context_factory(settable_inv_container: 'INVContainer', prep_engine: 'PRepEngine'):
     inv_engine = INVEngine()
-    settable_inv_container.set_by_icon_service(RevisionCode(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value))
+    settable_inv_container.set_inv(RevisionCode(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value))
     inv_engine._inv_container = settable_inv_container
 
     IconScoreContext.engine = ContextEngine(prep=prep_engine, inv=inv_engine)

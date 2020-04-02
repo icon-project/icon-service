@@ -19,8 +19,8 @@ from unittest.mock import Mock
 import pytest
 
 from iconservice.base.exception import AccessDeniedException
-from iconservice.icon_network import INVEngine, INVContainer, INVStorage
-from iconservice.icon_network.data.value import *
+from iconservice.inv import INVEngine, INVContainer, INVStorage
+from iconservice.inv.data.value import *
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import ContextStorage
 from tests import create_address
@@ -71,7 +71,7 @@ def dummy_invs():
 def inv_container(dummy_invs):
     container = INVContainer(False)
     for value in dummy_invs.values():
-        container.set_by_icon_service(value)
+        container.set_inv(value)
 
     assert len(container._tx_batch) == 0
     return container
@@ -190,21 +190,21 @@ class TestContainer:
         (False, True),
         (True, True)
     ])
-    def test_set_by_icon_service(self, inv_container, is_migrated, is_open):
+    def test_set_inv(self, inv_container, is_migrated, is_open):
         inv_container._is_migrated = is_migrated
         dummy_inv_value = RevisionCode(5)
 
-        inv_container.set_by_icon_service(dummy_inv_value, is_open)
+        inv_container.set_inv(dummy_inv_value, is_open)
 
         assert inv_container.revision_code == dummy_inv_value.value
 
-    def test_when_set_by_icon_service_after_migration_and_not_open(self, inv_container):
+    def test_when_set_inv_after_migration_and_not_open(self, inv_container):
         is_migrated, is_open = True, False
         inv_container._is_migrated = is_migrated
         dummy_inv_value = RevisionCode(5)
 
         with pytest.raises(PermissionError) as e:
-            inv_container.set_by_icon_service(dummy_inv_value, is_open)
+            inv_container.set_inv(dummy_inv_value, is_open)
 
         assert e.value.args[0].startswith("Invalid case of setting ICON Network value from icon-service")
 

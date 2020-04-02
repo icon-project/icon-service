@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 from .container import Container
 from .data.value import Value, VALUE_MAPPER
@@ -48,10 +48,12 @@ class Storage(StorageBase):
         for type_ in IconNetworkValueType:
             value: Optional['Value'] = self._get_value(context, type_)
             if value is not None:
-                container.set_by_icon_service(value, is_open=True)
+                container.set_inv(value, is_open=True)
         return container
 
-    def put_migration_flag(self, context: 'IconScoreContext'):
+    def migration(self, context: 'IconScoreContext', data: List['Value']):
+        for value in data:
+            self.put_value(context, value)
         self._db.put(context, self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
 
     def _get_migration_flag(self, context: 'IconScoreContext') -> bool:

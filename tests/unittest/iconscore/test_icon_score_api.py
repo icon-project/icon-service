@@ -23,8 +23,8 @@ import pytest
 from iconservice.base.block import Block
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import Revision
-from iconservice.icon_network import INVEngine, INVContainer
-from iconservice.icon_network.data.value import *
+from iconservice.inv import INVEngine, INVContainer
+from iconservice.inv.data.value import *
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_base2 import PRepInfo, get_main_prep_info, get_sub_prep_info
 from iconservice.iconscore.icon_score_base2 import ScoreApiStepRatio
@@ -97,10 +97,10 @@ def context(settable_inv_container: INVContainer):
     prep_engine = PRepEngine()
     prep_engine.prep_address_converter = mock.Mock()
     inv_engine = INVEngine()
-    settable_inv_container.set_by_icon_service(StepPrice(10 ** 10))
-    settable_inv_container.set_by_icon_service(StepCosts(STEP_COSTS))
-    settable_inv_container.set_by_icon_service(MaxStepLimits({IconScoreContextType.INVOKE: 2_500_000_000}))
-    settable_inv_container.set_by_icon_service(RevisionCode(Revision.THREE.value))
+    settable_inv_container.set_inv(StepPrice(10 ** 10))
+    settable_inv_container.set_inv(StepCosts(STEP_COSTS))
+    settable_inv_container.set_inv(MaxStepLimits({IconScoreContextType.INVOKE: 2_500_000_000}))
+    settable_inv_container.set_inv(RevisionCode(Revision.THREE.value))
     inv_engine._inv_container = settable_inv_container
 
     IconScoreContext.engine = ContextEngine(prep=prep_engine, inv=inv_engine)

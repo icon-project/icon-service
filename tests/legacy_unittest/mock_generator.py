@@ -34,7 +34,7 @@ from iconservice.iiss import IISSEngine, IISSStorage
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.meta import MetaDBStorage
 from iconservice.prep import PRepEngine, PRepStorage
-from iconservice.icon_network import INVEngine, INVStorage
+from iconservice.inv import INVEngine, INVStorage
 from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_block_hash, rmtree
 from tests.conftest import generate_inv_container

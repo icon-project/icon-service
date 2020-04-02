@@ -87,78 +87,78 @@ class Engine(EngineBase, ContextContainer):
 
         try:
             self._push_context(context)
-            governance_score = self._get_governance_score(context)
+            governance = self._get_governance(context)
             for type_ in IconNetworkValueType:
-                value: Any = self._get_gs_data_mapper[type_](context, governance_score)
-                container.set_by_icon_service(ValueConverter.convert_for_icon_service(type_, value))
+                value: Any = self._get_gs_data_mapper[type_](context, governance)
+                container.set_inv(ValueConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass
         finally:
             self._pop_context()
 
     @classmethod
-    def _get_governance_score(cls, context: 'IconScoreContext') -> 'Governance':
-        governance_score = \
+    def _get_governance(cls, context: 'IconScoreContext') -> 'Governance':
+        governance = \
             IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-        if governance_score is None:
+        if governance is None:
             raise ScoreNotFoundException('Governance SCORE not found')
-        return governance_score
+        return governance
 
     @classmethod
-    def _get_step_price_from_governance(cls, context: 'IconScoreContext', governance_score: 'Governance') -> int:
+    def _get_step_price_from_governance(cls, context: 'IconScoreContext', governance: 'Governance') -> int:
         step_price = 0
         # Gets the step price if the fee flag is on
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
-            step_price = governance_score.getStepPrice()
+            step_price = governance.getStepPrice()
         return step_price
 
     @classmethod
-    def _get_step_costs_from_governance(cls, _, governance_score: 'Governance') -> Dict[str, int]:
-        return governance_score.getStepCosts()
+    def _get_step_costs_from_governance(cls, _, governance: 'Governance') -> Dict[str, int]:
+        return governance.getStepCosts()
 
     @classmethod
-    def _get_step_max_limits_from_governance(cls, _, governance_score: 'Governance') -> Dict[str, int]:
+    def _get_step_max_limits_from_governance(cls, _, governance: 'Governance') -> Dict[str, int]:
         # Gets the max step limit
-        return {"invoke": governance_score.getMaxStepLimit("invoke"),
-                "query": governance_score.getMaxStepLimit("query")}
+        return {"invoke": governance.getMaxStepLimit("invoke"),
+                "query": governance.getMaxStepLimit("query")}
 
     @classmethod
-    def _get_service_flag(cls, context: 'IconScoreContext', governance_score: 'Governance') -> int:
+    def _get_service_flag(cls, context: 'IconScoreContext', governance: 'Governance') -> int:
         service_config = context.icon_service_flag
         try:
-            service_config = governance_score.service_config
+            service_config = governance.service_config
         except AttributeError:
             pass
         return service_config
 
     @classmethod
-    def _get_revision_name_from_governance(cls, _, governance_score: 'Governance') -> str:
+    def _get_revision_name_from_governance(cls, _, governance: 'Governance') -> str:
         # There is no use of revision name
         revision_name: str = ""
-        if hasattr(governance_score, 'getRevision'):
-            revision_name: str = governance_score.getRevision()['name']
+        if hasattr(governance, 'getRevision'):
+            revision_name: str = governance.getRevision()['name']
         return revision_name
 
     @classmethod
-    def _get_revision_code_from_governance(cls, _, governance_score: 'Governance') -> int:
+    def _get_revision_code_from_governance(cls, _, governance: 'Governance') -> int:
         # Check if revision has been changed by comparing with INV engine's ICON Network value
         revision: int = 0
-        if hasattr(governance_score, 'revision_code'):
-            revision: int = governance_score.revision_code
+        if hasattr(governance, 'revision_code'):
+            revision: int = governance.revision_code
         return revision
 
     @classmethod
-    def _get_import_whitelist(cls, _, governance_score: 'Governance') -> Dict[str, list]:
-        if hasattr(governance_score, 'import_white_list_cache'):
-            return governance_score.import_white_list_cache
+    def _get_import_whitelist(cls, _, governance: 'Governance') -> Dict[str, list]:
+        if hasattr(governance, 'import_white_list_cache'):
+            return governance.import_white_list_cache
 
         return {"iconservice": ['*']}
 
     @classmethod
-    def _get_score_black_list(cls, _, governance_score: 'Governance') -> List['Address']:
+    def _get_score_black_list(cls, _, governance: 'Governance') -> List['Address']:
         score_black_list = []
-        if hasattr(governance_score, '_score_black_list'):
-            score_black_list = [address for address in governance_score._score_black_list]
+        if hasattr(governance, '_score_black_list'):
+            score_black_list = [address for address in governance._score_black_list]
         return score_black_list
 
     def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):

@@ -4,8 +4,8 @@ import pytest
 
 from iconservice.database.db import KeyValueDatabase, ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, IconNetworkValueType
-from iconservice.icon_network.container import Container as INVContainer
-from iconservice.icon_network.data.value import (
+from iconservice.inv.container import Container as INVContainer
+from iconservice.inv.data.value import (
     RevisionCode,
     ScoreBlackList,
     StepPrice,

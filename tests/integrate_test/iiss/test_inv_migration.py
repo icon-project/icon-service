@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING, Optional
 from iconservice import IconNetworkValueType, Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, AddressPrefix
 from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType, IconServiceFlag
-from iconservice.icon_network.container import ValueConverter, Container
-from iconservice.icon_network.data.value import Value
+from iconservice.inv.container import ValueConverter, Container
+from iconservice.inv.data.value import Value
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_step import StepType
 from tests import create_address

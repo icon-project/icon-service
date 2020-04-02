@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from ..prep.data import PRep, PRepContainer, Term
     from ..utils import ContextEngine, ContextStorage
     from ..prep.prep_address_converter import PRepAddressConverter
-    from ..icon_network.container import Container as INVContainer
+    from ..inv.container import Container as INVContainer
 
 
 class IconScoreContext(ABC):
