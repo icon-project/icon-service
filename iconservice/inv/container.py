@@ -118,7 +118,6 @@ class Container(object):
 
     def __init__(self, is_migrated: bool):
         # Todo: Freeze data
-        # Todo: Consider about integrating set method
         self._is_migrated: bool = is_migrated
 
         self._tx_batch = self.BatchDict()
