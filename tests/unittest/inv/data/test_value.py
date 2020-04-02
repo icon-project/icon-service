@@ -119,7 +119,7 @@ class TestValue:
 
         assert e.value.args[0].startswith("Invalid Step costs type:")
 
-    @pytest.mark.parametrize("value", [{"dict": 1}, ["list"], "str", True, ("1", "2"), 0.1, -1, b'bytes'])
+    @pytest.mark.parametrize("value", [{"dict": 1}, ["list"], "str", ("1", "2"), 0.1, -1, b'bytes'])
     def test_step_price_should_raise_exception_when_input_invalid_value(self, value):
         with pytest.raises(BaseException):
             _: 'StepPrice' = StepPrice(value)
