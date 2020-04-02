@@ -22,7 +22,7 @@ from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
-from .icon_network.container import Container as INVContainer
+from .inv.container import Container as INVContainer
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iiss.reward_calc.msg_data import TxData
 from .prep.prep_address_converter import PRepAddressConverter

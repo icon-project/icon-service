@@ -19,8 +19,8 @@ from unittest.mock import Mock
 import pytest
 
 from iconservice.base.exception import AccessDeniedException
-from iconservice.icon_network import INVEngine, INVContainer, INVStorage
-from iconservice.icon_network.data.value import *
+from iconservice.inv import INVEngine, INVContainer, INVStorage
+from iconservice.inv.data.value import *
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import ContextStorage
 from tests import create_address
@@ -71,7 +71,7 @@ def dummy_invs():
 def inv_container(dummy_invs):
     container = INVContainer(False)
     for value in dummy_invs.values():
-        container.set_by_icon_service(value)
+        container.set_inv(value)
 
     assert len(container._tx_batch) == 0
     return container
@@ -136,7 +136,7 @@ class TestContainer:
         for i in range(data_len):
             insufficient_inv_list: list = dummy_inv_list[:i]
             with pytest.raises(InvalidParamsException) as e:
-                inv_container.migrate(context, insufficient_inv_list)
+                inv_container.migrate(insufficient_inv_list)
 
             assert e.value.message == "Icon Network Values are insufficient"
             assert len(inv_container._tx_batch) == 0
@@ -146,11 +146,10 @@ class TestContainer:
     def test_migration_success(self, context, dummy_invs, inv_container):
         dummy_inv_list: list = [value for value in dummy_invs.values()]
 
-        inv_container.migrate(context, dummy_inv_list)
+        inv_container.migrate(dummy_inv_list)
 
         assert len(inv_container._tx_batch) == len(dummy_inv_list)
         assert inv_container._tx_batch.is_migration_triggered() is True
-        context.storage.inv.put_migration_flag.assert_called()
 
     @staticmethod
     def _check_each_inv_is_different(actual_invs, expected_invs):
@@ -178,7 +177,7 @@ class TestContainer:
         self._check_each_inv_is_different(inv_container._icon_network_values, expected_invs)
 
         # Act
-        inv_container.migrate(context, data)
+        inv_container.migrate(data)
         inv_container.update_migration_if_succeed()
 
         assert inv_container.is_migrated is True
@@ -190,40 +189,39 @@ class TestContainer:
         (False, True),
         (True, True)
     ])
-    def test_set_by_icon_service(self, inv_container, is_migrated, is_open):
+    def test_set_inv(self, inv_container, is_migrated, is_open):
         inv_container._is_migrated = is_migrated
         dummy_inv_value = RevisionCode(5)
 
-        inv_container.set_by_icon_service(dummy_inv_value, is_open)
+        inv_container.set_inv(dummy_inv_value, is_open)
 
         assert inv_container.revision_code == dummy_inv_value.value
 
-    def test_when_set_by_icon_service_after_migration_and_not_open(self, inv_container):
+    def test_when_set_inv_after_migration_and_not_open(self, inv_container):
         is_migrated, is_open = True, False
         inv_container._is_migrated = is_migrated
         dummy_inv_value = RevisionCode(5)
 
         with pytest.raises(PermissionError) as e:
-            inv_container.set_by_icon_service(dummy_inv_value, is_open)
+            inv_container.set_inv(dummy_inv_value, is_open)
 
         assert e.value.args[0].startswith("Invalid case of setting ICON Network value from icon-service")
 
-    def test_set_by_governance_score_before_migration(self, context, inv_container):
+    def test_set_tx_batch_before_migration(self, context, inv_container):
         dummy_inv_value = RevisionCode(5)
 
         with pytest.raises(AssertionError):
-            inv_container.set_by_governance_score(context, dummy_inv_value)
+            inv_container.set_tx_batch(dummy_inv_value)
 
         context.storage.inv.put_value.assert_not_called()
 
-    def test_set_by_governance_score_after_migration(self, context, inv_container):
+    def test_set_tx_batch_after_migration(self, context, inv_container):
         inv_container._is_migrated = True
         dummy_inv_value = RevisionCode(5)
 
-        inv_container.set_by_governance_score(context, dummy_inv_value)
+        inv_container.set_tx_batch(dummy_inv_value)
 
         assert inv_container.revision_code == dummy_inv_value.value
-        context.storage.inv.put_value.assert_called()
 
     def test_copy_container(self, inv_container):
         inv_container._tx_batch[RevisionCode.TYPE] = RevisionCode(5)

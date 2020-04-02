@@ -19,8 +19,8 @@ from unittest.mock import Mock
 import pytest
 
 from iconservice.base.exception import AccessDeniedException
-from iconservice.icon_network import INVEngine, INVContainer, INVStorage
-from iconservice.icon_network.data.value import *
+from iconservice.inv import INVEngine, INVContainer, INVStorage
+from iconservice.inv.data.value import *
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import ContextStorage
 from tests import create_address

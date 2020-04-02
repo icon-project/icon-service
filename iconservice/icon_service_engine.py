@@ -47,7 +47,7 @@ from .icon_constant import (
     IISS_DB, IISS_INITIAL_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
     RevisionChangedFlag)
-from .icon_network import INVEngine, INVStorage
+from .inv import INVEngine, INVStorage
 from .iconscore.context.context import ContextContainer
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, IconScoreContextFactory

@@ -22,7 +22,7 @@ import pytest
 import iconservice.iconscore.icon_score_step as step_module
 from iconservice.base.exception import InvalidRequestException
 from iconservice.icon_constant import Revision, IconScoreContextType, MAX_EXTERNAL_CALL_COUNT
-from iconservice.icon_network.container import Container as INVContainer
+from iconservice.inv.container import Container as INVContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, get_data_size_recursively, get_deploy_content_size, AutoValueEnum, StepTracer, \
     get_input_data_size, IconScoreStepCounter, OutOfStepException

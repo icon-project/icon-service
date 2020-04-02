@@ -24,7 +24,7 @@ from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContextType
-    from ..icon_network.container import Container as INVContainer
+    from ..inv.container import Container as INVContainer
 
 
 def get_input_data_size(revision: int, input_data: Any) -> int:

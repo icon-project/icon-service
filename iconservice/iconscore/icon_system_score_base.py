@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException, IconServiceBaseException, InvalidParamsException
 from ..icon_constant import IconNetworkValueType
-from ..icon_network.container import ValueConverter as INVConverter
-from ..icon_network.data.value import Value
+from ..inv.container import ValueConverter as INVConverter
+from ..inv.data.value import Value
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
 
@@ -78,7 +78,8 @@ class IconSystemScoreBase(IconScoreBase):
         converted_data: list = []
         for type_, value in data.items():
             converted_data.append(INVConverter.convert_for_icon_service(type_, value))
-        self._context.inv_container.migrate(self._context, converted_data)
+        self._context.inv_container.migrate(converted_data)
+        self._context.storage.inv.migrate(self._context, converted_data)
 
     @classmethod
     def _check_inv_type(cls, type_: 'IconNetworkValueType'):
@@ -89,14 +90,15 @@ class IconSystemScoreBase(IconScoreBase):
         self._check_inv_type(type_)
 
         value: Any = self._context.inv_container.get_by_type(type_)
-        converted_value: Any = INVConverter.convert_for_governance_score(type_, value)
+        converted_value: Any = INVConverter.convert_for_governance(type_, value)
         return converted_value
 
     def set_icon_network_value(self, type_: 'IconNetworkValueType', value: Any):
         self._check_inv_type(type_)
 
         converted_value: 'Value' = INVConverter.convert_for_icon_service(type_, value)
-        self._context.inv_container.set_by_governance_score(self._context, converted_value)
+        self._context.inv_container.set_tx_batch(converted_value)
+        self._context.storage.inv.put_value(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True

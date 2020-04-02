@@ -34,7 +34,7 @@ from iconservice.iiss import IISSEngine, IISSStorage
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.meta import MetaDBStorage
 from iconservice.prep import PRepEngine, PRepStorage
-from iconservice.icon_network import INVEngine, INVStorage
+from iconservice.inv import INVEngine, INVStorage
 from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_block_hash, rmtree
 from tests.conftest import generate_inv_container
@@ -51,8 +51,8 @@ IISS_ENGINE_PATH = 'iconservice.iiss.engine'
 IISS_STORAGE_PATH = 'iconservice.iiss.storage'
 PREP_ENGINE_PATH = 'iconservice.prep.engine'
 PREP_STORAGE_PATH = 'iconservice.prep.storage'
-INV_ENGINE_PATH = 'iconservice.icon_network.engine'
-INV_STORAGE_PATH = 'iconservice.icon_network.storage'
+INV_ENGINE_PATH = 'iconservice.inv.engine'
+INV_STORAGE_PATH = 'iconservice.inv.storage'
 
 
 # noinspection PyProtectedMember
