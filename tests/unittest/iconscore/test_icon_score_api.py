@@ -110,7 +110,7 @@ def context(settable_inv_container: INVContainer):
     context = context_factory.create(IconScoreContextType.INVOKE, block)
 
     step_limit = 1_000_000_000
-    context.create_step_counter(step_limit)
+    context.set_step_counter(step_limit)
 
     ContextContainer._push_context(context)
     yield context
@@ -227,7 +227,7 @@ class TestIconScoreApi:
             expected_step: int = step_cost + step_cost * chunks // 10
             step_used: int = context.step_counter.step_used
             assert step_used == expected_step
-            context.create_step_counter(STEP_LIMIT)
+            context.set_step_counter(STEP_LIMIT)
 
     def test_json_dumps_step(self, context):
         step_cost: int = _calc_step_cost(ScoreApiStepRatio.JSON_DUMPS)
@@ -245,7 +245,7 @@ class TestIconScoreApi:
             obj2: dict = json_loads(text)
             assert obj2 == obj
 
-            context.create_step_counter(STEP_LIMIT)
+            context.set_step_counter(STEP_LIMIT)
 
     def test_json_loads_step(self, context):
         step_cost: int = _calc_step_cost(ScoreApiStepRatio.JSON_LOADS)
@@ -255,7 +255,7 @@ class TestIconScoreApi:
             for j in range(i):
                 obj[f'key{j}'] = f'value{j}'
             text: str = json_dumps(obj)
-            context.create_step_counter(STEP_LIMIT)
+            context.set_step_counter(STEP_LIMIT)
 
             obj2: dict = json_loads(text)
             assert obj2 == obj

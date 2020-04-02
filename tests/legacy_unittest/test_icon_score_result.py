@@ -61,7 +61,7 @@ class TestScoreResult(unittest.TestCase):
         self._mock_context.event_logs = []
         self._mock_context.traces = []
         self._mock_context._inv_container = IconScoreContext.engine.inv.inv_container.copy()
-        self._mock_context.create_step_counter()
+        self._mock_context.set_step_counter()
         self._mock_context.current_address = Mock(spec=Address)
 
     def tearDown(self):

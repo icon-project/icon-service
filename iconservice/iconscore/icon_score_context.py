@@ -322,7 +322,7 @@ class IconScoreContext(ABC):
 
         # Logger.debug(tag=self.TAG, msg="put_dirty_prep() end")
 
-    def create_step_counter(self, step_limit: Optional[int] = None):
+    def set_step_counter(self, step_limit: Optional[int] = None):
         if self.type == IconScoreContextType.ESTIMATION:
             context_type: 'IconScoreContextType' = IconScoreContextType.INVOKE
         else:

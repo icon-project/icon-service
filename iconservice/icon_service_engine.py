@@ -892,7 +892,7 @@ class IconServiceEngine(ContextContainer):
         context.current_address = to
         context.event_logs = []
         context.traces = []
-        context.create_step_counter(step_limit=step_limit)
+        context.set_step_counter(step_limit=step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
         context.fee_sharing_proportion = 0
@@ -979,7 +979,7 @@ class IconServiceEngine(ContextContainer):
         :return: The amount of step
         """
         context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
-        context.create_step_counter()
+        context.set_step_counter()
 
         params: dict = request['params']
         data_type: str = params.get('dataType')
@@ -1018,7 +1018,7 @@ class IconServiceEngine(ContextContainer):
             step_limit = None
 
         context.traces = []
-        context.create_step_counter(step_limit=step_limit)
+        context.set_step_counter(step_limit=step_limit)
 
         ret = self._call(context, method, params)
         return ret
@@ -1046,7 +1046,7 @@ class IconServiceEngine(ContextContainer):
         to: 'Address' = params.get('to')
 
         context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
-        context.create_step_counter()
+        context.set_step_counter()
 
         try:
             self._push_context(context)
