@@ -18,11 +18,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import IconScoreFuncType
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iconscore.icon_score_result import TransactionResult
-from iconservice.inv import INVContainer, INVStorage, INVEngine
+from iconservice.inv import INVContainer, INVStorage
 from iconservice.inv.data.value import *
 from iconservice.utils import ContextStorage
 from tests import create_address
