@@ -44,6 +44,8 @@ class ValueConverter(object):
                         converted_value[IconScoreContextType.INVOKE] = value
                     elif key == "query":
                         converted_value[IconScoreContextType.QUERY] = value
+                    else:
+                        raise InvalidParamsException(f"Invalid context type: {type_.name}")
                 else:
                     raise ValueError(f"Invalid data type: "
                                      f"value: {type_.name} "
@@ -217,7 +219,7 @@ class Container(object):
             raise PermissionError(f"Invalid case of setting ICON Network value from icon-service"
                                   f"migration: {self._is_migrated} is open: {is_open}")
 
-    def set_tx_batch(self, value: 'Value'):
+    def set_inv_to_tx_batch(self, value: 'Value'):
         """
         Set values on ICON Network value and put these into DB.
         Only Governance SCORE can set values after migration.

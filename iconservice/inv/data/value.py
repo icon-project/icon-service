@@ -139,9 +139,9 @@ class MaxStepLimits(Value):
 
     @classmethod
     def _supplements_value(cls, value: dict):
-        if value.get(IconScoreContextType.INVOKE, None) is None:
+        if value.get(IconScoreContextType.INVOKE) is None:
             value[IconScoreContextType.INVOKE] = 0
-        if value.get(IconScoreContextType.QUERY, None) is None:
+        if value.get(IconScoreContextType.QUERY) is None:
             value[IconScoreContextType.QUERY] = 0
 
     @classmethod

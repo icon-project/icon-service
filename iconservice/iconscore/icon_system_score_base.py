@@ -97,7 +97,7 @@ class IconSystemScoreBase(IconScoreBase):
         self._check_inv_type(type_)
 
         converted_value: 'Value' = INVConverter.convert_for_icon_service(type_, value)
-        self._context.inv_container.set_tx_batch(converted_value)
+        self._context.inv_container.set_inv_to_tx_batch(converted_value)
         self._context.storage.inv.put_value(self._context, converted_value)
 
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:

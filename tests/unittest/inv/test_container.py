@@ -18,10 +18,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from iconservice.base.exception import AccessDeniedException
-from iconservice.inv import INVEngine, INVContainer, INVStorage
-from iconservice.inv.data.value import *
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.inv import INVContainer, INVStorage
+from iconservice.inv.data.value import *
 from iconservice.utils import ContextStorage
 from tests import create_address
 
@@ -211,7 +210,7 @@ class TestContainer:
         dummy_inv_value = RevisionCode(5)
 
         with pytest.raises(AssertionError):
-            inv_container.set_tx_batch(dummy_inv_value)
+            inv_container.set_inv_to_tx_batch(dummy_inv_value)
 
         context.storage.inv.put_value.assert_not_called()
 
@@ -219,7 +218,7 @@ class TestContainer:
         inv_container._is_migrated = True
         dummy_inv_value = RevisionCode(5)
 
-        inv_container.set_tx_batch(dummy_inv_value)
+        inv_container.set_inv_to_tx_batch(dummy_inv_value)
 
         assert inv_container.revision_code == dummy_inv_value.value
 
