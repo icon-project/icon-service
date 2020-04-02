@@ -75,7 +75,6 @@ def dummy_invs():
 
 @pytest.fixture
 def context():
-    IconScoreContext.storage = ContextStorage(deploy=Mock(spec=INVStorage))
     context = Mock(spec=IconScoreContext)
     context.type = IconScoreContextType.DIRECT
     context.readonly = False

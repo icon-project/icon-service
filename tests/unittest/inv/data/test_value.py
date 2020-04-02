@@ -27,17 +27,12 @@ class TestValue:
         if isinstance(value, list):
             value.append("dump")
             for val in value:
-                if isinstance(val, (list, set, dict)):
-                    self._modify_if_collection_type(val)
-        if isinstance(value, set):
-            value.add("dump")
-            for val in value:
-                if isinstance(val, (list, set, dict)):
+                if isinstance(val, (list, dict)):
                     self._modify_if_collection_type(val)
         elif isinstance(value, dict):
             value["dump_key"] = "dump_value"
             for val in value.values():
-                if isinstance(val, (list, set, dict)):
+                if isinstance(val, (list, dict)):
                     self._modify_if_collection_type(val)
 
     @pytest.mark.parametrize("icon_network_value, value", [
@@ -78,7 +73,7 @@ class TestValue:
 
         assert decoded_value.value == icon_network_value.value
 
-        # TEST: returned value property should not effect on Value instances' value when modify
+        # TEST: returned value property should not effect on Value instances' value when being modified
         returned_value: Any = icon_network_value.value
 
         # Act
