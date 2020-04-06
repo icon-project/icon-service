@@ -170,8 +170,11 @@ class ConfigKey:
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
-    # Reward calculator executable path
+    # Reward calculator
+    # executable path
     ICON_RC_DIR_PATH = 'iconRcPath'
+    # Boolean which determines Opening RC monitor channel (Default True)
+    ICON_RC_MONITOR = 'iconRcMonitor'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
