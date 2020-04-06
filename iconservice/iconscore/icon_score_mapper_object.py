@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import Revision
 from ..utils import is_builtin_score

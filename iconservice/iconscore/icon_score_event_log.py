@@ -43,7 +43,8 @@ class EventLog(object):
         :param indexed: a list of indexed arguments including a event signature
         :param data: a list of normal arguments
         """
-        assert isinstance(score_address, Address)
+
+        assert score_address.is_contract
         assert isinstance(indexed, list)
         assert isinstance(data, list)
 
@@ -54,7 +55,7 @@ class EventLog(object):
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
-    def to_dict(self, casing: Optional = None) -> dict:
+    def to_dict(self, casing: Optional[callable] = None) -> dict:
         """
         Returns properties as `dict`
         :return: a dict
@@ -70,9 +71,10 @@ class EventLog(object):
         return new_dict
 
 
-class EventLogEmitter(object):
-    @staticmethod
-    def emit_event_log(context: 'IconScoreContext',
+class EventLogEmitter:
+    @classmethod
+    def emit_event_log(cls,
+                       context: 'IconScoreContext',
                        score_address: 'Address',
                        event_signature: str,
                        arguments: List[Any],
@@ -119,8 +121,10 @@ class EventLogEmitter(object):
         event = EventLog(score_address, indexed, data)
         context.event_logs.append(event)
 
-    @staticmethod
-    def __get_byte_length(context: 'IconScoreContext', data: 'BaseType') -> int:
+    @classmethod
+    def __get_byte_length(cls,
+                          context: 'IconScoreContext',
+                          data: 'BaseType') -> int:
         if data is None:
             return 0
         elif isinstance(data, int):
@@ -131,10 +135,11 @@ class EventLogEmitter(object):
             else:
                 return ICON_ADDRESS_BYTES_SIZE
 
-        return len(EventLogEmitter.__get_bytes_from_base_type(data))
+        return len(cls.__get_bytes_from_base_type(data))
 
-    @staticmethod
-    def __get_bytes_from_base_type(data: 'BaseType') -> bytes:
+    @classmethod
+    def __get_bytes_from_base_type(cls,
+                                   data: 'BaseType') -> bytes:
         if isinstance(data, str):
             return data.encode('utf-8')
         elif isinstance(data, Address):
@@ -146,9 +151,11 @@ class EventLogEmitter(object):
         else:
             raise InvalidEventLogException(f'Invalid data type: {type(data)}, data: {data}')
 
-    @staticmethod
-    def get_ordered_bytes(index: int, data: 'BaseType') -> bytes:
+    @classmethod
+    def get_ordered_bytes(cls,
+                          index: int,
+                          data: 'BaseType') -> bytes:
         bloom_data = index.to_bytes(1, DATA_BYTE_ORDER)
         if data is not None:
-            bloom_data += EventLogEmitter.__get_bytes_from_base_type(data)
+            bloom_data += cls.__get_bytes_from_base_type(data)
         return bloom_data

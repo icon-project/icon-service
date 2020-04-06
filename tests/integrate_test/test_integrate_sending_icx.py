@@ -17,10 +17,8 @@
 """IconScoreEngine testcase
 """
 
-import unittest
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 

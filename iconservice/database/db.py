@@ -20,8 +20,8 @@ import plyvel
 from iconcommons.logger import Logger
 from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
-from ..icon_constant import ICON_DB_LOG_TAG
-from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
+from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType
+from ..iconscore.context.context import ContextGetter
 
 if TYPE_CHECKING:
     from ..base.address import Address

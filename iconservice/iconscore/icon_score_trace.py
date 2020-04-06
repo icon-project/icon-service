@@ -16,6 +16,7 @@
 
 from enum import Enum, unique
 from typing import TYPE_CHECKING, Optional
+
 from ..base.address import Address
 
 if TYPE_CHECKING:

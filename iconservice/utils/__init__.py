@@ -27,7 +27,6 @@ from enum import Flag
 from typing import Any, Union, Optional
 
 from iconcommons import Logger
-
 from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER, ICX_IN_LOOP
 
 
@@ -126,8 +125,8 @@ def set_flag(src_flags: Flag, flag: Flag, on: bool) -> Flag:
     return src_flags
 
 
-ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
-ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc")
+ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue inv")
+ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue meta rc inv")
 
 
 def print_log_with_level(log_level: str, msg: str, tag: str):

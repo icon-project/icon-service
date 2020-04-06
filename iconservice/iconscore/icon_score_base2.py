@@ -28,7 +28,7 @@ from ..base.address import Address, AddressPrefix
 from ..base.exception import InvalidParamsException, IconScoreException, InvalidInstanceException
 from ..icon_constant import CHARSET_ENCODING
 from ..icon_constant import Revision
-from ..iconscore.icon_score_context import ContextContainer
+from ..iconscore.context.context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:

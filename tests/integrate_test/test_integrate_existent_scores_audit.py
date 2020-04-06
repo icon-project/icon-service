@@ -27,7 +27,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, BUILTIN_SCORE_ADDRESS_MAPPER
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_result import TransactionResult
-from tests.integrate_test import root_clear
+from tests import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -57,7 +57,6 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
     def _setUp_audit(self):
         self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True,
                                                      ConfigKey.SERVICE_FEE: False,
-                                                     ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                                                      ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)

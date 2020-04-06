@@ -19,7 +19,6 @@ import copy
 from typing import TYPE_CHECKING, List, Iterable, Optional, Dict
 
 from iconcommons.logger import Logger
-
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...icon_constant import PRepStatus, PenaltyReason, TermFlag

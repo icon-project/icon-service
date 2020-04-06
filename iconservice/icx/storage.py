@@ -19,7 +19,6 @@ from enum import IntEnum, IntFlag
 from typing import TYPE_CHECKING, Optional, Union
 
 from iconcommons import Logger
-
 from .coin_part import CoinPart, CoinPartFlag, CoinPartType
 from .delegation_part import DelegationPart
 from .icx_account import Account

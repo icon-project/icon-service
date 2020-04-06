@@ -15,8 +15,8 @@
 import copy
 from typing import TYPE_CHECKING
 
-from ..utils.msgpack_for_db import MsgPackForDB
 from ..base.exception import InvalidParamsException
+from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..base.address import Address

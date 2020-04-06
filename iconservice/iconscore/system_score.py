@@ -20,8 +20,6 @@ from inspect import currentframe
 from typing import TYPE_CHECKING
 
 from iconcommons.logger import Logger
-
-
 from .icon_score_base import IconScoreBase, interface, external, payable
 from .icon_score_base2 import InterfaceScore
 from ..base.address import Address

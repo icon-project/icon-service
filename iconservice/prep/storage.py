@@ -14,7 +14,6 @@
 
 from typing import TYPE_CHECKING, Optional, Iterable
 
-from iconcommons import Logger
 from .data import Term
 from .data.prep import PRep
 from ..base.ComponentBase import StorageBase

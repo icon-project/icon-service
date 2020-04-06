@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
 import decimal
+from typing import TYPE_CHECKING
 
 from .engine import Engine as IISSEngine
 from .engine import Method as IISSMethod

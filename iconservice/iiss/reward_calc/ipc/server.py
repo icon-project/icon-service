@@ -18,7 +18,6 @@ from asyncio import StreamReader, StreamWriter
 from typing import Optional
 
 from iconcommons import Logger
-
 from .message import MessageType, Request
 from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker

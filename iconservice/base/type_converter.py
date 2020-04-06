@@ -30,7 +30,7 @@ score_base_support_type = (int, str, bytes, bool, Address)
 
 class TypeConverter:
     @staticmethod
-    def convert(params: dict, param_type: ParamType) -> Any:
+    def convert(params: Union[list, dict], param_type: ParamType) -> Any:
         if param_type is None:
             return params
 

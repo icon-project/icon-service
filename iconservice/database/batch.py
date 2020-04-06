@@ -19,14 +19,10 @@ from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
 from typing import Optional
 
-from iconcommons.logger import Logger
-
-from ..base.exception import DatabaseException, AccessDeniedException
-from ..utils import sha3_256
-
 from ..base.block import Block
+from ..base.exception import DatabaseException, AccessDeniedException
 from ..icx import IcxStorage
-
+from ..utils import sha3_256
 
 TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
 

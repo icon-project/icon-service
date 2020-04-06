@@ -17,10 +17,10 @@ from typing import Tuple, Any, Union
 
 import msgpack
 
-from ..base.address import Address, AddressPrefix
+from . import int_to_bytes, bytes_to_int
+from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import CHARSET_ENCODING
-from . import int_to_bytes, bytes_to_int
 
 
 class TypeTag(IntEnum):

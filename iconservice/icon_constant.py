@@ -107,6 +107,7 @@ BASE_TRANSACTION_INDEX = 0
 
 
 class Revision(Enum):
+    GENESIS = 0
     TWO = 2
     THREE = 3
     FOUR = 4
@@ -148,7 +149,6 @@ class ConfigKey:
     SERVICE = 'service'
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
-    SERVICE_DEPLOYER_WHITE_LIST = 'deployerWhiteList'
     SERVICE_SCORE_PACKAGE_VALIDATOR = 'scorePackageValidator'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
@@ -201,8 +201,22 @@ class EnableThreadFlag(IntFlag):
 class IconServiceFlag(IntFlag):
     FEE = 1
     AUDIT = 2
-    DEPLOYER_WHITE_LIST = 4
+    # DEPLOYER_WHITE_LIST = 4
     SCORE_PACKAGE_VALIDATOR = 8
+
+
+class IconNetworkValueType(Enum):
+    SERVICE_CONFIG = b'service_config'
+
+    STEP_PRICE = b'step_price'
+    STEP_COSTS = b'step_costs'
+    MAX_STEP_LIMITS = b'max_step_limits'
+
+    REVISION_CODE = b'revision_code'
+    REVISION_NAME = b'revision_name'
+
+    SCORE_BLACK_LIST = b'score_black_list'
+    IMPORT_WHITE_LIST = b'import_white_list'
 
 
 @unique
@@ -370,3 +384,21 @@ class TermFlag(Flag):
     MAIN_PREP_NODE_ADDRESS = auto()
 
     ALL = 0xFFFFFFFF
+
+
+class RevisionChangedFlag(Flag):
+    # Empty
+    NONE = 0x0
+    # Set when STEP price changed on the block
+    # STEP_PRICE_CHANGED = 0x10
+    # Set when STEP costs changed on the block
+    # STEP_COST_CHANGED = 0x20
+    # Set when Max STEP limits changed on the block
+    # STEP_MAX_LIMIT_CHANGED = 0x40
+    # STEP changed flag mask
+    # STEP_ALL_CHANGED = 0xf0
+
+    # CHANGE REVISION
+    GENESIS_IISS_CALC = 0x100
+    IISS_CALC = 0x200
+    DECENTRALIZATION = 0x400

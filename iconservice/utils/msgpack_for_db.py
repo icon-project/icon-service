@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum
 from abc import ABCMeta, abstractmethod
+from enum import IntEnum
 from typing import Any
 
 from msgpack import dumps as msgpack_dumps, loads as msgpack_loads, ExtType as msgpack_extType
 
-from ..base.address import Address, AddressPrefix
 from . import int_to_bytes, bytes_to_int
+from ..base.address import Address
 
 
 # you should override if you want to parse custom type
