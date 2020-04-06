@@ -1,7 +1,7 @@
 setproctitle==1.1.10
-plyvel>=1.0.5
-coincurve>=12.0.0
-earlgrey>=0.0.4
-iconcommons>=1.0.5
-msgpack~=1.0.0
-iso3166
+plyvel==1.2.0
+coincurve==13.0.0
+earlgrey==0.0.4
+iconcommons==1.1.3
+msgpack==1.0.0
+iso3166==1.0.1
