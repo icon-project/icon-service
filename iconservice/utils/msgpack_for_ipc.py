@@ -130,8 +130,8 @@ class MsgPackForIpc(object):
 
     @classmethod
     def dumps(cls, data: Any) -> bytes:
-        return msgpack.dumps(data)
+        return msgpack.dumps(data, use_bin_type=False)
 
     @classmethod
     def loads(cls, data: bytes) -> list:
-        return msgpack.loads(data)
+        return msgpack.loads(data, raw=True, strict_map_key=False)
