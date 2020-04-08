@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import Revision
+from iconservice.base.exception import InvalidContainerAccessException
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -112,3 +113,45 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         )
 
         self.assertEqual(len(response), 2)
+
+
+class TestIntegrateDictDBPatch(TestIntegrateBase):
+    def test_dict_db_defective(self):
+        self.update_governance("0_0_4")
+
+        expected_status = {
+            "code": Revision.TWO.value,
+            "name": "1.1.0"
+        }
+
+        query_request = {
+            "version": self._version,
+            "from": self._accounts[0],
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getRevision",
+                "params": {}
+            }
+        }
+        response = self._query(query_request)
+        self.assertEqual(expected_status, response)
+
+        tx_results: List['TransactionResult'] = self.deploy_score("sample_scores",
+                                                                  "sample_dict_db",
+                                                                  self._accounts[0])
+        score_address: 'Address' = tx_results[0].score_address
+
+        self.score_call(self._accounts[0], score_address, "create_item", params={"key": "a", "value": hex(1)})
+
+        with self.assertRaises(InvalidContainerAccessException) as e:
+            self._query(
+                {
+                    'to': score_address,
+                    'dataType': 'call',
+                    'data': {
+                        'method': 'get_items'
+                    }
+                }
+            )
+        self.assertEqual(e.exception.message, "Iteration not supported in DictDB")

@@ -447,6 +447,42 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.withdraw_deposit(deposit_id=deposit_id,
                                                                       score_address=self.score_address)
         self.assertTrue(tx_results[0].status)
+        event_log = tx_results[0].event_logs[0]
+        self.assertEqual('DepositWithdrawn(bytes,Address,int,int)', event_log.indexed[0])
+        self.assertEqual(event_log.data[0], MIN_DEPOSIT_AMOUNT) # withdraw amount
+        self.assertEqual(event_log.data[1], 0)  # penalty amount
+
+        score_info: dict = self._query_score_info(self.score_address)
+        self.assertNotIn('depositInfo', score_info)
+
+    def test_withdraw_deposit_with_penalty(self):
+        """
+        Given : The SCORE is deployed, deposit once and .
+        When  : Withdraws the deposit.
+        Then  : Amount of availableDeposit is 0.
+        """
+        tx_results: List['TransactionResult'] = self.deposit_icx(score_address=self.score_address,
+                                                                 amount=MIN_DEPOSIT_AMOUNT,
+                                                                 period=MIN_DEPOSIT_TERM)
+        deposit_id: bytes = tx_results[0].tx_hash
+
+        score_info: dict = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        self.assertIn(deposit_id, map(lambda d: d['id'], score_info['depositInfo']['deposits']))
+
+        # invoke score method to use virtual step
+        self.score_call(from_=self._admin,
+                        to_=self.score_address,
+                        func_name="set_value",
+                        params={"value": hex(100), "proportion": hex(100)})
+
+        tx_results: List['TransactionResult'] = self.withdraw_deposit(deposit_id=deposit_id,
+                                                                      score_address=self.score_address)
+        self.assertTrue(tx_results[0].status)
+        event_log = tx_results[0].event_logs[0]
+        self.assertEqual('DepositWithdrawn(bytes,Address,int,int)', event_log.indexed[0])
+        self.assertTrue(event_log.data[0] < MIN_DEPOSIT_AMOUNT) # withdraw amount
+        self.assertTrue(event_log.data[1] > 0)  # penalty amount
 
         score_info: dict = self._query_score_info(self.score_address)
         self.assertNotIn('depositInfo', score_info)
