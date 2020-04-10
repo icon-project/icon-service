@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
 THREAD_VALIDATE = 'validate'
-
+THREAD_STATUS = 'status'
 
 _TAG = "IIS"
 
@@ -51,6 +51,7 @@ class IconScoreInnerTask(object):
         self._open()
 
         self._thread_pool = {THREAD_INVOKE: ThreadPoolExecutor(1),
+                             THREAD_STATUS: ThreadPoolExecutor(1),
                              THREAD_QUERY: ThreadPoolExecutor(1),
                              THREAD_VALIDATE: ThreadPoolExecutor(1)}
 
@@ -194,8 +195,13 @@ class IconScoreInnerTask(object):
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
-                                              self._query, request)
+            method = request['method']
+            if method == "ise_getStatus":
+                return await loop.run_in_executor(self._thread_pool[THREAD_STATUS],
+                                                  self._query, request)
+            else:
+                return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                                  self._query, request)
         else:
             return self._query(request)
 
