@@ -14,7 +14,6 @@ extra_requires = {
         "pytest-mock"
     ]
 }
-test_requires = extra_requires['test']
 
 version = os.environ.get('VERSION')
 if version is None:
@@ -35,8 +34,6 @@ setup_options = {
         'icon_service.json',
         'builtin_scores/*/package.json'
     ]},
-    'setup_requires': ['pytest-runner'],
-    'tests_require': test_requires,
     'license': "Apache License 2.0",
     'install_requires': requires,
     'extras_require': extra_requires,
@@ -53,8 +50,7 @@ setup_options = {
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7'
-    ],
-    'test_suite': 'tests'
+    ]
 }
 
 setup(**setup_options)
