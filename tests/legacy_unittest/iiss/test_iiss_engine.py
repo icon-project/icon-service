@@ -25,8 +25,7 @@ import pytest
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidParamsException, InvalidRequestException
 from iconservice.base.message import Message
-from iconservice.icon_constant import IISS_DAY_BLOCK
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS
+from iconservice.icon_constant import IISS_DAY_BLOCK, IISS_MAX_DELEGATIONS, Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.delegation_part import DelegationPart
@@ -596,6 +595,12 @@ class TestIissEngine(unittest.TestCase):
                 assert account.delegated_amount == 0
             else:
                 assert account.delegated_amount == cached_accounts[address][1]
+
+    def test_invoke(self):
+        context = Mock(revision=Revision.IISS.value - 1)
+        engine = IISSEngine()
+        with pytest.raises(InvalidParamsException):
+            engine.invoke(context, "stake", {})
 
 
 if __name__ == '__main__':

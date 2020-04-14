@@ -19,10 +19,13 @@ import unittest
 from typing import List, Dict, Union
 from unittest.mock import Mock
 
+import pytest
+
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
+from iconservice.base.exception import InvalidParamsException
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatus, PenaltyReason
+from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatus, PenaltyReason, Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.prep import PRepEngine
 from iconservice.prep.data import PRepContainer, Term
@@ -578,3 +581,10 @@ class TestEngine(unittest.TestCase):
             prep = context.preps.get_by_index(i)
             assert prep.status == PRepStatus.ACTIVE
             assert prep.penalty == PenaltyReason.NONE
+
+    def test_invoke(self):
+        context = Mock(revision=Revision.IISS.value - 1)
+        engine = PRepEngine()
+
+        with pytest.raises(InvalidParamsException):
+            engine.invoke(context, "registerPRep", {})

@@ -32,6 +32,7 @@ from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus, ROLLBACK_LOG_TAG
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
+from ..iconscore.icon_score_step import StepType
 from ..icx.icx_account import Account
 from ..icx.storage import Intent
 from ..iiss.listener import EngineListener as IISSEngineListener
@@ -202,6 +203,9 @@ class Engine(EngineBase, IISSEngineListener):
         return method in cls.QUERY_METHOD_TABLE
 
     def invoke(self, context: 'IconScoreContext', method: str, params: dict):
+        if context.revision < Revision.IISS.value:
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            raise InvalidParamsException(f"Method Not Found: {method}")
         handler: callable = self._invoke_handlers[method]
         handler(context, **params)
 
