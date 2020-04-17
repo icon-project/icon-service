@@ -18,6 +18,7 @@
 """
 from typing import TYPE_CHECKING, List
 
+from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -371,3 +372,18 @@ class TestIISSStake(TestIISSBase):
         response: dict = self.get_delegation(self._accounts[0])
         voting_power: int = response['votingPower']
         self.assertFalse(voting_power < 0)
+
+    def test_stake_with_value_should_raise_exception(self):
+        self.update_governance()
+        self.set_revision(Revision.IISS.value)
+        balance: int = 10 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=balance)
+
+        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                             to_=SYSTEM_SCORE_ADDRESS,
+                                             func_name='setStake',
+                                             params={"value": hex(8 * ICX_IN_LOOP)},
+                                             value=5)
+
+        return self.process_confirm_block_tx([tx], expected_status=False)
