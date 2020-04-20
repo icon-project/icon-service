@@ -263,15 +263,23 @@ class TypeConverter:
             kw_params[param_name] = kw_param
 
     @staticmethod
-    def adjust_params_to_method(func: callable, kw_params: dict):
+    def adjust_params_to_method(func: callable, kw_params: dict, remove_invalid_param: bool = False):
         hints = TypeConverter.make_annotations_from_method(func)
 
         # check user input argument name is valid
+        invalid_keys = []
         for key in kw_params.keys():
             try:
                 _type = hints[key]
             except KeyError:
-                raise InvalidParamsException(f"Invalid parameter name '{key}'")
+                invalid_keys.append(key)
+
+        if len(invalid_keys) > 0:
+            if remove_invalid_param:
+                for key in invalid_keys:
+                    del kw_params[key]
+            else:
+                raise InvalidParamsException(f"Invalid parameter name '{invalid_keys}'")
 
         # check required argument is exist in user input
         for param_name, param_type in hints.items():

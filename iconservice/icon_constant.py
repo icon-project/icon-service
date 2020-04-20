@@ -124,7 +124,10 @@ class Revision(Enum):
     DIVIDE_NODE_ADDRESS = 9
     FIX_BURN_EVENT_SIGNATURE = 9
     ADD_LOGS_BLOOM_ON_BASE_TX = 9
-    LATEST = 9
+
+    # Revision 10
+    SCORE_FUNC_PARAMS_CHECK = 10
+    LATEST = 10
 
 
 RC_DB_VERSION_0 = 0
