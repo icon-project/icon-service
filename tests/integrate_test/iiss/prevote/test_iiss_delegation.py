@@ -187,3 +187,11 @@ class TestIISSDelegate(TestIISSBase):
                                              params={})
         self.process_confirm_block_tx([tx])
 
+        # TEST: set delegation with value should raise exception
+        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                             to_=SYSTEM_SCORE_ADDRESS,
+                                             func_name="setDelegation",
+                                             params={},
+                                             value=5)
+        self.process_confirm_block_tx([tx], expected_status=False)
+

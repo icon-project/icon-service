@@ -43,7 +43,6 @@ class SystemScore(IconScoreBase):
     def on_update(self, **kwargs) -> None:
         super().on_update()
 
-    @payable
     @external
     def setStake(self, value: int = 0) -> None:
         self._context.engine.iiss.invoke(*self._get_params(locals_params=locals()))
@@ -60,7 +59,6 @@ class SystemScore(IconScoreBase):
     def getDelegation(self, address: Address) -> dict:
         return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
 
-    @payable
     @external
     def claimIScore(self) -> None:
         self._context.engine.iiss.invoke(*self._get_params(locals_params=locals()))
@@ -167,7 +165,7 @@ class InterfaceSystemScore(InterfaceScore):
     def queryIScore(self, address: Address) -> dict: pass
 
     @interface
-    def getIISSInfo(address) -> dict: pass
+    def getIISSInfo(self) -> dict: pass
 
     @interface
     def getPRep(self, address: Address) -> dict: pass

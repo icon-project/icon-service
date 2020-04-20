@@ -122,6 +122,16 @@ class TestIISSClaim(TestIISSBase):
         self.assertEqual([icx, iscore], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_not_called()
 
+        # TEST: claim iscore with value should fail
+        expected_status = False
+        tx = self.create_score_call_tx(from_=self._accounts[0],
+                                       to_=SYSTEM_SCORE_ADDRESS,
+                                       func_name="claimIScore",
+                                       params={},
+                                       value=5)
+
+        self.process_confirm_block_tx([tx], expected_status=expected_status)
+
     def _query_iscore_with_invalid_params(self):
         params = {
             "version": self._version,
