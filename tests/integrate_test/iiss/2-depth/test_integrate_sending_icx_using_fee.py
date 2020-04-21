@@ -26,7 +26,7 @@ from iconservice.base.address import Address
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_constant import Revision
 from iconservice.utils import icx_to_loop
-from tests import create_address
+from tests import create_address, create_block_hash
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -304,3 +304,108 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         parent_blocks[index].cumulative_fee = step_limit * step_price
         assert len(precommit_data_manager) == 2
         assert last_block == parent_blocks[index]
+
+    def test_send_icx3(self):
+        from_: 'Address' = self._admin.address
+        step_price = 10 ** 10
+        default_step_cost = 100_000
+        input_step_cost = 200
+        value = icx_to_loop(7)
+
+        icon_service_engine: IconServiceEngine = self.icon_service_engine
+
+        self.update_governance()
+
+        for revision in range(Revision.THREE.value, Revision.LATEST.value + 1):
+            self.set_revision(revision)
+
+            # The latest confirmed block
+            root_block = icon_service_engine._precommit_data_manager.last_block
+
+            # Check that "from_" address has enough icx to transfer
+            balance0: int = self.get_balance(from_)
+            self.assertTrue(balance0 > value)
+
+            # Check "to" address balance. It should be 0
+            addresses = []
+            for _ in range(2):
+                address: 'Address' = create_address()
+                balance: int = self.get_balance(address)
+                assert balance == 0
+
+                addresses.append(address)
+
+            # Estimate the step limit of icx transfer tx
+            step_limit = self._calculate_step_limit(
+                revision,
+                data=None,
+                default_step_cost=default_step_cost,
+                input_step_cost=input_step_cost
+            )
+
+            # Root -> Parent ========================================
+            # from_ sends 10 ICX to addresses[0]
+            tx = self.create_transfer_icx_tx(
+                from_=from_,
+                to_=addresses[0],
+                value=value,
+                disable_pre_validate=False,
+                support_v2=False,
+                step_limit=step_limit
+            )
+
+            prev_block = root_block
+            block, hash_list = self.make_and_req_block_for_2_depth_invocation([tx], prev_block=prev_block)
+            new_hash: bytes = create_block_hash()
+            self._change_block_hash(block.height, block.hash, new_hash)
+            block._hash = new_hash
+            assert block.prev_hash == prev_block.hash
+            assert block.height == prev_block.height + 1
+            parent_block = block
+
+            # Before confirming a parent block
+            for address in addresses:
+                balance = self.get_balance(address)
+                assert balance == 0
+
+            # Root -> Parent -> Child =====================================
+            prev_block = block
+
+            # addresses[0] sends 5 ICX to addresses[1]
+            tx = self.create_transfer_icx_tx(
+                from_=addresses[0],
+                to_=addresses[1],
+                value=icx_to_loop(5),
+                disable_pre_validate=True,
+                support_v2=False,
+                step_limit=step_limit
+            )
+
+            block, hash_list = self.make_and_req_block_for_2_depth_invocation([tx], prev_block=prev_block)
+            new_hash: bytes = create_block_hash()
+            self._change_block_hash(block.height, block.hash, new_hash)
+            block._hash = new_hash
+            assert block.prev_hash == prev_block.hash
+            assert block.height == prev_block.height + 1
+            child_block = block
+
+            # Before confirming a parent block
+            for address in addresses:
+                balance = self.get_balance(address)
+                assert balance == 0
+
+            self._write_precommit_state(parent_block)
+
+            balance = self.get_balance(addresses[0])
+            assert balance == icx_to_loop(7)
+
+            balance = self.get_balance(addresses[1])
+            assert balance == 0
+
+            self._write_precommit_state(child_block)
+
+            balance = self.get_balance(addresses[0])
+            assert balance < icx_to_loop(5)
+
+            balance = self.get_balance(addresses[1])
+            assert balance == icx_to_loop(5)
