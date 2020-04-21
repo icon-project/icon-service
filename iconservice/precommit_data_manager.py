@@ -243,6 +243,11 @@ class PrecommitDataManager(object):
         def is_leaf(self) -> bool:
             return len(self._children) == 0
 
+        def update_block_hash(self, src: bytes, dest: bytes):
+            self.precommit_data.block_batch.update_block_hash(dest)
+            self._block = self.precommit_data.block_batch.block
+            self.precommit_data.block_batch.set_block_to_batch(self.precommit_data.revision)
+
     def __init__(self):
         self._root: Optional['PrecommitDataManager.Node'] = None
         # block_hash : PrecommitDataManager.Node instance
@@ -396,3 +401,17 @@ class PrecommitDataManager(object):
             yield node.precommit_data.block_batch
             # parent means previous block node
             node = node.parent
+
+    def change_block_hash(self, block_height: int, src: bytes, dest: bytes):
+        node: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(src)
+        if node is None:
+            raise InvalidParamsException(
+                f'No precommit data: block_hash={bytes_to_hex(src)}')
+
+        if not node.is_leaf() or node.block.height != block_height:
+            raise InvalidParamsException(
+                f"Invalid node data (not leaf): src={src}, dest={dest}")
+
+        node.update_block_hash(src=src, dest=dest)
+        del self._precommit_data_mapper[src]
+        self._precommit_data_mapper[dest] = node

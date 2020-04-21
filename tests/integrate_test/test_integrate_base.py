@@ -317,6 +317,13 @@ class TestIntegrateBase(TestCase):
 
         return block, self.get_hash_list_from_tx_list(tx_list)
 
+    def _change_block_hash(self, block_height: int, old_block_hash: bytes, new_block_hash: bytes) -> None:
+        self.icon_service_engine.change_old_block_hash(
+            _block_height=block_height,
+            instant_block_hash=old_block_hash,
+            block_hash=new_block_hash
+        )
+
     def _write_precommit_state(self, block: 'Block') -> None:
         self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1

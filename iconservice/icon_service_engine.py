@@ -1829,6 +1829,15 @@ class IconServiceEngine(ContextContainer):
             'prevBlockHash': prev_block_hash
         }
 
+    def change_old_block_hash(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
+        """Change Old Block Hash
+        :param _block_height: height of block being committed
+        :param instant_block_hash: instant hash of block being committed
+        :param block_hash: hash of block being committed
+        """
+        # Check for block validation before commit
+        self._precommit_data_manager.change_block_hash(_block_height, instant_block_hash, block_hash)
+
     def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
