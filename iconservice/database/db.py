@@ -468,7 +468,6 @@ class IconScoreDatabase(ContextGetter):
         :params key: key passed by SCORE
         :return: key bytes
         """
-
         return b'|'.join((self._prefix_hash_key, key))
 
     def _validate_ownership(self):
@@ -556,5 +555,4 @@ class IconScoreSubDatabase(object):
         :params key: key passed by SCORE
         :return: key bytes
         """
-
         return b'|'.join((self._prefix_hash_key, key))
