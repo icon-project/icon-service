@@ -1498,23 +1498,22 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before commit
         self._precommit_data_manager.change_block_hash(_block_height, instant_block_hash, block_hash)
 
-    def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
+    def commit(self, _block_height: int, block_hash: bytes) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
         :param _block_height: height of block being committed
-        :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed
         """
         # Check for block validation before commit
-        self._precommit_data_manager.validate_block_to_commit(instant_block_hash)
+        self._precommit_data_manager.validate_block_to_commit(block_hash)
 
-        precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
+        precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block_hash)
         context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
 
         if precommit_data.revision < Revision.IISS.value:
             self._commit_before_iiss(context, precommit_data)
         else:
-            self._commit_after_iiss(context, precommit_data, instant_block_hash)
+            self._commit_after_iiss(context, precommit_data)
 
     def _commit_before_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
@@ -1522,15 +1521,18 @@ class IconServiceEngine(ContextContainer):
 
     def _commit_after_iiss(self,
                            context: 'IconScoreContext',
-                           precommit_data: 'PrecommitData',
-                           instant_block_hash: bytes):
+                           precommit_data: 'PrecommitData'):
         # Check if this block is the start block of a calculation period
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
         is_calc_period_start_block: bool = context.block.height == start_calc_block_height
 
         wal_writer, state_wal, iiss_wal = \
-            self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
+            self._process_wal(context, precommit_data, is_calc_period_start_block)
         wal_writer.flush()
+
+        # ===== WARNING!! ===== #
+        # we need to remain instant_block_hash key for Backup DB Migration after change_block_hash and LFT2 logic
+        # ===================== #
 
         # Backup the previous block state
         self._backup_manager.run(
@@ -1541,7 +1543,7 @@ class IconServiceEngine(ContextContainer):
             block_batch=precommit_data.block_batch,
             iiss_wal=iiss_wal,
             is_calc_period_start_block=is_calc_period_start_block,
-            instant_block_hash=instant_block_hash)
+            instant_block_hash=precommit_data.block.hash)
 
         # Clean up the oldest backup file
         self._backup_cleaner.run_on_commit(context.block.height)
@@ -1558,7 +1560,7 @@ class IconServiceEngine(ContextContainer):
         wal_writer.flush()
 
         # send IPC
-        self._process_ipc(context, wal_writer, precommit_data, standby_db_info, instant_block_hash)
+        self._process_ipc(context, wal_writer, precommit_data, standby_db_info)
         wal_writer.close()
 
         try:
@@ -1566,10 +1568,10 @@ class IconServiceEngine(ContextContainer):
         except BaseException as e:
             Logger.error(tag=_TAG, msg=str(e))
 
-    def _process_wal(self, context: 'IconScoreContext',
+    def _process_wal(self,
+                     context: 'IconScoreContext',
                      precommit_data: 'PrecommitData',
-                     is_calc_period_start_block: bool,
-                     instant_block_hash: bytes) \
+                     is_calc_period_start_block: bool) \
             -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
         """Assume that this method is called after Revision.IISS is on
 
@@ -1591,11 +1593,15 @@ class IconServiceEngine(ContextContainer):
         Logger.info(tag=_TAG, msg=f"tx_index={tx_index}")
         iiss_wal: 'IissWAL' = IissWAL(precommit_data.rc_block_batch, tx_index, revision)
 
+        # ===== WARNING!! ===== #
+        # we need to remain instant_block_hash key for Backup DB Migration after change_block_hash and LFT2 logic
+        # ===================== #
+
         wal_writer: 'WriteAheadLogWriter' = \
             WriteAheadLogWriter(precommit_data.revision,
                                 max_log_count=2,
                                 block=block,
-                                instant_block_hash=instant_block_hash)
+                                instant_block_hash=block.hash)
         wal_writer.open(wal_path)
 
         if is_calc_period_start_block:
@@ -1663,17 +1669,12 @@ class IconServiceEngine(ContextContainer):
     def _process_ipc(context: 'IconScoreContext',
                      wal_writer: 'WriteAheadLogWriter',
                      precommit_data: 'PrecommitData',
-                     standby_db_info: Optional['RewardCalcDBInfo'],
-                     instant_block_hash: bytes):
+                     standby_db_info: Optional['RewardCalcDBInfo']):
+
         assert precommit_data.revision >= Revision.IISS.value
 
         commit_block_hash: bytes = precommit_data.block.hash
-        if commit_block_hash != instant_block_hash:
-            # Leader node must use instant_block_hash which is used in invoke()
-            commit_block_hash: bytes = instant_block_hash
-
-        context.engine.iiss.send_commit(
-            precommit_data.block.height, commit_block_hash)
+        context.engine.iiss.send_commit(precommit_data.block.height, commit_block_hash)
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
         wal_writer.flush()
 
@@ -1682,16 +1683,16 @@ class IconServiceEngine(ContextContainer):
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
             wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
 
-    def remove_precommit_state(self, block_height: int, instant_block_hash: bytes) -> None:
+    def remove_precommit_state(self, block_height: int, block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         :param block_height: height of block which is needed to be removed from the pre-commit data manager
-        :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
+        :param block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
         Logger.warning(tag=_TAG, msg=f"remove_precommit_state() start: height={block_height}")
 
-        self._precommit_data_manager.validate_block_to_commit(instant_block_hash)
-        # self._precommit_data_manager.remove_precommit_state(instant_block_hash)
+        self._precommit_data_manager.validate_block_to_commit(block_hash)
+        # self._precommit_data_manager.remove_precommit_state(block_hash)
 
         Logger.warning(tag=_TAG, msg="remove_precommit_state() end")
 

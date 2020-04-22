@@ -279,30 +279,23 @@ class IconScoreInnerTask(object):
         return ret
 
     @staticmethod
-    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, bytes, Optional[bytes]]:
+    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, bytes]:
         block_height: int = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
-        block_hash: Optional[bytes] = None
-        if ConstantKeys.BLOCK_HASH in converted_block_params:
-            instant_block_hash: bytes = converted_block_params[ConstantKeys.BLOCK_HASH]
-        else:
-            instant_block_hash: bytes = converted_block_params[ConstantKeys.OLD_BLOCK_HASH]
-            block_hash = converted_block_params[ConstantKeys.NEW_BLOCK_HASH]
-
-        return block_height, instant_block_hash, block_hash
+        block_hash: Optional[bytes] = converted_block_params[ConstantKeys.BLOCK_HASH]
+        return block_height, block_hash
 
     def _write_precommit_state(self, request: dict) -> dict:
         Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE Request: {request}')
 
         try:
             converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            block_height, instant_block_hash, block_hash = \
+            block_height, block_hash = \
                 self._get_block_info_for_precommit_state(converted_block_params)
             Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE: '
                                       f'BH={block_height} '
-                                      f'instant_block_hash={bytes_to_hex(instant_block_hash)} '
                                       f'block_hash={bytes_to_hex(block_hash)}')
 
-            self._icon_service_engine.commit(block_height, instant_block_hash, block_hash)
+            self._icon_service_engine.commit(block_height, block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
             self._log_exception(e, _TAG)
