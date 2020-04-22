@@ -322,11 +322,14 @@ type_convert_templates[ParamType.QUERY] = {
 type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
     ConstantKeys.BLOCK_HASH: ValueType.BYTES,
+}
+
+type_convert_templates[ParamType.CHANGE_BLOCK_HASH] = {
+    ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
+    ConstantKeys.BLOCK_HASH: ValueType.BYTES,
     ConstantKeys.OLD_BLOCK_HASH: ValueType.BYTES,
     ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES
 }
-
-type_convert_templates[ParamType.CHANGE_BLOCK_HASH] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
 type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
