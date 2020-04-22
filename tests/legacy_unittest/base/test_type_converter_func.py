@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import unittest
-from iconservice.base.type_converter import TypeConverter
+
 from iconservice.base.address import Address
+from iconservice.base.exception import InvalidParamsException
+from iconservice.base.type_converter import TypeConverter
 from tests import create_address
 
 
@@ -154,6 +156,16 @@ class TestTypeConverterFunc(unittest.TestCase):
 
         params = {"value": value}
         TypeConverter.adjust_params_to_method(self.test_score.func_param_address1, params)
+        self.assertEqual(value, self.test_score.func_param_address1(**params))
+
+    def test_func_param_invalid_key(self):
+        value = None
+
+        params = {"value": value, "invalid_key": value}
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.adjust_params_to_method(self.test_score.func_param_int, params)
+
+        TypeConverter.adjust_params_to_method(self.test_score.func_param_int, params, True)
         self.assertEqual(value, self.test_score.func_param_address1(**params))
 
 

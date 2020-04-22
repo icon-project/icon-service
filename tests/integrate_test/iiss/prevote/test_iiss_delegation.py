@@ -147,16 +147,18 @@ class TestIISSDelegate(TestIISSBase):
         self.set_stake(from_=self._accounts[0],
                        value=stake)
 
-        # set delegation 1
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
                                              to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={"invalid": delegations})
+        self.process_confirm_block_tx([tx], expected_status=True)
+
+        # checkout update revision
+        self.set_revision(Revision.SCORE_FUNC_PARAMS_CHECK.value)
         self.process_confirm_block_tx([tx], expected_status=False)
 
-        # set delegation 2
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
@@ -180,7 +182,7 @@ class TestIISSDelegate(TestIISSBase):
                                              })
         self.process_confirm_block_tx([tx], expected_status=False)
 
-        # set delegation 3
+        # set delegation None
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
                                              to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",

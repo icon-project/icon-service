@@ -23,9 +23,10 @@ from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CA
     ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.address import Address
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, InvalidParamsException
 from ..base.type_converter import TypeConverter
+from ..icon_constant import Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_base import IconScoreBase
@@ -104,7 +105,7 @@ class IconScoreEngine(object):
 
         icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
 
-        converted_params = IconScoreEngine._convert_score_params_by_annotations(icon_score, func_name, kw_params)
+        converted_params = IconScoreEngine._convert_score_params_by_annotations(context, icon_score, func_name, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
         context.current_address: 'Address' = icon_score_address
 
@@ -115,14 +116,22 @@ class IconScoreEngine(object):
         return deepcopy(ret)
 
     @staticmethod
-    def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
+    def _convert_score_params_by_annotations(context: 'IconScoreContext',
+                                             icon_score: 'IconScoreBase',
+                                             func_name: str,
+                                             kw_params: dict) -> dict:
         tmp_params = deepcopy(kw_params)
 
         validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
         validate_external_method(func_name)
 
+        remove_invalid_params = False
+        if icon_score.address == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value:
+            remove_invalid_params = True
+
         score_func = getattr(icon_score, func_name)
-        TypeConverter.adjust_params_to_method(score_func, tmp_params)
+        TypeConverter.adjust_params_to_method(score_func, tmp_params, remove_invalid_params)
+
         return tmp_params
 
     @staticmethod
