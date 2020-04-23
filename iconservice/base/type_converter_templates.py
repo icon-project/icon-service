@@ -326,17 +326,12 @@ type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
 
 type_convert_templates[ParamType.CHANGE_BLOCK_HASH] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
-    ConstantKeys.BLOCK_HASH: ValueType.BYTES,
     ConstantKeys.OLD_BLOCK_HASH: ValueType.BYTES,
     ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES
 }
 
 type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
-
-type_convert_templates[ParamType.ROLLBACK] = {
-    ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
-    ConstantKeys.BLOCK_HASH: ValueType.BYTES
-}
+type_convert_templates[ParamType.ROLLBACK] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
 type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.METHOD: ValueType.STRING,

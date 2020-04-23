@@ -278,19 +278,13 @@ class IconScoreInnerTask(object):
 
         return ret
 
-    @staticmethod
-    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, bytes]:
-        block_height: int = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
-        block_hash: Optional[bytes] = converted_block_params[ConstantKeys.BLOCK_HASH]
-        return block_height, block_hash
-
     def _write_precommit_state(self, request: dict) -> dict:
         Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE Request: {request}')
 
         try:
-            converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            block_height, block_hash = \
-                self._get_block_info_for_precommit_state(converted_block_params)
+            converted_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
+            block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
+            block_hash: bytes = converted_params[ConstantKeys.BLOCK_HASH]
             Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE: '
                                       f'BH={block_height} '
                                       f'block_hash={bytes_to_hex(block_hash)}')
@@ -331,13 +325,13 @@ class IconScoreInnerTask(object):
         Logger.info(tag=_TAG, msg=f'REMOVE_PRECOMMIT_STATE Request: {request}')
 
         try:
-            converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            block_height, instant_block_hash, _ = \
-                self._get_block_info_for_precommit_state(converted_block_params)
+            converted_params = TypeConverter.convert(request, ParamType.REMOVE_PRECOMMIT)
+            block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
+            block_hash: bytes = converted_params[ConstantKeys.BLOCK_HASH]
             Logger.info(tag=_TAG, msg=f'REMOVE_PRECOMMIT_STATE: BH={block_height} '
-                                      f'instant_block_hash={bytes_to_hex(instant_block_hash)}')
+                                      f'instant_block_hash={bytes_to_hex(block_hash)}')
 
-            self._icon_service_engine.remove_precommit_state(block_height, instant_block_hash)
+            self._icon_service_engine.remove_precommit_state(block_height, block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
             self._log_exception(e, _TAG)
@@ -445,9 +439,11 @@ class IconScoreInnerTask(object):
         Logger.info(tag=_TAG, msg=f'CHANGE_BLOCK_HASH Request: {request}')
 
         try:
-            converted_block_params = TypeConverter.convert(request, ParamType.CHANGE_BLOCK_HASH)
-            block_height, instant_block_hash, block_hash = \
-                self._get_block_info_for_precommit_state(converted_block_params)
+            converted_params = TypeConverter.convert(request, ParamType.CHANGE_BLOCK_HASH)
+            block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
+            instant_block_hash: bytes = converted_params[ConstantKeys.OLD_BLOCK_HASH]
+            block_hash: bytes = converted_params[ConstantKeys.NEW_BLOCK_HASH]
+
             Logger.info(tag=_TAG, msg=f'CHANGE_BLOCK_HASH: '
                                       f'BH={block_height} '
                                       f'instant_block_hash={bytes_to_hex(instant_block_hash)} '
