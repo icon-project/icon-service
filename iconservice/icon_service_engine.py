@@ -1352,9 +1352,17 @@ class IconServiceEngine(ContextContainer):
             self._deposit_handler.handle_deposit_request(context, data)
             return None
         else:
-            # do not charge CONNTRAC_CALL step to system SCORE call
-            if to != SYSTEM_SCORE_ADDRESS:
-                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            # charge step
+            if data_type == 'message':
+                # for mainnet backward compatibility
+                if context.revision < Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value:
+                    context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            else:
+                # do not charge CONTRACT_CALL step to system SCORE call
+                if to != SYSTEM_SCORE_ADDRESS:
+                    context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+
+            # invoke SCORE external method
             IconScoreEngine.invoke(context, to, data_type, data)
             return None
 
