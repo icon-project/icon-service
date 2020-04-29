@@ -129,7 +129,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             }
         }
 
-        self.assertRaises(TypeError, self._query, query_request)
+        self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_invalid_paramter_value_query(self):
         init_supply: int = 1000
@@ -215,8 +215,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
                                                                 func_name="transfer",
                                                                 params={"value": hex(value)},
                                                                 expected_status=False)
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertTrue(tx_results[0].failure.message.find("missing 1 required positional argument") != -1)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[0].failure.code)
 
         query_request = {
             "from": self._admin,

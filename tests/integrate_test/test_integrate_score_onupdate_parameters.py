@@ -143,14 +143,9 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list,
                                                                               expected_status=False)
 
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_results[2].failure.code, ExceptionCode.SYSTEM_ERROR)
-
-        self.assertTrue(tx_results[0].failure.message.find("on_update() missing 1 required positional argument:") != -1)
-        self.assertTrue(tx_results[1].failure.message.find("on_update() missing 1 required positional argument:") != -1)
-        self.assertTrue(
-            tx_results[2].failure.message.find("on_update() missing 2 required positional arguments:") != -1)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[2].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         for i in range(count):
             query_request = {

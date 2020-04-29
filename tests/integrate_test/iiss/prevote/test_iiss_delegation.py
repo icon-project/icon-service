@@ -153,7 +153,7 @@ class TestIISSDelegate(TestIISSBase):
                                              to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={"invalid": delegations})
-        self.process_confirm_block_tx([tx], expected_status=True)
+        self.process_confirm_block_tx([tx], expected_status=False)
 
         # checkout update revision
         self.set_revision(Revision.SCORE_FUNC_PARAMS_CHECK.value)
@@ -182,7 +182,7 @@ class TestIISSDelegate(TestIISSBase):
                                              })
         self.process_confirm_block_tx([tx], expected_status=False)
 
-        # set delegation None
+        # TEST: set delegation None
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
                                              to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",

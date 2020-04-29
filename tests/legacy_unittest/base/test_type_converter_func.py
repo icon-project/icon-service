@@ -22,6 +22,10 @@ from iconservice.base.type_converter import TypeConverter
 from tests import create_address
 
 
+DEFAULT_INT = 0
+DEFAULT_STR = "default"
+
+
 class TestTypeConverterFunc(unittest.TestCase):
     def setUp(self):
         self.test_score = TestScore()
@@ -168,6 +172,32 @@ class TestTypeConverterFunc(unittest.TestCase):
         TypeConverter.adjust_params_to_method(self.test_score.func_param_int, params, True)
         self.assertEqual(value, self.test_score.func_param_address1(**params))
 
+        # all params are invalid
+        params = {"invalid_key1": value, "invalid_key2": value}
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.adjust_params_to_method(self.test_score.func_param_int, params)
+
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.adjust_params_to_method(self.test_score.func_param_int, params, True)
+
+        # invalid/valid params are mixed and func has default value
+        params = {"invalid_key1": value, "value": value}
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.adjust_params_to_method(self.test_score.func_param_default, params)
+
+        TypeConverter.adjust_params_to_method(self.test_score.func_param_default, params, True)
+        value_int, value_str = self.test_score.func_param_default(**params)
+        self.assertEqual(None, value_int)
+        self.assertEqual(DEFAULT_STR, value_str)
+
+        # all params are invalid
+        params = {"invalid_key1": value, "invalid_key2": value}
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.adjust_params_to_method(self.test_score.func_param_default, params)
+
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.adjust_params_to_method(self.test_score.func_param_default, params, True)
+
 
 class TestScore:
     def func_param_int(self, value: int) -> int:
@@ -187,3 +217,6 @@ class TestScore:
 
     def func_param_address2(self, value: 'Address') -> 'Address':
         return value
+
+    def func_param_default(self, value: int = DEFAULT_INT, value_str: str = DEFAULT_STR) -> tuple:
+        return value, value_str
