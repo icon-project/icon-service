@@ -1,0 +1,40 @@
+@startuml cliamIScore sequence diagram
+
+participant RabbitMQ
+participant InnerService
+participant ServiceEngine
+participant ScoreEngine
+participant SystemScore
+participant IISSEngine
+participant RewardCalcProxy
+participant RewardCalculator
+
+group block invoke
+
+RabbitMQ -> InnerService: [mq] invoke(block)
+InnerService -> ServiceEngine: thread (main -> invoke)
+
+group tx invoke loop
+
+ServiceEngine -> ScoreEngine
+ScoreEngine -> IISSEngine
+IISSEngine -> RewardCalcProxy: claim_iscore() start
+RewardCalcProxy -> RewardCalculator: [uds] CLAIM
+RewardCalculator -> RewardCalcProxy: [uds] CLAIM
+RewardCalcProxy -> IISSEngine: claim_iscore() end
+IISSEngine -> IISSEngine: update ICX balance
+IISSEngine -> RewardCalcProxy: commit_iscore() start
+RewardCalcProxy -> RewardCalculator: [uds] COMMIT_CLAIM
+RewardCalculator -> RewardCalcProxy: [uds] COMMIT_CLAIM
+RewardCalcProxy -> IISSEngine: commit_iscore() end
+IISSEngine -> ScoreEngine: txResult
+ScoreEngine -> ServiceEngine: txResult
+ServiceEngine -> ServiceEngine: Collect a txResult into invokeResult
+
+end
+
+InnerService -> RabbitMQ: [mq] txResults
+
+end
+
+@enduml

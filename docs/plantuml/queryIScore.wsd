@@ -1,0 +1,29 @@
+@startuml queryIScore sequence diagram
+
+participant RabbitMQ
+participant InnerService
+participant ServiceEngine
+participant ScoreEngine
+participant SystemScore
+participant IISSEngine
+participant RewardCalcProxy
+participant RewardCalculator
+
+RabbitMQ -> InnerService: [mq] query()
+InnerService -> ServiceEngine: thread (main -> query)
+
+ServiceEngine -> ScoreEngine
+ScoreEngine -> SystemScore
+SystemScore -> IISSEngine
+IISSEngine -> RewardCalcProxy: query_iscore() start
+RewardCalcProxy -> RewardCalculator: [uds] QUERY
+RewardCalculator -> RewardCalcProxy: [uds] QUERY
+RewardCalcProxy -> IISSEngine: query_iscore() end
+IISSEngine -> SystemScore: query result
+SystemScore -> ScoreEngine: query result
+ScoreEngine -> ServiceEngine: query result
+
+ServiceEngine -> InnerService: thread (query -> main)
+InnerService -> RabbitMQ: [mq] query result
+
+@enduml
