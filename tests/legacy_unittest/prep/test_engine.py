@@ -486,9 +486,9 @@ class TestEngine(unittest.TestCase):
             (PRepStatus.ACTIVE, PenaltyReason.NONE)
         )
 
-        for case in cases:
-            index = random.randint(0, len(new_term.main_preps) - 1)
-            prep = new_preps.get_by_index(index)
+        s_data = random.sample([i for i in range(len(new_term.main_preps))], len(cases))
+        for index, case in enumerate(cases):
+            prep = new_preps.get_by_index(s_data[index])
 
             dirty_prep = prep.copy()
             dirty_prep.status = case[0]
@@ -511,7 +511,6 @@ class TestEngine(unittest.TestCase):
         engine.term = new_term
         engine.preps = new_preps
 
-        params = {}
         response: dict = engine.handle_get_inactive_preps(context)
         inactive_preps: list = response["preps"]
         for i, prep in enumerate(expected_preps):
