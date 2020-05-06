@@ -24,7 +24,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.iconscore.icon_score_result import TransactionResult
-from iconservice.iconscore.icon_score_step import StepType
+from iconservice.iconscore.icon_score_step import StepType, get_input_data_size
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -56,9 +56,9 @@ class TestIntegrateStep(TestIntegrateBase):
         prev_block, hash_list = self.make_and_req_block([tx])
         return prev_block, self.get_tx_results(hash_list)
 
-    def _send_message_tx(self, message: bytes):
-        tx = self.create_message_tx(from_=self._accounts[1],
-                                    to_=self._accounts[0],
+    def _send_message_tx(self, from_: Address, to_:Address, message: bytes):
+        tx = self.create_message_tx(from_=from_,
+                                    to_=to_,
                                     data=message)
         prev_block, hash_list = self.make_and_req_block([tx])
         return prev_block, self.get_tx_results(hash_list)
@@ -127,7 +127,7 @@ class TestIntegrateStep(TestIntegrateBase):
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
         data: bytes = b'test_length_25_test_lengt'
-        prev_block, tx_results = self._send_message_tx(data)
+        prev_block, tx_results = self._send_message_tx(self._accounts[1], self._accounts[0], data)
         self.assertEqual(True, context.step_trace_flag)
 
         input_step = context.step_counter.get_step_cost(StepType.INPUT)
@@ -322,3 +322,59 @@ class TestIntegrateStep(TestIntegrateBase):
         self.assertEqual(StepType.CONTRACT_CALL, steps[2][0])
         self.assertEqual(StepType.API_CALL, steps[3][0])
 
+    def test_send_message_revision(self):
+        self.update_governance_for_audit("0_0_4")
+
+        self.set_revision(Revision.THREE.value)
+
+        # mock context
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        IconScoreContextFactory._create_context = mock.Mock(return_value=context)
+
+        data: bytes = b'test_length_25_test_lengt'
+
+        # TEST: to SCORE
+        prev_block, tx_results = self._send_message_tx(self._accounts[1], ZERO_SCORE_ADDRESS, data)
+        self.assertEqual(True, context.step_trace_flag)
+
+        input_step = context.step_counter.get_step_cost(StepType.INPUT)
+        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        steps = context.step_counter.step_tracer.steps
+        self.assertEqual(3, len(steps))
+        self.assertEqual(StepType.DEFAULT, steps[0][0])
+        self.assertEqual(StepType.INPUT, steps[1][0])
+        self.assertEqual(input_step * input_size, steps[1][1])
+        self.assertEqual(StepType.CONTRACT_CALL, steps[2][0])
+
+        self._write_precommit_state(prev_block)
+
+        # TEST: to EOA
+        prev_block, tx_results = self._send_message_tx(self._accounts[1], self._accounts[0], data)
+        self.assertEqual(True, context.step_trace_flag)
+
+        input_step = context.step_counter.get_step_cost(StepType.INPUT)
+        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        steps = context.step_counter.step_tracer.steps
+        self.assertEqual(2, len(steps))
+        self.assertEqual(StepType.DEFAULT, steps[0][0])
+        self.assertEqual(StepType.INPUT, steps[1][0])
+        self.assertEqual(input_step * input_size, steps[1][1])
+
+        self._write_precommit_state(prev_block)
+
+        # revision >= Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE
+        self.set_revision(Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value)
+
+        # TEST: to SCORE
+        prev_block, tx_results = self._send_message_tx(self._accounts[1], ZERO_SCORE_ADDRESS, data)
+        self.assertEqual(True, context.step_trace_flag)
+
+        input_step = context.step_counter.get_step_cost(StepType.INPUT)
+        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        steps = context.step_counter.step_tracer.steps
+        self.assertEqual(2, len(steps))
+        self.assertEqual(StepType.DEFAULT, steps[0][0])
+        self.assertEqual(StepType.INPUT, steps[1][0])
+        self.assertEqual(input_step * input_size, steps[1][1], steps)
+
+        self._write_precommit_state(prev_block)
