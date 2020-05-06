@@ -32,10 +32,11 @@ class EventLog(object):
     """
 
     def __init__(
-            self,
-            score_address: 'Address',
-            indexed: List['BaseType'],
-            data: List['BaseType']) -> None:
+        self,
+        score_address: "Address",
+        indexed: List["BaseType"],
+        data: List["BaseType"],
+    ) -> None:
         """
         Constructor
 
@@ -48,12 +49,12 @@ class EventLog(object):
         assert isinstance(indexed, list)
         assert isinstance(data, list)
 
-        self.score_address: 'Address' = score_address
-        self.indexed: 'List[BaseType]' = indexed
-        self.data: 'List[BaseType]' = data
+        self.score_address: "Address" = score_address
+        self.indexed: "List[BaseType]" = indexed
+        self.data: "List[BaseType]" = data
 
     def __str__(self) -> str:
-        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+        return "\n".join([f"{k}: {v}" for k, v in self.__dict__.items()])
 
     def to_dict(self, casing: Optional[callable] = None) -> dict:
         """
@@ -73,13 +74,15 @@ class EventLog(object):
 
 class EventLogEmitter:
     @classmethod
-    def emit_event_log(cls,
-                       context: 'IconScoreContext',
-                       score_address: 'Address',
-                       event_signature: str,
-                       arguments: List[Any],
-                       indexed_args_count: int,
-                       fee_charge: bool = False):
+    def emit_event_log(
+        cls,
+        context: "IconScoreContext",
+        score_address: "Address",
+        event_signature: str,
+        arguments: List[Any],
+        indexed_args_count: int,
+        fee_charge: bool = False,
+    ):
         """
         Puts a eventlog to the running context
 
@@ -95,16 +98,18 @@ class EventLogEmitter:
 
         if context.readonly:
             raise InvalidEventLogException(
-                'The event log can not be recorded on readonly context')
+                "The event log can not be recorded on readonly context"
+            )
 
         if indexed_args_count > len(arguments):
             raise InvalidEventLogException(
-                f'declared indexed_args_count is {indexed_args_count}, '
-                f'but argument count is {len(arguments)}')
+                f"declared indexed_args_count is {indexed_args_count}, "
+                f"but argument count is {len(arguments)}"
+            )
 
         event_size = EventLogEmitter.__get_byte_length(context, event_signature)
-        indexed: List['BaseType'] = [event_signature]
-        data: List['BaseType'] = []
+        indexed: List["BaseType"] = [event_signature]
+        data: List["BaseType"] = []
         for i, argument in enumerate(arguments):
             event_size += EventLogEmitter.__get_byte_length(context, argument)
 
@@ -122,9 +127,7 @@ class EventLogEmitter:
         context.event_logs.append(event)
 
     @classmethod
-    def __get_byte_length(cls,
-                          context: 'IconScoreContext',
-                          data: 'BaseType') -> int:
+    def __get_byte_length(cls, context: "IconScoreContext", data: "BaseType") -> int:
         if data is None:
             return 0
         elif isinstance(data, int):
@@ -138,10 +141,9 @@ class EventLogEmitter:
         return len(cls.__get_bytes_from_base_type(data))
 
     @classmethod
-    def __get_bytes_from_base_type(cls,
-                                   data: 'BaseType') -> bytes:
+    def __get_bytes_from_base_type(cls, data: "BaseType") -> bytes:
         if isinstance(data, str):
-            return data.encode('utf-8')
+            return data.encode("utf-8")
         elif isinstance(data, Address):
             return data.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + data.body
         elif isinstance(data, bytes):
@@ -149,12 +151,12 @@ class EventLogEmitter:
         elif isinstance(data, int):
             return int_to_bytes(data)
         else:
-            raise InvalidEventLogException(f'Invalid data type: {type(data)}, data: {data}')
+            raise InvalidEventLogException(
+                f"Invalid data type: {type(data)}, data: {data}"
+            )
 
     @classmethod
-    def get_ordered_bytes(cls,
-                          index: int,
-                          data: 'BaseType') -> bytes:
+    def get_ordered_bytes(cls, index: int, data: "BaseType") -> bytes:
         bloom_data = index.to_bytes(1, DATA_BYTE_ORDER)
         if data is not None:
             bloom_data += cls.__get_bytes_from_base_type(data)

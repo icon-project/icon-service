@@ -35,25 +35,36 @@ class TestValue:
                 if isinstance(val, (list, dict)):
                     self._modify_if_collection_type(val)
 
-    @pytest.mark.parametrize("icon_network_value, value", [
-        (RevisionCode(5), 5),
-        (RevisionName("1.1.5"), "1.1.5"),
-        (ScoreBlackList([]), []),
-        (StepPrice(10_000), 10_000),
-        (StepCosts({StepType('default'): 10_000}), {StepType('default'): 10_000}),
-        (MaxStepLimits({
-            IconScoreContextType.INVOKE: 100_000_000,
-            IconScoreContextType.QUERY: 100_000_000
-        }), {
-             IconScoreContextType.INVOKE: 100_000_000,
-             IconScoreContextType.QUERY: 100_000_000
-         }),
-        (ServiceConfig(5), 5),
-        (ImportWhiteList({"iconservice": ['*'], "os": ["path"]}), {"iconservice": ['*'], "os": ["path"]})
-    ])
-    def test_from_to_bytes(self, icon_network_value: 'Value', value):
+    @pytest.mark.parametrize(
+        "icon_network_value, value",
+        [
+            (RevisionCode(5), 5),
+            (RevisionName("1.1.5"), "1.1.5"),
+            (ScoreBlackList([]), []),
+            (StepPrice(10_000), 10_000),
+            (StepCosts({StepType("default"): 10_000}), {StepType("default"): 10_000}),
+            (
+                MaxStepLimits(
+                    {
+                        IconScoreContextType.INVOKE: 100_000_000,
+                        IconScoreContextType.QUERY: 100_000_000,
+                    }
+                ),
+                {
+                    IconScoreContextType.INVOKE: 100_000_000,
+                    IconScoreContextType.QUERY: 100_000_000,
+                },
+            ),
+            (ServiceConfig(5), 5),
+            (
+                ImportWhiteList({"iconservice": ["*"], "os": ["path"]}),
+                {"iconservice": ["*"], "os": ["path"]},
+            ),
+        ],
+    )
+    def test_from_to_bytes(self, icon_network_value: "Value", value):
         # TEST: Check key is generated as expected
-        expected_bytes_key = b'inv' + icon_network_value.TYPE.value
+        expected_bytes_key = b"inv" + icon_network_value.TYPE.value
 
         bytes_key: bytes = icon_network_value.make_key()
 
@@ -69,7 +80,7 @@ class TestValue:
         assert unpacked_value[0] == expected_version
 
         # TEST: decoded value has same value with original
-        decoded_value: 'Value' = icon_network_value.from_bytes(encoded_value)
+        decoded_value: "Value" = icon_network_value.from_bytes(encoded_value)
 
         assert decoded_value.value == icon_network_value.value
 
@@ -83,95 +94,142 @@ class TestValue:
 
     # Below tests each Value's initialization
 
-    @pytest.mark.parametrize("value", [
-        {
-            type_: random() for type_ in StepType
-        },
-        {
-            StepType('delete'): -150
-        },
-        {
-            StepType('contractDestruct'): -100,
-        }
-    ])
+    @pytest.mark.parametrize(
+        "value",
+        [
+            {type_: random() for type_ in StepType},
+            {StepType("delete"): -150},
+            {StepType("contractDestruct"): -100,},
+        ],
+    )
     def test_step_costs_initialization(self, value):
-        step_costs: 'StepCosts' = StepCosts(value)
+        step_costs: "StepCosts" = StepCosts(value)
 
         assert step_costs.value == value
 
-    @pytest.mark.parametrize("value", [{type_: -1} for type_ in StepType if
-                                       type_ != StepType.CONTRACT_DESTRUCT and type_ != StepType.DELETE])
+    @pytest.mark.parametrize(
+        "value",
+        [
+            {type_: -1}
+            for type_ in StepType
+            if type_ != StepType.CONTRACT_DESTRUCT and type_ != StepType.DELETE
+        ],
+    )
     def test_step_costs_should_raise_exception_when_setting_minus_costs(self, value):
         with pytest.raises(InvalidParamsException) as e:
-            _: 'StepCosts' = StepCosts(value)
+            _: "StepCosts" = StepCosts(value)
 
         assert e.value.message.startswith("Invalid step costs:")
 
-    @pytest.mark.parametrize("value", [["list"], "str", 1, True, ("1", "2"), 0.1, b'bytes'])
-    def test_step_costs_should_raise_exception_when_input_invalid_type_value(self, value):
+    @pytest.mark.parametrize(
+        "value", [["list"], "str", 1, True, ("1", "2"), 0.1, b"bytes"]
+    )
+    def test_step_costs_should_raise_exception_when_input_invalid_type_value(
+        self, value
+    ):
         with pytest.raises(TypeError) as e:
-            _: 'StepCosts' = StepCosts(value)
+            _: "StepCosts" = StepCosts(value)
 
         assert e.value.args[0].startswith("Invalid Step costs type:")
 
-    @pytest.mark.parametrize("value", [{"dict": 1}, ["list"], "str", ("1", "2"), 0.1, -1, b'bytes'])
+    @pytest.mark.parametrize(
+        "value", [{"dict": 1}, ["list"], "str", ("1", "2"), 0.1, -1, b"bytes"]
+    )
     def test_step_price_should_raise_exception_when_input_invalid_value(self, value):
         with pytest.raises(BaseException):
-            _: 'StepPrice' = StepPrice(value)
+            _: "StepPrice" = StepPrice(value)
 
-    @pytest.mark.parametrize("value", [
-        {IconScoreContextType.INVOKE: -1, IconScoreContextType.QUERY: 0},
-        {IconScoreContextType.INVOKE: 0, IconScoreContextType.QUERY: -1},
-        ["list"], "str", True, ("1", "2"), 0.1, -1, b'bytes'
-    ])
-    def test_max_step_limits_should_raise_exception_when_input_invalid_value(self, value):
+    @pytest.mark.parametrize(
+        "value",
+        [
+            {IconScoreContextType.INVOKE: -1, IconScoreContextType.QUERY: 0},
+            {IconScoreContextType.INVOKE: 0, IconScoreContextType.QUERY: -1},
+            ["list"],
+            "str",
+            True,
+            ("1", "2"),
+            0.1,
+            -1,
+            b"bytes",
+        ],
+    )
+    def test_max_step_limits_should_raise_exception_when_input_invalid_value(
+        self, value
+    ):
         with pytest.raises(BaseException):
-            _: 'MaxStepLimits' = MaxStepLimits(value)
+            _: "MaxStepLimits" = MaxStepLimits(value)
 
-    @pytest.mark.parametrize("value, expected_invoke, expected_query", [
-        ({}, 0, 0),
-        ({IconScoreContextType.INVOKE: 1}, 1, 0),
-        ({IconScoreContextType.QUERY: 1}, 0, 1)
-    ])
-    def test_max_step_limits_should_supplement_value(self, value, expected_invoke, expected_query):
-        max_step_limits: 'MaxStepLimits' = MaxStepLimits(value)
+    @pytest.mark.parametrize(
+        "value, expected_invoke, expected_query",
+        [
+            ({}, 0, 0),
+            ({IconScoreContextType.INVOKE: 1}, 1, 0),
+            ({IconScoreContextType.QUERY: 1}, 0, 1),
+        ],
+    )
+    def test_max_step_limits_should_supplement_value(
+        self, value, expected_invoke, expected_query
+    ):
+        max_step_limits: "MaxStepLimits" = MaxStepLimits(value)
 
         assert max_step_limits.value[IconScoreContextType.INVOKE] == expected_invoke
         assert max_step_limits.value[IconScoreContextType.QUERY] == expected_query
 
-    @pytest.mark.parametrize("value", [
-        [1],
-        [b'bytes'],
-        ["str"],
-        [create_address(), "str"],
-        {"dict": "value"}, "str", True, ("1", "2"), 0.1, -1, b'bytes'
-    ])
-    def test_score_black_list_should_raise_exception_when_input_invalid_value(self, value):
+    @pytest.mark.parametrize(
+        "value",
+        [
+            [1],
+            [b"bytes"],
+            ["str"],
+            [create_address(), "str"],
+            {"dict": "value"},
+            "str",
+            True,
+            ("1", "2"),
+            0.1,
+            -1,
+            b"bytes",
+        ],
+    )
+    def test_score_black_list_should_raise_exception_when_input_invalid_value(
+        self, value
+    ):
         with pytest.raises(BaseException):
-            _: 'ScoreBlackList' = ScoreBlackList(value)
+            _: "ScoreBlackList" = ScoreBlackList(value)
 
-    @pytest.mark.parametrize("value", [
-        {1: ["path"]},
-        {b'bytes': ["path"]},
-        {"key": [1]},
-        {"key": {"dict": "value"}},
-        {"key": ("1", "2")},
-        {"key": ("1", "2")},
-        {"dict": "value"},
-        {"dict": 1},
-        {"dict": b'bytes'},
-        {"dict": True},
-        "str", True, ("1", "2"), 0.1, -1, b'bytes'
-    ])
-    def test_import_white_list_should_raise_exception_when_input_invalid_value(self, value):
+    @pytest.mark.parametrize(
+        "value",
+        [
+            {1: ["path"]},
+            {b"bytes": ["path"]},
+            {"key": [1]},
+            {"key": {"dict": "value"}},
+            {"key": ("1", "2")},
+            {"key": ("1", "2")},
+            {"dict": "value"},
+            {"dict": 1},
+            {"dict": b"bytes"},
+            {"dict": True},
+            "str",
+            True,
+            ("1", "2"),
+            0.1,
+            -1,
+            b"bytes",
+        ],
+    )
+    def test_import_white_list_should_raise_exception_when_input_invalid_value(
+        self, value
+    ):
         with pytest.raises(BaseException):
-            _: 'ImportWhiteList' = ImportWhiteList(value)
+            _: "ImportWhiteList" = ImportWhiteList(value)
 
-    @pytest.mark.parametrize("value", [
-        -1,
-        sum(IconServiceFlag) + 1,
-        {"dict": True}, "str", ("1", "2"), b'bytes'
-    ])
-    def test_service_config_should_raise_exception_when_input_invalid_value(self, value):
+    @pytest.mark.parametrize(
+        "value",
+        [-1, sum(IconServiceFlag) + 1, {"dict": True}, "str", ("1", "2"), b"bytes"],
+    )
+    def test_service_config_should_raise_exception_when_input_invalid_value(
+        self, value
+    ):
         with pytest.raises(BaseException):
-            _: 'ServiceConfig' = ServiceConfig(value)
+            _: "ServiceConfig" = ServiceConfig(value)

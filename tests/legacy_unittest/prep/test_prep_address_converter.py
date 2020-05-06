@@ -27,8 +27,12 @@ class TestPRepAddressConverter(unittest.TestCase):
 
         # Generate sample addresses for test
         for i in range(10):
-            node_address = Address.from_data(AddressPrefix.EOA, f'node_address{i}'.encode("utf-8"))
-            prep_address = Address.from_data(AddressPrefix.EOA, f'prep_address{i}'.encode("utf-8"))
+            node_address = Address.from_data(
+                AddressPrefix.EOA, f"node_address{i}".encode("utf-8")
+            )
+            prep_address = Address.from_data(
+                AddressPrefix.EOA, f"prep_address{i}".encode("utf-8")
+            )
 
             self.node_addresses.append(node_address)
             self.prep_addresses.append(prep_address)
@@ -74,8 +78,12 @@ class TestPRepAddressConverter(unittest.TestCase):
 
         # Replace old_node_address with a new node_address
         converter.replace_node_address(new_node_address, prep_address, old_node_address)
-        assert prep_address == converter.get_prep_address_from_node_address(old_node_address)
-        assert prep_address == converter.get_prep_address_from_node_address(new_node_address)
+        assert prep_address == converter.get_prep_address_from_node_address(
+            old_node_address
+        )
+        assert prep_address == converter.get_prep_address_from_node_address(
+            new_node_address
+        )
         assert old_node_address in converter._prev_node_address_mapper
         assert new_node_address in converter._node_address_mapper
         assert len(converter._prev_node_address_mapper) == 1
@@ -97,39 +105,63 @@ class TestPRepAddressConverter(unittest.TestCase):
 
         new_converter = converter.copy()
         assert isinstance(new_converter, PRepAddressConverter)
-        assert prep_address == new_converter.get_prep_address_from_node_address(old_node_address)
-        assert prep_address == new_converter.get_prep_address_from_node_address(new_node_address)
+        assert prep_address == new_converter.get_prep_address_from_node_address(
+            old_node_address
+        )
+        assert prep_address == new_converter.get_prep_address_from_node_address(
+            new_node_address
+        )
         assert old_node_address in new_converter._prev_node_address_mapper
         assert new_node_address in new_converter._node_address_mapper
         assert len(new_converter._prev_node_address_mapper) == 1
         assert len(new_converter._node_address_mapper) == 1
-        assert id(new_converter._prev_node_address_mapper) != id(converter._prev_node_address_mapper)
-        assert id(new_converter._node_address_mapper) != id(converter._node_address_mapper)
+        assert id(new_converter._prev_node_address_mapper) != id(
+            converter._prev_node_address_mapper
+        )
+        assert id(new_converter._node_address_mapper) != id(
+            converter._node_address_mapper
+        )
 
         new_converter.delete_node_address(new_node_address)
-        assert new_node_address == new_converter.get_prep_address_from_node_address(new_node_address)
-        assert prep_address == converter.get_prep_address_from_node_address(new_node_address)
+        assert new_node_address == new_converter.get_prep_address_from_node_address(
+            new_node_address
+        )
+        assert prep_address == converter.get_prep_address_from_node_address(
+            new_node_address
+        )
 
         new_converter.reset_prev_node_address()
-        assert old_node_address == new_converter.get_prep_address_from_node_address(old_node_address)
-        assert prep_address == converter.get_prep_address_from_node_address(old_node_address)
+        assert old_node_address == new_converter.get_prep_address_from_node_address(
+            old_node_address
+        )
+        assert prep_address == converter.get_prep_address_from_node_address(
+            old_node_address
+        )
 
     def test_serialize(self):
         # empty
         data: bytes = PRepAddressConverter().to_bytes()
-        converter: 'PRepAddressConverter' = PRepAddressConverter.from_bytes(data)
-        assert self.converter._prev_node_address_mapper == converter._prev_node_address_mapper
+        converter: "PRepAddressConverter" = PRepAddressConverter.from_bytes(data)
+        assert (
+            self.converter._prev_node_address_mapper
+            == converter._prev_node_address_mapper
+        )
 
         # add data
         old_node_address = self.node_addresses[0]
         new_node_address = self.node_addresses[1]
         prep_address = self.prep_addresses[0]
 
-        self.converter.replace_node_address(old_node_address, prep_address, new_node_address)
+        self.converter.replace_node_address(
+            old_node_address, prep_address, new_node_address
+        )
         data: bytes = self.converter.to_bytes()
-        converter: 'PRepAddressConverter' = PRepAddressConverter.from_bytes(data)
-        assert self.converter._prev_node_address_mapper == converter._prev_node_address_mapper
+        converter: "PRepAddressConverter" = PRepAddressConverter.from_bytes(data)
+        assert (
+            self.converter._prev_node_address_mapper
+            == converter._prev_node_address_mapper
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

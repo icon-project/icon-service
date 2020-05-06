@@ -23,10 +23,17 @@ from .message import Request, Response, MessageType
 
 
 class MessageQueue(object):
-    def __init__(self, loop, notify_message: tuple = None, notify_handler: Callable[['Response'], Any] = None):
+    def __init__(
+        self,
+        loop,
+        notify_message: tuple = None,
+        notify_handler: Callable[["Response"], Any] = None,
+    ):
         if notify_handler is None and notify_message is not None:
-            raise InvalidParamsException("Failed to construct MessageQueue instance."
-                                         "If notify_message is not None, notify_handler is mandatory parameter")
+            raise InvalidParamsException(
+                "Failed to construct MessageQueue instance."
+                "If notify_message is not None, notify_handler is mandatory parameter"
+            )
         self._loop = loop
         self._requests = asyncio.Queue()
         self._msg_id_to_future: Dict[int, asyncio.Future] = {}
@@ -34,7 +41,7 @@ class MessageQueue(object):
         self.notify_handler = notify_handler
         self._rc_status = RCStatus.NOT_READY
 
-    async def get(self) -> 'Request':
+    async def get(self) -> "Request":
         return await self._requests.get()
 
     def put(self, request, wait_for_response: bool = True) -> Optional[asyncio.Future]:
@@ -50,14 +57,16 @@ class MessageQueue(object):
     def task_done(self):
         self._requests.task_done()
 
-    def message_handler(self, response: 'Response'):
+    def message_handler(self, response: "Response"):
         msg_type: MessageType = getattr(response, "MSG_TYPE")
 
         if self._rc_status == RCStatus.NOT_READY:
             if msg_type == MessageType.READY:
                 self._rc_status = RCStatus.READY
             else:
-                raise ServiceNotReadyException(f"Ready notification did not arrive: {response}")
+                raise ServiceNotReadyException(
+                    f"Ready notification did not arrive: {response}"
+                )
 
         if response.is_notification():
             self.notify_handler(response)
@@ -66,9 +75,11 @@ class MessageQueue(object):
         try:
             self.put_response(response)
         except KeyError:
-            Logger.warning(f"Unexpected response arrived.  Respond Id : {response.msg_id}")
+            Logger.warning(
+                f"Unexpected response arrived.  Respond Id : {response.msg_id}"
+            )
 
-    def put_response(self, response: 'Response'):
+    def put_response(self, response: "Response"):
         msg_id: int = response.msg_id
 
         future: asyncio.Future = self._msg_id_to_future[msg_id]

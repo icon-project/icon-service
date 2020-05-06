@@ -32,13 +32,13 @@ class Icx(object):
     These functions are intended to be used for SCORE development.
     """
 
-    def __init__(self, context: 'IconScoreContext', address: 'Address') -> None:
+    def __init__(self, context: "IconScoreContext", address: "Address") -> None:
         """Constructor
         """
         self._context = context
         self._address = address
 
-    def transfer(self, addr_to: 'Address', amount: int) -> None:
+    def transfer(self, addr_to: "Address", amount: int) -> None:
         """
         transfer the amount of icx to the given 'addr_to'
         If failed, an exception will be raised
@@ -46,9 +46,11 @@ class Icx(object):
         :param addr_to: receiver address
         :param amount: the amount of icx to transfer
         """
-        InternalCall.other_external_call(self._context, self._address, addr_to, amount, STR_FALLBACK)
+        InternalCall.other_external_call(
+            self._context, self._address, addr_to, amount, STR_FALLBACK
+        )
 
-    def send(self, addr_to: 'Address', amount: int) -> bool:
+    def send(self, addr_to: "Address", amount: int) -> bool:
         """
         transfer the amount of icx to the given 'addr_to'
 
@@ -64,7 +66,7 @@ class Icx(object):
         except:
             return False
 
-    def get_balance(self, address: 'Address') -> int:
+    def get_balance(self, address: "Address") -> int:
         """
         Returns the ICX balance of given address
 
@@ -77,11 +79,12 @@ class Icx(object):
     def _is_icx_send_defective(self) -> bool:
         try:
             governance_score = IconScoreContextUtil.get_builtin_score(
-                self._context, GOVERNANCE_SCORE_ADDRESS)
+                self._context, GOVERNANCE_SCORE_ADDRESS
+            )
 
-            if hasattr(governance_score, 'getVersion'):
+            if hasattr(governance_score, "getVersion"):
                 version = governance_score.getVersion()
-                return version == '0.0.2'
+                return version == "0.0.2"
         except BaseException:
             pass
 

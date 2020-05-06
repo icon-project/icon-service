@@ -19,25 +19,25 @@ from typing import TypeVar
 
 from ..base.address import Address
 
-T = TypeVar('T')
+T = TypeVar("T")
 # TODO add checking function for list, dict type
 BaseType = TypeVar("BaseType", bool, int, str, bytes, list, dict, Address)
 
-CONST_CLASS_EXTERNALS = '__externals'
-CONST_CLASS_PAYABLES = '__payables'
-CONST_CLASS_INDEXES = '__indexes'
-CONST_CLASS_API = '__api'
+CONST_CLASS_EXTERNALS = "__externals"
+CONST_CLASS_PAYABLES = "__payables"
+CONST_CLASS_INDEXES = "__indexes"
+CONST_CLASS_API = "__api"
 
-CONST_BIT_FLAG = '__bit_flag'
-CONST_INDEXED_ARGS_COUNT = '__indexed_args_count'
+CONST_BIT_FLAG = "__bit_flag"
+CONST_INDEXED_ARGS_COUNT = "__indexed_args_count"
 
 FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
 FORMAT_IS_NOT_DERIVED_OF_OBJECT = "isn't derived of {}"
 FORMAT_DECORATOR_DUPLICATED = "can't duplicated {} decorator func: {}, cls: {}"
 
-STR_FALLBACK = 'fallback'
-STR_ON_INSTALL = 'on_install'
-STR_ON_UPDATE = 'on_update'
+STR_FALLBACK = "fallback"
+STR_ON_INSTALL = "on_install"
+STR_ON_UPDATE = "on_update"
 
 ATTR_SCORE_GET_API = "_IconScoreBase__get_api"
 ATTR_SCORE_CALL = "_IconScoreBase__call"

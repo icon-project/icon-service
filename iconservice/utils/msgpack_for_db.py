@@ -16,7 +16,11 @@ from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Any
 
-from msgpack import dumps as msgpack_dumps, loads as msgpack_loads, ExtType as msgpack_extType
+from msgpack import (
+    dumps as msgpack_dumps,
+    loads as msgpack_loads,
+    ExtType as msgpack_extType,
+)
 
 from . import int_to_bytes, bytes_to_int
 from ..base.address import Address
@@ -63,7 +67,7 @@ class MsgPackForDB(object):
             return msgpack_extType(t, b)
 
     # you should assign CustomCodec if you want to parse custom type
-    _codec: 'Codec' = BaseCodec()
+    _codec: "Codec" = BaseCodec()
 
     class BaseType(IntEnum):
         NONE = 0
@@ -75,7 +79,9 @@ class MsgPackForDB(object):
         if isinstance(obj, int):
             return msgpack_extType(cls.BaseType.BIG_INT, int_to_bytes(obj))
         elif isinstance(obj, Address):
-            return msgpack_extType(cls.BaseType.ADDRESS, obj.to_bytes_including_prefix())
+            return msgpack_extType(
+                cls.BaseType.ADDRESS, obj.to_bytes_including_prefix()
+            )
         else:
             return cls._codec.encode(obj)
 
@@ -90,8 +96,12 @@ class MsgPackForDB(object):
 
     @classmethod
     def dumps(cls, data: Any) -> bytes:
-        return msgpack_dumps(data, default=cls._encode, use_bin_type=True, strict_types=True)
+        return msgpack_dumps(
+            data, default=cls._encode, use_bin_type=True, strict_types=True
+        )
 
     @classmethod
     def loads(cls, data: bytes) -> list:
-        return msgpack_loads(data, ext_hook=cls._decode, raw=False, strict_map_key=False)
+        return msgpack_loads(
+            data, ext_hook=cls._decode, raw=False, strict_map_key=False
+        )

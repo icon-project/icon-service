@@ -27,29 +27,29 @@ if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_result import TransactionResult
 
 
-def _create_query_request(from_: 'Address', to_: 'Address', method: str):
+def _create_query_request(from_: "Address", to_: "Address", method: str):
     return {
         "version": 3,
         "from": from_,
         "to": to_,
         "dataType": "call",
-        "data": {"method": method}
+        "data": {"method": method},
     }
 
 
 class TestScoreGlobalVariable(TestIntegrateBase):
-
     def setUp(self):
         super().setUp()
 
-        sender: 'Address' = self._accounts[0].address
+        sender: "Address" = self._accounts[0].address
 
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_global_variable_score",
             from_=sender,
-            expected_status=True)
-        score_address: 'Address' = tx_results[0].score_address
+            expected_status=True,
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         request = _create_query_request(sender, score_address, "hello")
         response = self._query(request)
@@ -63,7 +63,11 @@ class TestScoreGlobalVariable(TestIntegrateBase):
 
     def test_global_dict(self):
         expected_response = {"a": 1, "b": [2, 3], "c": {"d": 4}}
-        expected_converted_response = {"a": "0x1", "b": ["0x2", "0x3"], "c": {"d": "0x4"}}
+        expected_converted_response = {
+            "a": "0x1",
+            "b": ["0x2", "0x3"],
+            "c": {"d": "0x4"},
+        }
         request: dict = self._create_query_request("getGlobalDict")
 
         # First score call for query

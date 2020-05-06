@@ -10,9 +10,9 @@ class SampleScore(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
-    def on_install(self, value: int=1000) -> None:
+    def on_install(self, value: int = 1000) -> None:
         super().on_install()
         self._value.set(value)
 

@@ -20,8 +20,14 @@ from typing import Union, Any, get_type_hints
 
 from .address import Address, MalformedAddress, is_icon_address_valid
 from .exception import InvalidParamsException
-from .type_converter_templates import ParamType, \
-    type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
+from .type_converter_templates import (
+    ParamType,
+    type_convert_templates,
+    ValueType,
+    KEY_CONVERTER,
+    CONVERT_USING_SWITCH_KEY,
+    SWITCH_KEY,
+)
 from ..icon_constant import HASH_TYPE_TABLE
 from ..utils import get_main_type_from_annotations_type
 
@@ -35,11 +41,15 @@ class TypeConverter:
             return params
 
         copied_params = deepcopy(params)  # to avoid corrupting original data
-        converted_params = TypeConverter._convert(copied_params, type_convert_templates[param_type])
+        converted_params = TypeConverter._convert(
+            copied_params, type_convert_templates[param_type]
+        )
         return converted_params
 
     @staticmethod
-    def _convert(params: Union[str, list, dict, None], template: Union[list, dict, ValueType]) -> Any:
+    def _convert(
+        params: Union[str, list, dict, None], template: Union[list, dict, ValueType]
+    ) -> Any:
         if TypeConverter._skip_params(params, template):
             return params
 
@@ -51,8 +61,12 @@ class TypeConverter:
             for key, value in params.items():
                 if TypeConverter._check_convert_using_method(key, template):
                     ref_key_table = deepcopy(new_params)
-                    target_template = TypeConverter._get_convert_using_method_template(key, template)
-                    new_value = TypeConverter._convert_using_switch(value, ref_key_table, target_template)
+                    target_template = TypeConverter._get_convert_using_method_template(
+                        key, template
+                    )
+                    new_value = TypeConverter._convert_using_switch(
+                        value, ref_key_table, target_template
+                    )
                 else:
                     new_value = TypeConverter._convert(value, template.get(key))
                 new_params[key] = new_value
@@ -101,20 +115,26 @@ class TypeConverter:
         return tmp_params.get(CONVERT_USING_SWITCH_KEY)
 
     @staticmethod
-    def _skip_params(params: Union[str, dict, None], template: Union[list, dict, ValueType]) -> bool:
+    def _skip_params(
+        params: Union[str, dict, None], template: Union[list, dict, ValueType]
+    ) -> bool:
         if params is None:
-            raise InvalidParamsException(f'TypeConvert Exception None value, template: {str(template)}')
+            raise InvalidParamsException(
+                f"TypeConvert Exception None value, template: {str(template)}"
+            )
         if isinstance(params, str):
             if params != "" and not template:
                 return True
         elif not params or not template:
             return True
         return False
-    
+
     @staticmethod
-    def _convert_using_switch(params: Union[str, dict, None],
-                              tmp_params: dict,
-                              template: Union[list, dict, ValueType]) -> Any:
+    def _convert_using_switch(
+        params: Union[str, dict, None],
+        tmp_params: dict,
+        template: Union[list, dict, ValueType],
+    ) -> Any:
         if TypeConverter._skip_params(params, template):
             return params
 
@@ -155,7 +175,9 @@ class TypeConverter:
             else:
                 converted_value = TypeConverter._convert_value_address(value)
         elif value_type == ValueType.ADDRESS_OR_MALFORMED_ADDRESS:
-            converted_value = TypeConverter._convert_value_address_or_malformed_address(value)
+            converted_value = TypeConverter._convert_value_address_or_malformed_address(
+                value
+            )
         elif value_type == ValueType.BYTES:  # hash...(block_hash, tx_hash)
             converted_value = TypeConverter._convert_value_bytes(value)
         else:
@@ -165,12 +187,14 @@ class TypeConverter:
     @staticmethod
     def _convert_value_int(value: str) -> int:
         if isinstance(value, str):
-            if value.startswith('0x') or value.startswith('-0x'):
+            if value.startswith("0x") or value.startswith("-0x"):
                 return int(value, 16)
             else:
                 return int(value)
         else:
-            raise InvalidParamsException(f'TypeConvert Exception int value :{value}, type: {type(value)}')
+            raise InvalidParamsException(
+                f"TypeConvert Exception int value :{value}, type: {type(value)}"
+            )
 
     @staticmethod
     def _convert_value_hexadecimal(value: str) -> int:
@@ -181,7 +205,8 @@ class TypeConverter:
         """
         if not isinstance(value, str):
             raise InvalidParamsException(
-                f'TypeConvert Exception int value :{value}, type: {type(value)}')
+                f"TypeConvert Exception int value :{value}, type: {type(value)}"
+            )
 
         return int(value, 16)
 
@@ -190,27 +215,34 @@ class TypeConverter:
         if isinstance(value, str):
             return value
         else:
-            raise InvalidParamsException(f'TypeConvert Exception str value :{value}, type: {type(value)}')
+            raise InvalidParamsException(
+                f"TypeConvert Exception str value :{value}, type: {type(value)}"
+            )
 
     @staticmethod
     def _convert_value_bool(value: str) -> bool:
         if isinstance(value, str):
             return bool(TypeConverter._convert_value_int(value))
         else:
-            raise InvalidParamsException(f'TypeConvert Exception bool value :{value}, type: {type(value)}')
+            raise InvalidParamsException(
+                f"TypeConvert Exception bool value :{value}, type: {type(value)}"
+            )
 
     @staticmethod
-    def _convert_value_address(value: str) -> 'Address':
+    def _convert_value_address(value: str) -> "Address":
         if isinstance(value, str):
             return Address.from_string(value)
         else:
-            raise InvalidParamsException(f'TypeConvert Exception address value :{value}, type: {type(value)}')
+            raise InvalidParamsException(
+                f"TypeConvert Exception address value :{value}, type: {type(value)}"
+            )
 
     @staticmethod
-    def _convert_value_address_or_malformed_address(value: str) -> 'Address':
+    def _convert_value_address_or_malformed_address(value: str) -> "Address":
         if not isinstance(value, str):
             raise InvalidParamsException(
-                f'TypeConvert Exception address value :{value}, type: {type(value)}')
+                f"TypeConvert Exception address value :{value}, type: {type(value)}"
+            )
 
         if is_icon_address_valid(value):
             return Address.from_string(value)
@@ -222,12 +254,14 @@ class TypeConverter:
     @staticmethod
     def _convert_value_bytes(value: str) -> bytes:
         if isinstance(value, str):
-            if value.startswith('0x'):
+            if value.startswith("0x"):
                 return bytes.fromhex(value[2:])
             else:
                 return bytes.fromhex(value)
         else:
-            raise InvalidParamsException(f'TypeConvert Exception bytes value :{value}, type: {type(value)}')
+            raise InvalidParamsException(
+                f"TypeConvert Exception bytes value :{value}, type: {type(value)}"
+            )
 
     @staticmethod
     def get_default_args(func):
@@ -244,8 +278,8 @@ class TypeConverter:
         # (when parameter has 'NoneType' as a default)
 
         hints = get_type_hints(func)
-        if hints.get('return') is not None:
-            del hints['return']
+        if hints.get("return") is not None:
+            del hints["return"]
         return hints
 
     @staticmethod
@@ -263,7 +297,9 @@ class TypeConverter:
             kw_params[param_name] = kw_param
 
     @staticmethod
-    def adjust_params_to_method(func: callable, kw_params: dict, remove_invalid_param: bool = False):
+    def adjust_params_to_method(
+        func: callable, kw_params: dict, remove_invalid_param: bool = False
+    ):
         hints = TypeConverter.make_annotations_from_method(func)
 
         # check user input argument name is valid
@@ -334,4 +370,4 @@ class TypeConverter:
             # if the value is of 'txHash' or 'blockHash', excludes '0x' prefix
             return bytes.hex(value)
         else:
-            return f'0x{bytes.hex(value)}'
+            return f"0x{bytes.hex(value)}"

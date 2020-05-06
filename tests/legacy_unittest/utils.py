@@ -26,9 +26,10 @@ from iconservice.utils import icx_to_loop
 
 
 def create_dummy_prep(
-        index: int,
-        address: Optional['Address'] = None,
-        status: 'PRepStatus' = PRepStatus.ACTIVE) -> 'PRep':
+    index: int,
+    address: Optional["Address"] = None,
+    status: "PRepStatus" = PRepStatus.ACTIVE,
+) -> "PRep":
     address = address if address else Address(AddressPrefix.EOA, os.urandom(20))
 
     return PRep(
@@ -44,11 +45,13 @@ def create_dummy_prep(
         delegated=random.randint(0, 1000),
         irep=10_000,
         irep_block_height=index,
-        block_height=index
+        block_height=index,
     )
 
 
-def create_dummy_preps(size: int, main_preps: int, elected_preps: int) -> 'PRepContainer':
+def create_dummy_preps(
+    size: int, main_preps: int, elected_preps: int
+) -> "PRepContainer":
     assert elected_preps <= size <= 1000
 
     preps = PRepContainer()
@@ -83,8 +86,10 @@ def get_timestamp_us() -> int:
     return int(time.time() * 1_000_000)
 
 
-def create_dummy_block(block_height: int = -1) -> 'Block':
-    block_height: int = block_height if block_height >= 0 else random.randint(100, 10000)
+def create_dummy_block(block_height: int = -1) -> "Block":
+    block_height: int = block_height if block_height >= 0 else random.randint(
+        100, 10000
+    )
     block_hash: bytes = os.urandom(32)
     timestamp_us: int = get_timestamp_us()
     prev_hash: bytes = os.urandom(32)

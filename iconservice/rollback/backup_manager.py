@@ -41,10 +41,12 @@ class BackupManager(object):
     """
 
     def __init__(self, backup_root_path: str, rc_data_path: str):
-        Logger.debug(tag=TAG,
-                     msg=f"__init__() start: "
-                         f"backup_root_path={backup_root_path}, "
-                         f"rc_data_path={rc_data_path}")
+        Logger.debug(
+            tag=TAG,
+            msg=f"__init__() start: "
+            f"backup_root_path={backup_root_path}, "
+            f"rc_data_path={rc_data_path}",
+        )
 
         self._rc_data_path = rc_data_path
         self._backup_root_path = backup_root_path
@@ -63,15 +65,17 @@ class BackupManager(object):
         filename = get_backup_filename(block_height)
         return os.path.join(self._backup_root_path, filename)
 
-    def run(self,
-            icx_db: 'KeyValueDatabase',
-            rc_db: 'KeyValueDatabase',
-            revision: int,
-            prev_block: 'Block',
-            block_batch: 'BlockBatch',
-            iiss_wal: 'IissWAL',
-            is_calc_period_start_block: bool,
-            instant_block_hash: bytes):
+    def run(
+        self,
+        icx_db: "KeyValueDatabase",
+        rc_db: "KeyValueDatabase",
+        revision: int,
+        prev_block: "Block",
+        block_batch: "BlockBatch",
+        iiss_wal: "IissWAL",
+        is_calc_period_start_block: bool,
+        instant_block_hash: bytes,
+    ):
         """Backup the previous block state
 
         :param icx_db:
@@ -90,7 +94,11 @@ class BackupManager(object):
         Logger.info(tag=TAG, msg=f"backup_file_path={path}")
 
         writer = WriteAheadLogWriter(
-            revision, max_log_count=2, block=prev_block, instant_block_hash=instant_block_hash)
+            revision,
+            max_log_count=2,
+            block=prev_block,
+            instant_block_hash=instant_block_hash,
+        )
         writer.open(path)
 
         if is_calc_period_start_block:
@@ -104,7 +112,9 @@ class BackupManager(object):
         Logger.debug(tag=TAG, msg="backup() end")
 
     @classmethod
-    def _backup_rc_db(cls, writer: 'WriteAheadLogWriter', db: 'KeyValueDatabase', iiss_wal: 'IissWAL'):
+    def _backup_rc_db(
+        cls, writer: "WriteAheadLogWriter", db: "KeyValueDatabase", iiss_wal: "IissWAL"
+    ):
         def get_rc_db_generator():
             for key, _ in iiss_wal:
                 value: Optional[bytes] = db.get(key)
@@ -113,7 +123,12 @@ class BackupManager(object):
         writer.write_walogable(get_rc_db_generator())
 
     @classmethod
-    def _backup_state_db(cls, writer: 'WriteAheadLogWriter', db: 'KeyValueDatabase', block_batch: 'BlockBatch'):
+    def _backup_state_db(
+        cls,
+        writer: "WriteAheadLogWriter",
+        db: "KeyValueDatabase",
+        block_batch: "BlockBatch",
+    ):
         if block_batch is None:
             block_batch = {}
 

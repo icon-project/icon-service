@@ -49,14 +49,13 @@ IS_SERVICE_FLAG_ON = IconScoreContextUtil.is_service_flag_on
 
 
 class TestIconZipDeploy(unittest.TestCase):
-    _SCORE_ROOT_PATH = 'tests/score'
-    _TEST_DB_PATH = 'tests/test_db'
+    _SCORE_ROOT_PATH = "tests/score"
+    _TEST_DB_PATH = "tests/test_db"
 
     @classmethod
     def setUpClass(cls):
         db_path = os.path.join(TEST_ROOT_PATH, cls._TEST_DB_PATH)
-        ContextDatabaseFactory.open(
-            db_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+        ContextDatabaseFactory.open(db_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
     @classmethod
     def tearDownClass(cls):
@@ -69,7 +68,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._tx_index = 0
         self.__ensure_dir(db_path)
 
-        self._icx_db = ContextDatabaseFactory.create_by_name('icx_db')
+        self._icx_db = ContextDatabaseFactory.create_by_name("icx_db")
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
         self._icon_deploy_storage = DeployStorage(self._icx_db)
@@ -92,7 +91,7 @@ class TestIconZipDeploy(unittest.TestCase):
             prep=None,
             issue=None,
             rc=None,
-            meta=None
+            meta=None,
         )
         self.make_context()
         self._icon_deploy_storage.open(self._context)
@@ -108,10 +107,12 @@ class TestIconZipDeploy(unittest.TestCase):
 
         tx_hash = create_tx_hash()
         self._context.new_icon_score_mapper = IconScoreMapper()
-        self._context.tx = Transaction(tx_hash,
-                                       origin=self.from_address,
-                                       timestamp=randrange(1, 1000),
-                                       nonce=randrange(1, 1000))
+        self._context.tx = Transaction(
+            tx_hash,
+            origin=self.from_address,
+            timestamp=randrange(1, 1000),
+            nonce=randrange(1, 1000),
+        )
         self._context.block = Block(1, create_block_hash(), 0, None, 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
@@ -125,7 +126,7 @@ class TestIconZipDeploy(unittest.TestCase):
         ContextContainer._pop_context()
         self._icon_score_mapper.close()
 
-        path = os.path.join(TEST_ROOT_PATH, 'tests')
+        path = os.path.join(TEST_ROOT_PATH, "tests")
         remove_path(path)
         path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         remove_path(path)
@@ -141,26 +142,26 @@ class TestIconZipDeploy(unittest.TestCase):
 
     @staticmethod
     def read_zipfile_as_byte(archive_path: str) -> bytes:
-        with open(archive_path, 'rb') as f:
+        with open(archive_path, "rb") as f:
             byte_data = f.read()
             return byte_data
 
     def test_deploy(self):
         content: bytes = self.read_zipfile_as_byte(
-            os.path.join(TEST_ROOT_PATH, 'legacy_unittest/sample', 'normal_score.zip'))
+            os.path.join(TEST_ROOT_PATH, "legacy_unittest/sample", "normal_score.zip")
+        )
 
-        data = {
-            "contentType": "application/zip",
-            "content": f'0x{bytes.hex(content)}'
-        }
+        data = {"contentType": "application/zip", "content": f"0x{bytes.hex(content)}"}
         self._icon_deploy_storage.get_next_tx_hash = Mock(return_value=ZERO_TX_HASH)
         self._context.step_counter = Mock()
 
-        sample_token_address = self._engine.invoke(self._context,
-                                                   SYSTEM_SCORE_ADDRESS,
-                                                   data)
+        sample_token_address = self._engine.invoke(
+            self._context, SYSTEM_SCORE_ADDRESS, data
+        )
 
-        deploy_info = self._context.storage.deploy.get_deploy_info(self._context, sample_token_address)
+        deploy_info = self._context.storage.deploy.get_deploy_info(
+            self._context, sample_token_address
+        )
         self.assertEqual(DeployState.INACTIVE, deploy_info.deploy_state)
         self.assertEqual(sample_token_address, deploy_info.score_address)
         self.assertEqual(self._context.tx.origin, deploy_info.owner)

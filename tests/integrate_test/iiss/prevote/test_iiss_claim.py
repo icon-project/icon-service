@@ -40,13 +40,11 @@ class TestIISSClaim(TestIISSBase):
 
         # gain 100 icx
         balance: int = 100 * ICX_IN_LOOP
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=balance)
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
 
         # stake 10 icx
         stake: int = 10 * ICX_IN_LOOP
-        self.set_stake(from_=self._accounts[0],
-                       value=stake)
+        self.set_stake(from_=self._accounts[0], value=stake)
 
         # set delegation 1 icx addr0 ~ addr9
         delegation_amount: int = 1 * ICX_IN_LOOP
@@ -54,15 +52,13 @@ class TestIISSClaim(TestIISSBase):
         delegations: list = []
         start_index: int = 0
         for i in range(IISS_MAX_DELEGATIONS):
-            delegation_info: tuple = \
-                (
-                    self._accounts[start_index + i],
-                    delegation_amount
-                )
+            delegation_info: tuple = (
+                self._accounts[start_index + i],
+                delegation_amount,
+            )
             delegations.append(delegation_info)
             total_delegating += delegation_amount
-        self.set_delegation(from_=self._accounts[0],
-                            origin_delegations=delegations)
+        self.set_delegation(from_=self._accounts[0], origin_delegations=delegations)
 
         # claim mocking
         block_height = 10 ** 2
@@ -75,10 +71,14 @@ class TestIISSClaim(TestIISSBase):
         treasury_balance_before_claim: int = self.get_balance(self._fee_treasury)
 
         # claim iscore
-        tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
+        tx_results: List["TransactionResult"] = self.claim_iscore(self._accounts[0])
         self.assertEqual(1, len(tx_results[0].event_logs))
-        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
-        self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
+        self.assertEqual(
+            SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address
+        )
+        self.assertEqual(
+            ["IScoreClaimed(int,int)"], tx_results[0].event_logs[0].indexed
+        )
         self.assertEqual([iscore, icx], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_called()
 
@@ -97,15 +97,18 @@ class TestIISSClaim(TestIISSBase):
         expected_response = {
             "blockHeight": block_height,
             "estimatedICX": icx,
-            "iscore": iscore
+            "iscore": iscore,
         }
         self.assertEqual(expected_response, response)
 
         # get_treasury account balance after claim
         treasury_balance_after_claim: int = self.get_balance(self._fee_treasury)
         expected_withdraw_icx_amount_from_treasury: int = icx
-        self.assertEqual(expected_withdraw_icx_amount_from_treasury,
-                         treasury_balance_before_claim - (treasury_balance_after_claim - accumulative_fee))
+        self.assertEqual(
+            expected_withdraw_icx_amount_from_treasury,
+            treasury_balance_before_claim
+            - (treasury_balance_after_claim - accumulative_fee),
+        )
 
         # 0 claim mocking
         block_height = 10 ** 2 + 1
@@ -115,20 +118,26 @@ class TestIISSClaim(TestIISSBase):
         RewardCalcProxy.commit_claim = Mock()
 
         # claim iscore
-        tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
+        tx_results: List["TransactionResult"] = self.claim_iscore(self._accounts[0])
         self.assertEqual(1, len(tx_results[0].event_logs))
-        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
-        self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
+        self.assertEqual(
+            SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address
+        )
+        self.assertEqual(
+            ["IScoreClaimed(int,int)"], tx_results[0].event_logs[0].indexed
+        )
         self.assertEqual([icx, iscore], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_not_called()
 
         # TEST: claim iscore with value should fail
         expected_status = False
-        tx = self.create_score_call_tx(from_=self._accounts[0],
-                                       to_=SYSTEM_SCORE_ADDRESS,
-                                       func_name="claimIScore",
-                                       params={},
-                                       value=5)
+        tx = self.create_score_call_tx(
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            func_name="claimIScore",
+            params={},
+            value=5,
+        )
 
         self.process_confirm_block_tx([tx], expected_status=expected_status)
 
@@ -137,9 +146,7 @@ class TestIISSClaim(TestIISSBase):
             "version": self._version,
             "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "queryIScore"
-            }
+            "data": {"method": "queryIScore"},
         }
 
         # query iscore without an address

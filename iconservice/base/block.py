@@ -34,6 +34,7 @@ class BlockVersion(IntEnum):
 class Block(object):
     """Block Information included in IconScoreContext
     """
+
     _VERSION = BlockVersion.MSG_PACK
     _STRUCT_PACKED_BYTES_SIZE = 129
     # leveldb account value structure (bigendian, 1 + 32 + 32 + 32 + 32 bytes)
@@ -43,14 +44,18 @@ class Block(object):
     # | timestamp(DEFAULT_BYTE_SIZE)
     # | prev_hash(DEFAULT_BYTE_SIZE)
 
-    _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s')
+    _struct = Struct(
+        f">B{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s"
+    )
 
-    def __init__(self,
-                 block_height: int,
-                 block_hash: bytes,
-                 timestamp: int,
-                 prev_hash: Optional[bytes],
-                 cumulative_fee: int = 0) -> None:
+    def __init__(
+        self,
+        block_height: int,
+        block_hash: bytes,
+        timestamp: int,
+        prev_hash: Optional[bytes],
+        cumulative_fee: int = 0,
+    ) -> None:
         """Constructor
 
         :param block_height: block height
@@ -68,21 +73,25 @@ class Block(object):
         self.cumulative_fee = cumulative_fee
 
     def __str__(self) -> str:
-        return f"Block(height={self._height}, " \
-                f"hash={bytes_to_hex(self._hash)}, " \
-                f"prev_hash={bytes_to_hex(self._prev_hash)}, " \
-                f"timestamp={self._timestamp}, " \
-                f"cumulative_fee={self.cumulative_fee})"
+        return (
+            f"Block(height={self._height}, "
+            f"hash={bytes_to_hex(self._hash)}, "
+            f"prev_hash={bytes_to_hex(self._prev_hash)}, "
+            f"timestamp={self._timestamp}, "
+            f"cumulative_fee={self.cumulative_fee})"
+        )
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __eq__(self, other):
-        return isinstance(other, Block) \
-            and self._height == other._height \
-            and self._timestamp == other._timestamp \
-            and self._prev_hash == other._prev_hash \
+        return (
+            isinstance(other, Block)
+            and self._height == other._height
+            and self._timestamp == other._timestamp
+            and self._prev_hash == other._prev_hash
             and self.cumulative_fee == other.cumulative_fee
+        )
 
     @property
     def height(self) -> int:
@@ -102,19 +111,21 @@ class Block(object):
 
     @staticmethod
     def from_dict(params: dict):
-        block_height = params.get('blockHeight')
-        block_hash = params.get('blockHash')
-        timestamp = params.get('timestamp', 0)
-        prev_hash = params.get('prevBlockHash', b'\x00' * 32)
+        block_height = params.get("blockHeight")
+        block_hash = params.get("blockHash")
+        timestamp = params.get("timestamp", 0)
+        prev_hash = params.get("prevBlockHash", b"\x00" * 32)
 
-        return Block(block_height=block_height,
-                     block_hash=block_hash,
-                     timestamp=timestamp,
-                     prev_hash=prev_hash,
-                     cumulative_fee=0)
+        return Block(
+            block_height=block_height,
+            block_hash=block_hash,
+            timestamp=timestamp,
+            prev_hash=prev_hash,
+            cumulative_fee=0,
+        )
 
     @staticmethod
-    def from_block(block: 'Block'):
+    def from_block(block: "Block"):
         block_height = block.height
         block_hash = block.hash
         timestamp = block.timestamp
@@ -123,14 +134,17 @@ class Block(object):
         return Block(block_height, block_hash, timestamp, prev_hash, cumulative_fee)
 
     @staticmethod
-    def from_bytes(buf: bytes) -> 'Block':
-        if len(buf) == Block._STRUCT_PACKED_BYTES_SIZE and buf[0] == BlockVersion.STRUCT:
+    def from_bytes(buf: bytes) -> "Block":
+        if (
+            len(buf) == Block._STRUCT_PACKED_BYTES_SIZE
+            and buf[0] == BlockVersion.STRUCT
+        ):
             return Block._from_struct_packed_bytes(buf)
         else:
             return Block._from_msg_packed_bytes(buf)
 
     @staticmethod
-    def _from_struct_packed_bytes(buf: bytes) -> 'Block':
+    def _from_struct_packed_bytes(buf: bytes) -> "Block":
         """Create Account object from bytes data
 
         :param buf: (bytes) bytes data including Account information
@@ -138,8 +152,13 @@ class Block(object):
         """
         byteorder = DATA_BYTE_ORDER
 
-        version, block_height_bytes, block_hash_bytes, \
-            timestamp_bytes, block_prev_hash_bytes = Block._struct.unpack(buf)
+        (
+            version,
+            block_height_bytes,
+            block_hash_bytes,
+            timestamp_bytes,
+            block_prev_hash_bytes,
+        ) = Block._struct.unpack(buf)
 
         block_height = int.from_bytes(block_height_bytes, byteorder)
         block_hash = block_hash_bytes
@@ -154,7 +173,7 @@ class Block(object):
         return block
 
     @staticmethod
-    def _from_msg_packed_bytes(buf: bytes) -> 'Block':
+    def _from_msg_packed_bytes(buf: bytes) -> "Block":
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
 
@@ -163,11 +182,13 @@ class Block(object):
         if version != BlockVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid block version: {version}")
 
-        return Block(block_height=data[1],
-                     block_hash=data[2],
-                     timestamp=data[3],
-                     prev_hash=data[4],
-                     cumulative_fee=data[5])
+        return Block(
+            block_height=data[1],
+            block_hash=data[2],
+            timestamp=data[3],
+            prev_hash=data[4],
+            cumulative_fee=data[5],
+        )
 
     def to_bytes(self, revision: int) -> bytes:
         if revision >= Revision.IISS.value:
@@ -182,7 +203,7 @@ class Block(object):
             self._hash,
             self._timestamp,
             self._prev_hash,
-            self.cumulative_fee
+            self.cumulative_fee,
         ]
         return MsgPackForDB.dumps(data)
 
@@ -207,7 +228,8 @@ class Block(object):
             block_height_bytes,
             block_hash_bytes,
             timestamp_bytes,
-            prev_block_hash_bytes)
+            prev_block_hash_bytes,
+        )
 
 
 # This predefined block is used to fix context.block.height access error before genesis block is synchronized.

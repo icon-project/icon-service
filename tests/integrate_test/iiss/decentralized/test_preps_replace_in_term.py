@@ -18,7 +18,12 @@
 """
 from typing import TYPE_CHECKING, List
 
-from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, PREP_PENALTY_SIGNATURE
+from iconservice.icon_constant import (
+    ICX_IN_LOOP,
+    PREP_MAIN_PREPS,
+    PREP_MAIN_AND_SUB_PREPS,
+    PREP_PENALTY_SIGNATURE,
+)
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
@@ -40,14 +45,8 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in self._accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
-        expected_response: dict = {
-            "preps": expected_preps,
-            "totalDelegated": 0
-        }
+            expected_preps.append({"address": account.address, "delegated": 0})
+        expected_response: dict = {"preps": expected_preps, "totalDelegated": 0}
         self.assertEqual(expected_response, response)
 
     def test_prep_replace_in_term1(self):
@@ -58,28 +57,24 @@ class TestPreps(TestIISSBase):
             all new preps have maintained until 100 block because it already passed GRACE_PERIOD
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
 
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         tx_list = []
         for i in range(PREP_MAIN_PREPS):
             tx = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + PREP_MAIN_PREPS],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + PREP_MAIN_PREPS], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + PREP_MAIN_PREPS],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i + PREP_MAIN_PREPS],
+                origin_delegations=[(accounts[i], 1)],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
@@ -89,14 +84,11 @@ class TestPreps(TestIISSBase):
         expected_preps: list = []
         expected_total_delegated: int = 0
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
             expected_total_delegated += 1
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
@@ -106,14 +98,18 @@ class TestPreps(TestIISSBase):
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
 
-        tx_results: ['TransactionResult'] = self.process_confirm_block_tx(
+        tx_results: ["TransactionResult"] = self.process_confirm_block_tx(
             tx_list=tx_list,
             prev_block_generator=self._accounts[0].address,
-            prev_block_validators=[account.address for account in self._accounts[1:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in self._accounts[1:PREP_MAIN_PREPS]
+            ],
         )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
-            self.assertEqual("PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0])
+            self.assertEqual(
+                "PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0]
+            )
 
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
@@ -122,26 +118,24 @@ class TestPreps(TestIISSBase):
 
         # maintain
         block_count = 40
-        self.make_blocks(to=self._block_height + block_count,
-                         prev_block_generator=accounts[0].address,
-                         prev_block_validators=[
-                             account.address
-                             for account in accounts[1:PREP_MAIN_PREPS]
-                         ])
+        self.make_blocks(
+            to=self._block_height + block_count,
+            prev_block_generator=accounts[0].address,
+            prev_block_validators=[
+                account.address for account in accounts[1:PREP_MAIN_PREPS]
+            ],
+        )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
             expected_total_delegated += 1
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
@@ -154,8 +148,12 @@ class TestPreps(TestIISSBase):
         PENALTY_GRACE_PERIOD = 35
         BLOCK_VALIDATION_PENALTY_THRESHOLD = 35
 
-        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = BLOCK_VALIDATION_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = (
+            PENALTY_GRACE_PERIOD
+        )
+        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = (
+            BLOCK_VALIDATION_PENALTY_THRESHOLD
+        )
 
         """
         scenario 2
@@ -165,11 +163,11 @@ class TestPreps(TestIISSBase):
             so after GRACE_PERIOD will replace half preps.
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         half_prep_count: int = PREP_MAIN_PREPS // 2
@@ -178,16 +176,12 @@ class TestPreps(TestIISSBase):
         for i in range(test_prep_count):
             tx = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + test_prep_count],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i + test_prep_count],
+                origin_delegations=[(accounts[i], 1)],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
@@ -196,14 +190,11 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -213,14 +204,18 @@ class TestPreps(TestIISSBase):
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx(
             tx_list=tx_list,
             prev_block_generator=self._accounts[0].address,
-            prev_block_validators=[account.address for account in self._accounts[1:half_prep_count]]
+            prev_block_validators=[
+                account.address for account in self._accounts[1:half_prep_count]
+            ],
         )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
-            self.assertEqual("PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0])
+            self.assertEqual(
+                "PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0]
+            )
 
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
@@ -232,23 +227,19 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count1,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
-                account.address for account in accounts[1: half_prep_count]
-            ]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": 1 * test_prep_count
+            "totalDelegated": 1 * test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -264,13 +255,12 @@ class TestPreps(TestIISSBase):
 
         # change prep!
         block_count2 = 1
-        tx_results: List[List['TransactionResult']] = self.make_blocks(
+        tx_results: List[List["TransactionResult"]] = self.make_blocks(
             to=self._block_height + block_count2,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
-                account.address for account in accounts[1: half_prep_count]
-            ]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
         )
 
         for event_log in tx_results[0][0].event_logs[3:]:
@@ -281,10 +271,9 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count3,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
-                account.address for account in accounts[1: half_prep_count]
-            ]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
@@ -294,31 +283,31 @@ class TestPreps(TestIISSBase):
         expected_total_delegated: int = 0
 
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
             expected_total_delegated += 1
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
         for i in range(half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["validatedBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["validatedBlocks"]
+            )
 
         for i in range(half_prep_count, PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
             self.assertEqual(0, response["validatedBlocks"])
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -331,14 +320,15 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count4,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
-                account.address for account in accounts[1: half_prep_count]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
             ]
-            +
-            [
-                account.address for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]
-            ]
+            + [
+                account.address
+                for account in accounts[
+                    PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count
+                ]
+            ],
         )
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -346,13 +336,16 @@ class TestPreps(TestIISSBase):
             self.assertEqual(1, response["totalBlocks"])
             self.assertEqual(1, response["validatedBlocks"])
 
-
     def test_prep_replace_in_term4(self):
         PENALTY_GRACE_PERIOD = 35
         LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 50
 
-        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = (
+            PENALTY_GRACE_PERIOD
+        )
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = (
+            LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        )
 
         """
         scenario 4
@@ -361,11 +354,11 @@ class TestPreps(TestIISSBase):
             half preps are normal case. but another half preps don't validate block(static values are all zero).
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         half_prep_count: int = PREP_MAIN_PREPS // 2
@@ -374,16 +367,12 @@ class TestPreps(TestIISSBase):
         for i in range(test_prep_count):
             tx = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + test_prep_count],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i + test_prep_count],
+                origin_delegations=[(accounts[i], 1)],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
@@ -392,13 +381,10 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -407,12 +393,13 @@ class TestPreps(TestIISSBase):
         for account in self._accounts[:PREP_MAIN_PREPS]:
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
-        self.process_confirm_block_tx(tx_list=tx_list,
-                                      prev_block_generator=self._accounts[0].address,
-                                      prev_block_validators=[
-                                          account.address
-                                          for account in self._accounts[1:half_prep_count]
-                                      ])
+        self.process_confirm_block_tx(
+            tx_list=tx_list,
+            prev_block_generator=self._accounts[0].address,
+            prev_block_validators=[
+                account.address for account in self._accounts[1:half_prep_count]
+            ],
+        )
 
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
@@ -424,23 +411,19 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count1,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
+            prev_block_validators=[
                 account.address for account in accounts[1:PREP_MAIN_PREPS]
-            ]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -453,10 +436,9 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count2,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
+            prev_block_validators=[
                 account.address for account in accounts[1:half_prep_count]
-            ]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
@@ -464,19 +446,13 @@ class TestPreps(TestIISSBase):
 
         expected_preps: list = []
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count - half_prep_count
+            "totalDelegated": test_prep_count - half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -499,40 +475,39 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count3,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
+            prev_block_validators=[
                 account.address for account in accounts[1:half_prep_count]
-            ]
+            ],
         )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
 
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count - half_prep_count
+            "totalDelegated": test_prep_count - half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
         for i in range(half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["validatedBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["validatedBlocks"]
+            )
 
         for i in range(half_prep_count, PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
             self.assertEqual(block_count1, response["validatedBlocks"])
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -544,44 +519,47 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count4,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
-                account.address for account in accounts[1: half_prep_count]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
             ]
-            +
-            [
-                account.address for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]
-            ]
+            + [
+                account.address
+                for account in accounts[
+                    PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count
+                ]
+            ],
         )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
 
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count - half_prep_count
+            "totalDelegated": test_prep_count - half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
         for i in range(half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3 + block_count4, response["totalBlocks"])
-            self.assertEqual(block_count1 + block_count2 + block_count3 + block_count4, response["validatedBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3 + block_count4,
+                response["totalBlocks"],
+            )
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3 + block_count4,
+                response["validatedBlocks"],
+            )
 
         for i in range(half_prep_count, PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
             self.assertEqual(block_count1, response["validatedBlocks"])
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -597,28 +575,24 @@ class TestPreps(TestIISSBase):
             all new preps have maintained until 100 block because it already passed GRACE_PERIOD
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
 
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         tx_list = []
         for i in range(PREP_MAIN_PREPS):
             tx = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + PREP_MAIN_PREPS],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + PREP_MAIN_PREPS], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + PREP_MAIN_PREPS],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i + PREP_MAIN_PREPS],
+                origin_delegations=[(accounts[i], 1)],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
@@ -628,14 +602,11 @@ class TestPreps(TestIISSBase):
         expected_preps: list = []
         expected_total_delegated: int = 0
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
             expected_total_delegated += 1
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
@@ -645,15 +616,22 @@ class TestPreps(TestIISSBase):
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
 
-        tx_results: ['TransactionResult'] = self.process_confirm_block_tx(
+        tx_results: ["TransactionResult"] = self.process_confirm_block_tx(
             tx_list=tx_list,
             prev_block_generator=self._accounts[0].address,
-            prev_block_validators=[account.address for account in self._accounts[1:PREP_MAIN_PREPS]],
-            prev_block_votes=[[account.address, i % 2 + 1] for i, account in enumerate(self._accounts[1:PREP_MAIN_PREPS])]
+            prev_block_validators=[
+                account.address for account in self._accounts[1:PREP_MAIN_PREPS]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(self._accounts[1:PREP_MAIN_PREPS])
+            ],
         )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
-            self.assertEqual("PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0])
+            self.assertEqual(
+                "PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0]
+            )
 
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
@@ -662,26 +640,24 @@ class TestPreps(TestIISSBase):
 
         # maintain
         block_count = 40
-        self.make_blocks(to=self._block_height + block_count,
-                         prev_block_generator=accounts[0].address,
-                         prev_block_validators=[
-                             account.address
-                             for account in accounts[1:PREP_MAIN_PREPS]
-                         ])
+        self.make_blocks(
+            to=self._block_height + block_count,
+            prev_block_generator=accounts[0].address,
+            prev_block_validators=[
+                account.address for account in accounts[1:PREP_MAIN_PREPS]
+            ],
+        )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
             expected_total_delegated += 1
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
@@ -694,8 +670,12 @@ class TestPreps(TestIISSBase):
         PENALTY_GRACE_PERIOD = 35
         BLOCK_VALIDATION_PENALTY_THRESHOLD = 35
 
-        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = BLOCK_VALIDATION_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = (
+            PENALTY_GRACE_PERIOD
+        )
+        IconScoreContext.engine.prep._penalty_imposer._block_validation_penalty_threshold = (
+            BLOCK_VALIDATION_PENALTY_THRESHOLD
+        )
 
         """
         scenario 2
@@ -705,11 +685,11 @@ class TestPreps(TestIISSBase):
             so after GRACE_PERIOD will replace half preps.
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         half_prep_count: int = PREP_MAIN_PREPS // 2
@@ -718,16 +698,12 @@ class TestPreps(TestIISSBase):
         for i in range(test_prep_count):
             tx = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + test_prep_count],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i + test_prep_count],
+                origin_delegations=[(accounts[i], 1)],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
@@ -736,14 +712,11 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -753,18 +726,26 @@ class TestPreps(TestIISSBase):
             tx: dict = self.create_unregister_prep_tx(from_=account)
             tx_list.append(tx)
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx(
             tx_list=tx_list,
             prev_block_generator=self._accounts[0].address,
-            prev_block_validators=[account.address for account in self._accounts[1:half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(self._accounts[1:half_prep_count])]
-            +
-            [[account.address, 0] for account in self._accounts[half_prep_count:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in self._accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(self._accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, 0]
+                for account in self._accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
         # 0: base transaction index
         for tx_result in tx_results[1:]:
-            self.assertEqual("PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0])
+            self.assertEqual(
+                "PRepUnregistered(Address)", tx_result.event_logs[0].indexed[0]
+            )
 
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
@@ -776,24 +757,27 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count1,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
-            +
-            [[account.address, False] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, False]
+                for account in accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": 1 * test_prep_count
+            "totalDelegated": 1 * test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -809,14 +793,20 @@ class TestPreps(TestIISSBase):
 
         # change prep!
         block_count2 = 1
-        tx_results: List[List['TransactionResult']] = self.make_blocks(
+        tx_results: List[List["TransactionResult"]] = self.make_blocks(
             to=self._block_height + block_count2,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
-            +
-            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, 0]
+                for account in accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
 
         for event_log in tx_results[0][0].event_logs[3:]:
@@ -827,11 +817,17 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count3,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
-            +
-            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, 0]
+                for account in accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
@@ -841,31 +837,31 @@ class TestPreps(TestIISSBase):
         expected_total_delegated: int = 0
 
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
             expected_total_delegated += 1
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
         for i in range(half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["validatedBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["validatedBlocks"]
+            )
 
         for i in range(half_prep_count, PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
             self.assertEqual(0, response["validatedBlocks"])
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -878,14 +874,25 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count4,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [account.address for account in accounts[1: half_prep_count]]
-            +
-            [account.address for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1: half_prep_count])]
-            +
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count])],
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ]
+            + [
+                account.address
+                for account in accounts[
+                    PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count
+                ]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(
+                    accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]
+                )
+            ],
         )
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -899,11 +906,11 @@ class TestPreps(TestIISSBase):
             unregister prep half_prep_count on current preps
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         half_prep_count: int = PREP_MAIN_PREPS // 2
@@ -914,33 +921,21 @@ class TestPreps(TestIISSBase):
             tx = self.create_register_prep_tx(from_=accounts[i + half_prep_count])
             tx_list.append(tx)
 
-            tx = self.create_set_stake_tx(from_=accounts[i],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i], value=1)
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + half_prep_count],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + half_prep_count], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i], origin_delegations=[(accounts[i], 1)]
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in self._accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
-        expected_response: dict = {
-            "preps": expected_preps,
-            "totalDelegated": 0
-        }
+            expected_preps.append({"address": account.address, "delegated": 0})
+        expected_response: dict = {"preps": expected_preps, "totalDelegated": 0}
         self.assertEqual(expected_response, response)
 
         self.make_blocks_to_end_calculation()
@@ -949,18 +944,12 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         for account in self._accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+            expected_preps.append({"address": account.address, "delegated": 0})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": half_prep_count
+            "totalDelegated": half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -977,29 +966,26 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1: half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1: half_prep_count])]
-            +
-            [[account.address, 0] for account in self._accounts[0: half_prep_count]]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [[account.address, 0] for account in self._accounts[0:half_prep_count]],
         )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         for account in self._accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+            expected_preps.append({"address": account.address, "delegated": 0})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": half_prep_count
+            "totalDelegated": half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -1023,26 +1009,17 @@ class TestPreps(TestIISSBase):
         expected_preps: list = []
 
         # insert subpreps to unregister prep's position
-        for account in self._accounts[half_prep_count: half_prep_count + count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        for account in self._accounts[half_prep_count : half_prep_count + count]:
+            expected_preps.append({"address": account.address, "delegated": 0})
 
-        for account in accounts[count: half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+        for account in accounts[count:half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
-        for account in self._accounts[0: half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        for account in self._accounts[0:half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 0})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": half_prep_count
+            "totalDelegated": half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -1050,8 +1027,12 @@ class TestPreps(TestIISSBase):
         PENALTY_GRACE_PERIOD = 35
         LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 50
 
-        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
-        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = (
+            PENALTY_GRACE_PERIOD
+        )
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = (
+            LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        )
 
         """
         scenario 4
@@ -1060,11 +1041,11 @@ class TestPreps(TestIISSBase):
             half preps are normal case. but another half preps don't validate block(static values are all zero).
         """
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
-        self.distribute_icx(accounts=accounts,
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=1 * ICX_IN_LOOP
+        )
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(PREP_MAIN_AND_SUB_PREPS)
+        self.distribute_icx(accounts=accounts, init_balance=3000 * ICX_IN_LOOP)
 
         # replace new PREPS
         half_prep_count: int = PREP_MAIN_PREPS // 2
@@ -1073,16 +1054,12 @@ class TestPreps(TestIISSBase):
         for i in range(test_prep_count):
             tx = self.create_register_prep_tx(from_=accounts[i])
             tx_list.append(tx)
-            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count],
-                                          value=1)
+            tx = self.create_set_stake_tx(from_=accounts[i + test_prep_count], value=1)
             tx_list.append(tx)
-            tx = self.create_set_delegation_tx(from_=accounts[i + test_prep_count],
-                                               origin_delegations=[
-                                                   (
-                                                       accounts[i],
-                                                       1
-                                                   )
-                                               ])
+            tx = self.create_set_delegation_tx(
+                from_=accounts[i + test_prep_count],
+                origin_delegations=[(accounts[i], 1)],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
         self.make_blocks_to_end_calculation()
@@ -1091,13 +1068,10 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -1109,11 +1083,17 @@ class TestPreps(TestIISSBase):
         self.process_confirm_block_tx(
             tx_list=tx_list,
             prev_block_generator=self._accounts[0].address,
-            prev_block_validators=[account.address for account in self._accounts[1: half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(self._accounts[1: half_prep_count])]
-            +
-            [[account.address, 0] for account in self._accounts[half_prep_count: PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in self._accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(self._accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, 0]
+                for account in self._accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
 
         for i in range(PREP_MAIN_PREPS):
@@ -1126,21 +1106,23 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count1,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1:PREP_MAIN_PREPS]],
-            prev_block_votes=[[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:PREP_MAIN_PREPS])]
+            prev_block_validators=[
+                account.address for account in accounts[1:PREP_MAIN_PREPS]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:PREP_MAIN_PREPS])
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count
+            "totalDelegated": test_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -1153,11 +1135,17 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count2,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1:half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
-            +
-            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, 0]
+                for account in accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
 
         # check new PREPS to MAIN_PREPS
@@ -1165,19 +1153,13 @@ class TestPreps(TestIISSBase):
 
         expected_preps: list = []
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count - half_prep_count
+            "totalDelegated": test_prep_count - half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
@@ -1200,41 +1182,47 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count3,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=[account.address for account in accounts[1:half_prep_count]],
-            prev_block_votes=
-            [[account.address, i % 2 + 1] for i, account in enumerate(accounts[1:half_prep_count])]
-            +
-            [[account.address, 0] for account in accounts[half_prep_count:PREP_MAIN_PREPS]]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
+            ],
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
+            ]
+            + [
+                [account.address, 0]
+                for account in accounts[half_prep_count:PREP_MAIN_PREPS]
+            ],
         )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
 
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count - half_prep_count
+            "totalDelegated": test_prep_count - half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
         for i in range(half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["validatedBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["validatedBlocks"]
+            )
 
         for i in range(half_prep_count, PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
             self.assertEqual(block_count1, response["validatedBlocks"])
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):
@@ -1246,52 +1234,57 @@ class TestPreps(TestIISSBase):
         self.make_blocks(
             to=self._block_height + block_count4,
             prev_block_generator=accounts[0].address,
-            prev_block_validators=
-            [
-                account.address for account in accounts[1: half_prep_count]
+            prev_block_validators=[
+                account.address for account in accounts[1:half_prep_count]
             ]
-            +
-            [
-                account.address for account in accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count]
+            + [
+                account.address
+                for account in accounts[
+                    PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count
+                ]
             ],
-            prev_block_votes=
-            [
-                [account.address, i % 2 + 1] for i, account in enumerate(accounts[1: half_prep_count])
+            prev_block_votes=[
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(accounts[1:half_prep_count])
             ]
-            +
-            [
-                [account.address, i % 2 + 1] for i, account in enumerate(accounts[PREP_MAIN_PREPS: PREP_MAIN_PREPS + half_prep_count])
-            ]
+            + [
+                [account.address, i % 2 + 1]
+                for i, account in enumerate(
+                    accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]
+                )
+            ],
         )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
 
         for account in accounts[:half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
-        for account in accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + half_prep_count]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 1
-            })
+            expected_preps.append({"address": account.address, "delegated": 1})
+        for account in accounts[PREP_MAIN_PREPS : PREP_MAIN_PREPS + half_prep_count]:
+            expected_preps.append({"address": account.address, "delegated": 1})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": test_prep_count - half_prep_count
+            "totalDelegated": test_prep_count - half_prep_count,
         }
         self.assertEqual(expected_response, response)
 
         for i in range(half_prep_count):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3 + block_count4, response["totalBlocks"])
-            self.assertEqual(block_count1 + block_count2 + block_count3 + block_count4, response["validatedBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3 + block_count4,
+                response["totalBlocks"],
+            )
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3 + block_count4,
+                response["validatedBlocks"],
+            )
 
         for i in range(half_prep_count, PREP_MAIN_PREPS):
             response: dict = self.get_prep(accounts[i])
-            self.assertEqual(block_count1 + block_count2 + block_count3, response["totalBlocks"])
+            self.assertEqual(
+                block_count1 + block_count2 + block_count3, response["totalBlocks"]
+            )
             self.assertEqual(block_count1, response["validatedBlocks"])
 
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_PREPS + half_prep_count):

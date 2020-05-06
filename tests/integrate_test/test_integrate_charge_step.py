@@ -26,114 +26,142 @@ if TYPE_CHECKING:
 
 class TestIntegrateChargeStep(TestIntegrateBase):
     def test_json(self):
-        dumps: bytes = json.dumps('').encode('utf-8')
+        dumps: bytes = json.dumps("").encode("utf-8")
         self.assertEqual(2, len(dumps))  # '""'
-        dumps: bytes = json.dumps(None).encode('utf-8')
+        dumps: bytes = json.dumps(None).encode("utf-8")
         self.assertEqual(4, len(dumps))  # 'null'
 
     def test_check_charge_step(self):
         self.update_governance()
         self.set_revision(3)
 
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name="setStepCost",
-                        params={"stepType": "apiCall", "cost": "0x2710"})
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="setStepCost",
+            params={"stepType": "apiCall", "cost": "0x2710"},
+        )
 
-        tx_results: List['TransactionResult'] = self.deploy_score("test_scores",
-                                                                  "check_charge_step",
-                                                                  self._accounts[0])
-        score_addr: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "test_scores", "check_charge_step", self._accounts[0]
+        )
+        score_addr: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000000000"},
+        )
         base_step_used: int = tx_results[0].step_used
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x100000000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x100000000000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(10000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x010000000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x010000000000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(12000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x001000000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x001000000000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(13000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000000001"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000000001"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(0, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000100000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000100000000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(150000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000010000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000010000000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(150000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000001000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000001000000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(15000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000100000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000100000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(51000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000010000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000010000"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(52000, func)
 
         # Fail
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000001000"},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000001000"},
+            expected_status=False,
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(40000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000000100"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000000100"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(700000, func)
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000000010"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000000010"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(700000, func)
 
@@ -141,26 +169,32 @@ class TestIntegrateChargeStep(TestIntegrateBase):
         self.update_governance()
         self.set_revision(3)
 
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name="setStepCost",
-                        params={"stepType": "apiCall", "cost": "0x2710"})
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="setStepCost",
+            params={"stepType": "apiCall", "cost": "0x2710"},
+        )
 
-        tx_results: List['TransactionResult'] = self.deploy_score("test_scores",
-                                                                  "check_charge_step",
-                                                                  self._accounts[0])
-        score_addr: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "test_scores", "check_charge_step", self._accounts[0]
+        )
+        score_addr: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x000000000000"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x000000000000"},
+        )
         base_step_used: int = tx_results[0].step_used
 
         # except Fail
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr,
-                                                                func_name="test_str",
-                                                                params={"bit": "0x111111110111"})
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="test_str",
+            params={"bit": "0x111111110111"},
+        )
         func = tx_results[0].step_used - base_step_used
         self.assertEqual(1853000, func)

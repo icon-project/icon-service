@@ -3,14 +3,15 @@ from iconservice import *
 
 class Interface(InterfaceScore):
     @interface
-    def invoke(self, _to: Address, _name: str) -> None: pass
+    def invoke(self, _to: Address, _name: str) -> None:
+        pass
 
     @interface
-    def query(self, _to: Address, _name: str) -> None: pass
+    def query(self, _to: Address, _name: str) -> None:
+        pass
 
 
 class SampleScoreStart(IconScoreBase):
-
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
 
@@ -22,21 +23,20 @@ class SampleScoreStart(IconScoreBase):
 
     @external
     def invokeRecursive(self, _to: Address, _name: str) -> None:
-        self.call(_to, _name, {'index': 0})
+        self.call(_to, _name, {"index": 0})
 
     @external(readonly=True)
     def queryRecursive(self, _to: Address, _name: str) -> int:
-        return self.call(_to, _name, {'index': 0})
+        return self.call(_to, _name, {"index": 0})
 
     @external
     def invoke(self, index: int) -> None:
-        print(f'index:{index}')
-        self.call(self.msg.sender, 'invoke', {'index': index + 1})
+        print(f"index:{index}")
+        self.call(self.msg.sender, "invoke", {"index": index + 1})
 
     @external(readonly=True)
     def query(self, index: int) -> int:
-        return self.call(self.msg.sender, 'query', {'index': index + 1})
-
+        return self.call(self.msg.sender, "query", {"index": index + 1})
 
     @external
     def invokeLoop(self, _to: Address, _name: str, _count: int) -> None:

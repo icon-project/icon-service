@@ -3,14 +3,14 @@ from iconservice import *
 
 class SampleInvalidEventLogScore(IconScoreBase):
     @eventlog
-    def EventLogWithOutTypeHint(self, value:dict):
+    def EventLogWithOutTypeHint(self, value: dict):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=str)
+        self._value = VarDB("value", db, value_type=str)
 
-    def on_install(self, value: str="default") -> None:
+    def on_install(self, value: str = "default") -> None:
         super().on_install()
         self.set_value(value)
 

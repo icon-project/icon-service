@@ -27,13 +27,13 @@ WAL_LOG_TAG = "WAL"
 ROLLBACK_LOG_TAG = "ROLLBACK"
 BACKUP_LOG_TAG = "BACKUP"
 
-JSONRPC_VERSION = '2.0'
-CHARSET_ENCODING = 'utf-8'
+JSONRPC_VERSION = "2.0"
+CHARSET_ENCODING = "utf-8"
 
 ICX_IN_LOOP = 10 ** 18
 # 32bytes == 256bit
 DEFAULT_BYTE_SIZE = 32
-DATA_BYTE_ORDER = 'big'  # big endian
+DATA_BYTE_ORDER = "big"  # big endian
 # Fixed fee is 0.01 icx.
 FIXED_FEE = 10 ** 16
 # Max data field size
@@ -45,21 +45,23 @@ MAX_EXTERNAL_CALL_COUNT = 1 + 1024
 # Max call stack size
 MAX_CALL_STACK_SIZE = 64
 
-ICON_DEX_DB_NAME = 'icon_dex'
-PACKAGE_JSON_FILE = 'package.json'
+ICON_DEX_DB_NAME = "icon_dex"
+PACKAGE_JSON_FILE = "package.json"
 
-ICX_TRANSFER_EVENT_LOG = 'ICXTransfer(Address,Address,int)'
+ICX_TRANSFER_EVENT_LOG = "ICXTransfer(Address,Address,int)"
 
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
-ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
-                                "{scoreRootPath}." \
-                                "{stateDbRootPath}." \
-                                "{channel}.{amqpKey}." \
-                                "{amqpTarget}"
+ICON_SERVICE_PROCTITLE_FORMAT = (
+    "icon_service."
+    "{scoreRootPath}."
+    "{stateDbRootPath}."
+    "{channel}.{amqpKey}."
+    "{amqpTarget}"
+)
 
 BUILTIN_SCORE_ADDRESS_MAPPER = {
-    'governance': GOVERNANCE_ADDRESS,
-    'system': SYSTEM_ADDRESS
+    "governance": GOVERNANCE_ADDRESS,
+    "system": SYSTEM_ADDRESS,
 }
 
 ZERO_TX_HASH = bytes(DEFAULT_BYTE_SIZE)
@@ -92,13 +94,14 @@ class IssueDataKey:
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
         "event_signature": "PRepIssued(int,int,int,int)",
-        "data": [IssueDataKey.IREP, IssueDataKey.RREP, IssueDataKey.TOTAL_DELEGATION,
-                 IssueDataKey.VALUE]
+        "data": [
+            IssueDataKey.IREP,
+            IssueDataKey.RREP,
+            IssueDataKey.TOTAL_DELEGATION,
+            IssueDataKey.VALUE,
+        ],
     },
-    IssueDataKey.TOTAL: {
-        "event_signature": "ICXIssued(int,int,int,int)",
-        "data": []
-    }
+    IssueDataKey.TOTAL: {"event_signature": "ICXIssued(int,int,int,int)", "data": []},
 }
 
 ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP]
@@ -137,50 +140,50 @@ RC_DB_VERSION_2 = 2
 # The case that only revision is changed, do not update this table
 RC_DATA_VERSION_TABLE = {
     Revision.IISS.value: RC_DB_VERSION_0,
-    Revision.DECENTRALIZATION.value: RC_DB_VERSION_2
+    Revision.DECENTRALIZATION.value: RC_DB_VERSION_2,
 }
 
-IISS_DB = 'iiss'
-RC_SOCKET = 'iiss.sock'
+IISS_DB = "iiss"
+RC_SOCKET = "iiss.sock"
 
-META_DB = 'meta'
+META_DB = "meta"
 
 
 class ConfigKey:
-    BUILTIN_SCORE_OWNER = 'builtinScoreOwner'
-    SERVICE = 'service'
-    SERVICE_FEE = 'fee'
-    SERVICE_AUDIT = 'audit'
-    SERVICE_SCORE_PACKAGE_VALIDATOR = 'scorePackageValidator'
-    SCORE_ROOT_PATH = 'scoreRootPath'
-    STATE_DB_ROOT_PATH = 'stateDbRootPath'
-    CHANNEL = 'channel'
-    AMQP_KEY = 'amqpKey'
-    AMQP_TARGET = 'amqpTarget'
-    CONFIG = 'config'
-    TBEARS_MODE = 'tbearsMode'
+    BUILTIN_SCORE_OWNER = "builtinScoreOwner"
+    SERVICE = "service"
+    SERVICE_FEE = "fee"
+    SERVICE_AUDIT = "audit"
+    SERVICE_SCORE_PACKAGE_VALIDATOR = "scorePackageValidator"
+    SCORE_ROOT_PATH = "scoreRootPath"
+    STATE_DB_ROOT_PATH = "stateDbRootPath"
+    CHANNEL = "channel"
+    AMQP_KEY = "amqpKey"
+    AMQP_TARGET = "amqpTarget"
+    CONFIG = "config"
+    TBEARS_MODE = "tbearsMode"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
-    TERM_PERIOD = 'termPeriod'
-    INITIAL_IREP = 'initialIRep'
-    PREP_MAIN_PREPS = 'mainPRepCount'
-    PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
-    IPC_TIMEOUT = 'ipcTimeout'
+    TERM_PERIOD = "termPeriod"
+    INITIAL_IREP = "initialIRep"
+    PREP_MAIN_PREPS = "mainPRepCount"
+    PREP_MAIN_AND_SUB_PREPS = "mainAndSubPRepCount"
+    IPC_TIMEOUT = "ipcTimeout"
 
     # log
-    LOG = 'log'
-    LOG_FILE_PATH = 'filePath'
-    STEP_TRACE_FLAG = 'stepTraceFlag'
-    PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
+    LOG = "log"
+    LOG_FILE_PATH = "filePath"
+    STEP_TRACE_FLAG = "stepTraceFlag"
+    PRECOMMIT_DATA_LOG_FLAG = "precommitDataLogFlag"
 
     # Reward calculator
     # executable path
-    ICON_RC_DIR_PATH = 'iconRcPath'
+    ICON_RC_DIR_PATH = "iconRcPath"
     # Boolean which determines Opening RC monitor channel (Default True)
-    ICON_RC_MONITOR = 'iconRcMonitor'
+    ICON_RC_MONITOR = "iconRcMonitor"
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
-    REWARD_POINT = 'rewardPoint'
+    REWARD_POINT = "rewardPoint"
     REWARD_MIN = "rewardMin"
     REWARD_MAX = "rewardMAX"
     UN_STAKE_LOCK_MIN = "lockMin"
@@ -214,17 +217,17 @@ class IconServiceFlag(IntFlag):
 
 
 class IconNetworkValueType(Enum):
-    SERVICE_CONFIG = b'service_config'
+    SERVICE_CONFIG = b"service_config"
 
-    STEP_PRICE = b'step_price'
-    STEP_COSTS = b'step_costs'
-    MAX_STEP_LIMITS = b'max_step_limits'
+    STEP_PRICE = b"step_price"
+    STEP_COSTS = b"step_costs"
+    MAX_STEP_LIMITS = b"max_step_limits"
 
-    REVISION_CODE = b'revision_code'
-    REVISION_NAME = b'revision_name'
+    REVISION_CODE = b"revision_code"
+    REVISION_NAME = b"revision_name"
 
-    SCORE_BLACK_LIST = b'score_black_list'
-    IMPORT_WHITE_LIST = b'import_white_list'
+    SCORE_BLACK_LIST = b"score_black_list"
+    IMPORT_WHITE_LIST = b"import_white_list"
 
 
 @unique
@@ -247,7 +250,9 @@ class IconScoreFuncType(IntEnum):
     WRITABLE = 1
 
 
-ENABLE_THREAD_FLAG = EnableThreadFlag.INVOKE | EnableThreadFlag.QUERY | EnableThreadFlag.VALIDATE
+ENABLE_THREAD_FLAG = (
+    EnableThreadFlag.INVOKE | EnableThreadFlag.QUERY | EnableThreadFlag.VALIDATE
+)
 
 
 class DeployType(IntEnum):
@@ -262,15 +267,10 @@ class DeployState(IntEnum):
 
 # 0xb9eeb235f715b166cf4b91ffcf8cc48a81913896086d30104ffc0cf47eed1cbd
 INVALID_CLAIM_TX = [
-    b'\xb9\xee\xb25\xf7\x15\xb1f\xcfK\x91\xff\xcf\x8c\xc4\x8a\x81\x918\x96\x08m0\x10O\xfc\x0c\xf4~\xed\x1c\xbd'
+    b"\xb9\xee\xb25\xf7\x15\xb1f\xcfK\x91\xff\xcf\x8c\xc4\x8a\x81\x918\x96\x08m0\x10O\xfc\x0c\xf4~\xed\x1c\xbd"
 ]
 
-HASH_TYPE_TABLE = [
-    "blockHash",
-    "txHash",
-    "prevBlockHash",
-    "rootHash"
-]
+HASH_TYPE_TABLE = ["blockHash", "txHash", "prevBlockHash", "rootHash"]
 
 IISS_MAX_DELEGATIONS = 10
 PREP_MAIN_PREPS = 22
@@ -356,6 +356,7 @@ class PRepFlag(Flag):
     """Setting flags to True means that PRep fields specified by the flags has been changed
 
     """
+
     NONE = 0
     STATUS = auto()
     NAME = auto()

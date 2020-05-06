@@ -1,1 +1,1 @@
-exec('import os')
+exec("import os")

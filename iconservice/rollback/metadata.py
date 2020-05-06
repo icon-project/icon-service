@@ -31,9 +31,16 @@ class Metadata(object):
     """Contains rollback metadata
 
     """
+
     _VERSION = 0
 
-    def __init__(self, block_height: int, block_hash: bytes, term_start_block_height: int, last_block: 'Block'):
+    def __init__(
+        self,
+        block_height: int,
+        block_hash: bytes,
+        term_start_block_height: int,
+        last_block: "Block",
+    ):
         """
 
         :param block_height: final block_height after rollback
@@ -55,7 +62,7 @@ class Metadata(object):
         return self._block_hash
 
     @property
-    def last_block(self) -> 'Block':
+    def last_block(self) -> "Block":
         return self._last_block
 
     @property
@@ -63,20 +70,24 @@ class Metadata(object):
         return self._term_start_block_height
 
     def __eq__(self, other):
-        return self._block_height == other.block_height \
-               and self._block_hash == other.block_hash \
-               and self._term_start_block_height == other.term_start_block_height \
-               and self._last_block == other.last_block
+        return (
+            self._block_height == other.block_height
+            and self._block_hash == other.block_hash
+            and self._term_start_block_height == other.term_start_block_height
+            and self._last_block == other.last_block
+        )
 
     def __str__(self):
-        return f"rollback.Metadata(" \
-               f"block_height={self._block_height} " \
-               f"block_hash={bytes_to_hex(self._block_hash)} " \
-               f"term_start_block_height={self._term_start_block_height} " \
-               f"last_block={self._last_block})"
+        return (
+            f"rollback.Metadata("
+            f"block_height={self._block_height} "
+            f"block_hash={bytes_to_hex(self._block_hash)} "
+            f"term_start_block_height={self._term_start_block_height} "
+            f"last_block={self._last_block})"
+        )
 
     @classmethod
-    def from_bytes(cls, buf: bytes) -> 'Metadata':
+    def from_bytes(cls, buf: bytes) -> "Metadata":
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
         assert version == cls._VERSION
@@ -84,7 +95,7 @@ class Metadata(object):
         block_height: int = data[1]
         block_hash: bytes = data[2]
         term_start_block_height: int = data[3]
-        last_block: 'Block' = Block.from_bytes(data[4])
+        last_block: "Block" = Block.from_bytes(data[4])
 
         return Metadata(block_height, block_hash, term_start_block_height, last_block)
 
@@ -94,13 +105,13 @@ class Metadata(object):
             self._block_height,
             self._block_hash,
             self._term_start_block_height,
-            self._last_block.to_bytes(Revision.IISS.value)
+            self._last_block.to_bytes(Revision.IISS.value),
         ]
 
         return MsgPackForDB.dumps(data)
 
     @classmethod
-    def load(cls, path: str) -> Optional['Metadata']:
+    def load(cls, path: str) -> Optional["Metadata"]:
         Logger.debug(tag=TAG, msg=f"load() start: {path}")
 
         metadata = None

@@ -25,14 +25,14 @@ class BasePartState(Flag):
 
 
 class BasePart(object):
-    def __init__(self, states: 'BasePartState' = BasePartState.NONE):
+    def __init__(self, states: "BasePartState" = BasePartState.NONE):
         self._states = states
 
     @property
-    def states(self) -> 'BasePartState':
+    def states(self) -> "BasePartState":
         return self._states
 
-    def toggle_state(self, state: 'BasePartState', on: bool):
+    def toggle_state(self, state: "BasePartState", on: bool):
         self._states = set_flag(self._states, state, on)
 
     def is_dirty(self) -> bool:
@@ -44,5 +44,5 @@ class BasePart(object):
     def set_complete(self, on: bool):
         self.toggle_state(BasePartState.COMPLETE, on)
 
-    def is_set(self, states: 'BasePartState') -> bool:
+    def is_set(self, states: "BasePartState") -> bool:
         return self._states & states == states

@@ -2,7 +2,7 @@ from iconservice import *
 
 
 class SampleScoreSendPayable(IconScoreBase):
-    _SCORE_ADDR = 'score_addr'
+    _SCORE_ADDR = "score_addr"
 
     @eventlog(indexed=1)
     def SendResult(self, result: bool):
@@ -50,4 +50,3 @@ class SampleScoreSendPayable(IconScoreBase):
     @payable
     def fallback(self) -> None:
         self.FallbackCalled()
-

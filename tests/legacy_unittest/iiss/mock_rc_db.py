@@ -23,8 +23,7 @@ class MockIissDataBase(KeyValueDatabase):
         super().__init__(db)
 
     @staticmethod
-    def from_path(path: str,
-                  create_if_missing: bool = True) -> 'MockIissDataBase':
+    def from_path(path: str, create_if_missing: bool = True) -> "MockIissDataBase":
         """
         :param path: db path
         :param create_if_missing:
@@ -33,7 +32,7 @@ class MockIissDataBase(KeyValueDatabase):
         db = MockPlyvelDB(MockPlyvelDB.make_db())
         return MockIissDataBase(db)
 
-    def get_sub_db(self, prefix: bytes) -> 'MockIissDataBase':
+    def get_sub_db(self, prefix: bytes) -> "MockIissDataBase":
         """Return a new prefixed database.
 
         :param prefix: (bytes): prefix to use

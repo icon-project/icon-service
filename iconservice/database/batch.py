@@ -24,7 +24,9 @@ from ..base.exception import DatabaseException, AccessDeniedException
 from ..icx import IcxStorage
 from ..utils import sha3_256
 
-TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
+TransactionBatchValue = namedtuple(
+    "TransactionBatchValue", ["value", "include_state_root_hash"]
+)
 
 
 def digest(ordered_dict: OrderedDict):
@@ -39,7 +41,7 @@ def digest(ordered_dict: OrderedDict):
         data.append(key)
         if value is not None:
             data.append(value)
-    value: bytes = b'|'.join(data)
+    value: bytes = b"|".join(data)
     return sha3_256(value)
 
 
@@ -71,7 +73,8 @@ class TransactionBatch(MutableMapping):
     key: Score Address
     value: IconScoreBatch
     """
-    def __init__(self, tx_hash: Optional[bytes]=None) -> None:
+
+    def __init__(self, tx_hash: Optional[bytes] = None) -> None:
         """Constructor
 
         :param tx_hash: tx_hash
@@ -92,7 +95,7 @@ class TransactionBatch(MutableMapping):
         call_batch[key] = value
 
     def __delitem__(self, key):
-        raise DatabaseException('delete item is not allowed')
+        raise DatabaseException("delete item is not allowed")
 
     def __contains__(self, item):
         for call_batch in self._call_batches:
@@ -129,7 +132,9 @@ class TransactionBatch(MutableMapping):
 
     def digest(self) -> bytes:
         if len(self._call_batches) != 1:
-            raise DatabaseException(f'Wrong call_batch count: {len(self._call_batches)}')
+            raise DatabaseException(
+                f"Wrong call_batch count: {len(self._call_batches)}"
+            )
 
         return digest(self._call_batches[0])
 
@@ -148,7 +153,8 @@ class BlockBatch(Batch):
     key: Address
     value: IconScoreBatch
     """
-    def __init__(self, block: Optional['Block'] = None):
+
+    def __init__(self, block: Optional["Block"] = None):
         """Constructor
 
         :param block: block info
@@ -159,16 +165,18 @@ class BlockBatch(Batch):
     def __setitem__(self, key, value):
         raise AccessDeniedException("Can not set data on block batch directly.")
 
-    def update(self, tx_batch: 'TransactionBatch', **kwargs):
+    def update(self, tx_batch: "TransactionBatch", **kwargs):
         for key, value in tx_batch.items():
             super().__setitem__(key, value)
 
     def update_block_hash(self, block_hash: bytes):
-        self.block = Block(block_height=self.block.height,
-                           block_hash=block_hash,
-                           timestamp=self.block.timestamp,
-                           prev_hash=self.block.prev_hash,
-                           cumulative_fee=self.block.cumulative_fee)
+        self.block = Block(
+            block_height=self.block.height,
+            block_hash=block_hash,
+            timestamp=self.block.timestamp,
+            prev_hash=self.block.prev_hash,
+            cumulative_fee=self.block.cumulative_fee,
+        )
 
     def set_block_to_batch(self, revision: int):
         # Logger.debug(tag="DB", msg=f"set_block_to_batch() block={self.block}")

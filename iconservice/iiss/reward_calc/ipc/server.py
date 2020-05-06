@@ -30,11 +30,11 @@ class IPCServer(object):
         self._running = False
         self._loop = None
         self._path = None
-        self._queue: Optional['MessageQueue'] = None
-        self._unpacker: Optional['MessageUnpacker'] = MessageUnpacker()
+        self._queue: Optional["MessageQueue"] = None
+        self._unpacker: Optional["MessageUnpacker"] = MessageUnpacker()
         self._tasks = []
 
-    def open(self, loop,  message_queue: 'MessageQueue', path: str):
+    def open(self, loop, message_queue: "MessageQueue", path: str):
         Logger.info(tag=_TAG, msg="open() start")
 
         assert loop
@@ -80,7 +80,7 @@ class IPCServer(object):
 
         Logger.info(tag=_TAG, msg="close() end")
 
-    def _on_accepted(self, reader: 'StreamReader', writer: 'StreamWriter'):
+    def _on_accepted(self, reader: "StreamReader", writer: "StreamWriter"):
         Logger.info(tag=_TAG, msg=f"on_accepted() start: {reader} {writer}")
 
         self._tasks.append(asyncio.ensure_future(self._on_send(writer)))
@@ -88,12 +88,12 @@ class IPCServer(object):
 
         Logger.info(tag=_TAG, msg="on_accepted() end")
 
-    async def _on_send(self, writer: 'StreamWriter'):
+    async def _on_send(self, writer: "StreamWriter"):
         Logger.info(tag=_TAG, msg="_on_send() start")
 
         while self._running:
             try:
-                request: 'Request' = await self._queue.get()
+                request: "Request" = await self._queue.get()
                 self._queue.task_done()
 
                 if request.msg_type == MessageType.NONE:
@@ -115,7 +115,7 @@ class IPCServer(object):
 
         Logger.info(tag=_TAG, msg="_on_send() end")
 
-    async def _on_recv(self, reader: 'StreamReader'):
+    async def _on_recv(self, reader: "StreamReader"):
         Logger.info(tag=_TAG, msg="_on_recv() start")
 
         while self._running:

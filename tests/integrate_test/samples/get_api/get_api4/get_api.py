@@ -2,7 +2,6 @@ from iconservice import *
 
 
 class GetApi(IconScoreBase):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass

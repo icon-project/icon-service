@@ -30,41 +30,27 @@ class TestMessageUnpacker(unittest.TestCase):
         version: int = 7
         msg_id: int = 1234
         block_height: int = 100
-        state_hash: bytes = hashlib.sha3_256(b'').digest()
-        block_hash: bytes = hashlib.sha3_256(b'block_hash').digest()
+        state_hash: bytes = hashlib.sha3_256(b"").digest()
+        block_hash: bytes = hashlib.sha3_256(b"block_hash").digest()
         tx_index: int = 1
         tx_hash: bytes = hashlib.sha3_256(b"tx_hash").digest()
-        address = Address.from_data(AddressPrefix.EOA, b'')
+        address = Address.from_data(AddressPrefix.EOA, b"")
         iscore: int = 5000
         success: bool = True
 
         status: int = 1
 
         messages = [
-            (
-                MessageType.VERSION,
-                msg_id,
-                (
-                    version,
-                    block_height
-                )
-            ),
-            (
-                MessageType.CALCULATE,
-                msg_id,
-                (
-                    status,
-                    block_height
-                )
-            ),
+            (MessageType.VERSION, msg_id, (version, block_height)),
+            (MessageType.CALCULATE, msg_id, (status, block_height)),
             (
                 MessageType.QUERY,
                 msg_id,
                 (
                     address.to_bytes_including_prefix(),
                     int_to_bytes(iscore),
-                    block_height
-                )
+                    block_height,
+                ),
             ),
             (
                 MessageType.CLAIM,
@@ -75,77 +61,26 @@ class TestMessageUnpacker(unittest.TestCase):
                     block_hash,
                     tx_index,
                     tx_hash,
-                    int_to_bytes(iscore)
-                )
+                    int_to_bytes(iscore),
+                ),
             ),
-            (
-                MessageType.COMMIT_BLOCK,
-                msg_id,
-                (
-                    success,
-                    block_height,
-                    block_hash
-                )
-            ),
-            (
-                MessageType.COMMIT_CLAIM,
-                msg_id
-            ),
-            (
-                MessageType.QUERY_CALCULATE_STATUS,
-                msg_id,
-                (
-                    status,
-                    block_height
-                )
-            ),
+            (MessageType.COMMIT_BLOCK, msg_id, (success, block_height, block_hash)),
+            (MessageType.COMMIT_CLAIM, msg_id),
+            (MessageType.QUERY_CALCULATE_STATUS, msg_id, (status, block_height)),
             (
                 MessageType.QUERY_CALCULATE_RESULT,
                 msg_id,
-                (
-                    status,
-                    block_height,
-                    int_to_bytes(iscore),
-                    state_hash
-                )
+                (status, block_height, int_to_bytes(iscore), state_hash),
             ),
-            (
-                MessageType.READY,
-                msg_id,
-                (
-                    version,
-                    block_height,
-                    block_hash
-                )
-            ),
+            (MessageType.READY, msg_id, (version, block_height, block_hash)),
             (
                 MessageType.CALCULATE_DONE,
                 msg_id,
-                (
-                    success,
-                    block_height,
-                    int_to_bytes(iscore),
-                    state_hash
-                )
+                (success, block_height, int_to_bytes(iscore), state_hash),
             ),
-            (
-                MessageType.ROLLBACK,
-                msg_id,
-                (
-                    success,
-                    block_height,
-                    block_hash
-                )
-            ),
-            (
-                MessageType.INIT,
-                msg_id,
-                (
-                    success,
-                    block_height
-                )
-            )
-    ]
+            (MessageType.ROLLBACK, msg_id, (success, block_height, block_hash)),
+            (MessageType.INIT, msg_id, (success, block_height)),
+        ]
 
         for message in messages:
             data: bytes = msgpack.packb(message)
@@ -221,10 +156,17 @@ class TestMessageUnpacker(unittest.TestCase):
             self.unpacker.feed(data)
 
         expected = [
-            version_response, calculate_response, query_response,
-            claim_response, commit_block_response, commit_claim_response,
-            query_calculate_status, query_calculate_result,
-            ready_notification, calculate_done_notification, rollback_response
+            version_response,
+            calculate_response,
+            query_response,
+            claim_response,
+            commit_block_response,
+            commit_claim_response,
+            query_calculate_status,
+            query_calculate_result,
+            ready_notification,
+            calculate_done_notification,
+            rollback_response,
         ]
         for expected_response, response in zip(expected, self.unpacker):
             self.assertEqual(expected_response.MSG_TYPE, response.MSG_TYPE)

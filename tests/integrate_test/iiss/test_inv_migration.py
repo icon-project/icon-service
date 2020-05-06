@@ -21,7 +21,12 @@ from typing import TYPE_CHECKING, Optional
 
 from iconservice import IconNetworkValueType, Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, AddressPrefix
-from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType, IconServiceFlag
+from iconservice.icon_constant import (
+    ConfigKey,
+    Revision,
+    IconScoreContextType,
+    IconServiceFlag,
+)
 from iconservice.inv.container import ValueConverter, Container
 from iconservice.inv.data.value import Value
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -44,116 +49,132 @@ class TestINVMigration(TestIISSBase):
         super().setUp()
 
     def _get_step_price(self):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="getStepPrice")
+        return self.query_score(
+            from_=None, to_=GOVERNANCE_SCORE_ADDRESS, func_name="getStepPrice"
+        )
 
     def _set_step_price(self, step_price: int, is_migrated: bool):
         func_name = "set_step_price" if is_migrated else "setStepPrice"
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name=func_name,
-                        params={"stepPrice": hex(step_price)},
-                        expected_status=True)
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name=func_name,
+            params={"stepPrice": hex(step_price)},
+            expected_status=True,
+        )
 
-    def _is_in_score_black_list(self, address: 'Address'):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="isInScoreBlackList",
-                                params={"address": str(address)})
+    def _is_in_score_black_list(self, address: "Address"):
+        return self.query_score(
+            from_=None,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="isInScoreBlackList",
+            params={"address": str(address)},
+        )
 
-    def _add_to_score_black_list(self, address: 'Address', is_migrated: bool):
+    def _add_to_score_black_list(self, address: "Address", is_migrated: bool):
         func_name = "add_to_score_black_list" if is_migrated else "addToScoreBlackList"
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name=func_name,
-                        params={"address": str(address)},
-                        expected_status=True)
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name=func_name,
+            params={"address": str(address)},
+            expected_status=True,
+        )
 
     def _is_in_import_white_list(self, import_stmt: str):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="isInImportWhiteList",
-                                params={"importStmt": import_stmt})
+        return self.query_score(
+            from_=None,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="isInImportWhiteList",
+            params={"importStmt": import_stmt},
+        )
 
     def _add_import_white_list(self, import_stmt: str, is_migrated: bool):
         if is_migrated:
             return
 
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name="addImportWhiteList",
-                        params={"importStmt": import_stmt},
-                        expected_status=True)
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="addImportWhiteList",
+            params={"importStmt": import_stmt},
+            expected_status=True,
+        )
 
     def _remove_import_white_list(self, import_stmt: str):
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name="removeImportWhiteList",
-                        params={"importStmt": import_stmt},
-                        expected_status=True)
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="removeImportWhiteList",
+            params={"importStmt": import_stmt},
+            expected_status=True,
+        )
 
     def _get_step_costs(self):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="getStepCosts")
+        return self.query_score(
+            from_=None, to_=GOVERNANCE_SCORE_ADDRESS, func_name="getStepCosts"
+        )
 
     def _set_step_costs(self, step_type: str, cost: int, is_migrated: bool):
         func_name = "set_step_cost" if is_migrated else "setStepCost"
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name=func_name,
-                        params={"stepType": step_type,
-                                "cost": hex(cost)},
-                        expected_status=True)
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name=func_name,
+            params={"stepType": step_type, "cost": hex(cost)},
+            expected_status=True,
+        )
 
     def _get_max_step_limit(self, context_type: str):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="getMaxStepLimit",
-                                params={
-                                    "contextType": context_type
-                                })
+        return self.query_score(
+            from_=None,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="getMaxStepLimit",
+            params={"contextType": context_type},
+        )
 
     def _set_max_step_limit(self, context_type: str, value: int, is_migrated: bool):
         func_name = "set_max_step_limit" if is_migrated else "setMaxStepLimit"
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name=func_name,
-                        params={"contextType": context_type,
-                                "value": hex(value)},
-                        expected_status=True)
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name=func_name,
+            params={"contextType": context_type, "value": hex(value)},
+            expected_status=True,
+        )
 
     def _get_revision(self):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="getRevision")
+        return self.query_score(
+            from_=None, to_=GOVERNANCE_SCORE_ADDRESS, func_name="getRevision"
+        )
 
     # Override
     def _set_revision(self, revision: int, is_migrated: bool):
         func_name = "set_revision" if is_migrated else "setRevision"
-        return self.score_call(from_=self._admin,
-                               to_=GOVERNANCE_SCORE_ADDRESS,
-                               func_name=func_name,
-                               params={"code": hex(revision), "name": f"1.1.{revision}"},
-                               expected_status=True)
+        return self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name=func_name,
+            params={"code": hex(revision), "name": f"1.1.{revision}"},
+            expected_status=True,
+        )
 
     def _get_service_config(self):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="getServiceConfig")
+        return self.query_score(
+            from_=None, to_=GOVERNANCE_SCORE_ADDRESS, func_name="getServiceConfig"
+        )
 
     def _get_version(self):
-        return self.query_score(from_=None,
-                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                func_name="getVersion")
+        return self.query_score(
+            from_=None, to_=GOVERNANCE_SCORE_ADDRESS, func_name="getVersion"
+        )
 
-    def _get_inv_from_is(self, inv_type: 'IconNetworkValueType'):
-        inv_container: 'Container' = IconScoreContext.engine.inv.inv_container
+    def _get_inv_from_is(self, inv_type: "IconNetworkValueType"):
+        inv_container: "Container" = IconScoreContext.engine.inv.inv_container
         return inv_container.get_by_type(inv_type)
 
     def _get_is_migrated_from_is(self):
-        inv_container: 'Container' = IconScoreContext.engine.inv.inv_container
+        inv_container: "Container" = IconScoreContext.engine.inv.inv_container
         return inv_container.is_migrated
 
     def _convert_service_config_from_int_to_dict(self, service_flag: int) -> dict:
@@ -171,8 +192,12 @@ class TestINVMigration(TestIISSBase):
         """Service Config"""
         # TEST: service config should be same between icon-service and governance
         gs_service_config: dict = self._get_service_config()
-        is_service_flag: int = self._get_inv_from_is(IconNetworkValueType.SERVICE_CONFIG)
-        is_service_config: dict = self._convert_service_config_from_int_to_dict(is_service_flag)
+        is_service_flag: int = self._get_inv_from_is(
+            IconNetworkValueType.SERVICE_CONFIG
+        )
+        is_service_config: dict = self._convert_service_config_from_int_to_dict(
+            is_service_flag
+        )
         assert gs_service_config == is_service_config
 
         """Step Price"""
@@ -196,7 +221,8 @@ class TestINVMigration(TestIISSBase):
         gs_step_costs = self._get_step_costs()
         is_step_costs = ValueConverter.convert_for_governance(
             IconNetworkValueType.STEP_COSTS,
-            self._get_inv_from_is(IconNetworkValueType.STEP_COSTS))
+            self._get_inv_from_is(IconNetworkValueType.STEP_COSTS),
+        )
 
         assert is_step_costs == gs_step_costs
 
@@ -210,7 +236,9 @@ class TestINVMigration(TestIISSBase):
             gs_step_costs = self._get_step_costs()
             is_step_costs = self._get_inv_from_is(IconNetworkValueType.STEP_COSTS)
 
-            assert gs_step_costs[type_] == is_step_costs[StepType(type_)] == expected_costs
+            assert (
+                gs_step_costs[type_] == is_step_costs[StepType(type_)] == expected_costs
+            )
 
         """Max Step Limits"""
         # TEST: Max step limits should be same between icon-service and governance
@@ -218,7 +246,9 @@ class TestINVMigration(TestIISSBase):
         gs_query_max_step_limit = self._get_max_step_limit("query")
         is_max_step_limit = self._get_inv_from_is(IconNetworkValueType.MAX_STEP_LIMITS)
 
-        assert is_max_step_limit[IconScoreContextType.INVOKE] == gs_invoke_max_step_limit
+        assert (
+            is_max_step_limit[IconScoreContextType.INVOKE] == gs_invoke_max_step_limit
+        )
         assert is_max_step_limit[IconScoreContextType.QUERY] == gs_query_max_step_limit
 
         # TEST: When update the max step limits, icon service should update accordingly
@@ -234,8 +264,16 @@ class TestINVMigration(TestIISSBase):
         gs_query_max_step_limit = self._get_max_step_limit("query")
         is_max_step_limit = self._get_inv_from_is(IconNetworkValueType.MAX_STEP_LIMITS)
 
-        assert is_max_step_limit[IconScoreContextType.INVOKE] == gs_invoke_max_step_limit == expected_invoke_value
-        assert is_max_step_limit[IconScoreContextType.QUERY] == gs_query_max_step_limit == expected_query_value
+        assert (
+            is_max_step_limit[IconScoreContextType.INVOKE]
+            == gs_invoke_max_step_limit
+            == expected_invoke_value
+        )
+        assert (
+            is_max_step_limit[IconScoreContextType.QUERY]
+            == gs_query_max_step_limit
+            == expected_query_value
+        )
 
         """Revision"""
         # TEST: Revision should be same between icon-service and governance
@@ -243,8 +281,8 @@ class TestINVMigration(TestIISSBase):
         is_revision_code = self._get_inv_from_is(IconNetworkValueType.REVISION_CODE)
         is_revision_name = self._get_inv_from_is(IconNetworkValueType.REVISION_NAME)
 
-        assert is_revision_code == gs_revision['code']
-        assert is_revision_name == gs_revision['name']
+        assert is_revision_code == gs_revision["code"]
+        assert is_revision_name == gs_revision["name"]
 
         # TEST: When update the revision, icon service should update accordingly
         expected_revision_value = Revision.IISS.value
@@ -256,16 +294,18 @@ class TestINVMigration(TestIISSBase):
         is_revision_code = self._get_inv_from_is(IconNetworkValueType.REVISION_CODE)
         is_revision_name = self._get_inv_from_is(IconNetworkValueType.REVISION_NAME)
 
-        assert is_revision_code == gs_revision['code'] == expected_revision_value
-        assert is_revision_name == gs_revision['name'] == expected_revision_name
+        assert is_revision_code == gs_revision["code"] == expected_revision_value
+        assert is_revision_name == gs_revision["name"] == expected_revision_name
 
         """Score Black List"""
         # TEST: Score black list should be same between icon-service and governance
         expected_is_in_black_list: bool = False
-        score_address: 'Address' = create_address(AddressPrefix.CONTRACT)
+        score_address: "Address" = create_address(AddressPrefix.CONTRACT)
 
         gs_is_in_black_list = self._is_in_score_black_list(score_address)
-        is_is_in_black_list = score_address in self._get_inv_from_is(IconNetworkValueType.SCORE_BLACK_LIST)
+        is_is_in_black_list = score_address in self._get_inv_from_is(
+            IconNetworkValueType.SCORE_BLACK_LIST
+        )
 
         assert is_is_in_black_list == gs_is_in_black_list == expected_is_in_black_list
 
@@ -274,7 +314,9 @@ class TestINVMigration(TestIISSBase):
 
         self._add_to_score_black_list(score_address, is_migrated)
         gs_is_in_black_list = self._is_in_score_black_list(score_address)
-        is_is_in_black_list = score_address in self._get_inv_from_is(IconNetworkValueType.SCORE_BLACK_LIST)
+        is_is_in_black_list = score_address in self._get_inv_from_is(
+            IconNetworkValueType.SCORE_BLACK_LIST
+        )
 
         assert is_is_in_black_list == gs_is_in_black_list == expected_is_in_black_list
 
@@ -285,9 +327,11 @@ class TestINVMigration(TestIISSBase):
         is_import_list = self._get_inv_from_is(IconNetworkValueType.IMPORT_WHITE_LIST)
 
         gs_is_in_import_list = self._is_in_import_white_list(import_stmt)
-        is_is_in_import_list = is_import_list.get('os', None) is not None
+        is_is_in_import_list = is_import_list.get("os", None) is not None
 
-        assert is_is_in_import_list == gs_is_in_import_list == expected_is_in_import_list
+        assert (
+            is_is_in_import_list == gs_is_in_import_list == expected_is_in_import_list
+        )
 
         # TEST: When add import white list, icon service should update accordingly
         # After governance 0.0.6, adding import white list is removed. So do not test after migration
@@ -296,24 +340,34 @@ class TestINVMigration(TestIISSBase):
 
             self._add_import_white_list(import_stmt, is_migrated)
             gs_is_in_import_list = self._is_in_import_white_list(import_stmt)
-            is_is_in_import_list = \
-                self._get_inv_from_is(IconNetworkValueType.IMPORT_WHITE_LIST).get('os', None) is not None
+            is_is_in_import_list = (
+                self._get_inv_from_is(IconNetworkValueType.IMPORT_WHITE_LIST).get(
+                    "os", None
+                )
+                is not None
+            )
 
-            assert is_is_in_import_list == gs_is_in_import_list == expected_is_in_import_list
+            assert (
+                is_is_in_import_list
+                == gs_is_in_import_list
+                == expected_is_in_import_list
+            )
 
             # Remove added import white list (kind of tear down)
             self._remove_import_white_list(import_stmt)
 
     def _inv_is_stored_on_state_db(self) -> bool:
-        context: 'IconScoreContext' = IconScoreContext()
+        context: "IconScoreContext" = IconScoreContext()
         for type_ in IconNetworkValueType:
-            inv_value: Optional['Value'] = IconScoreContext.storage.inv._get_value(context, type_)
+            inv_value: Optional["Value"] = IconScoreContext.storage.inv._get_value(
+                context, type_
+            )
             if inv_value is None:
                 return False
         return True
 
     def _is_migration_flag_stored_on_state_db(self) -> bool:
-        context: 'IconScoreContext' = IconScoreContext()
+        context: "IconScoreContext" = IconScoreContext()
         return IconScoreContext.storage.inv._get_migration_flag(context)
 
     def test_before_migration(self):
@@ -324,7 +378,9 @@ class TestINVMigration(TestIISSBase):
         assert self._is_migration_flag_stored_on_state_db() is False
 
     def test_after_migration(self):
-        self.update_governance(version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests")
+        self.update_governance(
+            version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests"
+        )
         self.check_inv(is_migrated=True)
 
         assert self._inv_is_stored_on_state_db() is True
@@ -341,22 +397,28 @@ class TestINVMigration(TestIISSBase):
 
         # TEST: When After upgrade GS to version 1.0.1, all INVs should be same between icon-service and governance
         # and all INVs must be stored on stateDB
-        self.update_governance(version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests")
+        self.update_governance(
+            version="1_0_1", expected_status=True, root_path="sample_builtin_for_tests"
+        )
         self.check_inv(is_migrated=True)
 
         assert self._inv_is_stored_on_state_db() is True
         assert self._is_migration_flag_stored_on_state_db() is True
 
     # FIXME: use fixture.marks.parameterize
-    def test_when_put_insufficient_invs_on_migration_should_rollback_to_before_migration(self):
+    def test_when_put_insufficient_invs_on_migration_should_rollback_to_before_migration(
+        self,
+    ):
         # TEST: Test case about raising exception during migration
         expected_status: bool = False
         self.update_governance(version="0_0_6")
 
         # Act
-        self.update_governance(version="1_0_1_insufficient_invs",
-                               expected_status=expected_status,
-                               root_path="sample_builtin_for_tests")
+        self.update_governance(
+            version="1_0_1_insufficient_invs",
+            expected_status=expected_status,
+            root_path="sample_builtin_for_tests",
+        )
 
         assert self._get_is_migrated_from_is() is False
         assert self._inv_is_stored_on_state_db() is False
@@ -372,9 +434,11 @@ class TestINVMigration(TestIISSBase):
         self.update_governance(version="0_0_6")
 
         # Act
-        self.update_governance(version="1_0_1_revert_on_update",
-                               expected_status=expected_status,
-                               root_path="sample_builtin_for_tests")
+        self.update_governance(
+            version="1_0_1_revert_on_update",
+            expected_status=expected_status,
+            root_path="sample_builtin_for_tests",
+        )
 
         assert self._get_is_migrated_from_is() is False
         assert self._inv_is_stored_on_state_db() is False
@@ -390,9 +454,11 @@ class TestINVMigration(TestIISSBase):
         self.update_governance(version="0_0_6")
 
         # Act
-        self.update_governance(version="1_0_1_revert_at_the_end_of_update",
-                               expected_status=expected_status,
-                               root_path="sample_builtin_for_tests")
+        self.update_governance(
+            version="1_0_1_revert_at_the_end_of_update",
+            expected_status=expected_status,
+            root_path="sample_builtin_for_tests",
+        )
 
         assert self._get_is_migrated_from_is() is False
         assert self._inv_is_stored_on_state_db() is False
@@ -408,9 +474,11 @@ class TestINVMigration(TestIISSBase):
         self.update_governance(version="0_0_6")
 
         # Act
-        self.update_governance(version="1_0_1_change_the_value_of_invs_on_migrations",
-                               expected_status=expected_status,
-                               root_path="sample_builtin_for_tests")
+        self.update_governance(
+            version="1_0_1_change_the_value_of_invs_on_migrations",
+            expected_status=expected_status,
+            root_path="sample_builtin_for_tests",
+        )
 
         assert self._get_is_migrated_from_is() is True
         assert self._inv_is_stored_on_state_db() is True

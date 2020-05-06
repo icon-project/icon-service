@@ -27,12 +27,12 @@ if TYPE_CHECKING:
 
 
 class Storage(StorageBase):
-    MIGRATION_FLAG: bytes = b'mf'
+    MIGRATION_FLAG: bytes = b"mf"
 
-    def __init__(self, db: 'ContextDatabase'):
+    def __init__(self, db: "ContextDatabase"):
         super().__init__(db)
 
-    def get_container(self, context: 'IconScoreContext') -> Optional['Container']:
+    def get_container(self, context: "IconScoreContext") -> Optional["Container"]:
         """
         Load container from DB after migration
 
@@ -40,33 +40,35 @@ class Storage(StorageBase):
         :return: Return'None' if migration has not been finished
         """
         is_migrated: bool = self._get_migration_flag(context)
-        container: Optional['Container'] = None
+        container: Optional["Container"] = None
         if not is_migrated:
             return container
 
-        container: 'Container' = Container(is_migrated)
+        container: "Container" = Container(is_migrated)
         for type_ in IconNetworkValueType:
-            value: Optional['Value'] = self._get_value(context, type_)
+            value: Optional["Value"] = self._get_value(context, type_)
             if value is not None:
                 container.set_inv(value, is_open=True)
         return container
 
-    def migrate(self, context: 'IconScoreContext', data: List['Value']):
+    def migrate(self, context: "IconScoreContext", data: List["Value"]):
         for value in data:
             self.put_value(context, value)
         self._db.put(context, self.MIGRATION_FLAG, MsgPackForDB.dumps(True))
 
-    def _get_migration_flag(self, context: 'IconScoreContext') -> bool:
+    def _get_migration_flag(self, context: "IconScoreContext") -> bool:
         return bool(self._db.get(context, self.MIGRATION_FLAG))
 
-    def put_value(self, context: 'IconScoreContext', value: 'Value'):
+    def put_value(self, context: "IconScoreContext", value: "Value"):
         self._db.put(context, value.make_key(), value.to_bytes())
 
-    def _get_value(self, context: 'IconScoreContext', type_: 'IconNetworkValueType') -> Optional['Value']:
+    def _get_value(
+        self, context: "IconScoreContext", type_: "IconNetworkValueType"
+    ) -> Optional["Value"]:
         assert isinstance(type_, IconNetworkValueType)
         value: Optional[bytes] = self._db.get(context, Value.PREFIX + type_.value)
         if value is None:
             return None
 
-        value: 'value' = VALUE_MAPPER[type_].from_bytes(value)
+        value: "value" = VALUE_MAPPER[type_].from_bytes(value)
         return value

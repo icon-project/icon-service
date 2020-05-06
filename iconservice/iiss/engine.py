@@ -27,14 +27,26 @@ from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import (
-    InvalidParamsException, InvalidRequestException,
-    OutOfBalanceException, FatalException, InternalServiceErrorException
+    InvalidParamsException,
+    InvalidRequestException,
+    OutOfBalanceException,
+    FatalException,
+    InternalServiceErrorException,
 )
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
-from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
-    RevisionChangedFlag
+from ..icon_constant import (
+    IISS_MAX_DELEGATIONS,
+    ISCORE_EXCHANGE_RATE,
+    IISS_MAX_REWARD_RATE,
+    IconScoreContextType,
+    IISS_LOG_TAG,
+    ROLLBACK_LOG_TAG,
+    RCCalculateResult,
+    INVALID_CLAIM_TX,
+    Revision,
+    RevisionChangedFlag,
+)
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..iconscore.icon_score_step import StepType
@@ -45,7 +57,14 @@ from ..iiss.reward_calc.storage import get_rc_version
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
-    from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
+    from .reward_calc.msg_data import (
+        TxData,
+        DelegationInfo,
+        DelegationTx,
+        Header,
+        BlockProduceInfoData,
+        PRepsData,
+    )
     from .reward_calc.msg_data import GovernanceVariable
     from ..iiss.storage import RewardRate
     from ..icx import IcxStorage
@@ -59,19 +78,20 @@ QUERY_CALCULATE_REPEAT_COUNT = 3
 
 
 class Method:
-    SET_STAKE = 'setStake'
-    GET_STAKE = 'getStake'
-    SET_DELEGATION = 'setDelegation'
-    GET_DELEGATION = 'getDelegation'
-    CLAIM_ISCORE = 'claimIScore'
-    QUERY_ISCORE = 'queryIScore'
-    ESTIMATE_UNLOCK_PERIOD = 'estimateUnstakeLockPeriod'
+    SET_STAKE = "setStake"
+    GET_STAKE = "getStake"
+    SET_DELEGATION = "setDelegation"
+    GET_DELEGATION = "getDelegation"
+    CLAIM_ISCORE = "claimIScore"
+    QUERY_ISCORE = "queryIScore"
+    ESTIMATE_UNLOCK_PERIOD = "estimateUnstakeLockPeriod"
 
 
 class Engine(EngineBase):
     """IISSEngine class
 
     """
+
     TAG = "IISS"
 
     INVOKE_METHOD_TABLE = [
@@ -107,12 +127,19 @@ class Engine(EngineBase):
             Method.ESTIMATE_UNLOCK_PERIOD: self.handle_estimate_unstake_lock_period,
         }
 
-        self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
-        self._listeners: List['IISSEngineListener'] = []
+        self._reward_calc_proxy: Optional["RewardCalcProxy"] = None
+        self._listeners: List["IISSEngineListener"] = []
 
-    def open(self, context: 'IconScoreContext',
-             log_dir: str, data_path: str, socket_path: str, ipc_timeout: int,
-             icon_rc_path: str, icon_rc_monitor: bool):
+    def open(
+        self,
+        context: "IconScoreContext",
+        log_dir: str,
+        data_path: str,
+        socket_path: str,
+        ipc_timeout: int,
+        icon_rc_path: str,
+        icon_rc_monitor: bool,
+    ):
         """
         :param context:
         :param log_dir:
@@ -123,29 +150,36 @@ class Engine(EngineBase):
         :param icon_rc_monitor: Boolean which determines Opening RC monitor channel
         :return:
         """
-        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path, icon_rc_monitor)
+        self._init_reward_calc_proxy(
+            log_dir, data_path, socket_path, ipc_timeout, icon_rc_path, icon_rc_monitor
+        )
 
-    def add_listener(self, listener: 'IISSEngineListener'):
+    def add_listener(self, listener: "IISSEngineListener"):
         assert isinstance(listener, IISSEngineListener)
         self._listeners.append(listener)
 
-    def remove_listener(self, listener: 'IISSEngineListener'):
+    def remove_listener(self, listener: "IISSEngineListener"):
         assert isinstance(listener, IISSEngineListener)
         self._listeners.remove(listener)
 
     @staticmethod
-    def ready_callback(cb_data: 'ReadyNotification'):
+    def ready_callback(cb_data: "ReadyNotification"):
         Logger.debug(tag=_TAG, msg=f"ready_callback() start: {cb_data}")
         Logger.debug(tag=_TAG, msg="ready_callback() end")
 
-    def init_reward_calculator(self, block: 'Block'):
+    def init_reward_calculator(self, block: "Block"):
         """Send a INIT request to RC to synchronize the block state with RC
 
         """
         Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() start: block={block}")
 
-        success, block_height = self._reward_calc_proxy.init_reward_calculator(block.height)
-        Logger.info(tag=_TAG, msg=f"success={success} block_height={block_height} last_block={block}")
+        success, block_height = self._reward_calc_proxy.init_reward_calculator(
+            block.height
+        )
+        Logger.info(
+            tag=_TAG,
+            msg=f"success={success} block_height={block_height} last_block={block}",
+        )
 
         Logger.debug(tag=_TAG, msg=f"_init_reward_calculator() end")
 
@@ -155,9 +189,9 @@ class Engine(EngineBase):
     def is_reward_calculator_ready(self):
         return self._reward_calc_proxy.is_reward_calculator_ready()
 
-    def query_calculate_result(self,
-                               calc_bh: int,
-                               repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT) -> Tuple[int, int, bytes]:
+    def query_calculate_result(
+        self, calc_bh: int, repeat_cnt: int = QUERY_CALCULATE_REPEAT_COUNT
+    ) -> Tuple[int, int, bytes]:
         """Query the calculation result for the last term to reward calculator
 
         :param calc_bh:
@@ -172,71 +206,107 @@ class Engine(EngineBase):
         iscore: int = -1
 
         for i in range(repeat_cnt):
-            calc_result_status, calc_result_bh, iscore, state_hash = \
-                self._reward_calc_proxy.query_calculate_result(calc_bh)
+            (
+                calc_result_status,
+                calc_result_bh,
+                iscore,
+                state_hash,
+            ) = self._reward_calc_proxy.query_calculate_result(calc_bh)
             if calc_result_status == RCCalculateResult.SUCCESS:
                 break
             elif calc_result_status == RCCalculateResult.IN_PROGRESS:
                 time.sleep(1)
-                Logger.debug(tag=_TAG, msg=f"Retry to query calculate result: {i + 1}/{repeat_cnt}")
+                Logger.debug(
+                    tag=_TAG,
+                    msg=f"Retry to query calculate result: {i + 1}/{repeat_cnt}",
+                )
                 continue
             else:
-                raise FatalException(f'RC has a problem about calculating: {calc_result_status}')
+                raise FatalException(
+                    f"RC has a problem about calculating: {calc_result_status}"
+                )
 
         if calc_result_status != RCCalculateResult.SUCCESS:
-            raise FatalException(f'RC has a problem about calculating: {calc_result_status}')
+            raise FatalException(
+                f"RC has a problem about calculating: {calc_result_status}"
+            )
 
         if calc_result_bh != calc_bh:
-            raise FatalException(f'Unexpected calculate result response '
-                                 f'(reward calc: {calc_result_bh} icon service: {calc_bh}')
+            raise FatalException(
+                f"Unexpected calculate result response "
+                f"(reward calc: {calc_result_bh} icon service: {calc_bh}"
+            )
 
         if iscore < 0:
-            raise FatalException(f'Invalid I-SCORE value: {iscore}')
+            raise FatalException(f"Invalid I-SCORE value: {iscore}")
 
-        Logger.debug(tag=_TAG, msg=f"query_calculate_result() end: "
-                                   f"status={calc_result_status}, "
-                                   f"calc_result_bh={calc_result_bh}, "
-                                   f"iscore={iscore}, "
-                                   f"state_hash={bytes_to_hex(state_hash)}")
+        Logger.debug(
+            tag=_TAG,
+            msg=f"query_calculate_result() end: "
+            f"status={calc_result_status}, "
+            f"calc_result_bh={calc_result_bh}, "
+            f"iscore={iscore}, "
+            f"state_hash={bytes_to_hex(state_hash)}",
+        )
 
         return iscore, calc_result_bh, state_hash
 
     @staticmethod
-    def check_calculate_request_block_height(reward_calc_bh: int,
-                                             icon_service_bh: int):
+    def check_calculate_request_block_height(reward_calc_bh: int, icon_service_bh: int):
 
         if reward_calc_bh != icon_service_bh:
-            raise FatalException(f"request block height is not matched: "
-                                 f"response from RC:{reward_calc_bh} "
-                                 f"request:{reward_calc_bh} ")
+            raise FatalException(
+                f"request block height is not matched: "
+                f"response from RC:{reward_calc_bh} "
+                f"request:{reward_calc_bh} "
+            )
 
-    def calculate_done_callback(self, cb_data: 'CalculateDoneNotification'):
+    def calculate_done_callback(self, cb_data: "CalculateDoneNotification"):
         Logger.info(tag=_TAG, msg=f"calculate_done_callback start")
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
         if not cb_data.success:
-            raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
+            raise FatalException(
+                f"Reward calc has failed calculating about block height:{cb_data.block_height}"
+            )
 
         # context for searching db data
-        context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+        context: "IconScoreContext" = IconScoreContext(IconScoreContextType.QUERY)
+        end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(
+            context
+        )
         calc_period: int = context.storage.iiss.get_calc_period(context)
 
         latest_calculate_bh: int = end_block_height_of_calc - calc_period
-        self.check_calculate_request_block_height(cb_data.block_height, latest_calculate_bh)
+        self.check_calculate_request_block_height(
+            cb_data.block_height, latest_calculate_bh
+        )
 
-        IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height, cb_data.state_hash)
+        IconScoreContext.storage.rc.put_calc_response_from_rc(
+            cb_data.iscore, cb_data.block_height, cb_data.state_hash
+        )
         Logger.info(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
-    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int,
-                                icon_rc_path: str, icon_rc_monitor: bool):
-        self._reward_calc_proxy = RewardCalcProxy(calc_done_callback=self.calculate_done_callback,
-                                                  ready_callback=self.ready_callback,
-                                                  ipc_timeout=ipc_timeout,
-                                                  icon_rc_path=icon_rc_path)
-        self._reward_calc_proxy.open(log_dir=log_dir,
-                                     sock_path=socket_path,
-                                     iiss_db_path=data_path,
-                                     icon_rc_monitor=icon_rc_monitor)
+    def _init_reward_calc_proxy(
+        self,
+        log_dir: str,
+        data_path: str,
+        socket_path: str,
+        ipc_timeout: int,
+        icon_rc_path: str,
+        icon_rc_monitor: bool,
+    ):
+        self._reward_calc_proxy = RewardCalcProxy(
+            calc_done_callback=self.calculate_done_callback,
+            ready_callback=self.ready_callback,
+            ipc_timeout=ipc_timeout,
+            icon_rc_path=icon_rc_path,
+        )
+        self._reward_calc_proxy.open(
+            log_dir=log_dir,
+            sock_path=socket_path,
+            iiss_db_path=data_path,
+            icon_rc_monitor=icon_rc_monitor,
+        )
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):
@@ -262,7 +332,7 @@ class Engine(EngineBase):
     def check_query_method(cls, method: str) -> bool:
         return method in cls.QUERY_METHOD_TABLE
 
-    def invoke(self, context: 'IconScoreContext', method: str, params: dict):
+    def invoke(self, context: "IconScoreContext", method: str, params: dict):
         if context.revision < Revision.IISS.value:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             raise InvalidParamsException(f"Method Not Found: {method}")
@@ -270,31 +340,35 @@ class Engine(EngineBase):
         handler: callable = self._invoke_handlers[method]
         handler(context, **params)
 
-    def query(self, context: 'IconScoreContext', method: str, params: dict) -> Any:
+    def query(self, context: "IconScoreContext", method: str, params: dict) -> Any:
         handler: callable = self._query_handler[method]
         ret = handler(context, **params)
         return ret
 
-    def handle_set_stake(self, context: 'IconScoreContext', value: int):
+    def handle_set_stake(self, context: "IconScoreContext", value: int):
         if not isinstance(value, int) or value < 0:
             raise InvalidParamsException(
                 "Failed to stake: value is not int type or value < 0"
             )
 
-        address: 'Address' = context.msg.sender
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
+        address: "Address" = context.msg.sender
+        account: "Account" = context.storage.icx.get_account(
+            context, address, Intent.ALL
+        )
         total_stake: int = context.storage.iiss.get_total_stake(context)
 
         if value < 0:
-            raise InvalidParamsException('Failed to stake: value < 0')
+            raise InvalidParamsException("Failed to stake: value < 0")
 
         self._check_from_can_stake(context, value, account)
 
-        unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
-                                                                       context.storage.iiss.lock_max,
-                                                                       context.storage.iiss.reward_point,
-                                                                       total_stake,
-                                                                       context.total_supply)
+        unstake_lock_period: int = self._calculate_unstake_lock_period(
+            context.storage.iiss.lock_min,
+            context.storage.iiss.lock_max,
+            context.storage.iiss.reward_point,
+            total_stake,
+            context.total_supply,
+        )
         # subtract account's staked amount from the total stake
         total_stake -= account.stake
         account.set_stake(value, unstake_lock_period)
@@ -307,10 +381,9 @@ class Engine(EngineBase):
             listener.on_set_stake(context, account)
 
     @classmethod
-    def _check_from_can_stake(cls,
-                              context: 'IconScoreContext',
-                              stake: int,
-                              account: 'Account'):
+    def _check_from_can_stake(
+        cls, context: "IconScoreContext", stake: int, account: "Account"
+    ):
         fee: int = 0
         # SCORE can stake via SCORE inter-call
         # fee must be charged to TX sender
@@ -319,30 +392,32 @@ class Engine(EngineBase):
 
         if account.balance + account.total_stake < stake + fee:
             raise OutOfBalanceException(
-                f'Out of balance({account.address}): balance({account.balance}) + total_stake({account.total_stake})'
-                f' < stake({stake}) + fee({fee})')
+                f"Out of balance({account.address}): balance({account.balance}) + total_stake({account.total_stake})"
+                f" < stake({stake}) + fee({fee})"
+            )
 
         if stake < account.delegations_amount:
-            raise InvalidParamsException(f"Failed to stake: stake({stake})"
-                                         f" < delegations_amount({account.delegations_amount})")
+            raise InvalidParamsException(
+                f"Failed to stake: stake({stake})"
+                f" < delegations_amount({account.delegations_amount})"
+            )
 
     @classmethod
-    def _calculate_unstake_lock_period(cls,
-                                       lmin: int,
-                                       lmax: int,
-                                       rpoint: int,
-                                       total_stake: int,
-                                       total_supply: int):
+    def _calculate_unstake_lock_period(
+        cls, lmin: int, lmax: int, rpoint: int, total_stake: int, total_supply: int
+    ):
         stake_percentage: float = total_stake / total_supply
         if stake_percentage >= rpoint / IISS_MAX_REWARD_RATE:
             return lmin
 
         first_operand: float = (lmax - lmin) / (rpoint / IISS_MAX_REWARD_RATE) ** 2
-        second_operand: float = (stake_percentage - (rpoint / IISS_MAX_REWARD_RATE)) ** 2
+        second_operand: float = (
+            stake_percentage - (rpoint / IISS_MAX_REWARD_RATE)
+        ) ** 2
         return int(first_operand * second_operand) + lmin
 
     @staticmethod
-    def handle_get_stake(context: 'IconScoreContext', address: "Address") -> dict:
+    def handle_get_stake(context: "IconScoreContext", address: "Address") -> dict:
         account: "Account" = context.storage.icx.get_account(
             context, address, Intent.STAKE
         )
@@ -351,9 +426,7 @@ class Engine(EngineBase):
         unstake: int = account.unstake
         unstake_block_height: int = account.unstake_block_height
 
-        data = {
-            "stake": stake
-        }
+        data = {"stake": stake}
 
         if unstake_block_height:
             data["unstake"] = unstake
@@ -362,30 +435,33 @@ class Engine(EngineBase):
 
         return data
 
-    def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext'):
+    def handle_estimate_unstake_lock_period(self, context: "IconScoreContext"):
         total_stake: int = context.storage.iiss.get_total_stake(context)
-        unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
-                                                                       context.storage.iiss.lock_max,
-                                                                       context.storage.iiss.reward_point,
-                                                                       total_stake,
-                                                                       context.total_supply)
-        return {
-            "unstakeLockPeriod": unstake_lock_period
-        }
+        unstake_lock_period: int = self._calculate_unstake_lock_period(
+            context.storage.iiss.lock_min,
+            context.storage.iiss.lock_max,
+            context.storage.iiss.reward_point,
+            total_stake,
+            context.total_supply,
+        )
+        return {"unstakeLockPeriod": unstake_lock_period}
 
-    def handle_set_delegation(self, context: 'IconScoreContext', delegations: list):
+    def handle_set_delegation(self, context: "IconScoreContext", delegations: list):
         """Handles setDelegation JSON-RPC API request
         """
         # SCORE can stake via SCORE inter-call
-        sender: 'Address' = context.msg.sender
-        cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
+        sender: "Address" = context.msg.sender
+        cached_accounts: Dict["Address", Tuple["Account", int]] = OrderedDict()
 
         # Convert setDelegation params
-        total_delegating, new_delegations = \
-            self._convert_params_of_set_delegation(delegations)
+        total_delegating, new_delegations = self._convert_params_of_set_delegation(
+            delegations
+        )
 
         # Check whether voting power is enough to delegate
-        self._check_voting_power_is_enough(context, sender, total_delegating, cached_accounts)
+        self._check_voting_power_is_enough(
+            context, sender, total_delegating, cached_accounts
+        )
 
         # Get old delegations from delegating accounts
         self._get_old_delegations_from_sender_account(context, sender, cached_accounts)
@@ -394,8 +470,9 @@ class Engine(EngineBase):
         self._calc_delegations(context, new_delegations, cached_accounts)
 
         # Put updated delegation data to stateDB
-        updated_accounts: List['Account'] = \
-            self._put_delegation_to_state_db(context, sender, new_delegations, cached_accounts)
+        updated_accounts: List["Account"] = self._put_delegation_to_state_db(
+            context, sender, new_delegations, cached_accounts
+        )
 
         # Put updated delegation data to rcDB
         self._put_delegation_to_rc_db(context, sender, new_delegations)
@@ -404,8 +481,9 @@ class Engine(EngineBase):
             listener.on_set_delegation(context, updated_accounts)
 
     @classmethod
-    def _convert_params_of_set_delegation(cls,
-                                          delegations: list) -> Tuple[int, List[Tuple['Address', int]]]:
+    def _convert_params_of_set_delegation(
+        cls, delegations: list
+    ) -> Tuple[int, List[Tuple["Address", int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
@@ -421,15 +499,19 @@ class Engine(EngineBase):
             return 0, []
 
         if len(delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
+            raise InvalidParamsException(
+                f"Delegations out of range: {len(delegations)}"
+            )
 
-        temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
+        temp_delegations: list = TypeConverter.convert(
+            delegations, ParamType.IISS_SET_DELEGATION
+        )
         total_delegating: int = 0
-        converted_delegations: List[Tuple['Address', int]] = []
+        converted_delegations: List[Tuple["Address", int]] = []
         delegated_addresses = set()
 
         for delegation in temp_delegations:
-            address: 'Address' = delegation["address"]
+            address: "Address" = delegation["address"]
             value: int = delegation["value"]
             assert isinstance(address, Address)
             assert isinstance(value, int)
@@ -449,10 +531,13 @@ class Engine(EngineBase):
         return total_delegating, converted_delegations
 
     @classmethod
-    def _check_voting_power_is_enough(cls,
-                                      context: 'IconScoreContext',
-                                      sender: 'Address', delegating: int,
-                                      cached_accounts: Dict['Address', Tuple['Account', int]]):
+    def _check_voting_power_is_enough(
+        cls,
+        context: "IconScoreContext",
+        sender: "Address",
+        delegating: int,
+        cached_accounts: Dict["Address", Tuple["Account", int]],
+    ):
         """
 
         :param context:
@@ -461,7 +546,9 @@ class Engine(EngineBase):
         :param delegating:
         :return:
         """
-        account: 'Account' = context.storage.icx.get_account(context, sender, Intent.ALL)
+        account: "Account" = context.storage.icx.get_account(
+            context, sender, Intent.ALL
+        )
         assert isinstance(account, Account)
 
         if account.voting_weight < delegating:
@@ -470,10 +557,12 @@ class Engine(EngineBase):
         cached_accounts[sender] = account, 0
 
     @classmethod
-    def _get_old_delegations_from_sender_account(cls,
-                                                 context: 'IconScoreContext',
-                                                 sender: 'Address',
-                                                 cached_accounts: Dict['Address', Tuple['Account', int]]):
+    def _get_old_delegations_from_sender_account(
+        cls,
+        context: "IconScoreContext",
+        sender: "Address",
+        cached_accounts: Dict["Address", Tuple["Account", int]],
+    ):
         """Get old delegations from sender account
 
         :param context:
@@ -482,7 +571,7 @@ class Engine(EngineBase):
         :return:
         """
         icx_storage = context.storage.icx
-        sender_account: 'Account' = cached_accounts[sender][0]
+        sender_account: "Account" = cached_accounts[sender][0]
 
         old_delegations: List[Tuple[Address, int]] = sender_account.delegations
         if not old_delegations:
@@ -491,20 +580,24 @@ class Engine(EngineBase):
         for address, old_delegated in old_delegations:
             assert old_delegated > 0
 
-            cached: Tuple['Account', int] = cached_accounts.get(address)
+            cached: Tuple["Account", int] = cached_accounts.get(address)
             if cached is None:
-                account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+                account: "Account" = icx_storage.get_account(
+                    context, address, Intent.DELEGATED
+                )
             else:
-                account: 'Account' = cached[0]
+                account: "Account" = cached[0]
 
             assert account.delegated_amount >= old_delegated
             cached_accounts[address] = account, -old_delegated
 
     @classmethod
-    def _calc_delegations(cls,
-                          context: 'IconScoreContext',
-                          new_delegations: List[Tuple['Address', int]],
-                          cached_accounts: Dict['Address', Tuple['Account', int]]):
+    def _calc_delegations(
+        cls,
+        context: "IconScoreContext",
+        new_delegations: List[Tuple["Address", int]],
+        cached_accounts: Dict["Address", Tuple["Account", int]],
+    ):
         """Calculate new delegated amounts for each address with old and new delegations
 
         :param new_delegations:
@@ -519,17 +612,21 @@ class Engine(EngineBase):
             if address in cached_accounts:
                 account, old_delegated = cached_accounts[address]
             else:
-                account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+                account: "Account" = icx_storage.get_account(
+                    context, address, Intent.DELEGATED
+                )
                 old_delegated = 0
 
             cached_accounts[address] = account, new_delegated + old_delegated
 
     @classmethod
-    def _put_delegation_to_state_db(cls,
-                                    context: 'IconScoreContext',
-                                    sender: 'Address',
-                                    delegations: List[Tuple['Address', int]],
-                                    cached_accounts: Dict['Address', Tuple['Account', int]]) -> List['Account']:
+    def _put_delegation_to_state_db(
+        cls,
+        context: "IconScoreContext",
+        sender: "Address",
+        delegations: List[Tuple["Address", int]],
+        cached_accounts: Dict["Address", Tuple["Account", int]],
+    ) -> List["Account"]:
         """Put updated delegations to stateDB
 
         :param context:
@@ -538,12 +635,12 @@ class Engine(EngineBase):
         :param cached_accounts:
         :return: updated account list
         """
-        icx_storage: 'IcxStorage' = context.storage.icx
+        icx_storage: "IcxStorage" = context.storage.icx
 
-        sender_account: 'Account' = cached_accounts[sender][0]
+        sender_account: "Account" = cached_accounts[sender][0]
         sender_account.set_delegations(delegations)
 
-        updated_accounts: List['Account'] = []
+        updated_accounts: List["Account"] = []
 
         # Save changed accounts to stateDB
         for account, delegated_offset in cached_accounts.values():
@@ -556,10 +653,12 @@ class Engine(EngineBase):
         return updated_accounts
 
     @classmethod
-    def _put_delegation_to_rc_db(cls,
-                                 context: 'IconScoreContext',
-                                 address: 'Address',
-                                 delegations: List[Tuple['Address', int]]):
+    def _put_delegation_to_rc_db(
+        cls,
+        context: "IconScoreContext",
+        address: "Address",
+        delegations: List[Tuple["Address", int]],
+    ):
         """Put new delegations from setDelegation JSON-RPC API request to RewardCalcDB
 
         :param context:
@@ -570,17 +669,27 @@ class Engine(EngineBase):
         delegation_list: list = []
 
         for delegation in delegations:
-            info: 'DelegationInfo' = RewardCalcDataCreator.create_delegation_info(*delegation)
+            info: "DelegationInfo" = RewardCalcDataCreator.create_delegation_info(
+                *delegation
+            )
             delegation_list.append(info)
 
-        delegation_tx: 'DelegationTx' = RewardCalcDataCreator.create_tx_delegation(delegation_list)
-        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, context.block.height, delegation_tx)
+        delegation_tx: "DelegationTx" = RewardCalcDataCreator.create_tx_delegation(
+            delegation_list
+        )
+        iiss_tx_data: "TxData" = RewardCalcDataCreator.create_tx(
+            address, context.block.height, delegation_tx
+        )
         context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
 
-    def handle_get_delegation(self, context: 'IconScoreContext', address: 'Address') -> dict:
+    def handle_get_delegation(
+        self, context: "IconScoreContext", address: "Address"
+    ) -> dict:
         """Handles getDelegation JSON-RPC API request
         """
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
+        account: "Account" = context.storage.icx.get_account(
+            context, address, Intent.ALL
+        )
         delegation_list: list = []
         for address, value in account.delegations:
             delegation_list.append({"address": address, "value": value})
@@ -588,14 +697,13 @@ class Engine(EngineBase):
         data = {
             "delegations": delegation_list,
             "totalDelegated": account.delegations_amount,
-            "votingPower": account.voting_power
+            "votingPower": account.voting_power,
         }
 
         return data
 
     @classmethod
-    def _iscore_to_icx(cls,
-                       iscore: int) -> int:
+    def _iscore_to_icx(cls, iscore: int) -> int:
         """Exchange iscore to icx
 
         10 ** -18 icx == 1 loop == 1000 iscore
@@ -605,7 +713,7 @@ class Engine(EngineBase):
         """
         return iscore // ISCORE_EXCHANGE_RATE
 
-    def handle_claim_iscore(self, context: 'IconScoreContext'):
+    def handle_claim_iscore(self, context: "IconScoreContext"):
         """Handles claimIScore JSON-RPC request
         """
         iscore, block_height = self._claim_iscore(context)
@@ -618,43 +726,48 @@ class Engine(EngineBase):
             score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="IScoreClaimed(int,int)",
             arguments=[iscore, self._iscore_to_icx(iscore)],
-            indexed_args_count=0
+            indexed_args_count=0,
         )
 
     @staticmethod
-    def _check_claim_tx(context: 'IconScoreContext') -> bool:
+    def _check_claim_tx(context: "IconScoreContext") -> bool:
         if context.tx.hash in INVALID_CLAIM_TX:
             Logger.error(tag=_TAG, msg=f"skip claim tx: {context.tx.hash.hex()}")
             return False
         else:
             return True
 
-    def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
-        address: 'Address' = context.tx.origin
-        block: 'Block' = context.block
-        tx: 'Transaction' = context.tx
+    def _claim_iscore(self, context: "IconScoreContext") -> (int, int):
+        address: "Address" = context.tx.origin
+        block: "Block" = context.block
+        tx: "Transaction" = context.tx
 
-        if context.type == IconScoreContextType.INVOKE and self._check_claim_tx(context):
+        if context.type == IconScoreContextType.INVOKE and self._check_claim_tx(
+            context
+        ):
             iscore, block_height = self._reward_calc_proxy.claim_iscore(
-                address, block.height, block.hash, tx.index, tx.hash)
+                address, block.height, block.hash, tx.index, tx.hash
+            )
         else:
             # For debug_estimateStep request
             iscore, block_height = 0, 0
 
         return iscore, block_height
 
-    def _commit_claim(self, context: 'IconScoreContext', iscore: int):
-        address: 'Address' = context.tx.origin
-        block: 'Block' = context.block
-        tx: 'Transaction' = context.tx
+    def _commit_claim(self, context: "IconScoreContext", iscore: int):
+        address: "Address" = context.tx.origin
+        block: "Block" = context.block
+        tx: "Transaction" = context.tx
         success = True
 
         try:
             icx: int = self._iscore_to_icx(iscore)
 
-            from_account: 'Account' = context.storage.icx.get_account(context, address)
-            treasury_address: 'Address' = context.storage.icx.fee_treasury
-            treasury_account: 'Account' = context.storage.icx.get_account(context, treasury_address)
+            from_account: "Account" = context.storage.icx.get_account(context, address)
+            treasury_address: "Address" = context.storage.icx.fee_treasury
+            treasury_account: "Account" = context.storage.icx.get_account(
+                context, treasury_address
+            )
 
             treasury_account.withdraw(icx)
             from_account.deposit(icx)
@@ -666,9 +779,13 @@ class Engine(EngineBase):
             success = False
             raise e
         finally:
-            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash, tx.index, tx.hash)
+            self._reward_calc_proxy.commit_claim(
+                success, address, block.height, block.hash, tx.index, tx.hash
+            )
 
-    def handle_query_iscore(self, context: 'IconScoreContext', address: 'Address') -> dict:
+    def handle_query_iscore(
+        self, context: "IconScoreContext", address: "Address"
+    ) -> dict:
         if not isinstance(address, Address):
             raise InvalidParamsException(f"Invalid address: {address}")
 
@@ -678,17 +795,19 @@ class Engine(EngineBase):
         data = {
             "iscore": iscore,
             "estimatedICX": self._iscore_to_icx(iscore),
-            "blockHeight": block_height
+            "blockHeight": block_height,
         }
 
         return data
 
-    def update_db(self,
-                  context: 'IconScoreContext',
-                  term: Optional['Term'],
-                  prev_block_generator: Optional['Address'],
-                  prev_block_votes: Optional[List[Tuple['Address', int]]],
-                  rc_db_revision: int) -> Optional[bytes]:
+    def update_db(
+        self,
+        context: "IconScoreContext",
+        term: Optional["Term"],
+        prev_block_generator: Optional["Address"],
+        prev_block_votes: Optional[List[Tuple["Address", int]]],
+        rc_db_revision: int,
+    ) -> Optional[bytes]:
         """Called on IconServiceEngine._after_transaction_process()
 
         :param context:
@@ -703,8 +822,12 @@ class Engine(EngineBase):
         rc_state_hash: Optional[bytes] = None
         if self._is_iiss_calc(context.revision_changed_flag):
             self._update_state_db_on_end_calc(context)
-            if bool(context.revision_changed_flag & RevisionChangedFlag.GENESIS_IISS_CALC):
-                self._put_header_to_rc_db(context, context.revision, 0, is_genesis_iiss=True)
+            if bool(
+                context.revision_changed_flag & RevisionChangedFlag.GENESIS_IISS_CALC
+            ):
+                self._put_header_to_rc_db(
+                    context, context.revision, 0, is_genesis_iiss=True
+                )
 
             # get rc_state_hash in calc done response.
             _, _, rc_state_hash = context.storage.rc.get_calc_response_from_rc()
@@ -719,10 +842,9 @@ class Engine(EngineBase):
             return rc_state_hash
 
         if not context.is_the_first_block_on_decentralization():
-            self.put_block_produce_info_to_rc_db(context,
-                                                 context.rc_block_batch,
-                                                 prev_block_generator,
-                                                 prev_block_votes)
+            self.put_block_produce_info_to_rc_db(
+                context, context.rc_block_batch, prev_block_generator, prev_block_votes
+            )
 
         start_term_block: int = context.engine.prep.term.start_block_height
         # New P-Rep Term is started
@@ -735,7 +857,7 @@ class Engine(EngineBase):
 
         return rc_state_hash
 
-    def _update_state_db_on_end_calc(self, context: 'IconScoreContext'):
+    def _update_state_db_on_end_calc(self, context: "IconScoreContext"):
         # Warning: do not change the order of putting data (for state sync)
         self._put_last_calc_info(context)
         self._put_end_calc_block_height(context)
@@ -748,23 +870,25 @@ class Engine(EngineBase):
         self._reward_calc_proxy.calculate(iiss_db_path, block_height)
 
     @classmethod
-    def _is_iiss_calc(cls,
-                      flag: 'RevisionChangedFlag') -> bool:
-        return bool(flag & (RevisionChangedFlag.GENESIS_IISS_CALC | RevisionChangedFlag.IISS_CALC))
+    def _is_iiss_calc(cls, flag: "RevisionChangedFlag") -> bool:
+        return bool(
+            flag
+            & (RevisionChangedFlag.GENESIS_IISS_CALC | RevisionChangedFlag.IISS_CALC)
+        )
 
     @classmethod
-    def _check_update_calc_period(cls,
-                                  context: 'IconScoreContext') -> bool:
+    def _check_update_calc_period(cls, context: "IconScoreContext") -> bool:
         block_height: int = context.block.height
-        check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        check_end_block_height: Optional[
+            int
+        ] = context.storage.iiss.get_end_block_height_of_calc(context)
         if check_end_block_height is None:
             return False
 
         return block_height == check_end_block_height
 
     @classmethod
-    def _put_last_calc_info(cls,
-                            context: 'IconScoreContext'):
+    def _put_last_calc_info(cls, context: "IconScoreContext"):
 
         _, last_calc_end = context.storage.meta.get_last_calc_info(context)
         if last_calc_end > 0:
@@ -774,73 +898,86 @@ class Engine(EngineBase):
             # first
             start: int = -1
             end: int = context.block.height
-        context.storage.meta.put_last_calc_info(context,
-                                                start,
-                                                end)
+        context.storage.meta.put_last_calc_info(context, start, end)
 
     @classmethod
-    def _put_end_calc_block_height(cls,
-                                   context: 'IconScoreContext'):
+    def _put_end_calc_block_height(cls, context: "IconScoreContext"):
         calc_period: int = context.storage.iiss.get_calc_period(context)
         if calc_period is None:
-            raise InvalidParamsException("Fail put next calc block height: didn't init yet")
-        context.storage.iiss.put_end_block_height_of_calc(context, context.block.height + calc_period)
+            raise InvalidParamsException(
+                "Fail put next calc block height: didn't init yet"
+            )
+        context.storage.iiss.put_end_block_height_of_calc(
+            context, context.block.height + calc_period
+        )
 
     @classmethod
-    def _put_header_to_rc_db(cls,
-                             context: 'IconScoreContext',
-                             rc_db_revision: int,
-                             version: int,
-                             is_genesis_iiss: bool = False):
+    def _put_header_to_rc_db(
+        cls,
+        context: "IconScoreContext",
+        rc_db_revision: int,
+        version: int,
+        is_genesis_iiss: bool = False,
+    ):
 
         if is_genesis_iiss:
             block_height: int = context.block.height
         else:
-            block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
-        data: 'Header' = RewardCalcDataCreator.create_header(version,
-                                                             block_height,
-                                                             rc_db_revision)
+            block_height: int = context.storage.iiss.get_end_block_height_of_calc(
+                context
+            )
+        data: "Header" = RewardCalcDataCreator.create_header(
+            version, block_height, rc_db_revision
+        )
         context.storage.rc.put(context.rc_block_batch, data)
 
     @staticmethod
-    def _put_rrep(context: 'IconScoreContext'):
-        reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
-        reward_rate.reward_prep = IssueFormula.calculate_rrep(context.storage.iiss.reward_min,
-                                                              context.storage.iiss.reward_max,
-                                                              context.storage.iiss.reward_point,
-                                                              context.storage.icx.get_total_supply(context),
-                                                              context.preps.total_delegated)
+    def _put_rrep(context: "IconScoreContext"):
+        reward_rate: "RewardRate" = context.storage.iiss.get_reward_rate(context)
+        reward_rate.reward_prep = IssueFormula.calculate_rrep(
+            context.storage.iiss.reward_min,
+            context.storage.iiss.reward_max,
+            context.storage.iiss.reward_point,
+            context.storage.icx.get_total_supply(context),
+            context.preps.total_delegated,
+        )
 
         context.storage.iiss.put_reward_rate(context, reward_rate)
 
     @classmethod
-    def _put_gv_to_rc_db(cls,
-                         context: 'IconScoreContext',
-                         version: int):
+    def _put_gv_to_rc_db(cls, context: "IconScoreContext", version: int):
 
         calculated_irep: int = 0
         if context.is_decentralized():
             irep: int = context.engine.prep.term.irep
-            calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
-        reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
-        reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_rate.reward_prep)
+            calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(
+                irep
+            )
+        reward_rate: "RewardRate" = context.storage.iiss.get_reward_rate(context)
+        reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(
+            reward_rate.reward_prep
+        )
 
         # block height which GV variable has been calculated
         block_height: int = context.block.height - 1
-        data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(version,
-                                                                              block_height,
-                                                                              calculated_irep,
-                                                                              reward_prep_for_rc,
-                                                                              context.main_prep_count,
-                                                                              context.main_and_sub_prep_count)
+        data: "GovernanceVariable" = RewardCalcDataCreator.create_gv_variable(
+            version,
+            block_height,
+            calculated_irep,
+            reward_prep_for_rc,
+            context.main_prep_count,
+            context.main_and_sub_prep_count,
+        )
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def put_block_produce_info_to_rc_db(cls,
-                                        context: 'IconScoreContext',
-                                        rc_block_batch: list,
-                                        prev_block_generator: Optional['Address'] = None,
-                                        prev_block_votes: Optional[List[Tuple['Address', int]]] = None):
+    def put_block_produce_info_to_rc_db(
+        cls,
+        context: "IconScoreContext",
+        rc_block_batch: list,
+        prev_block_generator: Optional["Address"] = None,
+        prev_block_votes: Optional[List[Tuple["Address", int]]] = None,
+    ):
         """Called on every block
 
         :param context:
@@ -849,25 +986,30 @@ class Engine(EngineBase):
         :param prev_block_votes:
         :return:
         """
-        assert context.is_decentralized() and not context.is_the_first_block_on_decentralization()
+        assert (
+            context.is_decentralized()
+            and not context.is_the_first_block_on_decentralization()
+        )
         if prev_block_generator is None or prev_block_votes is None:
             return
 
         # Logger.debug(f"put_block_produce_info_for_rc", "IISS")
         prev_block_height: int = context.block.height - 1
-        data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
-                                                                                            prev_block_generator,
-                                                                                            prev_block_votes)
+        data: "BlockProduceInfoData" = RewardCalcDataCreator.create_block_produce_info_data(
+            prev_block_height, prev_block_generator, prev_block_votes
+        )
         context.storage.rc.put(rc_block_batch, data)
 
     @classmethod
-    def _put_preps_to_rc_db(cls, context: 'IconScoreContext', revision: int, term: Optional['Term'] = None):
+    def _put_preps_to_rc_db(
+        cls, context: "IconScoreContext", revision: int, term: Optional["Term"] = None
+    ):
         # If term is not None, it is the term which has been changed in term
         assert context.is_decentralized()
 
         if term is None:
             block_height: int = context.block.height - 1
-            term: 'Term' = context.engine.prep.term
+            term: "Term" = context.engine.prep.term
         else:
             block_height: int = context.block.height
 
@@ -879,33 +1021,42 @@ class Engine(EngineBase):
         Logger.info(
             tag=cls.TAG,
             msg=f"_put_preps_for_rc_db() "
-                f"block_height={block_height} "
-                f"total_elected_prep_delegated={term.total_elected_prep_delegated} "
-                f"total_elected_prep_delegated_snapshot={term.total_elected_prep_delegated_snapshot}")
+            f"block_height={block_height} "
+            f"total_elected_prep_delegated={term.total_elected_prep_delegated} "
+            f"total_elected_prep_delegated_snapshot={term.total_elected_prep_delegated_snapshot}",
+        )
 
-        data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(block_height,
-                                                                   total_elected_prep_delegated,
-                                                                   term.preps)
+        data: "PRepsData" = RewardCalcDataCreator.create_prep_data(
+            block_height, total_elected_prep_delegated, term.preps
+        )
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def get_start_block_of_calc(cls, context: 'IconScoreContext') -> int:
+    def get_start_block_of_calc(cls, context: "IconScoreContext") -> int:
         start_calc_block: int = -1
-        end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        end_block_height: Optional[
+            int
+        ] = context.storage.iiss.get_end_block_height_of_calc(context)
         period: Optional[int] = context.storage.iiss.get_calc_period(context)
         if end_block_height is not None and period is not None:
             start_calc_block: int = end_block_height - period + 1
         return start_calc_block
 
     def rollback_reward_calculator(self, block_height: int, block_hash: bytes):
-        Logger.info(tag=ROLLBACK_LOG_TAG,
-                    msg=f"rollback_reward_calculator() start: "
-                        f"height={block_height} hash={bytes_to_hex(block_hash)}")
+        Logger.info(
+            tag=ROLLBACK_LOG_TAG,
+            msg=f"rollback_reward_calculator() start: "
+            f"height={block_height} hash={bytes_to_hex(block_hash)}",
+        )
 
-        _success, _height, _hash = self._reward_calc_proxy.rollback(block_height, block_hash)
-        Logger.info(tag=ROLLBACK_LOG_TAG,
-                    msg=f"RewardCalculator response: "
-                        f"success={_success} height={_height} hash={bytes_to_hex(_hash)}")
+        _success, _height, _hash = self._reward_calc_proxy.rollback(
+            block_height, block_hash
+        )
+        Logger.info(
+            tag=ROLLBACK_LOG_TAG,
+            msg=f"RewardCalculator response: "
+            f"success={_success} height={_height} hash={bytes_to_hex(_hash)}",
+        )
 
         # Reward calculator rollback succeeded
         if _success and _height == block_height and _hash == block_hash:

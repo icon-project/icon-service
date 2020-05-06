@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from .prep.data import PRepContainer, Term
 
 
-def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
+def _print_block_batch(block_batch: "BlockBatch") -> List[str]:
     """Print the latest updated states stored in IconServiceEngine
     :return:
     """
@@ -44,7 +44,9 @@ def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
             value = block_batch[key]
 
             if isinstance(value, TransactionBatchValue):
-                lines.append(f"{i}: {key.hex()} - {bytes_to_hex(value.value)} - {value.include_state_root_hash}")
+                lines.append(
+                    f"{i}: {key.hex()} - {bytes_to_hex(value.value)} - {value.include_state_root_hash}"
+                )
             else:
                 lines.append(f"{i}: {key.hex()} - {bytes_to_hex(value)}")
     except:
@@ -74,22 +76,24 @@ def _print_rc_block_batch(rc_block_batch: list) -> List[str]:
 
 
 class PrecommitData(object):
-    def __init__(self,
-                 revision: int,
-                 rc_db_revision: int,
-                 inv_container: 'INVContainer',
-                 block_batch: 'BlockBatch',
-                 block_result: list,
-                 rc_block_batch: list,
-                 preps: 'PRepContainer',
-                 term: Optional['Term'],
-                 prev_block_generator: Optional['Address'],
-                 prev_block_validators: Optional[List['Address']],
-                 score_mapper: Optional['IconScoreMapper'],
-                 rc_state_root_hash: Optional[bytes],
-                 added_transactions: dict,
-                 main_prep_as_dict: Optional[dict],
-                 prep_address_converter: 'PRepAddressConverter'):
+    def __init__(
+        self,
+        revision: int,
+        rc_db_revision: int,
+        inv_container: "INVContainer",
+        block_batch: "BlockBatch",
+        block_result: list,
+        rc_block_batch: list,
+        preps: "PRepContainer",
+        term: Optional["Term"],
+        prev_block_generator: Optional["Address"],
+        prev_block_validators: Optional[List["Address"]],
+        score_mapper: Optional["IconScoreMapper"],
+        rc_state_root_hash: Optional[bytes],
+        added_transactions: dict,
+        main_prep_as_dict: Optional[dict],
+        prep_address_converter: "PRepAddressConverter",
+    ):
         """
 
         :param block_batch: changed states for a block
@@ -100,7 +104,7 @@ class PrecommitData(object):
         # Todo: check if remove the revision
         self.revision: int = revision
         self.rc_db_revision: int = rc_db_revision
-        self.inv_container: 'INVContainer' = inv_container
+        self.inv_container: "INVContainer" = inv_container
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch
@@ -110,7 +114,7 @@ class PrecommitData(object):
         self.prev_block_generator = prev_block_generator
         self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
-        
+
         self.is_state_root_hash: bytes = self.block_batch.digest()
         self.rc_state_root_hash: Optional[bytes] = rc_state_root_hash
 
@@ -119,7 +123,7 @@ class PrecommitData(object):
         self.added_transactions: dict = added_transactions
         self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
 
-        self.prep_address_converter: 'PRepAddressConverter' = prep_address_converter
+        self.prep_address_converter: "PRepAddressConverter" = prep_address_converter
 
         # To prevent redundant precommit data logging
         self.already_exists = False
@@ -154,15 +158,18 @@ class PrecommitData(object):
         return "\n".join(lines)
 
     @property
-    def block(self) -> Optional['Block']:
+    def block(self) -> Optional["Block"]:
         return None if self.block_batch is None else self.block_batch.block
 
     def _make_state_root_hash(self) -> bytes:
-        if self.revision < Revision.DECENTRALIZATION.value or self.rc_state_root_hash is None:
+        if (
+            self.revision < Revision.DECENTRALIZATION.value
+            or self.rc_state_root_hash is None
+        ):
             return self.is_state_root_hash
 
         data = [self.is_state_root_hash, self.rc_state_root_hash]
-        value: bytes = b'|'.join(data)
+        value: bytes = b"|".join(data)
         return sha3_256(value)
 
 
@@ -174,15 +181,15 @@ class PrecommitDataManager(object):
     def __init__(self):
         self._lock = Lock()
         self._precommit_data_mapper = {}
-        self._last_block: Optional['Block'] = None
+        self._last_block: Optional["Block"] = None
 
     @property
-    def last_block(self) -> 'Block':
+    def last_block(self) -> "Block":
         with self._lock:
             return self._last_block
 
     @last_block.setter
-    def last_block(self, block: 'Block'):
+    def last_block(self, block: "Block"):
         """Set the last confirmed block
 
         :param block:
@@ -191,15 +198,15 @@ class PrecommitDataManager(object):
         with self._lock:
             self._last_block = block if block else EMPTY_BLOCK
 
-    def push(self, precommit_data: 'PrecommitData'):
-        block: 'Block' = precommit_data.block_batch.block
+    def push(self, precommit_data: "PrecommitData"):
+        block: "Block" = precommit_data.block_batch.block
         self._precommit_data_mapper[block.hash] = precommit_data
 
-    def get(self, block_hash: 'bytes') -> Optional['PrecommitData']:
+    def get(self, block_hash: "bytes") -> Optional["PrecommitData"]:
         precommit_data = self._precommit_data_mapper.get(block_hash)
         return precommit_data
 
-    def commit(self, block: 'Block'):
+    def commit(self, block: "Block"):
         with self._lock:
             self._last_block = block
 
@@ -220,7 +227,7 @@ class PrecommitDataManager(object):
         """
         self._precommit_data_mapper.clear()
 
-    def validate_block_to_invoke(self, block: 'Block'):
+    def validate_block_to_invoke(self, block: "Block"):
         """Check if the block to invoke is valid before invoking it
 
         :param block: block to invoke
@@ -228,14 +235,17 @@ class PrecommitDataManager(object):
         if not self._is_last_block_valid():
             return
 
-        if block.prev_hash == self._last_block.hash and \
-                block.height == self._last_block.height + 1:
+        if (
+            block.prev_hash == self._last_block.hash
+            and block.height == self._last_block.height + 1
+        ):
             return
 
         raise InvalidParamsException(
-            f'Failed to invoke a block: '
-            f'last_block({self._last_block}) '
-            f'block_to_invoke({block})')
+            f"Failed to invoke a block: "
+            f"last_block({self._last_block}) "
+            f"block_to_invoke({block})"
+        )
 
     def validate_precommit_block(self, instant_block_hash: bytes):
         """Check block validation
@@ -248,17 +258,21 @@ class PrecommitDataManager(object):
         precommit_data = self._precommit_data_mapper.get(instant_block_hash)
         if precommit_data is None:
             raise InvalidParamsException(
-                f'No precommit data: block_hash({bytes_to_hex(instant_block_hash)})')
+                f"No precommit data: block_hash({bytes_to_hex(instant_block_hash)})"
+            )
 
         if not self._is_last_block_valid():
             return
 
         precommit_block = precommit_data.block
 
-        if self._last_block.hash != precommit_block.prev_hash or \
-                self._last_block.height + 1 != precommit_block.height:
+        if (
+            self._last_block.hash != precommit_block.prev_hash
+            or self._last_block.height + 1 != precommit_block.height
+        ):
             raise InvalidParamsException(
-                f'Invalid precommit block: last_block({self._last_block}) precommit_block({precommit_block})')
+                f"Invalid precommit block: last_block({self._last_block}) precommit_block({precommit_block})"
+            )
 
     def _is_last_block_valid(self) -> bool:
         return self._last_block.height >= 0

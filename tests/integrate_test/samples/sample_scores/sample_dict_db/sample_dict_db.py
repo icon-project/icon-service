@@ -8,7 +8,8 @@ https://forum.icon.community/t/problem-with-dictdb-cannot-iterate/484
 """
 
 from iconservice import *
-TAG = 'IterableDictDB'
+
+TAG = "IterableDictDB"
 
 
 class IterableDictDB(IconScoreBase):
@@ -19,7 +20,7 @@ class IterableDictDB(IconScoreBase):
     # ================================================
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._dict = DictDB('DICT', db, value_type=int)
+        self._dict = DictDB("DICT", db, value_type=int)
 
     def on_install(self) -> None:
         super().on_install()

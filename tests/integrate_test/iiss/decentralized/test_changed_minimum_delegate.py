@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice.icon_constant import Revision, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
+from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
@@ -30,8 +29,9 @@ class TestChangedMinimumDelegate(TestIISSBase):
         self.set_revision(Revision.IISS.value)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=3000 * ICX_IN_LOOP
+        )
 
         # register PRep
         tx_list: list = []
@@ -50,15 +50,7 @@ class TestChangedMinimumDelegate(TestIISSBase):
         expected_preps: list = []
         expected_total_delegated: int = 0
         for account in self._accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+            expected_preps.append({"address": account.address, "delegated": 0})
             expected_total_delegated += 0
-        expected_response: dict = {
-            "preps": expected_preps,
-            "totalDelegated": 0
-        }
+        expected_response: dict = {"preps": expected_preps, "totalDelegated": 0}
         self.assertEqual(expected_response, response)
-
-

@@ -39,6 +39,7 @@ class CoinPartVersion(IntEnum):
 class CoinPartType(IntEnum):
     """CoinPartType Type
     """
+
     GENERAL = 0
     GENESIS = 1
     TREASURY = 2
@@ -63,29 +64,31 @@ class CoinPart(BasePart):
 
     _VERSION = CoinPartVersion.MSG_PACK
     _STRUCT_PACKED_BYTES_SIZE = 36
-    _STRUCT_FORMAT = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
+    _STRUCT_FORMAT = Struct(f">BBBx{DEFAULT_BYTE_SIZE}s")
 
-    def __init__(self,
-                 coin_part_type: 'CoinPartType' = CoinPartType.GENERAL,
-                 flags: 'CoinPartFlag' = CoinPartFlag.NONE,
-                 balance: int = 0):
+    def __init__(
+        self,
+        coin_part_type: "CoinPartType" = CoinPartType.GENERAL,
+        flags: "CoinPartFlag" = CoinPartFlag.NONE,
+        balance: int = 0,
+    ):
         """Constructor
         """
         super().__init__()
 
-        self._type: 'CoinPartType' = coin_part_type
-        self._flags: 'CoinPartFlag' = flags
+        self._type: "CoinPartType" = coin_part_type
+        self._flags: "CoinPartFlag" = flags
         self._balance: int = balance
 
     @staticmethod
-    def make_key(address: 'Address') -> bytes:
+    def make_key(address: "Address") -> bytes:
         if address.prefix == AddressPrefix.EOA:
             return address.body
         else:
             return address.to_bytes_including_prefix()
 
     @property
-    def type(self) -> 'CoinPartType':
+    def type(self) -> "CoinPartType":
         """CoinPartType getter
 
         :return: CoinPartType value
@@ -93,13 +96,13 @@ class CoinPart(BasePart):
         return self._type
 
     @type.setter
-    def type(self, value: 'CoinPartType'):
+    def type(self, value: "CoinPartType"):
         """CoinPartType setter
 
         :param value: (CoinPartType)
         """
         if not isinstance(value, CoinPartType):
-            raise ValueError('Invalid CoinPartType')
+            raise ValueError("Invalid CoinPartType")
         self._type = value
 
     @property
@@ -111,7 +114,7 @@ class CoinPart(BasePart):
         return self._balance
 
     @property
-    def flags(self) -> 'CoinPartFlag':
+    def flags(self) -> "CoinPartFlag":
         """CoinPartFlag getter
 
         :return: CoinPartType value
@@ -133,7 +136,8 @@ class CoinPart(BasePart):
         """
         if not isinstance(value, int) or value < 0:
             raise InvalidParamsException(
-                'Failed to deposit: value is not int type or value < 0')
+                "Failed to deposit: value is not int type or value < 0"
+            )
 
         self._increase_balance(value)
 
@@ -144,10 +148,11 @@ class CoinPart(BasePart):
         """
         if not isinstance(value, int) or value < 0:
             raise InvalidParamsException(
-                'Failed to withdraw: value is not int type or value < 0')
+                "Failed to withdraw: value is not int type or value < 0"
+            )
 
         if self._balance < value:
-            raise OutOfBalanceException('Out of balance')
+            raise OutOfBalanceException("Out of balance")
 
         self._increase_balance(-value)
 
@@ -163,10 +168,12 @@ class CoinPart(BasePart):
 
         :param other: (CoinPart)
         """
-        return isinstance(other, CoinPart) \
-            and self._balance == other._balance \
-            and self._type == other._type \
+        return (
+            isinstance(other, CoinPart)
+            and self._balance == other._balance
+            and self._type == other._type
             and self._flags == other._flags
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding
@@ -176,27 +183,30 @@ class CoinPart(BasePart):
         return not self.__eq__(other)
 
     @staticmethod
-    def from_bytes(buf: bytes) -> 'CoinPart':
+    def from_bytes(buf: bytes) -> "CoinPart":
         """Create CoinPart object from bytes data
 
         :param buf: (bytes) bytes data including Account information
         :return: (CoinPart) account object
         """
 
-        if len(buf) == CoinPart._STRUCT_PACKED_BYTES_SIZE and buf[0] == CoinPartVersion.STRUCT:
+        if (
+            len(buf) == CoinPart._STRUCT_PACKED_BYTES_SIZE
+            and buf[0] == CoinPartVersion.STRUCT
+        ):
             return CoinPart._from_struct_packed_bytes(buf)
         else:
             return CoinPart._from_msg_packed_bytes(buf)
 
     @staticmethod
-    def _from_struct_packed_bytes(buf: bytes) -> 'CoinPart':
+    def _from_struct_packed_bytes(buf: bytes) -> "CoinPart":
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
         balance: int = int.from_bytes(amount, DATA_BYTE_ORDER)
 
         return CoinPart(coin_type, CoinPartFlag(flags), balance)
 
     @staticmethod
-    def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
+    def _from_msg_packed_bytes(buf: bytes) -> "CoinPart":
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
 
@@ -205,9 +215,9 @@ class CoinPart(BasePart):
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
-        return CoinPart(coin_part_type=data[1],
-                        flags=CoinPartFlag(data[2]),
-                        balance=data[3])
+        return CoinPart(
+            coin_part_type=data[1], flags=CoinPartFlag(data[2]), balance=data[3]
+        )
 
     def to_bytes(self, revision: int) -> bytes:
         """Convert CoinPart object to bytes
@@ -220,17 +230,14 @@ class CoinPart(BasePart):
             return self._to_struct_packed_bytes()
 
     def _to_msg_packed_bytes(self) -> bytes:
-        data = [
-            CoinPartVersion.MSG_PACK,
-            self._type,
-            self._flags.value,
-            self.balance
-        ]
+        data = [CoinPartVersion.MSG_PACK, self._type, self._flags.value, self.balance]
 
         return MsgPackForDB.dumps(data)
 
     def _to_struct_packed_bytes(self) -> bytes:
-        return CoinPart._STRUCT_FORMAT.pack(CoinPartVersion.STRUCT,
-                                            self._type,
-                                            self._flags.value,
-                                            self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
+        return CoinPart._STRUCT_FORMAT.pack(
+            CoinPartVersion.STRUCT,
+            self._type,
+            self._flags.value,
+            self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
+        )

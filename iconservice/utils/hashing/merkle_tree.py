@@ -61,15 +61,17 @@ class MerkleTree:
 
         new_level = []
         for l, r in zip(self.levels[0][0:N:2], self.levels[0][1:N:2]):
-            new_level.append(self.hash_function(l+r).digest())
+            new_level.append(self.hash_function(l + r).digest())
         if solo_leave is not None:
             new_level.append(solo_leave)
-        self.levels = [new_level, ] + self.levels  # prepend new level
+        self.levels = [new_level,] + self.levels  # prepend new level
 
     def make_tree(self):
         self.is_ready = False
         if self.get_leaf_count() > 0:
-            self.levels = [self.leaves, ]
+            self.levels = [
+                self.leaves,
+            ]
             while len(self.levels[0]) > 1:
                 self._calculate_next_level()
         self.is_ready = True
@@ -86,21 +88,23 @@ class MerkleTree:
     def get_proof(self, index):
         if self.levels is None:
             return None
-        elif not self.is_ready or index > len(self.leaves)-1 or index < 0:
+        elif not self.is_ready or index > len(self.leaves) - 1 or index < 0:
             return None
         else:
             proof = []
             for x in range(len(self.levels) - 1, 0, -1):
                 level_len = len(self.levels[x])
-                if (index == level_len - 1) and (level_len % 2 == 1):  # skip if this is an odd end node
-                    index = int(index / 2.)
+                if (index == level_len - 1) and (
+                    level_len % 2 == 1
+                ):  # skip if this is an odd end node
+                    index = int(index / 2.0)
                     continue
                 is_right_node = index % 2
                 sibling_index = index - 1 if is_right_node else index + 1
                 sibling_pos = "left" if is_right_node else "right"
                 sibling_value = self.levels[x][sibling_index]
                 proof.append({sibling_pos: sibling_value})
-                index = int(index / 2.)
+                index = int(index / 2.0)
             return proof
 
     @classmethod
@@ -114,10 +118,10 @@ class MerkleTree:
             for p in proof:
                 try:
                     # the sibling is a left node
-                    sibling = bytes(p['left'])
+                    sibling = bytes(p["left"])
                     proof_hash = cls.hash_function(sibling + proof_hash).digest()
                 except KeyError:
                     # the sibling is a right node
-                    sibling = bytes(p['right'])
+                    sibling = bytes(p["right"])
                     proof_hash = cls.hash_function(proof_hash + sibling).digest()
             return proof_hash == merkle_root

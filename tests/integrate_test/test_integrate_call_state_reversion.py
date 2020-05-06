@@ -29,71 +29,71 @@ if TYPE_CHECKING:
 
 class TestIntegrateCallStateReversion(TestIntegrateBase):
     def test_invoke_chain(self):
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'E'
-                                                                  })
-        score_e: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={"_name": "E"},
+        )
+        score_e: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'D',
-                                                                      '_nextAddress': str(score_e),
-                                                                      '_nextFunction': 'invoke'
-                                                                  })
-        score_d: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "D",
+                "_nextAddress": str(score_e),
+                "_nextFunction": "invoke",
+            },
+        )
+        score_d: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'C',
-                                                                      '_nextAddress': str(score_d),
-                                                                      '_nextFunction': 'invoke',
-                                                                      '_shouldHandleException': '0x1'
-                                                                  })
-        score_c: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "C",
+                "_nextAddress": str(score_d),
+                "_nextFunction": "invoke",
+                "_shouldHandleException": "0x1",
+            },
+        )
+        score_c: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'B',
-                                                                      '_nextAddress': str(score_c),
-                                                                      '_nextFunction': 'invoke'
-                                                                  })
-        score_b: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "B",
+                "_nextAddress": str(score_c),
+                "_nextFunction": "invoke",
+            },
+        )
+        score_b: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'A',
-                                                                      '_nextAddress': str(score_b),
-                                                                      '_nextFunction': 'invoke'
-                                                                  })
-        score_a: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "A",
+                "_nextAddress": str(score_b),
+                "_nextFunction": "invoke",
+            },
+        )
+        score_a: "Address" = tx_results[0].score_address
 
         value = 100 * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
-                                                                to_=score_a,
-                                                                func_name="invoke",
-                                                                params={},
-                                                                value=value)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._admin, to_=score_a, func_name="invoke", params={}, value=value
+        )
 
         # Changes in A is OK
         response = self._query(
-            {
-                'to': score_a,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_a, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, True)
 
@@ -102,13 +102,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in B is OK
         response = self._query(
-            {
-                'to': score_b,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_b, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, True)
 
@@ -117,13 +111,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in C is OK
         response = self._query(
-            {
-                'to': score_c,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_c, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, True)
 
@@ -132,13 +120,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in D is reverted
         response = self._query(
-            {
-                'to': score_d,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_d, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, False)
 
@@ -147,30 +129,28 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in E is reverted
         response = self._query(
-            {
-                'to': score_e,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_e, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, False)
 
         balance: int = self.get_balance(score_e)
         self.assertEqual(response, balance)
 
-        events_data = [x.data for x in tx_results[0].event_logs if x.indexed[0] == 'Event(str,str,Address)']
+        events_data = [
+            x.data
+            for x in tx_results[0].event_logs
+            if x.indexed[0] == "Event(str,str,Address)"
+        ]
         score_names_event_occurred = [x[0] for x in events_data]
 
         # Checks Events from 'A', 'B', 'C' exist
-        self.assertIn('A', score_names_event_occurred)
-        self.assertIn('B', score_names_event_occurred)
-        self.assertIn('C', score_names_event_occurred)
+        self.assertIn("A", score_names_event_occurred)
+        self.assertIn("B", score_names_event_occurred)
+        self.assertIn("C", score_names_event_occurred)
 
         # Checks Events from 'D', 'E' not exist
-        self.assertNotIn('D', score_names_event_occurred)
-        self.assertNotIn('E', score_names_event_occurred)
+        self.assertNotIn("D", score_names_event_occurred)
+        self.assertNotIn("E", score_names_event_occurred)
 
         # Checks msg stack is properly reverted every call
         self.assertEqual(events_data[0][2], events_data[5][2])
@@ -178,71 +158,71 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
         self.assertEqual(events_data[2][2], events_data[3][2])
 
     def test_invoke_query_mixed(self):
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'E'
-                                                                  })
-        score_e: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={"_name": "E"},
+        )
+        score_e: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'D',
-                                                                      '_nextAddress': str(score_e),
-                                                                      '_nextFunction': 'invoke'
-                                                                  })
-        score_d: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "D",
+                "_nextAddress": str(score_e),
+                "_nextFunction": "invoke",
+            },
+        )
+        score_d: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'C',
-                                                                      '_nextAddress': str(score_d),
-                                                                      '_nextFunction': 'invoke',
-                                                                      '_shouldHandleException': '0x1'
-                                                                  })
-        score_c: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "C",
+                "_nextAddress": str(score_d),
+                "_nextFunction": "invoke",
+                "_shouldHandleException": "0x1",
+            },
+        )
+        score_c: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'B',
-                                                                      '_nextAddress': str(score_c),
-                                                                      '_nextFunction': 'invoke'
-                                                                  })
-        score_b: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "B",
+                "_nextAddress": str(score_c),
+                "_nextFunction": "invoke",
+            },
+        )
+        score_b: "Address" = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_score_call_state_reversion",
-                                                                  "sample_score",
-                                                                  self._accounts[0],
-                                                                  deploy_params={
-                                                                      '_name': 'A',
-                                                                      '_nextAddress': str(score_b),
-                                                                      '_nextFunction': 'invoke'
-                                                                  })
-        score_a: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_score_call_state_reversion",
+            "sample_score",
+            self._accounts[0],
+            deploy_params={
+                "_name": "A",
+                "_nextAddress": str(score_b),
+                "_nextFunction": "invoke",
+            },
+        )
+        score_a: "Address" = tx_results[0].score_address
 
         value = 100 * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
-                                                                to_=score_a,
-                                                                func_name="invoke",
-                                                                params={},
-                                                                value=value)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._admin, to_=score_a, func_name="invoke", params={}, value=value
+        )
 
         # Changes in A is OK
         response = self._query(
-            {
-                'to': score_a,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_a, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, True)
 
@@ -251,13 +231,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in B is OK
         response = self._query(
-            {
-                'to': score_b,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_b, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, True)
 
@@ -266,13 +240,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in C is OK
         response = self._query(
-            {
-                'to': score_c,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_c, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, True)
 
@@ -281,13 +249,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         # Changes in D is reverted
         response = self._query(
-            {
-                'to': score_d,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getInvoked'
-                }
-            }
+            {"to": score_d, "dataType": "call", "data": {"method": "getInvoked"}}
         )
         self.assertEqual(response, False)
         balance: int = self.get_balance(score_d)
@@ -297,17 +259,21 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
         balance: int = self.get_balance(score_e)
         self.assertEqual(response, balance)
 
-        events_data = [x.data for x in tx_results[0].event_logs if x.indexed[0] == 'Event(str,str,Address)']
+        events_data = [
+            x.data
+            for x in tx_results[0].event_logs
+            if x.indexed[0] == "Event(str,str,Address)"
+        ]
         score_names_event_occurred = [x[0] for x in events_data]
 
         # Checks Events from 'A', 'B', 'C' exist
-        self.assertIn('A', score_names_event_occurred)
-        self.assertIn('B', score_names_event_occurred)
-        self.assertIn('C', score_names_event_occurred)
+        self.assertIn("A", score_names_event_occurred)
+        self.assertIn("B", score_names_event_occurred)
+        self.assertIn("C", score_names_event_occurred)
 
         # Checks Events from 'D', 'E' not exist
-        self.assertNotIn('D', score_names_event_occurred)
-        self.assertNotIn('E', score_names_event_occurred)
+        self.assertNotIn("D", score_names_event_occurred)
+        self.assertNotIn("E", score_names_event_occurred)
 
         # Checks msg stack is properly reverted every call
         self.assertEqual(events_data[0][2], events_data[5][2])

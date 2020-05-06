@@ -18,14 +18,16 @@
 
 import unittest
 
-from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from iconservice.base.address import (
+    ICON_EOA_ADDRESS_BYTES_SIZE,
+    ICON_CONTRACT_ADDRESS_BYTES_SIZE,
+)
 from iconservice.icx.base_part import BasePartState
 from iconservice.icx.stake_part import StakePart
 from tests import create_address
 
 
 class TestStakePart(unittest.TestCase):
-
     def test_stake_part_from_bytes_to_bytes(self):
         part1 = StakePart()
         part1.normalize(0)
@@ -71,7 +73,7 @@ class TestStakePart(unittest.TestCase):
         unstake = 0
         unstake_block_height = 0
 
-        stake_part: 'StakePart' = StakePart()
+        stake_part: "StakePart" = StakePart()
         stake_part.normalize(0)
         stake_part.add_stake(stake)
 
@@ -90,10 +92,14 @@ class TestStakePart(unittest.TestCase):
 
     def test_stake_part_make_key(self):
         key = StakePart.make_key(create_address())
-        self.assertEqual(ICON_EOA_ADDRESS_BYTES_SIZE + len(StakePart.PREFIX) + 1, len(key))
+        self.assertEqual(
+            ICON_EOA_ADDRESS_BYTES_SIZE + len(StakePart.PREFIX) + 1, len(key)
+        )
 
         key = StakePart.make_key(create_address(1))
-        self.assertEqual(ICON_CONTRACT_ADDRESS_BYTES_SIZE + len(StakePart.PREFIX), len(key))
+        self.assertEqual(
+            ICON_CONTRACT_ADDRESS_BYTES_SIZE + len(StakePart.PREFIX), len(key)
+        )
 
     def test_stake_part_stake(self):
         part = StakePart()
@@ -151,7 +157,7 @@ class TestStakePart(unittest.TestCase):
         unstake = 20
         part = StakePart(stake=stake, unstake=unstake)
         part.set_complete(True)
-        self.assertEqual(stake+unstake, part.total_stake)
+        self.assertEqual(stake + unstake, part.total_stake)
 
     def test_stake_part_total_stake_overflow(self):
         part = StakePart()
@@ -210,5 +216,5 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(part1, part3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

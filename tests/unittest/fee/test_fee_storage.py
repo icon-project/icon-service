@@ -26,7 +26,10 @@ from iconservice.database.db import ContextDatabase
 from iconservice.fee import FeeStorage
 from iconservice.fee.deposit import Deposit
 from iconservice.fee.deposit_meta import DepositMeta
-from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
+from iconservice.iconscore.icon_score_context import (
+    IconScoreContextType,
+    IconScoreContext,
+)
 from tests import create_address, create_tx_hash
 
 
@@ -40,7 +43,7 @@ def context():
 
 @pytest.fixture(scope="function")
 def storage():
-    db_name = 'fee.db'
+    db_name = "fee.db"
     db = ContextDatabase.from_path(db_name)
     assert db is not None
     storage = FeeStorage(db)
@@ -105,6 +108,7 @@ def test_get_put_delete_deposit(context, storage):
     storage.delete_deposit(context, deposit.id)
     deposit2 = storage.get_deposit(context, deposit.id)
     assert deposit2 is None
+
 
 def test_get_put_delete_deposit_with_none_type(context, storage):
     context = context

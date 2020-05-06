@@ -37,7 +37,7 @@ class PRepDictType(Enum):
 class PRep(Sortable):
     PREFIX: bytes = b"prep"
     _VERSION: int = 2
-    _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
+    _UNKNOWN_COUNTRY = iso3166.Country("Unknown", "ZZ", "ZZZ", "000", "Unknown")
 
     class Index(IntEnum):
         VERSION = 0
@@ -71,31 +71,31 @@ class PRep(Sortable):
         SIZE = auto()
 
     def __init__(
-            self, address: 'Address',
-            *,
-            flags: 'PRepFlag' = PRepFlag.NONE,
-            status: 'PRepStatus' = PRepStatus.ACTIVE,
-            penalty: 'PenaltyReason' = PenaltyReason.NONE,
-            grade: 'PRepGrade' = PRepGrade.CANDIDATE,
-            name: str = "",
-            country: str = "",
-            city: str = "Unknown",
-            email: str = "",
-            website: str = "",
-            details: str = "",
-            p2p_endpoint: str = "",
-            irep: int = 0,
-            irep_block_height: int = 0,
-            last_generate_block_height: int = -1,
-            stake: int = 0,
-            delegated: int = 0,
-            block_height: int = 0,
-            tx_index: int = 0,
-            total_blocks: int = 0,
-            validated_blocks: int = 0,
-            unvalidated_sequence_blocks: int = 0,
-            node_address: Optional['Address'] = None,
-
+        self,
+        address: "Address",
+        *,
+        flags: "PRepFlag" = PRepFlag.NONE,
+        status: "PRepStatus" = PRepStatus.ACTIVE,
+        penalty: "PenaltyReason" = PenaltyReason.NONE,
+        grade: "PRepGrade" = PRepGrade.CANDIDATE,
+        name: str = "",
+        country: str = "",
+        city: str = "Unknown",
+        email: str = "",
+        website: str = "",
+        details: str = "",
+        p2p_endpoint: str = "",
+        irep: int = 0,
+        irep_block_height: int = 0,
+        last_generate_block_height: int = -1,
+        stake: int = 0,
+        delegated: int = 0,
+        block_height: int = 0,
+        tx_index: int = 0,
+        total_blocks: int = 0,
+        validated_blocks: int = 0,
+        unvalidated_sequence_blocks: int = 0,
+        node_address: Optional["Address"] = None,
     ):
         """
         Main PRep: top 1 ~ 22 preps in descending order by delegated amount
@@ -126,22 +126,22 @@ class PRep(Sortable):
         :param node_address
         """
         # key
-        self._address: 'Address' = address
+        self._address: "Address" = address
 
         # flags
-        self._flags: 'PRepFlag' = flags
+        self._flags: "PRepFlag" = flags
 
         self._stake: int = stake
         self._delegated: int = delegated
 
         # status
-        self._status: 'PRepStatus' = status
-        self._penalty: 'PenaltyReason' = penalty
-        self._grade: 'PRepGrade' = grade
+        self._status: "PRepStatus" = status
+        self._penalty: "PenaltyReason" = penalty
+        self._grade: "PRepGrade" = grade
 
         # registration info
         self._name: str = name
-        self._country: 'iso3166.Country' = self._get_country(country)
+        self._country: "iso3166.Country" = self._get_country(country)
         self._city: str = city
         self._email: str = email
         self._website: str = website
@@ -169,7 +169,7 @@ class PRep(Sortable):
         # node key
         self._node_address = node_address if node_address else address
 
-    def is_flags_on(self, flags: 'PRepFlag') -> bool:
+    def is_flags_on(self, flags: "PRepFlag") -> bool:
         return (self._flags & flags) == flags
 
     def is_dirty(self) -> bool:
@@ -180,23 +180,23 @@ class PRep(Sortable):
         return bool(self._flags & PRepFlag.ALL)
 
     @property
-    def flags(self) -> 'PRepFlag':
+    def flags(self) -> "PRepFlag":
         return self._flags
 
     @property
-    def status(self) -> 'PRepStatus':
+    def status(self) -> "PRepStatus":
         return self._status
 
     @status.setter
-    def status(self, value: 'PRepStatus'):
+    def status(self, value: "PRepStatus"):
         self._set_property(name="_status", new_value=value, flags=PRepFlag.STATUS)
 
     @property
-    def penalty(self) -> 'PenaltyReason':
+    def penalty(self) -> "PenaltyReason":
         return self._penalty
 
     @penalty.setter
-    def penalty(self, value: 'PenaltyReason'):
+    def penalty(self, value: "PenaltyReason"):
         self._set_property(name="_penalty", new_value=value, flags=PRepFlag.PENALTY)
 
     @property
@@ -217,9 +217,10 @@ class PRep(Sortable):
         self._set_property(name="_country", new_value=value, flags=PRepFlag.COUNTRY)
 
     @classmethod
-    def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
+    def _get_country(cls, alpha3_country_code: str) -> "iso3166.Country":
         return iso3166.countries_by_alpha3.get(
-            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
+            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY
+        )
 
     @property
     def city(self) -> str:
@@ -259,7 +260,9 @@ class PRep(Sortable):
 
     @p2p_endpoint.setter
     def p2p_endpoint(self, value: str):
-        self._set_property(name="_p2p_endpoint", new_value=value, flags=PRepFlag.P2P_ENDPOINT)
+        self._set_property(
+            name="_p2p_endpoint", new_value=value, flags=PRepFlag.P2P_ENDPOINT
+        )
 
     def is_suspended(self) -> bool:
         """The suspended P-Rep cannot serve as Main P-Rep during this term
@@ -276,7 +279,7 @@ class PRep(Sortable):
         return self._status == PRepStatus.ACTIVE and self._penalty == PenaltyReason.NONE
 
     @property
-    def grade(self) -> 'PRepGrade':
+    def grade(self) -> "PRepGrade":
         """The grade of P-Rep
         0: MAIN
         1: SUB
@@ -287,7 +290,7 @@ class PRep(Sortable):
         return self._grade
 
     @grade.setter
-    def grade(self, value: 'PRepGrade'):
+    def grade(self, value: "PRepGrade"):
         self._set_property(name="_grade", new_value=value, flags=PRepFlag.GRADE)
 
     def update_block_statistics(self, is_validator: bool):
@@ -297,17 +300,30 @@ class PRep(Sortable):
         """
         self._check_access_permission()
 
-        self._set_property("_total_blocks", self._total_blocks + 1, PRepFlag.TOTAL_BLOCKS, False)
+        self._set_property(
+            "_total_blocks", self._total_blocks + 1, PRepFlag.TOTAL_BLOCKS, False
+        )
 
         if is_validator:
-            self._set_property("_validated_blocks", self._validated_blocks + 1, PRepFlag.VALIDATED_BLOCKS, False)
-            self._set_property("_unvalidated_sequence_blocks", 0, PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS, False)
+            self._set_property(
+                "_validated_blocks",
+                self._validated_blocks + 1,
+                PRepFlag.VALIDATED_BLOCKS,
+                False,
+            )
+            self._set_property(
+                "_unvalidated_sequence_blocks",
+                0,
+                PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS,
+                False,
+            )
         else:
             self._set_property(
                 "_unvalidated_sequence_blocks",
                 self._unvalidated_sequence_blocks + 1,
                 PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS,
-                False)
+                False,
+            )
 
     def reset_block_validation_penalty(self):
         """Reset block validation penalty and
@@ -317,7 +333,12 @@ class PRep(Sortable):
         """
         self._check_access_permission()
         self._set_property("_penalty", PenaltyReason.NONE, PRepFlag.PENALTY, False)
-        self._set_property("_unvalidated_sequence_blocks", 0, PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS, False)
+        self._set_property(
+            "_unvalidated_sequence_blocks",
+            0,
+            PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS,
+            False,
+        )
 
     @property
     def total_blocks(self) -> int:
@@ -343,16 +364,18 @@ class PRep(Sortable):
         return self._unvalidated_sequence_blocks
 
     @property
-    def address(self) -> 'Address':
+    def address(self) -> "Address":
         return self._address
 
     @property
-    def node_address(self) -> 'Address':
+    def node_address(self) -> "Address":
         return self._node_address
 
     @node_address.setter
-    def node_address(self, value: 'Address'):
-        self._set_property(name="_node_address", new_value=value, flags=PRepFlag.NODE_ADDRESS)
+    def node_address(self, value: "Address"):
+        self._set_property(
+            name="_node_address", new_value=value, flags=PRepFlag.NODE_ADDRESS
+        )
 
     @property
     def stake(self) -> int:
@@ -397,9 +420,11 @@ class PRep(Sortable):
     @last_generate_block_height.setter
     def last_generate_block_height(self, value: int):
         assert value >= 0
-        self._set_property(name="_last_generate_block_height",
-                           new_value=value,
-                           flags=PRepFlag.LAST_GENERATE_BLOCK_HEIGHT)
+        self._set_property(
+            name="_last_generate_block_height",
+            new_value=value,
+            flags=PRepFlag.LAST_GENERATE_BLOCK_HEIGHT,
+        )
 
     @property
     def block_height(self) -> int:
@@ -410,7 +435,7 @@ class PRep(Sortable):
         return self._tx_index
 
     @classmethod
-    def make_key(cls, address: 'Address') -> bytes:
+    def make_key(cls, address: "Address") -> bytes:
         return cls.PREFIX + address.to_bytes_including_prefix()
 
     def is_frozen(self) -> bool:
@@ -422,16 +447,18 @@ class PRep(Sortable):
         self._is_frozen = True
         self._flags = PRepFlag.NONE
 
-    def set(self,
-            *,
-            name: str = None,
-            country: str = None,
-            city: str = None,
-            email: str = None,
-            website: str = None,
-            details: str = None,
-            p2p_endpoint: str = None,
-            node_address: 'Address' = None):
+    def set(
+        self,
+        *,
+        name: str = None,
+        country: str = None,
+        city: str = None,
+        email: str = None,
+        website: str = None,
+        details: str = None,
+        p2p_endpoint: str = None,
+        node_address: "Address" = None,
+    ):
         """Update PRep properties on processing setPRep JSON-RPC API
         Not allowed to update some properties which can affect PRep order or are immutable
 
@@ -454,7 +481,7 @@ class PRep(Sortable):
             "website": website,
             "details": details,
             "p2p_endpoint": p2p_endpoint,
-            "node_address": node_address
+            "node_address": node_address,
         }
 
         for key, value in kwargs.items():
@@ -471,12 +498,14 @@ class PRep(Sortable):
         self._check_access_permission()
 
         self._set_property("_irep", irep, PRepFlag.IREP, False)
-        self._set_property("_irep_block_height", block_height, PRepFlag.IREP_BLOCK_HEIGHT, False)
+        self._set_property(
+            "_irep_block_height", block_height, PRepFlag.IREP_BLOCK_HEIGHT, False
+        )
 
-    def __gt__(self, other: 'PRep') -> bool:
+    def __gt__(self, other: "PRep") -> bool:
         return self.order() > other.order()
 
-    def __lt__(self, other: 'PRep') -> bool:
+    def __lt__(self, other: "PRep") -> bool:
         return self.order() < other.order()
 
     def order(self) -> Tuple[int, int, int]:
@@ -506,15 +535,11 @@ class PRep(Sortable):
             self.website,
             self.details,
             self.p2p_endpoint,
-
             self._irep,
             self._irep_block_height,
-
             self._last_generate_block_height,
-
             self._block_height,
             self._tx_index,
-
             self._total_blocks,
             self._validated_blocks,
         ]
@@ -528,7 +553,7 @@ class PRep(Sortable):
         return MsgPackForDB.dumps(data)
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> 'PRep':
+    def from_bytes(cls, data: bytes) -> "PRep":
         items: list = MsgPackForDB.loads(data)
         version: int = items[cls.Index.VERSION]
 
@@ -557,17 +582,17 @@ class PRep(Sortable):
             tx_index=items[cls.Index.TX_INDEX],
             total_blocks=items[cls.Index.TOTAL_BLOCKS],
             validated_blocks=items[cls.Index.VALIDATED_BLOCKS],
-
             # version 1
             penalty=PenaltyReason(items[cls.Index.PENALTY]),
             unvalidated_sequence_blocks=items[cls.Index.UNVALIDATED_SEQUENCE_BLOCKS],
-
             # version 2
             node_address=items[cls.Index.NODE_ADDRESS],
         )
 
     @staticmethod
-    def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':
+    def from_dict(
+        address: "Address", data: dict, block_height: int, tx_index: int
+    ) -> "PRep":
         """Create a PRep instance from data included in registerPRep JSON-RPC request
 
         :param address:
@@ -581,7 +606,6 @@ class PRep(Sortable):
             address=address,
             status=PRepStatus.ACTIVE,
             grade=PRepGrade.CANDIDATE,
-
             # Optional items
             name=data.get(ConstantKeys.NAME, ""),
             country=data.get(ConstantKeys.COUNTRY, ""),
@@ -589,21 +613,18 @@ class PRep(Sortable):
             email=data.get(ConstantKeys.EMAIL, ""),
             website=data.get(ConstantKeys.WEBSITE, ""),
             details=data.get(ConstantKeys.DETAILS, ""),
-
             # Required items
             p2p_endpoint=data[ConstantKeys.P2P_ENDPOINT],
             irep=0,
             irep_block_height=block_height,
-
             # Registration time
             block_height=block_height,
             tx_index=tx_index,
-
             # node key
-            node_address=data.get(ConstantKeys.NODE_ADDRESS)
+            node_address=data.get(ConstantKeys.NODE_ADDRESS),
         )
 
-    def to_dict(self, dict_type: 'PRepDictType') -> dict:
+    def to_dict(self, dict_type: "PRepDictType") -> dict:
         """Returns the P-Rep information in dict format
 
         :param dict_type: FULL(getPRep), ABRIDGED(getPReps)
@@ -642,7 +663,7 @@ class PRep(Sortable):
         info: dict = self.to_dict(PRepDictType.FULL)
         return str(info)
 
-    def copy(self) -> 'PRep':
+    def copy(self) -> "PRep":
         prep = copy.copy(self)
         prep._is_frozen = False
         prep._flags = PRepFlag.NONE
@@ -653,7 +674,13 @@ class PRep(Sortable):
         if self.is_frozen():
             raise AccessDeniedException("P-Rep access denied")
 
-    def _set_property(self, name: str, new_value: Any, flags: 'PRepFlag', check_permission: bool = True):
+    def _set_property(
+        self,
+        name: str,
+        new_value: Any,
+        flags: "PRepFlag",
+        check_permission: bool = True,
+    ):
         if check_permission:
             self._check_access_permission()
 

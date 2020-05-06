@@ -2,16 +2,15 @@ from iconservice import *
 
 
 class SampleScore(IconScoreBase):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
-    def on_install(self, value: int=1000) -> None:
+    def on_install(self, value: int = 1000) -> None:
         super().on_install()
         self._value.set(value)
 
@@ -33,7 +32,7 @@ class SampleScore(IconScoreBase):
 
     @external
     def increase_value(self):
-        self._value.set(self._value.get()+1)
+        self._value.set(self._value.get() + 1)
 
     @payable
     def fallback(self):

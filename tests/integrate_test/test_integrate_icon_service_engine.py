@@ -20,7 +20,11 @@ import hashlib
 import time
 import unittest
 
-from iconservice.base.address import AddressPrefix, MalformedAddress, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import (
+    AddressPrefix,
+    MalformedAddress,
+    GOVERNANCE_SCORE_ADDRESS,
+)
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.type_converter import TypeConverter
@@ -29,53 +33,50 @@ from iconservice.icon_constant import ConfigKey
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.utils import icx_to_loop
-from tests import create_block_hash, create_address, create_tx_hash, \
-    create_timestamp
+from tests import create_block_hash, create_address, create_tx_hash, create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY
 
 
 class TestIconServiceEngine(TestIntegrateBase):
-
     def _genesis_invoke(self) -> tuple:
         tx_hash = create_tx_hash()
         timestamp_us = create_timestamp()
         request_params = {
-            'txHash': tx_hash,
-            'version': self._version,
-            'timestamp': timestamp_us
+            "txHash": tx_hash,
+            "version": self._version,
+            "timestamp": timestamp_us,
         }
 
         tx = {
-            'method': 'icx_sendTransaction',
-            'params': request_params,
-            'genesisData': {
+            "method": "icx_sendTransaction",
+            "params": request_params,
+            "genesisData": {
                 "accounts": [
-                    {
-                        "name": "genesis",
-                        "address": self._genesis,
-                        "balance": 0
-                    },
+                    {"name": "genesis", "address": self._genesis, "balance": 0},
                     {
                         "name": "fee_treasury",
                         "address": self._fee_treasury,
-                        "balance": 0
+                        "balance": 0,
                     },
                     {
                         "name": "_admin",
                         "address": self._admin.address,
-                        "balance": icx_to_loop(TOTAL_SUPPLY)
-                    }
+                        "balance": icx_to_loop(TOTAL_SUPPLY),
+                    },
                 ]
             },
         }
 
         block_hash = create_block_hash()
-        self.genesis_block = Block(self._block_height + 1, block_hash, timestamp_us, None, 0)
-        invoke_response: tuple = self.icon_service_engine.invoke(
-            self.genesis_block,
-            [tx]
+        self.genesis_block = Block(
+            self._block_height + 1, block_hash, timestamp_us, None, 0
         )
-        self.icon_service_engine.commit(self.genesis_block.height, self.genesis_block.hash, None)
+        invoke_response: tuple = self.icon_service_engine.invoke(
+            self.genesis_block, [tx]
+        )
+        self.icon_service_engine.commit(
+            self.genesis_block.height, self.genesis_block.hash, None
+        )
         self._block_height += 1
         self._prev_block_hash = block_hash
 
@@ -88,8 +89,8 @@ class TestIconServiceEngine(TestIntegrateBase):
         self._score_address = create_address(AddressPrefix.CONTRACT)
 
     def test_query(self):
-        method = 'icx_getBalance'
-        params = {'address': self._admin.address}
+        method = "icx_getBalance"
+        params = {"address": self._admin.address}
 
         balance = self.icon_service_engine.query(method, params)
         self.assertTrue(isinstance(balance, int))
@@ -104,31 +105,31 @@ class TestIconServiceEngine(TestIntegrateBase):
 
         step_limit = 200000000000000
         tx_v3 = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'version': 3,
-                'from': self._admin.address,
-                'to': self._to,
-                'value': value,
-                'stepLimit': step_limit,
-                'timestamp': 1234567890,
-                'txHash': tx_hash
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "version": 3,
+                "from": self._admin.address,
+                "to": self._to,
+                "value": value,
+                "stepLimit": step_limit,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+            },
         }
 
-        block = Block(block_height,
-                      block_hash,
-                      block_timestamp,
-                      self.genesis_block.hash,
-                      0)
+        block = Block(
+            block_height, block_hash, block_timestamp, self.genesis_block.hash, 0
+        )
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v3]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -155,25 +156,29 @@ class TestIconServiceEngine(TestIntegrateBase):
         value = 1 * 10 ** 18
 
         tx_v2 = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'from': self._admin.address,
-                'to': self._to,
-                'value': value,
-                'fee': 10 ** 16,
-                'timestamp': 1234567890,
-                'txHash': tx_hash
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "from": self._admin.address,
+                "to": self._to,
+                "value": value,
+                "fee": 10 ** 16,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+            },
         }
 
-        block = Block(block_height, block_hash, block_timestamp, self.genesis_block.hash, 0)
+        block = Block(
+            block_height, block_hash, block_timestamp, self.genesis_block.hash, 0
+        )
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v2])
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v2]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -183,7 +188,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10 ** 6 on protocol v2
-        self.assertEqual(tx_result.step_used, 10**6)
+        self.assertEqual(tx_result.step_used, 10 ** 6)
         self.assertEqual(tx_result.step_price, 0)
 
         # Write updated states to levelDB
@@ -201,28 +206,32 @@ class TestIconServiceEngine(TestIntegrateBase):
         block_timestamp = 0
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
-        to = MalformedAddress.from_string('')
+        to = MalformedAddress.from_string("")
         fixed_fee: int = 10 ** 16
 
         tx_v2 = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'from': self._admin.address,
-                'to': to,
-                'value': value,
-                'fee': fixed_fee,
-                'timestamp': 1234567890,
-                'txHash': tx_hash
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "from": self._admin.address,
+                "to": to,
+                "value": value,
+                "fee": fixed_fee,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+            },
         }
 
-        block = Block(block_height, block_hash, block_timestamp, self.genesis_block.hash, 0)
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v2])
+        block = Block(
+            block_height, block_hash, block_timestamp, self.genesis_block.hash, 0
+        )
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v2]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -232,7 +241,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        self.assertEqual(tx_result.step_used, 10**6)
+        self.assertEqual(tx_result.step_used, 10 ** 6)
 
         self.assertEqual(tx_result.step_price, 0)
 
@@ -255,32 +264,32 @@ class TestIconServiceEngine(TestIntegrateBase):
         value = 1 * 10 ** 18
 
         tx_v3 = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'nid': 3,
-                'version': 3,
-                'from': self._admin.address,
-                'to': self._to,
-                'value': value,
-                'stepLimit': 1000000,
-                'timestamp': 1234567890,
-                'txHash': tx_hash
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "nid": 3,
+                "version": 3,
+                "from": self._admin.address,
+                "to": self._to,
+                "value": value,
+                "stepLimit": 1000000,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+            },
         }
 
-        block = Block(block_height,
-                      block_hash,
-                      block_timestamp,
-                      self.genesis_block.hash,
-                      0)
+        block = Block(
+            block_height, block_hash, block_timestamp, self.genesis_block.hash, 0
+        )
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v3]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -290,7 +299,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        self.assertEqual(tx_result.step_used, 10**6)
+        self.assertEqual(tx_result.step_used, 10 ** 6)
         self.assertEqual(tx_result.step_price, 0)
 
         self.icon_service_engine.commit(block.height, block.hash, None)
@@ -302,11 +311,15 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(from_balance, icx_to_loop(TOTAL_SUPPLY) - value - fee)
 
     def test_invoke_v3_with_fee(self):
-        table = {ConfigKey.SERVICE_FEE: True,
-                 ConfigKey.SERVICE_AUDIT: False,
-                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
+        table = {
+            ConfigKey.SERVICE_FEE: True,
+            ConfigKey.SERVICE_AUDIT: False,
+            ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False,
+        }
         # TODO : apply service flag
-        self.icon_service_engine._flag = self.icon_service_engine._make_service_flag(table)
+        self.icon_service_engine._flag = self.icon_service_engine._make_service_flag(
+            table
+        )
 
         block_height = 1
         block_hash = create_block_hash()
@@ -316,34 +329,34 @@ class TestIconServiceEngine(TestIntegrateBase):
         step_limit = 1000000
 
         tx_v3 = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'nid': 3,
-                'version': 3,
-                'from': self._admin.address,
-                'to': self._to,
-                'value': value,
-                'stepLimit': step_limit,
-                'timestamp': 1234567890,
-                'txHash': tx_hash
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "nid": 3,
+                "version": 3,
+                "from": self._admin.address,
+                "to": self._to,
+                "value": value,
+                "stepLimit": step_limit,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+            },
         }
 
-        block = Block(block_height,
-                      block_hash,
-                      block_timestamp,
-                      self.genesis_block.hash,
-                      0)
+        block = Block(
+            block_height, block_hash, block_timestamp, self.genesis_block.hash, 0
+        )
 
         before_from_balance: int = self.get_balance(self._admin.address)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v3]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -353,7 +366,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        self.assertEqual(tx_result.step_used, 10**6)
+        self.assertEqual(tx_result.step_used, 10 ** 6)
 
         # step_price = self.get_step_price()
         # if IconScoreContextUtil._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.FEE):
@@ -382,42 +395,39 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.deploy_score("sample_scores", "sample_wrong_revert", self._admin.address)
 
         block_height = 2
-        block_hash = create_block_hash(b'block')
+        block_hash = create_block_hash(b"block")
         block_timestamp = 0
         tx_hash = create_tx_hash()
 
         self._to = create_address(AddressPrefix.CONTRACT)
 
         tx_v3 = {
-            'method': "icx_sendTransaction",
+            "method": "icx_sendTransaction",
             "params": {
-                'from': self._admin,
-                'to': self._score_address,
-                'value': 0,
-                'fee': 10 ** 16,
-                'timestamp': 1234567890,
-                'txHash': tx_hash,
-                'dataType': 'call',
-                'data': {
-                    'method': 'set_value',
-                    'params': {
-                        'value': 777
-                    }
-                }
-            }
+                "from": self._admin,
+                "to": self._score_address,
+                "value": 0,
+                "fee": 10 ** 16,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+                "dataType": "call",
+                "data": {"method": "set_value", "params": {"value": 777}},
+            },
         }
         prev_hash = self.icon_service_engine._get_last_block().hash
 
         block = Block(block_height, block_hash, block_timestamp, prev_hash, 0)
 
         before_from_balance: int = self.get_balance(self._admin.address)
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v3]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNotNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 0)
@@ -427,7 +437,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        self.assertEqual(tx_result.step_used, 10**6)
+        self.assertEqual(tx_result.step_used, 10 ** 6)
 
         # step_price = self.icon_service_engine._step_counter_factory.get_step_price()
         # if IconScoreContextUtil._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.FEE):
@@ -448,38 +458,38 @@ class TestIconServiceEngine(TestIntegrateBase):
 
     def test_score_invoke_failure(self):
         block_height = 1
-        block_hash = create_block_hash(b'block')
+        block_hash = create_block_hash(b"block")
         block_timestamp = 0
         tx_hash = create_tx_hash()
 
         tx = {
-            'method': "icx_sendTransaction",
+            "method": "icx_sendTransaction",
             "params": {
-                'from': self._admin,
-                'to': self._score_address,
-                'value': 0,
-                'fee': 10 ** 16,
-                'timestamp': 1234567890,
-                'txHash': tx_hash,
-                'dataType': 'call',
-                'data': {
-                    'method': 'set_value',
-                    'params': {
-                        'value': 777
-                    }
-                }
-            }
+                "from": self._admin,
+                "to": self._score_address,
+                "value": 0,
+                "fee": 10 ** 16,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+                "dataType": "call",
+                "data": {"method": "set_value", "params": {"value": 777}},
+            },
         }
 
-        block = Block(block_height, block_hash, block_timestamp,
-                      self.icon_service_engine._get_last_block().hash, 0)
+        block = Block(
+            block_height,
+            block_hash,
+            block_timestamp,
+            self.icon_service_engine._get_last_block().hash,
+            0,
+        )
 
         tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNotNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 0)
@@ -503,36 +513,35 @@ class TestIconServiceEngine(TestIntegrateBase):
 
         step_limit = 200000000
         tx_v3 = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'txHash': tx_hash,
-                'nid': 3,
-                'version': 3,
-                'from': self._admin.address,
-                'to': to,
-                'value': value,
-                'stepLimit': step_limit,
-                'timestamp': 1234567890,
-                'dataType': 'call',
-                'data': {
-                    'method': 'getScoreStatus',
-                    'params': {
-                        'txHash': tx_hash
-                    }
-                },
-                'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "txHash": tx_hash,
+                "nid": 3,
+                "version": 3,
+                "from": self._admin.address,
+                "to": to,
+                "value": value,
+                "stepLimit": step_limit,
+                "timestamp": 1234567890,
+                "dataType": "call",
+                "data": {"method": "getScoreStatus", "params": {"txHash": tx_hash}},
+                "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+            },
         }
 
-        block = Block(block_height, block_hash, block_timestamp, self.genesis_block.hash, 0)
+        block = Block(
+            block_height, block_hash, block_timestamp, self.genesis_block.hash, 0
+        )
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, [tx_v3]
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNotNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 0)
@@ -547,13 +556,14 @@ class TestIconServiceEngine(TestIntegrateBase):
             block_hash=create_block_hash(),
             timestamp=0,
             prev_hash=create_block_hash(),
-            cumulative_fee=0)
+            cumulative_fee=0,
+        )
 
         with self.assertRaises(InvalidParamsException) as cm:
             self.icon_service_engine.commit(block.height, block.hash, None)
         e = cm.exception
         self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.code)
-        self.assertTrue(e.message.startswith('No precommit data'))
+        self.assertTrue(e.message.startswith("No precommit data"))
 
     def test_commit_change_block_hash(self):
         block_height = 1
@@ -563,23 +573,25 @@ class TestIconServiceEngine(TestIntegrateBase):
         tx_hash = create_tx_hash()
 
         dummy_tx = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'nid': 3,
-                'version': 3,
-                'from': self._admin.address,
-                'to': self._to,
-                'value': 1 * 10 ** 18,
-                'stepLimit': 1000000,
-                'timestamp': 1234567890,
-                'txHash': tx_hash
-            }
+            "method": "icx_sendTransaction",
+            "params": {
+                "nid": 3,
+                "version": 3,
+                "from": self._admin.address,
+                "to": self._to,
+                "value": 1 * 10 ** 18,
+                "stepLimit": 1000000,
+                "timestamp": 1234567890,
+                "txHash": tx_hash,
+            },
         }
-        block = Block(block_height,
-                      instant_block_hash,
-                      block_timestamp,
-                      self.genesis_block.hash,
-                      0)
+        block = Block(
+            block_height,
+            instant_block_hash,
+            block_timestamp,
+            self.genesis_block.hash,
+            0,
+        )
 
         self.icon_service_engine.invoke(block, [dummy_tx])
         instant_block_hash = block.hash
@@ -595,52 +607,55 @@ class TestIconServiceEngine(TestIntegrateBase):
             block_hash=create_block_hash(),
             timestamp=0,
             prev_hash=self.genesis_block.hash,
-            cumulative_fee=0)
+            cumulative_fee=0,
+        )
 
         block_result, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [])
         self.assertIsInstance(block_result, list)
-        self.assertEqual(state_root_hash, hashlib.sha3_256(b'').digest())
+        self.assertEqual(state_root_hash, hashlib.sha3_256(b"").digest())
 
         self.icon_service_engine.remove_precommit_state(block.height, block.hash)
-        self.assertIsNone(self.icon_service_engine._precommit_data_manager.get(block.hash))
+        self.assertIsNone(
+            self.icon_service_engine._precommit_data_manager.get(block.hash)
+        )
 
     def test_invoke_v2_with_malformed_to_address_and_type_converter(self):
-        to = ''
+        to = ""
         to_address = MalformedAddress.from_string(to)
         fixed_fee: int = 10 ** 16
         value = 1 * 10 ** 18
         block_height = 1
-        block_hash: bytes = create_block_hash(b'block')
+        block_hash: bytes = create_block_hash(b"block")
         prev_block_hash: bytes = self.genesis_block.hash
-        tx_hash: bytes = create_tx_hash(b'tx')
+        tx_hash: bytes = create_tx_hash(b"tx")
         timestamp: int = int(time.time() * 1000)
 
         request = {
-            'block': {
-                'blockHeight': hex(block_height),
-                'blockHash': block_hash.hex(),
-                'prevBlockHash': prev_block_hash.hex(),
-                'timestamp': str(timestamp)
+            "block": {
+                "blockHeight": hex(block_height),
+                "blockHash": block_hash.hex(),
+                "prevBlockHash": prev_block_hash.hex(),
+                "timestamp": str(timestamp),
             },
-            'transactions': [
+            "transactions": [
                 {
-                    'method': 'icx_sendTransaction',
-                    'params': {
-                        'from': str(self._admin.address),
-                        'to': to,
-                        'fee': hex(fixed_fee),
-                        'value': hex(value),
-                        'timestamp': '0x574024617ae39',
-                        'nonce': '0x1',
-                        'signature': 'yKMiB12Os0ZK9+XYiBSwydvMXA0y/LS9HzmZwtczQ1VAK98/mGUOmpwTjByFArjdkx72GOWIOzu6eqyZnKeHBAE=',
-                        'txHash': tx_hash.hex()
-                    }
+                    "method": "icx_sendTransaction",
+                    "params": {
+                        "from": str(self._admin.address),
+                        "to": to,
+                        "fee": hex(fixed_fee),
+                        "value": hex(value),
+                        "timestamp": "0x574024617ae39",
+                        "nonce": "0x1",
+                        "signature": "yKMiB12Os0ZK9+XYiBSwydvMXA0y/LS9HzmZwtczQ1VAK98/mGUOmpwTjByFArjdkx72GOWIOzu6eqyZnKeHBAE=",
+                        "txHash": tx_hash.hex(),
+                    },
                 }
-            ]
+            ],
         }
 
         params = TypeConverter.convert(request, ParamType.INVOKE)
-        converted_block_params = params['block']
+        converted_block_params = params["block"]
         block = Block.from_dict(converted_block_params)
 
         self.assertEqual(block_height, block.height)
@@ -648,15 +663,17 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(prev_block_hash, block.prev_hash)
         self.assertEqual(timestamp, block.timestamp)
 
-        transactions: list = params['transactions']
-        self.assertIsInstance(transactions[0]['params']['to'], MalformedAddress)
+        transactions: list = params["transactions"]
+        self.assertIsInstance(transactions[0]["params"]["to"], MalformedAddress)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, transactions)
+        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(
+            block, transactions
+        )
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
 
-        tx_result: 'TransactionResult' = tx_results[0]
+        tx_result: "TransactionResult" = tx_results[0]
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -666,7 +683,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        self.assertEqual(tx_result.step_used, 10**6)
+        self.assertEqual(tx_result.step_used, 10 ** 6)
 
         self.assertEqual(tx_result.step_price, 0)
 
@@ -683,27 +700,29 @@ class TestIconServiceEngine(TestIntegrateBase):
 
     def test_get_balance_with_malformed_address_and_type_converter(self):
         malformed_addresses = [
-            '',
-            '12341234',
-            'hx1234123456',
-            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf',
-            'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf']
+            "",
+            "12341234",
+            "hx1234123456",
+            "cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf",
+            "hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf",
+        ]
 
-        method: str = 'icx_getBalance'
+        method: str = "icx_getBalance"
 
         for address in malformed_addresses:
-            request = {'method': method, 'params': {'address': address}}
+            request = {"method": method, "params": {"address": address}}
 
             converted_request = TypeConverter.convert(request, ParamType.QUERY)
-            self.assertEqual(method, converted_request['method'])
+            self.assertEqual(method, converted_request["method"])
 
-            params: dict = converted_request['params']
-            self.assertEqual(MalformedAddress.from_string(address), params['address'])
+            params: dict = converted_request["params"]
+            self.assertEqual(MalformedAddress.from_string(address), params["address"])
 
             balance: int = self.icon_service_engine.query(
-                converted_request['method'], converted_request['params'])
+                converted_request["method"], converted_request["params"]
+            )
             self.assertEqual(0, balance)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

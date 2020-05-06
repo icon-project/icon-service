@@ -32,15 +32,17 @@ ICX_FACTOR = 10 ** 18
 ICX_FEE = 10 ** 16
 
 
-def _test_transaction_convert(method: str,
-                              tx_hash: Optional[bytes],
-                              from_addr: 'Address',
-                              to_addr: Union[str, 'Address', None],
-                              value: int,
-                              data_type: str,
-                              data_method: Optional[str] = None,
-                              content_type: Optional[str] = None,
-                              content: Optional[str] = None):
+def _test_transaction_convert(
+    method: str,
+    tx_hash: Optional[bytes],
+    from_addr: "Address",
+    to_addr: Union[str, "Address", None],
+    value: int,
+    data_type: str,
+    data_method: Optional[str] = None,
+    content_type: Optional[str] = None,
+    content: Optional[str] = None,
+):
     if to_addr is not None:
         req_to_addr = str(to_addr)
     else:
@@ -71,10 +73,10 @@ def _test_transaction_convert(method: str,
                 ConstantKeys.PARAMS: {
                     ConstantKeys.FROM: str(data_from),
                     ConstantKeys.TO: str(data_to),
-                    ConstantKeys.VALUE: hex(data_value)
+                    ConstantKeys.VALUE: hex(data_value),
                 }
-            }
-        }
+            },
+        },
     }
 
     params_params = request[ConstantKeys.PARAMS]
@@ -138,15 +140,15 @@ def _test_block_convert(block_height: int, timestamp: int):
         ConstantKeys.BLOCK_HEIGHT: hex(block_height),
         ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
         ConstantKeys.TIMESTAMP: hex(timestamp),
-        ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
+        ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.BLOCK)
 
     assert block_height == ret_params[ConstantKeys.BLOCK_HEIGHT]
-    assert block_hash ==  ret_params[ConstantKeys.BLOCK_HASH]
-    assert timestamp ==  ret_params[ConstantKeys.TIMESTAMP]
-    assert prev_block_hash ==  ret_params[ConstantKeys.PREV_BLOCK_HASH]
+    assert block_hash == ret_params[ConstantKeys.BLOCK_HASH]
+    assert timestamp == ret_params[ConstantKeys.TIMESTAMP]
+    assert prev_block_hash == ret_params[ConstantKeys.PREV_BLOCK_HASH]
 
 
 def test_account_convert():
@@ -160,13 +162,13 @@ def test_account_convert_negative_int():
 
 
 def _test_account_convert(balance: int):
-    name = 'genesis'
+    name = "genesis"
     address = create_address()
 
     request = {
         ConstantKeys.NAME: name,
         ConstantKeys.ADDRESS: str(address),
-        ConstantKeys.BALANCE: hex(balance)
+        ConstantKeys.BALANCE: hex(balance),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.ACCOUNT_DATA)
@@ -177,32 +179,31 @@ def _test_account_convert(balance: int):
 
 
 def test_call_data_convert():
-    method = 'icx_sendTransaction'
+    method = "icx_sendTransaction"
     data_from = create_address()
     data_to = create_address()
     data_value = 1 * ICX_FACTOR
 
     request = {
         ConstantKeys.METHOD: method,
-        ConstantKeys.PARAMS:
-            {
-                ConstantKeys.FROM: str(data_from),
-                ConstantKeys.TO: str(data_to),
-                ConstantKeys.VALUE: hex(data_value)
-            }
+        ConstantKeys.PARAMS: {
+            ConstantKeys.FROM: str(data_from),
+            ConstantKeys.TO: str(data_to),
+            ConstantKeys.VALUE: hex(data_value),
+        },
     }
 
     ret_params = TypeConverter.convert(request, ParamType.CALL_DATA)
 
     assert method == ret_params[ConstantKeys.METHOD]
     params = ret_params[ConstantKeys.PARAMS]
-    assert data_from !=  params[ConstantKeys.FROM]
+    assert data_from != params[ConstantKeys.FROM]
     assert data_to != params[ConstantKeys.TO]
     assert data_value != params[ConstantKeys.VALUE]
 
 
 def test_deploy_data_convert():
-    content_type = 'application/zip'
+    content_type = "application/zip"
     content = CONTENT
     data_from = create_address()
     data_to = create_address()
@@ -211,12 +212,11 @@ def test_deploy_data_convert():
     request = {
         ConstantKeys.CONTENT_TYPE: content_type,
         ConstantKeys.CONTENT: content,
-        ConstantKeys.PARAMS:
-            {
-                ConstantKeys.FROM: str(data_from),
-                ConstantKeys.TO: str(data_to),
-                ConstantKeys.VALUE: hex(data_value)
-            }
+        ConstantKeys.PARAMS: {
+            ConstantKeys.FROM: str(data_from),
+            ConstantKeys.TO: str(data_to),
+            ConstantKeys.VALUE: hex(data_value),
+        },
     }
 
     ret_params = TypeConverter.convert(request, ParamType.DEPLOY_DATA)
@@ -253,45 +253,65 @@ def test_base_data_convert():
             ConstantKeys.PREP_INCENTIVE: hex(prep_incentive),
             ConstantKeys.PREP_REWARD_RATE: hex(prep_reward_rate),
             ConstantKeys.PREP_TOTAL_DELEGATION: hex(prep_total_delegation),
-            ConstantKeys.PREP_VALUE: hex(prep_value)
+            ConstantKeys.PREP_VALUE: hex(prep_value),
         },
         ConstantKeys.EEP: {
             ConstantKeys.EEP_INCENTIVE: hex(eep_incentive),
             ConstantKeys.EEP_REWARD_RATE: hex(eep_reward_rate),
             ConstantKeys.EEP_TOTAL_DELEGATION: hex(eep_total_delegation),
-            ConstantKeys.EEP_VALUE: hex(eep_value)
+            ConstantKeys.EEP_VALUE: hex(eep_value),
         },
         ConstantKeys.DAPP: {
             ConstantKeys.DAPP_INCENTIVE: hex(dapp_incentive),
             ConstantKeys.DAPP_REWARD_RATE: hex(dapp_reward_rate),
             ConstantKeys.DAPP_TOTAL_DELEGATION: hex(dapp_total_delegation),
-            ConstantKeys.DAPP_VALUE: hex(dapp_value)
+            ConstantKeys.DAPP_VALUE: hex(dapp_value),
         },
         ConstantKeys.ISSUE_RESULT: {
             ConstantKeys.COVERED_BY_FEE: hex(covered_by_fee),
             ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: hex(covered_by_over_issued_icx),
-            ConstantKeys.ISSUE: hex(issue)
-        }
-
+            ConstantKeys.ISSUE: hex(issue),
+        },
     }
     ret_params = TypeConverter.convert(request, ParamType.BASE_DATA)
     assert prep_incentive == ret_params[ConstantKeys.PREP][ConstantKeys.PREP_INCENTIVE]
-    assert prep_reward_rate == ret_params[ConstantKeys.PREP][ConstantKeys.PREP_REWARD_RATE]
-    assert prep_total_delegation == ret_params[ConstantKeys.PREP][ConstantKeys.PREP_TOTAL_DELEGATION]
+    assert (
+        prep_reward_rate == ret_params[ConstantKeys.PREP][ConstantKeys.PREP_REWARD_RATE]
+    )
+    assert (
+        prep_total_delegation
+        == ret_params[ConstantKeys.PREP][ConstantKeys.PREP_TOTAL_DELEGATION]
+    )
     assert prep_value == ret_params[ConstantKeys.PREP][ConstantKeys.PREP_VALUE]
 
     assert eep_incentive == ret_params[ConstantKeys.EEP][ConstantKeys.EEP_INCENTIVE]
     assert eep_reward_rate == ret_params[ConstantKeys.EEP][ConstantKeys.EEP_REWARD_RATE]
-    assert eep_total_delegation == ret_params[ConstantKeys.EEP][ConstantKeys.EEP_TOTAL_DELEGATION]
+    assert (
+        eep_total_delegation
+        == ret_params[ConstantKeys.EEP][ConstantKeys.EEP_TOTAL_DELEGATION]
+    )
     assert eep_value == ret_params[ConstantKeys.EEP][ConstantKeys.EEP_VALUE]
 
     assert dapp_incentive == ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_INCENTIVE]
-    assert dapp_reward_rate == ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_REWARD_RATE]
-    assert dapp_total_delegation == ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_TOTAL_DELEGATION]
+    assert (
+        dapp_reward_rate == ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_REWARD_RATE]
+    )
+    assert (
+        dapp_total_delegation
+        == ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_TOTAL_DELEGATION]
+    )
     assert dapp_value, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_VALUE]
 
-    assert covered_by_fee == ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.COVERED_BY_FEE]
-    assert covered_by_over_issued_icx == ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.COVERED_BY_OVER_ISSUED_ICX]
+    assert (
+        covered_by_fee
+        == ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.COVERED_BY_FEE]
+    )
+    assert (
+        covered_by_over_issued_icx
+        == ret_params[ConstantKeys.ISSUE_RESULT][
+            ConstantKeys.COVERED_BY_OVER_ISSUED_ICX
+        ]
+    )
     assert issue == ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.ISSUE]
 
 
@@ -304,7 +324,9 @@ def test_transaction_convert_success1():
     data_type = "call"
     data_method = "transfer"
 
-    _test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type, data_method=data_method)
+    _test_transaction_convert(
+        method, tx_hash, from_addr, to_addr, value, data_type, data_method=data_method
+    )
 
 
 def test_transaction_convert_success2():
@@ -318,8 +340,16 @@ def test_transaction_convert_success2():
     content_type = "application/zip"
     content = CONTENT
 
-    _test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
-                              content_type=content_type, content=content)
+    _test_transaction_convert(
+        method,
+        tx_hash,
+        from_addr,
+        to_addr,
+        value,
+        data_type,
+        content_type=content_type,
+        content=content,
+    )
 
 
 def test_transaction_convert_malformed_address_success():
@@ -333,8 +363,16 @@ def test_transaction_convert_malformed_address_success():
     content = CONTENT
 
     with pytest.raises(BaseException) as e:
-        _test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
-                                  content_type=content_type, content=content)
+        _test_transaction_convert(
+            method,
+            tx_hash,
+            from_addr,
+            to_addr,
+            value,
+            data_type,
+            content_type=content_type,
+            content=content,
+        )
 
 
 def test_transaction_convert_fail1():
@@ -348,10 +386,21 @@ def test_transaction_convert_fail1():
     content = CONTENT
 
     with pytest.raises(BaseException) as e:
-        _test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
-                                  content_type=content_type, content=content)
+        _test_transaction_convert(
+            method,
+            tx_hash,
+            from_addr,
+            to_addr,
+            value,
+            data_type,
+            content_type=content_type,
+            content=content,
+        )
     assert e.value.code == ExceptionCode.INVALID_PARAMETER
-    assert e.value.message == "TypeConvert Exception None value, template: ValueType.ADDRESS_OR_MALFORMED_ADDRESS"
+    assert (
+        e.value.message
+        == "TypeConvert Exception None value, template: ValueType.ADDRESS_OR_MALFORMED_ADDRESS"
+    )
 
 
 def test_base_transaction_convert():
@@ -359,36 +408,35 @@ def test_base_transaction_convert():
         ConstantKeys.PREP_INCENTIVE: 1,
         ConstantKeys.PREP_REWARD_RATE: 1,
         ConstantKeys.PREP_TOTAL_DELEGATION: 1,
-        ConstantKeys.PREP_VALUE: 1
+        ConstantKeys.PREP_VALUE: 1,
     }
     eep_data = {
         ConstantKeys.EEP_INCENTIVE: 2,
         ConstantKeys.EEP_REWARD_RATE: 2,
         ConstantKeys.EEP_TOTAL_DELEGATION: 2,
-        ConstantKeys.EEP_VALUE: 2
+        ConstantKeys.EEP_VALUE: 2,
     }
     dapp_data = {
         ConstantKeys.DAPP_INCENTIVE: 3,
         ConstantKeys.DAPP_REWARD_RATE: 3,
         ConstantKeys.DAPP_TOTAL_DELEGATION: 3,
-        ConstantKeys.DAPP_VALUE: 3
+        ConstantKeys.DAPP_VALUE: 3,
     }
     result_data = {
         ConstantKeys.COVERED_BY_FEE: 4,
         ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: 4,
-        ConstantKeys.ISSUE: 4
+        ConstantKeys.ISSUE: 4,
     }
     # todo: consider more cases (total 7 case)
-    _test_base_transaction_convert({"prep": prep_data,
-                                         "eep": eep_data,
-                                         "dapp": dapp_data,
-                                         "result": result_data})
+    _test_base_transaction_convert(
+        {"prep": prep_data, "eep": eep_data, "dapp": dapp_data, "result": result_data}
+    )
 
 
 def _test_base_transaction_convert(data: dict, method: str = "icx_sendTransaction"):
     version = 3
     timestamp = 12345
-    data_type = 'base'
+    data_type = "base"
     nonce = 123
 
     request = {
@@ -398,9 +446,8 @@ def _test_base_transaction_convert(data: dict, method: str = "icx_sendTransactio
             ConstantKeys.TIMESTAMP: hex(timestamp),
             ConstantKeys.NONCE: hex(nonce),
             ConstantKeys.DATA_TYPE: data_type,
-            ConstantKeys.DATA: {
-            }
-        }
+            ConstantKeys.DATA: {},
+        },
     }
     data_params = request[ConstantKeys.PARAMS][ConstantKeys.DATA]
     for group in data.keys():
@@ -449,7 +496,7 @@ def test_invoke_convert():
             ConstantKeys.BLOCK_HEIGHT: hex(block_height),
             ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
             ConstantKeys.TIMESTAMP: hex(timestamp),
-            ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
+            ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash),
         },
         ConstantKeys.TRANSACTIONS: [
             {
@@ -470,10 +517,10 @@ def test_invoke_convert():
                         ConstantKeys.PARAMS: {
                             ConstantKeys.FROM: str(data_from),
                             ConstantKeys.TO: str(data_to),
-                            ConstantKeys.VALUE: hex(data_value)
-                        }
-                    }
-                }
+                            ConstantKeys.VALUE: hex(data_value),
+                        },
+                    },
+                },
             },
             {
                 ConstantKeys.METHOD: method,
@@ -486,12 +533,14 @@ def test_invoke_convert():
                     ConstantKeys.TIMESTAMP: hex(timestamp),
                     ConstantKeys.NONCE: hex(nonce),
                     ConstantKeys.SIGNATURE: signature,
-                }
-            }
+                },
+            },
         ],
         ConstantKeys.PREV_BLOCK_GENERATOR: str(prev_block_generator),
-        ConstantKeys.PREV_BLOCK_VALIDATORS: [str(addr) for addr in prev_block_validators],
-        ConstantKeys.PREV_BLOCK_VOTES: [[str(addr), hex(v)] for addr, v in prev_votes]
+        ConstantKeys.PREV_BLOCK_VALIDATORS: [
+            str(addr) for addr in prev_block_validators
+        ],
+        ConstantKeys.PREV_BLOCK_VOTES: [[str(addr), hex(v)] for addr, v in prev_votes],
     }
 
     ret_params = TypeConverter.convert(request, ParamType.INVOKE)
@@ -550,51 +599,51 @@ def test_genesis_invoke_convert():
     prev_block_hash = create_block_hash()
 
     accounts = [
-        {
-            "name": "god",
-            "address": create_address(),
-            "balance": 10 * ICX_FACTOR
-        },
-        {
-            "name": "treasury",
-            "address": create_address(),
-            "balance": 0
-        },
+        {"name": "god", "address": create_address(), "balance": 10 * ICX_FACTOR},
+        {"name": "treasury", "address": create_address(), "balance": 0},
     ]
 
     message = "hello icon!"
 
     request = {
-            ConstantKeys.BLOCK: {
-                ConstantKeys.BLOCK_HEIGHT: hex(block_height),
-                ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
-                ConstantKeys.TIMESTAMP: hex(timestamp),
-                ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
-            },
-            ConstantKeys.TRANSACTIONS: [
-                {
-                    ConstantKeys.METHOD: "icx_sendTransaction",
-                    ConstantKeys.PARAMS: {
-                        ConstantKeys.TX_HASH: bytes.hex(create_block_hash())
-                    },
-                    ConstantKeys.GENESIS_DATA: {
-                        ConstantKeys.ACCOUNTS: [
-                            {
-                                ConstantKeys.NAME: accounts[0][ConstantKeys.NAME],
-                                ConstantKeys.ADDRESS: str(accounts[0][ConstantKeys.ADDRESS]),
-                                ConstantKeys.BALANCE: hex(accounts[0][ConstantKeys.BALANCE])
-                            },
-                            {
-                                ConstantKeys.NAME: accounts[1][ConstantKeys.NAME],
-                                ConstantKeys.ADDRESS: str(accounts[1][ConstantKeys.ADDRESS]),
-                                ConstantKeys.BALANCE: hex(accounts[1][ConstantKeys.BALANCE])
-                            }
-                        ],
-                        ConstantKeys.MESSAGE: message
-                    }
-                }
-            ],
-        }
+        ConstantKeys.BLOCK: {
+            ConstantKeys.BLOCK_HEIGHT: hex(block_height),
+            ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
+            ConstantKeys.TIMESTAMP: hex(timestamp),
+            ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash),
+        },
+        ConstantKeys.TRANSACTIONS: [
+            {
+                ConstantKeys.METHOD: "icx_sendTransaction",
+                ConstantKeys.PARAMS: {
+                    ConstantKeys.TX_HASH: bytes.hex(create_block_hash())
+                },
+                ConstantKeys.GENESIS_DATA: {
+                    ConstantKeys.ACCOUNTS: [
+                        {
+                            ConstantKeys.NAME: accounts[0][ConstantKeys.NAME],
+                            ConstantKeys.ADDRESS: str(
+                                accounts[0][ConstantKeys.ADDRESS]
+                            ),
+                            ConstantKeys.BALANCE: hex(
+                                accounts[0][ConstantKeys.BALANCE]
+                            ),
+                        },
+                        {
+                            ConstantKeys.NAME: accounts[1][ConstantKeys.NAME],
+                            ConstantKeys.ADDRESS: str(
+                                accounts[1][ConstantKeys.ADDRESS]
+                            ),
+                            ConstantKeys.BALANCE: hex(
+                                accounts[1][ConstantKeys.BALANCE]
+                            ),
+                        },
+                    ],
+                    ConstantKeys.MESSAGE: message,
+                },
+            }
+        ],
+    }
 
     ret_params = TypeConverter.convert(request, ParamType.INVOKE)
 
@@ -609,8 +658,14 @@ def test_genesis_invoke_convert():
     accounts_params = genesis_params[ConstantKeys.ACCOUNTS]
     for index, account_params in enumerate(accounts_params):
         assert account_params[ConstantKeys.NAME] == accounts[index][ConstantKeys.NAME]
-        assert account_params[ConstantKeys.ADDRESS] == accounts[index][ConstantKeys.ADDRESS]
-        assert account_params[ConstantKeys.BALANCE] == accounts[index][ConstantKeys.BALANCE]
+        assert (
+            account_params[ConstantKeys.ADDRESS]
+            == accounts[index][ConstantKeys.ADDRESS]
+        )
+        assert (
+            account_params[ConstantKeys.BALANCE]
+            == accounts[index][ConstantKeys.BALANCE]
+        )
     assert genesis_params[ConstantKeys.MESSAGE] == message
 
 
@@ -629,10 +684,8 @@ def test_icx_call_convert():
         ConstantKeys.DATA_TYPE: data_type,
         ConstantKeys.DATA: {
             ConstantKeys.METHOD: data_method,
-            ConstantKeys.PARAMS: {
-                ConstantKeys.ADDRESS: str(data_addr)
-            }
-        }
+            ConstantKeys.PARAMS: {ConstantKeys.ADDRESS: str(data_addr)},
+        },
     }
 
     ret_params = TypeConverter.convert(request, ParamType.ICX_CALL)
@@ -652,10 +705,7 @@ def test_icx_get_balance_convert():
     version = 3
     addr1 = create_address()
 
-    request = {
-        ConstantKeys.VERSION: hex(version),
-        ConstantKeys.ADDRESS: str(addr1)
-    }
+    request = {ConstantKeys.VERSION: hex(version), ConstantKeys.ADDRESS: str(addr1)}
 
     ret_params = TypeConverter.convert(request, ParamType.ICX_GET_BALANCE)
 
@@ -666,9 +716,7 @@ def test_icx_get_balance_convert():
 def test_icx_total_supply_convert():
     version = 3
 
-    request = {
-        ConstantKeys.VERSION: hex(version)
-    }
+    request = {ConstantKeys.VERSION: hex(version)}
 
     ret_params = TypeConverter.convert(request, ParamType.ICX_GET_TOTAL_SUPPLY)
 
@@ -682,7 +730,7 @@ def test_icx_get_score_api_convert():
 
     request = {
         ConstantKeys.VERSION: hex(version),
-        ConstantKeys.ADDRESS: str(score_addr)
+        ConstantKeys.ADDRESS: str(score_addr),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.ICX_GET_SCORE_API)
@@ -709,11 +757,9 @@ def test_query_convert_icx_call():
             ConstantKeys.DATA_TYPE: data_type,
             ConstantKeys.DATA: {
                 ConstantKeys.METHOD: data_method,
-                ConstantKeys.PARAMS: {
-                    ConstantKeys.ADDRESS: str(data_addr),
-                }
-            }
-        }
+                ConstantKeys.PARAMS: {ConstantKeys.ADDRESS: str(data_addr),},
+            },
+        },
     }
 
     ret_params = TypeConverter.convert(request, ParamType.QUERY)
@@ -742,8 +788,8 @@ def test_query_convert_icx_get_balance():
         ConstantKeys.METHOD: method,
         ConstantKeys.PARAMS: {
             ConstantKeys.VERSION: hex(version),
-            ConstantKeys.ADDRESS: str(addr1)
-        }
+            ConstantKeys.ADDRESS: str(addr1),
+        },
     }
 
     ret_params = TypeConverter.convert(request, ParamType.QUERY)
@@ -761,9 +807,7 @@ def test_query_convert_icx_get_total_supply():
 
     request = {
         ConstantKeys.METHOD: method,
-        ConstantKeys.PARAMS: {
-            ConstantKeys.VERSION: hex(version)
-        }
+        ConstantKeys.PARAMS: {ConstantKeys.VERSION: hex(version)},
     }
 
     ret_params = TypeConverter.convert(request, ParamType.QUERY)
@@ -783,8 +827,8 @@ def test_query_convert_icx_get_score_api():
         ConstantKeys.METHOD: method,
         ConstantKeys.PARAMS: {
             ConstantKeys.VERSION: hex(version),
-            ConstantKeys.ADDRESS: str(addr1)
-        }
+            ConstantKeys.ADDRESS: str(addr1),
+        },
     }
 
     ret_params = TypeConverter.convert(request, ParamType.QUERY)
@@ -802,7 +846,7 @@ def test_write_precommit_convert():
 
     request = {
         ConstantKeys.BLOCK_HEIGHT: hex(block_height),
-        ConstantKeys.BLOCK_HASH: bytes.hex(block_hash)
+        ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
@@ -820,7 +864,7 @@ def test_write_precommit_convert_new_format():
     request = {
         ConstantKeys.BLOCK_HEIGHT: hex(block_height),
         ConstantKeys.OLD_BLOCK_HASH: bytes.hex(old_block_hash),
-        ConstantKeys.NEW_BLOCK_HASH: bytes.hex(new_block_hash)
+        ConstantKeys.NEW_BLOCK_HASH: bytes.hex(new_block_hash),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
@@ -836,7 +880,7 @@ def test_remove_precommit_convert():
 
     request = {
         ConstantKeys.BLOCK_HEIGHT: hex(block_height),
-        ConstantKeys.BLOCK_HASH: bytes.hex(block_hash)
+        ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.REMOVE_PRECOMMIT)
@@ -854,7 +898,9 @@ def test_validate_tx_convert():
     data_type = "call"
     data_method = "transfer"
 
-    _test_transaction_convert(method, None, from_addr, to_addr, value, data_type, data_method=data_method)
+    _test_transaction_convert(
+        method, None, from_addr, to_addr, value, data_type, data_method=data_method
+    )
 
 
 def test_v2_invoke_convert():
@@ -878,8 +924,8 @@ def test_v2_invoke_convert():
             ConstantKeys.FEE: hex(fee),
             ConstantKeys.TIMESTAMP: hex(timestamp),
             ConstantKeys.NONCE: hex(nonce),
-            ConstantKeys.SIGNATURE: signature
-        }
+            ConstantKeys.SIGNATURE: signature,
+        },
     }
 
     ret_params = TypeConverter.convert(request_params, ParamType.VALIDATE_TRANSACTION)
@@ -902,7 +948,7 @@ def test_wrong_block_convert():
         ConstantKeys.BLOCK_HEIGHT: [],
         ConstantKeys.BLOCK_HASH: {},
         ConstantKeys.TIMESTAMP: [],
-        ConstantKeys.PREV_BLOCK_HASH: {}
+        ConstantKeys.PREV_BLOCK_HASH: {},
     }
 
     ret_params = TypeConverter.convert(request, ParamType.BLOCK)
@@ -914,42 +960,51 @@ def test_wrong_block_convert():
 
     # wrong str 1
     request = {
-        ConstantKeys.BLOCK_HEIGHT: [1,2,3,4,5],
+        ConstantKeys.BLOCK_HEIGHT: [1, 2, 3, 4, 5],
         ConstantKeys.BLOCK_HASH: {},
         ConstantKeys.TIMESTAMP: [],
-        ConstantKeys.PREV_BLOCK_HASH: {}
+        ConstantKeys.PREV_BLOCK_HASH: {},
     }
 
     with pytest.raises(InvalidParamsException) as e:
         TypeConverter.convert(request, ParamType.BLOCK)
 
-    assert "TypeConvert Exception int value :[1, 2, 3, 4, 5], type: <class 'list'>" == e.value.message
+    assert (
+        "TypeConvert Exception int value :[1, 2, 3, 4, 5], type: <class 'list'>"
+        == e.value.message
+    )
 
     # wrong str 2
     request = {
         ConstantKeys.BLOCK_HEIGHT: [[], []],
         ConstantKeys.BLOCK_HASH: {},
         ConstantKeys.TIMESTAMP: [],
-        ConstantKeys.PREV_BLOCK_HASH: {}
+        ConstantKeys.PREV_BLOCK_HASH: {},
     }
 
     with pytest.raises(InvalidParamsException) as e:
         TypeConverter.convert(request, ParamType.BLOCK)
 
-    assert "TypeConvert Exception int value :[[], []], type: <class 'list'>" == e.value.message
+    assert (
+        "TypeConvert Exception int value :[[], []], type: <class 'list'>"
+        == e.value.message
+    )
 
     # wrong str 3
     request = {
         ConstantKeys.BLOCK_HEIGHT: [],
-        ConstantKeys.BLOCK_HASH: {1:2},
+        ConstantKeys.BLOCK_HASH: {1: 2},
         ConstantKeys.TIMESTAMP: [],
-        ConstantKeys.PREV_BLOCK_HASH: {}
+        ConstantKeys.PREV_BLOCK_HASH: {},
     }
 
     with pytest.raises(InvalidParamsException) as e:
         TypeConverter.convert(request, ParamType.BLOCK)
 
-    assert "TypeConvert Exception bytes value :{1: 2}, type: <class 'dict'>" == e.value.message
+    assert (
+        "TypeConvert Exception bytes value :{1: 2}, type: <class 'dict'>"
+        == e.value.message
+    )
 
     # wrong str 4
     block_height = 1
@@ -961,7 +1016,7 @@ def test_wrong_block_convert():
         ConstantKeys.BLOCK_HEIGHT: block_height,
         ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
         ConstantKeys.TIMESTAMP: hex(timestamp),
-        ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
+        ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash),
     }
 
     with pytest.raises(InvalidParamsException) as e:
@@ -979,7 +1034,7 @@ def test_wrong_block_convert():
         ConstantKeys.BLOCK_HEIGHT: str(block_height),
         ConstantKeys.BLOCK_HASH: block_hash,
         ConstantKeys.TIMESTAMP: hex(timestamp),
-        ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
+        ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash),
     }
 
     with pytest.raises(InvalidParamsException):

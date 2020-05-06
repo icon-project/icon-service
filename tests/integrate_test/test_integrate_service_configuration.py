@@ -30,17 +30,20 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateServiceConfiguration(TestIntegrateBase):
-
     def setUp(self):
         super().setUp()
         self.update_governance()
 
-    def _set_service_conf(self, service_flag: Any, expected_status: bool = True) -> List['TransactionResult']:
-        return self.score_call(from_=self._admin,
-                               to_=GOVERNANCE_SCORE_ADDRESS,
-                               func_name='updateServiceConfig',
-                               params={"serviceFlag": service_flag},
-                               expected_status=expected_status)
+    def _set_service_conf(
+        self, service_flag: Any, expected_status: bool = True
+    ) -> List["TransactionResult"]:
+        return self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="updateServiceConfig",
+            params={"serviceFlag": service_flag},
+            expected_status=expected_status,
+        )
 
     def _assert_get_service_conf(self, service_flag: int):
         query_request = {
@@ -48,9 +51,7 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
             "from": self._admin,
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getServiceConfig",
-            }
+            "data": {"method": "getServiceConfig",},
         }
         expect_ret = {}
         for flag in IconServiceFlag:
@@ -64,15 +65,17 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
 
     def test_invalid_owner(self):
         raise_exception_start_tag("sample_invalid_owner")
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=GOVERNANCE_SCORE_ADDRESS,
-                                                                func_name='updateServiceConfig',
-                                                                params={"serviceFlag": hex(IconServiceFlag.AUDIT)},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="updateServiceConfig",
+            params={"serviceFlag": hex(IconServiceFlag.AUDIT)},
+            expected_status=False,
+        )
         raise_exception_end_tag("sample_invalid_owner")
 
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, f'Invalid sender: not owner')
+        self.assertEqual(tx_results[0].failure.message, f"Invalid sender: not owner")
 
     def test_set_service_configuration(self):
         max_flag = 0
@@ -80,8 +83,8 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
             max_flag |= flag
 
         for conf in range(max_flag):
-            tx_results: List['TransactionResult'] = self._set_service_conf(hex(conf))
-            self.assertEqual(tx_results[0].status, int(True), f'Failed conf: {conf}')
+            tx_results: List["TransactionResult"] = self._set_service_conf(hex(conf))
+            self.assertEqual(tx_results[0].status, int(True), f"Failed conf: {conf}")
             self._assert_get_service_conf(conf)
 
     def test_set_service_configuration_wrong(self):

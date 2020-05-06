@@ -36,7 +36,7 @@ class Engine(EngineBase, ContextContainer):
 
     def __init__(self):
         super().__init__()
-        self._inv_container: Optional['Container'] = None
+        self._inv_container: Optional["Container"] = None
 
         # Warning: This mapper must be used only before migration
         # 'gs' means governance SCORE
@@ -48,23 +48,23 @@ class Engine(EngineBase, ContextContainer):
             IconNetworkValueType.REVISION_CODE: self._get_revision_code_from_governance,
             IconNetworkValueType.REVISION_NAME: self._get_revision_name_from_governance,
             IconNetworkValueType.SCORE_BLACK_LIST: self._get_score_black_list,
-            IconNetworkValueType.IMPORT_WHITE_LIST: self._get_import_whitelist
+            IconNetworkValueType.IMPORT_WHITE_LIST: self._get_import_whitelist,
         }
 
     @property
-    def inv_container(self) -> 'Container':
+    def inv_container(self) -> "Container":
         return self._inv_container
 
-    def load_inv_container(self, context: 'IconScoreContext'):
-        container: Optional['Container'] = context.storage.inv.get_container(context)
+    def load_inv_container(self, context: "IconScoreContext"):
+        container: Optional["Container"] = context.storage.inv.get_container(context)
         if container is None:
-            container: 'Container' = Container(is_migrated=False)
+            container: "Container" = Container(is_migrated=False)
             self._sync_inv_container_with_governance(context, container)
         self._inv_container = container
 
-    def update_inv_container_by_result(self,
-                                       context: 'IconScoreContext',
-                                       tx_result: 'TransactionResult'):
+    def update_inv_container_by_result(
+        self, context: "IconScoreContext", tx_result: "TransactionResult"
+    ):
         if tx_result.status == TransactionResult.SUCCESS:
             if context.inv_container.is_migrated:
                 context.inv_container.update_batch()
@@ -73,9 +73,9 @@ class Engine(EngineBase, ContextContainer):
                 self._sync_inv_container_with_governance(context, context.inv_container)
         context.inv_container.clear_batch()
 
-    def _sync_inv_container_with_governance(self,
-                                            context: 'IconScoreContext',
-                                            container: 'Container'):
+    def _sync_inv_container_with_governance(
+        self, context: "IconScoreContext", container: "Container"
+    ):
         """
         Syncronize ICON Network value.
         :param context:
@@ -97,15 +97,18 @@ class Engine(EngineBase, ContextContainer):
             self._pop_context()
 
     @classmethod
-    def _get_governance(cls, context: 'IconScoreContext') -> 'Governance':
-        governance = \
-            IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+    def _get_governance(cls, context: "IconScoreContext") -> "Governance":
+        governance = IconScoreContextUtil.get_icon_score(
+            context, GOVERNANCE_SCORE_ADDRESS
+        )
         if governance is None:
-            raise ScoreNotFoundException('Governance SCORE not found')
+            raise ScoreNotFoundException("Governance SCORE not found")
         return governance
 
     @classmethod
-    def _get_step_price_from_governance(cls, context: 'IconScoreContext', governance: 'Governance') -> int:
+    def _get_step_price_from_governance(
+        cls, context: "IconScoreContext", governance: "Governance"
+    ) -> int:
         step_price = 0
         # Gets the step price if the fee flag is on
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
@@ -113,17 +116,25 @@ class Engine(EngineBase, ContextContainer):
         return step_price
 
     @classmethod
-    def _get_step_costs_from_governance(cls, _, governance: 'Governance') -> Dict[str, int]:
+    def _get_step_costs_from_governance(
+        cls, _, governance: "Governance"
+    ) -> Dict[str, int]:
         return governance.getStepCosts()
 
     @classmethod
-    def _get_step_max_limits_from_governance(cls, _, governance: 'Governance') -> Dict[str, int]:
+    def _get_step_max_limits_from_governance(
+        cls, _, governance: "Governance"
+    ) -> Dict[str, int]:
         # Gets the max step limit
-        return {"invoke": governance.getMaxStepLimit("invoke"),
-                "query": governance.getMaxStepLimit("query")}
+        return {
+            "invoke": governance.getMaxStepLimit("invoke"),
+            "query": governance.getMaxStepLimit("query"),
+        }
 
     @classmethod
-    def _get_service_flag(cls, context: 'IconScoreContext', governance: 'Governance') -> int:
+    def _get_service_flag(
+        cls, context: "IconScoreContext", governance: "Governance"
+    ) -> int:
         service_config = context.icon_service_flag
         try:
             service_config = governance.service_config
@@ -132,35 +143,35 @@ class Engine(EngineBase, ContextContainer):
         return service_config
 
     @classmethod
-    def _get_revision_name_from_governance(cls, _, governance: 'Governance') -> str:
+    def _get_revision_name_from_governance(cls, _, governance: "Governance") -> str:
         # There is no use of revision name
         revision_name: str = ""
-        if hasattr(governance, 'getRevision'):
-            revision_name: str = governance.getRevision()['name']
+        if hasattr(governance, "getRevision"):
+            revision_name: str = governance.getRevision()["name"]
         return revision_name
 
     @classmethod
-    def _get_revision_code_from_governance(cls, _, governance: 'Governance') -> int:
+    def _get_revision_code_from_governance(cls, _, governance: "Governance") -> int:
         # Check if revision has been changed by comparing with INV engine's ICON Network value
         revision: int = 0
-        if hasattr(governance, 'revision_code'):
+        if hasattr(governance, "revision_code"):
             revision: int = governance.revision_code
         return revision
 
     @classmethod
-    def _get_import_whitelist(cls, _, governance: 'Governance') -> Dict[str, list]:
-        if hasattr(governance, 'import_white_list_cache'):
+    def _get_import_whitelist(cls, _, governance: "Governance") -> Dict[str, list]:
+        if hasattr(governance, "import_white_list_cache"):
             return governance.import_white_list_cache
 
-        return {"iconservice": ['*']}
+        return {"iconservice": ["*"]}
 
     @classmethod
-    def _get_score_black_list(cls, _, governance: 'Governance') -> List['Address']:
+    def _get_score_black_list(cls, _, governance: "Governance") -> List["Address"]:
         score_black_list = []
-        if hasattr(governance, '_score_black_list'):
+        if hasattr(governance, "_score_black_list"):
             score_black_list = [address for address in governance._score_black_list]
         return score_black_list
 
-    def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+    def commit(self, _context: "IconScoreContext", precommit_data: "PrecommitData"):
         # Set updated INVContainer
-        self._inv_container: 'Container' = precommit_data.inv_container
+        self._inv_container: "Container" = precommit_data.inv_container

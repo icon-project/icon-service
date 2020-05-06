@@ -30,12 +30,14 @@ class TestValidateIRep(unittest.TestCase):
         prev_irep: int = IISS_MIN_IREP
 
         with self.assertRaises(InvalidParamsException) as e:
-            _validate_irep(irep=irep,
-                           prev_irep=prev_irep,
-                           prev_irep_block_height=1,
-                           term_start_block_height=2,
-                           term_total_supply=(8 * 10 ** 8) * ICX_IN_LOOP,
-                           main_prep_count=MAIN_PREP_COUNT)
+            _validate_irep(
+                irep=irep,
+                prev_irep=prev_irep,
+                prev_irep_block_height=1,
+                term_start_block_height=2,
+                term_total_supply=(8 * 10 ** 8) * ICX_IN_LOOP,
+                main_prep_count=MAIN_PREP_COUNT,
+            )
         self.assertEqual(e.exception.args[0], f"Irep out of range: {irep}, {prev_irep}")
 
     def test_validate_prev_irep_over(self):
@@ -43,12 +45,14 @@ class TestValidateIRep(unittest.TestCase):
         irep: int = prev_irep * 12 // 10 + 1
 
         with self.assertRaises(InvalidParamsException) as e:
-            _validate_irep(irep=irep,
-                           prev_irep=prev_irep,
-                           prev_irep_block_height=1,
-                           term_start_block_height=2,
-                           term_total_supply=(8 * 10 ** 8) * ICX_IN_LOOP,
-                           main_prep_count=MAIN_PREP_COUNT)
+            _validate_irep(
+                irep=irep,
+                prev_irep=prev_irep,
+                prev_irep_block_height=1,
+                term_start_block_height=2,
+                term_total_supply=(8 * 10 ** 8) * ICX_IN_LOOP,
+                main_prep_count=MAIN_PREP_COUNT,
+            )
         self.assertEqual(e.exception.args[0], f"Irep out of range: {irep}, {prev_irep}")
 
     def test_validate_prev_irep_below(self):
@@ -56,29 +60,35 @@ class TestValidateIRep(unittest.TestCase):
         irep: int = prev_irep * 8 // 10 - 1
 
         with self.assertRaises(InvalidParamsException) as e:
-            _validate_irep(irep=irep,
-                           prev_irep=prev_irep,
-                           prev_irep_block_height=1,
-                           term_start_block_height=2,
-                           term_total_supply=(8 * 10 ** 8) * ICX_IN_LOOP,
-                           main_prep_count=MAIN_PREP_COUNT)
+            _validate_irep(
+                irep=irep,
+                prev_irep=prev_irep,
+                prev_irep_block_height=1,
+                term_start_block_height=2,
+                term_total_supply=(8 * 10 ** 8) * ICX_IN_LOOP,
+                main_prep_count=MAIN_PREP_COUNT,
+            )
         self.assertEqual(e.exception.args[0], f"Irep out of range: {irep}, {prev_irep}")
 
     def test_validate_irep_total_supply_over(self):
         total_supply: int = (8 * 10 ** 8) * ICX_IN_LOOP
 
-        prev_irep: int = total_supply * 14 // (600 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2))
+        prev_irep: int = total_supply * 14 // (
+            600 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2)
+        )
         irep: int = prev_irep + 1
 
         with self.assertRaises(InvalidParamsException) as e:
-            _validate_irep(irep=irep,
-                           prev_irep=prev_irep,
-                           prev_irep_block_height=1,
-                           term_start_block_height=2,
-                           term_total_supply=total_supply,
-                           main_prep_count=MAIN_PREP_COUNT)
+            _validate_irep(
+                irep=irep,
+                prev_irep=prev_irep,
+                prev_irep_block_height=1,
+                term_start_block_height=2,
+                term_total_supply=total_supply,
+                main_prep_count=MAIN_PREP_COUNT,
+            )
         self.assertEqual(e.exception.args[0], f"Irep out of range: {irep}, {prev_irep}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -22,9 +22,17 @@ from typing import TYPE_CHECKING, List
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException, FatalException
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, Revision, \
-    ISCORE_EXCHANGE_RATE, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
-    PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import (
+    ISSUE_CALCULATE_ORDER,
+    ISSUE_EVENT_LOG_MAPPER,
+    Revision,
+    ISCORE_EXCHANGE_RATE,
+    ICX_IN_LOOP,
+    PREP_MAIN_PREPS,
+    IconScoreContextType,
+    ConfigKey,
+    PREP_MAIN_AND_SUB_PREPS,
+)
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
@@ -51,8 +59,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         # delegate to PRep
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
-                                                     origin_delegations=[])
+            tx: dict = self.create_set_delegation_tx(
+                from_=self._accounts[PREP_MAIN_PREPS + i], origin_delegations=[]
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
@@ -70,21 +79,25 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         init_balance: int = minimum_delegate_amount_for_decentralization * 2
 
         # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
-                            init_balance=init_balance)
+        self.distribute_icx(
+            accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+            init_balance=init_balance,
+        )
 
         # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         stake_amount: int = minimum_delegate_amount_for_decentralization
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_stake_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
-                                                value=stake_amount)
+            tx: dict = self.create_set_stake_tx(
+                from_=self._accounts[PREP_MAIN_PREPS + i], value=stake_amount
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=3000 * ICX_IN_LOOP
+        )
 
         # register PRep
         tx_list: list = []
@@ -96,22 +109,18 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         # delegate to PRep
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
-                                                     origin_delegations=[
-                                                         (
-                                                             self._accounts[i],
-                                                             minimum_delegate_amount_for_decentralization
-                                                         )
-                                                     ])
+            tx: dict = self.create_set_delegation_tx(
+                from_=self._accounts[PREP_MAIN_PREPS + i],
+                origin_delegations=[
+                    (self._accounts[i], minimum_delegate_amount_for_decentralization)
+                ],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         # get main prep
         response: dict = self.get_main_prep_list()
-        expected_response: dict = {
-            "preps": [],
-            "totalDelegated": 0
-        }
+        expected_response: dict = {"preps": [], "totalDelegated": 0}
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
@@ -129,14 +138,11 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             "version": self._version,
             "timestamp": timestamp_us,
             "dataType": "base",
-            "data": data
+            "data": data,
         }
-        method = 'icx_sendTransaction'
-        request_params['txHash'] = create_tx_hash()
-        tx = {
-            'method': method,
-            'params': request_params
-        }
+        method = "icx_sendTransaction"
+        request_params["txHash"] = create_tx_hash()
+        tx = {"method": method, "params": request_params}
 
         return tx
 
@@ -178,33 +184,42 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         issue_data, total_issue_amount = self._make_issue_info()
 
         # failure case: when first transaction is not a issue transaction, should raise error
-        invalid_tx_list = [
-            self._create_dummy_tx()
-        ]
-        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        invalid_tx_list = [self._create_dummy_tx()]
+        self.assertRaises(
+            InvalidBaseTransactionException,
+            self._make_and_req_block_for_issue_test,
+            invalid_tx_list,
+        )
 
         # failure case: when first transaction is not a issue transaction
         # but 2nd is a issue transaction, should raise error
-        invalid_tx_list = [
-            self._create_dummy_tx(),
-            self._make_base_tx(issue_data)
-        ]
-        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        invalid_tx_list = [self._create_dummy_tx(), self._make_base_tx(issue_data)]
+        self.assertRaises(
+            InvalidBaseTransactionException,
+            self._make_and_req_block_for_issue_test,
+            invalid_tx_list,
+        )
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
             self._make_base_tx(issue_data),
-            self._make_base_tx(issue_data)
+            self._make_base_tx(issue_data),
         ]
-        self.assertRaises(KeyError, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(
+            KeyError, self._make_and_req_block_for_issue_test, invalid_tx_list
+        )
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [
             self._create_dummy_tx(),
             self._create_dummy_tx(),
-            self._create_dummy_tx()
+            self._create_dummy_tx(),
         ]
-        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(
+            InvalidBaseTransactionException,
+            self._make_and_req_block_for_issue_test,
+            invalid_tx_list,
+        )
 
     def test_validate_base_transaction_format(self):
         self._init_decentralized()
@@ -223,20 +238,28 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             tx_list = [
                 self._make_base_tx(copied_issue_data),
                 self._create_dummy_tx(),
-                self._create_dummy_tx()
+                self._create_dummy_tx(),
             ]
-            self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
+            self.assertRaises(
+                InvalidBaseTransactionException,
+                self._make_and_req_block_for_issue_test,
+                tx_list,
+            )
             copied_issue_data[group_key] = temp
 
         # more than
         copied_issue_data = deepcopy(issue_data)
-        copied_issue_data['dummy_key'] = {}
+        copied_issue_data["dummy_key"] = {}
         tx_list = [
             self._make_base_tx(copied_issue_data),
             self._create_dummy_tx(),
-            self._create_dummy_tx()
+            self._create_dummy_tx(),
         ]
-        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
+        self.assertRaises(
+            InvalidBaseTransactionException,
+            self._make_and_req_block_for_issue_test,
+            tx_list,
+        )
 
         # failure case: when group's inner data key (i.e. incentiveRep, rewardRep, etc) is different
         # with stateDB (except value), should raise error
@@ -244,14 +267,18 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         # more than
         copied_issue_data = deepcopy(issue_data)
         for _, data in copied_issue_data.items():
-            data['dummy_key'] = ""
+            data["dummy_key"] = ""
             tx_list = [
                 self._make_base_tx(copied_issue_data),
                 self._create_dummy_tx(),
-                self._create_dummy_tx()
+                self._create_dummy_tx(),
             ]
-            self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
-            del data['dummy_key']
+            self.assertRaises(
+                InvalidBaseTransactionException,
+                self._make_and_req_block_for_issue_test,
+                tx_list,
+            )
+            del data["dummy_key"]
 
         # less than
         copied_issue_data = deepcopy(issue_data)
@@ -262,9 +289,13 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                 tx_list = [
                     self._make_base_tx(copied_issue_data),
                     self._create_dummy_tx(),
-                    self._create_dummy_tx()
+                    self._create_dummy_tx(),
                 ]
-                self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
+                self.assertRaises(
+                    InvalidBaseTransactionException,
+                    self._make_and_req_block_for_issue_test,
+                    tx_list,
+                )
                 data[key] = temp
 
     def test_validate_base_transaction_value_editable_block(self):
@@ -278,28 +309,33 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         # failure case: when issue transaction invoked even though isBlockEditable is true, should raise error
         # case of isBlockEditable is True
         before_total_supply = self._query({}, "icx_getTotalSupply")
-        before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
+        before_treasury_icx_amount = self._query(
+            {"address": self._fee_treasury}, "icx_getBalance"
+        )
 
         base_transaction = self._create_base_transaction()
 
-        tx_list = [
-            base_transaction,
-            self._create_dummy_tx(),
-            self._create_dummy_tx()
-        ]
-        self.assertRaises(KeyError,
-                          self._make_and_req_block_for_issue_test,
-                          tx_list, None, None, None, None, True, 0)
+        tx_list = [base_transaction, self._create_dummy_tx(), self._create_dummy_tx()]
+        self.assertRaises(
+            KeyError,
+            self._make_and_req_block_for_issue_test,
+            tx_list,
+            None,
+            None,
+            None,
+            None,
+            True,
+            0,
+        )
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is True
-        tx_list = [
-            self._create_dummy_tx(),
-            self._create_dummy_tx()
-        ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        tx_list = [self._create_dummy_tx(), self._create_dummy_tx()]
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(
+            tx_list, is_block_editable=True
+        )
         self._write_precommit_state(prev_block)
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+        tx_results: List["TransactionResult"] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         expected_failure = None
         expected_trace = []
@@ -313,24 +349,41 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             if group_key not in issue_data:
                 continue
             expected_score_address = SYSTEM_SCORE_ADDRESS
-            expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
-            expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
-            self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
+            expected_indexed: list = [
+                ISSUE_EVENT_LOG_MAPPER[group_key]["event_signature"]
+            ]
+            expected_data: list = [
+                issue_data[group_key][key]
+                for key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]
+            ]
+            self.assertEqual(
+                expected_score_address, tx_results[0].event_logs[index].score_address
+            )
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
             self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
 
         # event log about correction
         self.assertEqual(expected_prev_fee, tx_results[0].event_logs[1].data[0])
         self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-        self.assertEqual(total_issue_amount - expected_prev_fee, tx_results[0].event_logs[1].data[2])
+        self.assertEqual(
+            total_issue_amount - expected_prev_fee, tx_results[0].event_logs[1].data[2]
+        )
         self.assertEqual(0, tx_results[0].event_logs[1].data[3])
 
         after_total_supply = self._query({}, "icx_getTotalSupply")
-        after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
+        after_treasury_icx_amount = self._query(
+            {"address": self._fee_treasury}, "icx_getBalance"
+        )
 
-        self.assertEqual(before_total_supply + total_issue_amount - expected_prev_fee, after_total_supply)
-        self.assertEqual(before_treasury_icx_amount + total_issue_amount - expected_prev_fee,
-                         after_treasury_icx_amount - tx_results[-1].cumulative_step_used * tx_results[-1].step_price)
+        self.assertEqual(
+            before_total_supply + total_issue_amount - expected_prev_fee,
+            after_total_supply,
+        )
+        self.assertEqual(
+            before_treasury_icx_amount + total_issue_amount - expected_prev_fee,
+            after_treasury_icx_amount
+            - tx_results[-1].cumulative_step_used * tx_results[-1].step_price,
+        )
 
     def test_validate_base_transaction_value_not_editable_block(self):
         self._init_decentralized()
@@ -343,17 +396,17 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is False
         before_total_supply = self._query({}, "icx_getTotalSupply")
-        before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
+        before_treasury_icx_amount = self._query(
+            {"address": self._fee_treasury}, "icx_getBalance"
+        )
         base_transaction = self._create_base_transaction()
 
-        tx_list = [
-            base_transaction,
-            self._create_dummy_tx(),
-            self._create_dummy_tx()
-        ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        tx_list = [base_transaction, self._create_dummy_tx(), self._create_dummy_tx()]
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(
+            tx_list, is_block_editable=False
+        )
         self._write_precommit_state(prev_block)
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+        tx_results: List["TransactionResult"] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         expected_failure = None
         expected_trace = []
@@ -367,24 +420,41 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             if group_key not in issue_data:
                 continue
             expected_score_address = SYSTEM_SCORE_ADDRESS
-            expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
-            expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
-            self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
+            expected_indexed: list = [
+                ISSUE_EVENT_LOG_MAPPER[group_key]["event_signature"]
+            ]
+            expected_data: list = [
+                issue_data[group_key][key]
+                for key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]
+            ]
+            self.assertEqual(
+                expected_score_address, tx_results[0].event_logs[index].score_address
+            )
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
             self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
 
         # event log about correction
         self.assertEqual(expected_prev_fee, tx_results[0].event_logs[1].data[0])
         self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-        self.assertEqual(total_issue_amount - expected_prev_fee, tx_results[0].event_logs[1].data[2])
+        self.assertEqual(
+            total_issue_amount - expected_prev_fee, tx_results[0].event_logs[1].data[2]
+        )
         self.assertEqual(0, tx_results[0].event_logs[1].data[3])
 
         after_total_supply = self._query({}, "icx_getTotalSupply")
-        after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
+        after_treasury_icx_amount = self._query(
+            {"address": self._fee_treasury}, "icx_getBalance"
+        )
 
-        self.assertEqual(before_total_supply + total_issue_amount - expected_prev_fee, after_total_supply)
-        self.assertEqual(before_treasury_icx_amount + total_issue_amount - expected_prev_fee,
-                         after_treasury_icx_amount - tx_results[-1].cumulative_step_used * tx_results[-1].step_price)
+        self.assertEqual(
+            before_total_supply + total_issue_amount - expected_prev_fee,
+            after_total_supply,
+        )
+        self.assertEqual(
+            before_treasury_icx_amount + total_issue_amount - expected_prev_fee,
+            after_treasury_icx_amount
+            - tx_results[-1].cumulative_step_used * tx_results[-1].step_price,
+        )
 
     def test_validate_base_transaction_value_corrected_issue_amount(self):
         # arbitrary iscore date
@@ -393,14 +463,21 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         prev_cumulative_fee = 1000000000000000
 
         def mock_calculated(_self, _path, _block_height):
-            context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-            end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+            context: "IconScoreContext" = IconScoreContext(IconScoreContextType.QUERY)
+            end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(
+                context
+            )
             calc_period: int = context.storage.iiss.get_calc_period(context)
-            response = CalculateDoneNotification(0, True,
-                                                 end_block_height_of_calc - calc_period,
-                                                 calculate_response_iscore_of_last_calc_period,
-                                                 b'mocked_response')
-            print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
+            response = CalculateDoneNotification(
+                0,
+                True,
+                end_block_height_of_calc - calc_period,
+                calculate_response_iscore_of_last_calc_period,
+                b"mocked_response",
+            )
+            print(
+                f"calculate request block height: {end_block_height_of_calc - calc_period}"
+            )
             _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
@@ -413,38 +490,53 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         iscore_diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
 
         expected_issue_amount = 3085791256172839450
-        response_iscore = \
-            expected_issue_amount * self.CALC_PERIOD * ISCORE_EXCHANGE_RATE - iscore_diff_between_is_and_rc
-        expected_diff_in_calc_period = (expected_issue_amount * self.CALC_PERIOD) - \
-                                       (response_iscore // ISCORE_EXCHANGE_RATE)
+        response_iscore = (
+            expected_issue_amount * self.CALC_PERIOD * ISCORE_EXCHANGE_RATE
+            - iscore_diff_between_is_and_rc
+        )
+        expected_diff_in_calc_period = (expected_issue_amount * self.CALC_PERIOD) - (
+            response_iscore // ISCORE_EXCHANGE_RATE
+        )
 
-        tx_list = [
-            self._create_dummy_tx()
-        ]
+        tx_list = [self._create_dummy_tx()]
 
         for term in range(0, 3):
+
             def mock_calculated(_self, _path, _block_height):
-                context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-                end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
+                context: "IconScoreContext" = IconScoreContext(
+                    IconScoreContextType.QUERY
+                )
+                end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(
+                    context
+                )
                 calc_period: int = context.storage.iiss.get_calc_period(context)
-                response = CalculateDoneNotification(0, True, end_block_height_of_calc - calc_period, response_iscore,
-                                                     b'mocked_response')
-                print(f"calculate request block height: {end_block_height_of_calc - calc_period}")
+                response = CalculateDoneNotification(
+                    0,
+                    True,
+                    end_block_height_of_calc - calc_period,
+                    response_iscore,
+                    b"mocked_response",
+                )
+                print(
+                    f"calculate request block height: {end_block_height_of_calc - calc_period}"
+                )
                 _self._calculate_done_callback(response)
 
             self._mock_ipc(mock_calculated)
-            next_calc = self.get_iiss_info()['nextCalculation']
+            next_calc = self.get_iiss_info()["nextCalculation"]
             expected_sequence = term
             expected_start_block = next_calc
             expected_end_block = next_calc + self.CALC_PERIOD - 1
-            print(f"######################################## "
-                  f"term {term} "
-                  f"########################################")
+            print(
+                f"######################################## "
+                f"term {term} "
+                f"########################################"
+            )
             for bh_in_term in range(next_calc, next_calc + self.CALC_PERIOD):
                 copied_tx_list = deepcopy(tx_list)
                 prev_block, hash_list = self.make_and_req_block(copied_tx_list)
                 self._write_precommit_state(prev_block)
-                tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+                tx_results: List["TransactionResult"] = self.get_tx_results(hash_list)
 
                 issue_amount = tx_results[0].event_logs[0].data[3]
                 actual_covered_by_fee = tx_results[0].event_logs[1].data[0]
@@ -465,12 +557,20 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                 if term == 0 and bh_in_term == next_calc + self.CALC_PERIOD - 1:
                     self.assertEqual(prev_cumulative_fee, actual_covered_by_fee)
                     self.assertEqual(0, actual_covered_by_remain)
-                    self.assertEqual(prev_cumulative_fee + actual_issue_amount, issue_amount)
+                    self.assertEqual(
+                        prev_cumulative_fee + actual_issue_amount, issue_amount
+                    )
                 elif term > 0 and bh_in_term == next_calc + self.CALC_PERIOD - 1:
                     self.assertEqual(prev_cumulative_fee, actual_covered_by_fee)
-                    self.assertEqual(expected_diff_in_calc_period, actual_covered_by_remain)
-                    self.assertEqual(prev_cumulative_fee + actual_issue_amount + expected_diff_in_calc_period,
-                                     issue_amount)
+                    self.assertEqual(
+                        expected_diff_in_calc_period, actual_covered_by_remain
+                    )
+                    self.assertEqual(
+                        prev_cumulative_fee
+                        + actual_issue_amount
+                        + expected_diff_in_calc_period,
+                        issue_amount,
+                    )
 
     def test_total_delegated_amount_is_zero(self):
         self._init_decentralized()
@@ -487,10 +587,9 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
     def test_calculate_response_invalid_block_height(self):
         def mock_calculated(_self, _path, _block_height):
             invalid_block_height: int = 0
-            response = CalculateDoneNotification(0, True,
-                                                 invalid_block_height,
-                                                 0,
-                                                 b'mocked_response')
+            response = CalculateDoneNotification(
+                0, True, invalid_block_height, 0, b"mocked_response"
+            )
             _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
@@ -500,10 +599,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def test_calculate_response_fails(self):
         def mock_calculated(_self, _path, _block_height):
-            response = CalculateDoneNotification(0, False,
-                                                 0,
-                                                 0,
-                                                 b'mocked_response')
+            response = CalculateDoneNotification(0, False, 0, 0, b"mocked_response")
             _self._calculate_done_callback(response)
 
         self._mock_ipc(mock_calculated)
@@ -515,26 +611,28 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         self._init_decentralized()
 
         # TEST: Before 'ADD_LOGS_BLOOM_ON_BASE_TX' revision, base transaction should not have logs bloom
-        tx_list = [
-            self._create_dummy_tx()
-        ]
+        tx_list = [self._create_dummy_tx()]
 
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(
+            tx_list, is_block_editable=True
+        )
         self._write_precommit_state(prev_block)
-        base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
+        base_tx_result: "TransactionResult" = self.get_tx_results(hash_list)[0]
 
         expected_logs_bloom = None
         self.assertEqual(expected_logs_bloom, base_tx_result.logs_bloom)
 
         # TEST: After 'ADD_LOGS_BLOOM_ON_BASE_TX' revision, base transaction should have logs bloom
         self.set_revision(Revision.ADD_LOGS_BLOOM_ON_BASE_TX.value)
-        tx_list = [
-            self._create_dummy_tx()
-        ]
+        tx_list = [self._create_dummy_tx()]
 
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(
+            tx_list, is_block_editable=True
+        )
         self._write_precommit_state(prev_block)
-        base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
+        base_tx_result: "TransactionResult" = self.get_tx_results(hash_list)[0]
 
-        expected_logs_bloom = IconServiceEngine._generate_logs_bloom(base_tx_result.event_logs)
+        expected_logs_bloom = IconServiceEngine._generate_logs_bloom(
+            base_tx_result.event_logs
+        )
         self.assertEqual(expected_logs_bloom.value, base_tx_result.logs_bloom.value)

@@ -18,7 +18,10 @@
 
 import pytest
 
-from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from iconservice.base.address import (
+    ICON_EOA_ADDRESS_BYTES_SIZE,
+    ICON_CONTRACT_ADDRESS_BYTES_SIZE,
+)
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import Revision
 from iconservice.icx.base_part import BasePartState
@@ -32,9 +35,9 @@ class TestAccountType:
         assert 0 == CoinPartType.GENERAL
         assert 1 == CoinPartType.GENESIS
         assert 2 == CoinPartType.TREASURY
-        assert 'GENERAL' == str(CoinPartType.GENERAL)
-        assert 'GENESIS' == str(CoinPartType.GENESIS)
-        assert 'TREASURY' == str(CoinPartType.TREASURY)
+        assert "GENERAL" == str(CoinPartType.GENERAL)
+        assert "GENESIS" == str(CoinPartType.GENESIS)
+        assert "TREASURY" == str(CoinPartType.TREASURY)
 
     def test_from_int(self):
         assert CoinPartType(0) == CoinPartType.GENERAL
@@ -75,7 +78,10 @@ class TestCoinPart:
         part1.withdraw(0)
         assert old == part1.balance
 
-    @pytest.mark.parametrize("revision", [Revision(i) for i in range(Revision.LATEST.value + 1) if i in range(3, 5)])
+    @pytest.mark.parametrize(
+        "revision",
+        [Revision(i) for i in range(Revision.LATEST.value + 1) if i in range(3, 5)],
+    )
     def test_coin_part_from_bytes_to_bytes_revision_3_to_4(self, revision):
         # Todo: No need to tests after revision 4?
         part1 = CoinPart()

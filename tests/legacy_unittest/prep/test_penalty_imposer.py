@@ -46,9 +46,11 @@ PENALTY = PenaltyReason.NONE
 UNVALIDATED_SEQUENCE_BLOCKS = 0
 
 
-def create_prep(total_blocks: int = 0,
-                validated_blocks: int = 0,
-                unvalidated_sequence_blocks: int = 0):
+def create_prep(
+    total_blocks: int = 0,
+    validated_blocks: int = 0,
+    unvalidated_sequence_blocks: int = 0,
+):
     address = Address(AddressPrefix.EOA, os.urandom(20))
     prep = PRep(
         address,
@@ -71,14 +73,13 @@ def create_prep(total_blocks: int = 0,
         tx_index=TX_INDEX,
         total_blocks=total_blocks,
         validated_blocks=validated_blocks,
-        unvalidated_sequence_blocks=unvalidated_sequence_blocks
+        unvalidated_sequence_blocks=unvalidated_sequence_blocks,
     )
 
     return prep
 
 
 class TestPenaltyImposer(unittest.TestCase):
-
     def setUp(self) -> None:
         self.context = IconScoreContext()
 
@@ -96,18 +97,18 @@ class TestPenaltyImposer(unittest.TestCase):
         prep = create_prep(
             total_blocks=total_blocks,
             validated_blocks=validated_blocks,
-            unvalidated_sequence_blocks=unvalidated_sequence_blocks
+            unvalidated_sequence_blocks=unvalidated_sequence_blocks,
         )
 
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold
+            block_validation_penalty_threshold=block_validation_penalty_threshold,
         )
 
-        penalty_imposer.run(context=self.context,
-                            prep=prep,
-                            on_penalty_imposed=on_penalty_imposed)
+        penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed
+        )
         on_penalty_imposed.assert_not_called()
 
         prep.update_block_statistics(is_validator=True)
@@ -116,7 +117,8 @@ class TestPenaltyImposer(unittest.TestCase):
         assert prep.unvalidated_sequence_blocks == 0
 
         penalty_imposer.run(
-            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed
+        )
         on_penalty_imposed.assert_not_called()
 
     def test_block_validation_penalty(self):
@@ -134,14 +136,16 @@ class TestPenaltyImposer(unittest.TestCase):
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold
+            block_validation_penalty_threshold=block_validation_penalty_threshold,
         )
 
         # Block validation penalty works regardless of penalty_grace_period
         penalty_imposer.run(
-            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed
+        )
         on_penalty_imposed.assert_called_with(
-            self.context, prep.address, PenaltyReason.BLOCK_VALIDATION)
+            self.context, prep.address, PenaltyReason.BLOCK_VALIDATION
+        )
 
     def test_low_productivity_penalty(self):
         penalty_grace_period = 43120 * 2
@@ -150,7 +154,9 @@ class TestPenaltyImposer(unittest.TestCase):
 
         total_blocks = penalty_grace_period
         unvalidated_sequence_blocks = 0
-        validated_blocks = penalty_grace_period * low_productivity_penalty_threshold // 100
+        validated_blocks = (
+            penalty_grace_period * low_productivity_penalty_threshold // 100
+        )
 
         prep = create_prep(total_blocks, validated_blocks, unvalidated_sequence_blocks)
 
@@ -158,12 +164,13 @@ class TestPenaltyImposer(unittest.TestCase):
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold
+            block_validation_penalty_threshold=block_validation_penalty_threshold,
         )
 
         # Low productivity penalty does not work during penalty_grace_period
         penalty_imposer.run(
-            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed
+        )
         on_penalty_imposed.assert_not_called()
 
         prep.update_block_statistics(is_validator=False)
@@ -173,9 +180,11 @@ class TestPenaltyImposer(unittest.TestCase):
         assert prep.block_validation_proportion < 85
 
         penalty_imposer.run(
-            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed
+        )
         on_penalty_imposed.assert_called_with(
-            self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY)
+            self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY
+        )
 
     def test_block_validation_and_low_productivity_penalty(self):
         # Success case: when prep get block validation and low productivity penalty at the same time,
@@ -186,7 +195,9 @@ class TestPenaltyImposer(unittest.TestCase):
 
         total_blocks = penalty_grace_period + 1
         unvalidated_sequence_blocks = block_validation_penalty_threshold
-        validated_blocks = penalty_grace_period * low_productivity_penalty_threshold // 100
+        validated_blocks = (
+            penalty_grace_period * low_productivity_penalty_threshold // 100
+        )
 
         prep = create_prep(total_blocks, validated_blocks, unvalidated_sequence_blocks)
 
@@ -194,10 +205,12 @@ class TestPenaltyImposer(unittest.TestCase):
         penalty_imposer = PenaltyImposer(
             penalty_grace_period=penalty_grace_period,
             low_productivity_penalty_threshold=low_productivity_penalty_threshold,
-            block_validation_penalty_threshold=block_validation_penalty_threshold
+            block_validation_penalty_threshold=block_validation_penalty_threshold,
         )
-        actual_reason: 'PenaltyReason' = penalty_imposer.run(
-            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed)
+        actual_reason: "PenaltyReason" = penalty_imposer.run(
+            context=self.context, prep=prep, on_penalty_imposed=on_penalty_imposed
+        )
         on_penalty_imposed.assert_called_with(
-            self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY)
+            self.context, prep.address, PenaltyReason.LOW_PRODUCTIVITY
+        )
         self.assertEqual(PenaltyReason.LOW_PRODUCTIVITY, actual_reason)

@@ -31,6 +31,7 @@ class PRepContainer(object):
     P-Rep PRep object contains information on registration and delegation.
     PRep objects are sorted in descending order by delegated amount.
     """
+
     _TAG = "PREP"
 
     def __init__(self, is_frozen: bool = False, total_prep_delegated: int = 0):
@@ -40,7 +41,7 @@ class PRepContainer(object):
         # Active P-Rep list ordered by delegated amount
         self._active_prep_list = SortedList()
         self._prep_dict = {}
-        self._flags: 'PRepContainerFlag' = PRepContainerFlag.NONE
+        self._flags: "PRepContainerFlag" = PRepContainerFlag.NONE
 
     def is_frozen(self) -> bool:
         return self._is_frozen
@@ -83,7 +84,7 @@ class PRepContainer(object):
         self._flags = PRepContainerFlag.NONE
         self._is_frozen: bool = True
 
-    def add(self, prep: 'PRep'):
+    def add(self, prep: "PRep"):
         self._check_access_permission()
 
         if prep.address in self._prep_dict:
@@ -92,7 +93,7 @@ class PRepContainer(object):
         self._add(prep)
         self._flags |= PRepContainerFlag.DIRTY
 
-    def _add(self, prep: 'PRep'):
+    def _add(self, prep: "PRep"):
 
         self._prep_dict[prep.address] = prep
 
@@ -103,7 +104,7 @@ class PRepContainer(object):
             self._total_prep_delegated += prep.delegated
             assert self._total_prep_delegated >= 0
 
-    def remove(self, address: 'Address') -> Optional['PRep']:
+    def remove(self, address: "Address") -> Optional["PRep"]:
         """Remove a prep indicated by address from self._active_prep_list and self._prep_dict
 
         :param address:
@@ -111,14 +112,14 @@ class PRepContainer(object):
         """
         self._check_access_permission()
 
-        prep: Optional['PRep'] = self._remove(address)
+        prep: Optional["PRep"] = self._remove(address)
         if prep is not None:
             self._flags |= PRepContainerFlag.DIRTY
 
         return prep
 
-    def _remove(self, address: 'Address') -> Optional['PRep']:
-        prep: Optional['PRep'] = self._prep_dict.get(address)
+    def _remove(self, address: "Address") -> Optional["PRep"]:
+        prep: Optional["PRep"] = self._prep_dict.get(address)
         if prep is not None:
             if prep.status == PRepStatus.ACTIVE:
                 self._active_prep_list.remove(prep)
@@ -128,7 +129,7 @@ class PRepContainer(object):
 
         return prep
 
-    def replace(self, new_prep: 'PRep') -> Optional['PRep']:
+    def replace(self, new_prep: "PRep") -> Optional["PRep"]:
         """Replace old_prep with new_prep
 
         :param new_prep:
@@ -136,7 +137,7 @@ class PRepContainer(object):
         """
         self._check_access_permission()
 
-        old_prep: Optional['PRep'] = self._prep_dict.get(new_prep.address)
+        old_prep: Optional["PRep"] = self._prep_dict.get(new_prep.address)
         if id(old_prep) == id(new_prep):
             Logger.debug(tag=self._TAG, msg="No need to replace the same P-Rep")
             return None
@@ -147,14 +148,14 @@ class PRepContainer(object):
 
         return old_prep
 
-    def contains(self, address: 'Address', active_prep_only: bool = True) -> bool:
+    def contains(self, address: "Address", active_prep_only: bool = True) -> bool:
         """Check whether the P-Rep is contained regardless of its PRepStatus
 
         :param address: Address
         :param active_prep_only: bool
         :return: True(contained) False(not contained)
         """
-        prep: 'PRep' = self._prep_dict.get(address)
+        prep: "PRep" = self._prep_dict.get(address)
         if prep is None:
             return False
 
@@ -168,7 +169,7 @@ class PRepContainer(object):
         for prep in self._active_prep_list:
             yield prep
 
-    def get_by_index(self, index: int) -> Optional['PRep']:
+    def get_by_index(self, index: int) -> Optional["PRep"]:
         """Returns an active P-Rep with a given index
 
         :param index:
@@ -176,7 +177,7 @@ class PRepContainer(object):
         """
         return self._active_prep_list.get(index)
 
-    def get_by_address(self, address: 'Address') -> Optional['PRep']:
+    def get_by_address(self, address: "Address") -> Optional["PRep"]:
         """Returns an P-Rep with a given address regardless of its status
 
         :param address: The address of a P-Rep
@@ -184,14 +185,14 @@ class PRepContainer(object):
         """
         return self._prep_dict.get(address)
 
-    def get_preps(self, start_index: int, size: int) -> List['PRep']:
+    def get_preps(self, start_index: int, size: int) -> List["PRep"]:
         """Returns active P-Reps ranging from start_index to start_index + size - 1
 
         :return: P-Rep list
         """
-        return self._active_prep_list[start_index:start_index + size]
+        return self._active_prep_list[start_index : start_index + size]
 
-    def get_inactive_preps(self) -> List['PRep']:
+    def get_inactive_preps(self) -> List["PRep"]:
         """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
         This method does not care about the order of P-Rep list
 
@@ -199,18 +200,18 @@ class PRepContainer(object):
         """
 
         # Collect P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
-        def _func(node: 'PRep') -> bool:
+        def _func(node: "PRep") -> bool:
             return node.status != PRepStatus.ACTIVE
 
         inactive_preps = list(filter(_func, self._prep_dict.values()))
         return inactive_preps
 
-    def index(self, address: 'Address') -> int:
+    def index(self, address: "Address") -> int:
         """Returns the index of a given address in active_prep_list
 
         :return: zero-based index
         """
-        prep: 'PRep' = self._prep_dict.get(address)
+        prep: "PRep" = self._prep_dict.get(address)
         if prep is None:
             Logger.info(tag="PREP", msg=f"P-Rep not found: {address}")
             return -1
@@ -220,13 +221,15 @@ class PRepContainer(object):
 
         return -1
 
-    def copy(self, mutable: bool) -> 'PRepContainer':
+    def copy(self, mutable: bool) -> "PRepContainer":
         """Copy PRepContainer without changing PRep objects
 
         :param mutable:
         :return:
         """
-        preps = PRepContainer(is_frozen=not mutable, total_prep_delegated=self._total_prep_delegated)
+        preps = PRepContainer(
+            is_frozen=not mutable, total_prep_delegated=self._total_prep_delegated
+        )
 
         preps._prep_dict.update(self._prep_dict)
         preps._active_prep_list.extend(self._active_prep_list)

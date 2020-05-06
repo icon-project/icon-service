@@ -33,41 +33,35 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
     def test_array_db_defective(self):
         self.update_governance("0_0_4")
 
-        expected_status = {
-            "code": Revision.TWO.value,
-            "name": "1.1.0"
-        }
+        expected_status = {"code": Revision.TWO.value, "name": "1.1.0"}
 
         query_request = {
             "version": self._version,
             "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getRevision",
-                "params": {}
-            }
+            "data": {"method": "getRevision", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_scores",
-                                                                  "sample_array_db",
-                                                                  self._accounts[0])
-        score_address: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_scores", "sample_array_db", self._accounts[0]
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         self.score_call(self._accounts[0], score_address, "set_values")
-        self.score_call(self._accounts[1], score_address, "set_values", step_limit=140519, expected_status=False)
+        self.score_call(
+            self._accounts[1],
+            score_address,
+            "set_values",
+            step_limit=140519,
+            expected_status=False,
+        )
         self.score_call(self._accounts[2], score_address, "set_values")
 
         response = self._query(
-            {
-                'to': score_address,
-                'dataType': 'call',
-                'data': {
-                    'method': 'get_values'
-                }
-            }
+            {"to": score_address, "dataType": "call", "data": {"method": "get_values"}}
         )
 
         self.assertEqual(len(response), 3)
@@ -78,38 +72,35 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
 
         expected_status = {
             "code": Revision.THREE.value,
-            "name": f"1.1.{Revision.THREE.value}"
+            "name": f"1.1.{Revision.THREE.value}",
         }
         query_request = {
             "version": self._version,
             "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getRevision",
-                "params": {}
-            }
+            "data": {"method": "getRevision", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_scores",
-                                                                  "sample_array_db",
-                                                                  self._accounts[0])
-        score_address: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_scores", "sample_array_db", self._accounts[0]
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         self.score_call(self._accounts[0], score_address, "set_values")
-        self.score_call(self._accounts[1], score_address, "set_values", step_limit=140519, expected_status=False)
+        self.score_call(
+            self._accounts[1],
+            score_address,
+            "set_values",
+            step_limit=140519,
+            expected_status=False,
+        )
         self.score_call(self._accounts[2], score_address, "set_values")
 
         response = self._query(
-            {
-                'to': score_address,
-                'dataType': 'call',
-                'data': {
-                    'method': 'get_values'
-                }
-            }
+            {"to": score_address, "dataType": "call", "data": {"method": "get_values"}}
         )
 
         self.assertEqual(len(response), 2)
@@ -119,39 +110,36 @@ class TestIntegrateDictDBPatch(TestIntegrateBase):
     def test_dict_db_defective(self):
         self.update_governance("0_0_4")
 
-        expected_status = {
-            "code": Revision.TWO.value,
-            "name": "1.1.0"
-        }
+        expected_status = {"code": Revision.TWO.value, "name": "1.1.0"}
 
         query_request = {
             "version": self._version,
             "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getRevision",
-                "params": {}
-            }
+            "data": {"method": "getRevision", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        tx_results: List['TransactionResult'] = self.deploy_score("sample_scores",
-                                                                  "sample_dict_db",
-                                                                  self._accounts[0])
-        score_address: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            "sample_scores", "sample_dict_db", self._accounts[0]
+        )
+        score_address: "Address" = tx_results[0].score_address
 
-        self.score_call(self._accounts[0], score_address, "create_item", params={"key": "a", "value": hex(1)})
+        self.score_call(
+            self._accounts[0],
+            score_address,
+            "create_item",
+            params={"key": "a", "value": hex(1)},
+        )
 
         with self.assertRaises(InvalidContainerAccessException) as e:
             self._query(
                 {
-                    'to': score_address,
-                    'dataType': 'call',
-                    'data': {
-                        'method': 'get_items'
-                    }
+                    "to": score_address,
+                    "dataType": "call",
+                    "data": {"method": "get_items"},
                 }
             )
         self.assertEqual(e.exception.message, "Iteration not supported in DictDB")

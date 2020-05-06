@@ -24,7 +24,7 @@ class MockKeyValueDatabase(KeyValueDatabase):
     """
 
     @staticmethod
-    def create_db() -> 'KeyValueDatabase':
+    def create_db() -> "KeyValueDatabase":
         db = MockPlyvelDB(MockPlyvelDB.make_db())
         return KeyValueDatabase(db)
 
@@ -59,15 +59,16 @@ class MockPlyvelDB(object):
     def iterator(self) -> iter:
         return iter(self._db)
 
-    def prefixed_db(self, bytes_prefix) -> 'MockPlyvelDB':
+    def prefixed_db(self, bytes_prefix) -> "MockPlyvelDB":
         return MockPlyvelDB(MockPlyvelDB.make_db())
 
-    def write_batch(self, *args, **kwargs) -> 'MockWriteBatch':
+    def write_batch(self, *args, **kwargs) -> "MockWriteBatch":
         return MockWriteBatch(self)
 
 
 class MockWriteBatch(object):
     """ WriteBatch(DB db, bytes prefix, bool transaction, sync) """
+
     def clear(self):
         """ WriteBatch.clear(self) """
         pass
@@ -92,5 +93,3 @@ class MockWriteBatch(object):
 
     def __init__(self, db):
         self._db = db
-
-

@@ -28,10 +28,12 @@ class PenaltyImposer(object):
 
     """
 
-    def __init__(self,
-                 penalty_grace_period: int,
-                 low_productivity_penalty_threshold: int,
-                 block_validation_penalty_threshold: int):
+    def __init__(
+        self,
+        penalty_grace_period: int,
+        low_productivity_penalty_threshold: int,
+        block_validation_penalty_threshold: int,
+    ):
         # Low productivity penalty is not imposed during penalty_grace_period
         self._penalty_grace_period: int = penalty_grace_period
 
@@ -41,26 +43,36 @@ class PenaltyImposer(object):
         # Unit: The number of blocks
         self._block_validation_penalty_threshold: int = block_validation_penalty_threshold
 
-        Logger.info(f"[PenaltyImposer Init] "
-                    f"penalty_grace_period: {self._penalty_grace_period} "
-                    f"low_productivity_penalty_threshold: {self._low_productivity_penalty_threshold} "
-                    f"block_validation_penalty_threshold: {self._block_validation_penalty_threshold}")
+        Logger.info(
+            f"[PenaltyImposer Init] "
+            f"penalty_grace_period: {self._penalty_grace_period} "
+            f"low_productivity_penalty_threshold: {self._low_productivity_penalty_threshold} "
+            f"block_validation_penalty_threshold: {self._block_validation_penalty_threshold}"
+        )
 
-    def run(self,
-            context: 'IconScoreContext',
-            prep: 'PRep',
-            on_penalty_imposed: Callable[['IconScoreContext', 'Address', 'PenaltyReason'], None]) -> 'PenaltyReason':
-        reason: 'PenaltyReason' = PenaltyReason.NONE
+    def run(
+        self,
+        context: "IconScoreContext",
+        prep: "PRep",
+        on_penalty_imposed: Callable[
+            ["IconScoreContext", "Address", "PenaltyReason"], None
+        ],
+    ) -> "PenaltyReason":
+        reason: "PenaltyReason" = PenaltyReason.NONE
 
         if self._check_block_validation_penalty(prep):
-            Logger.info(f"PenaltyImposer statistics({PenaltyReason.BLOCK_VALIDATION}): "
-                        f"prep_total_blocks: {prep.total_blocks} "
-                        f"prep_block_validation_proportion: {prep.block_validation_proportion}")
+            Logger.info(
+                f"PenaltyImposer statistics({PenaltyReason.BLOCK_VALIDATION}): "
+                f"prep_total_blocks: {prep.total_blocks} "
+                f"prep_block_validation_proportion: {prep.block_validation_proportion}"
+            )
             reason = PenaltyReason.BLOCK_VALIDATION
         if self._check_low_productivity_penalty(prep):
-            Logger.info(f"PenaltyImposer statistics({PenaltyReason.LOW_PRODUCTIVITY}): "
-                        f"prep_total_blocks: {prep.total_blocks} "
-                        f"prep_unvalidated_sequence_blocks: {prep.unvalidated_sequence_blocks}")
+            Logger.info(
+                f"PenaltyImposer statistics({PenaltyReason.LOW_PRODUCTIVITY}): "
+                f"prep_total_blocks: {prep.total_blocks} "
+                f"prep_unvalidated_sequence_blocks: {prep.unvalidated_sequence_blocks}"
+            )
             reason = PenaltyReason.LOW_PRODUCTIVITY
 
         if on_penalty_imposed and reason != PenaltyReason.NONE:
@@ -68,9 +80,14 @@ class PenaltyImposer(object):
 
         return reason
 
-    def _check_low_productivity_penalty(self, prep: 'PRep') -> bool:
-        return prep.total_blocks > self._penalty_grace_period and \
-               prep.block_validation_proportion < self._low_productivity_penalty_threshold
+    def _check_low_productivity_penalty(self, prep: "PRep") -> bool:
+        return (
+            prep.total_blocks > self._penalty_grace_period
+            and prep.block_validation_proportion
+            < self._low_productivity_penalty_threshold
+        )
 
-    def _check_block_validation_penalty(self, prep: 'PRep') -> bool:
-        return prep.unvalidated_sequence_blocks >= self._block_validation_penalty_threshold
+    def _check_block_validation_penalty(self, prep: "PRep") -> bool:
+        return (
+            prep.unvalidated_sequence_blocks >= self._block_validation_penalty_threshold
+        )

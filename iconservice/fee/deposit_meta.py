@@ -21,11 +21,18 @@ class DepositMeta(object):
     """
     DepositMeta Class implementing functions to serialize and deserialize.
     """
+
     _VERSION = 0
 
-    def __init__(self, head_id: bytes = None, tail_id: bytes = None,
-                 available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None,
-                 expires_of_virtual_step: int = -1, expires_of_deposit: int = -1):
+    def __init__(
+        self,
+        head_id: bytes = None,
+        tail_id: bytes = None,
+        available_head_id_of_virtual_step: bytes = None,
+        available_head_id_of_deposit: bytes = None,
+        expires_of_virtual_step: int = -1,
+        expires_of_deposit: int = -1,
+    ):
         self.version = self._VERSION
         self.head_id = head_id
         self.tail_id = tail_id
@@ -59,9 +66,15 @@ class DepositMeta(object):
 
         :return: DepositMeta in bytes
         """
-        data: list = [self.version, self.head_id, self.tail_id,
-                      self.available_head_id_of_virtual_step, self.available_head_id_of_deposit,
-                      self.expires_of_virtual_step, self.expires_of_deposit]
+        data: list = [
+            self.version,
+            self.head_id,
+            self.tail_id,
+            self.available_head_id_of_virtual_step,
+            self.available_head_id_of_deposit,
+            self.expires_of_virtual_step,
+            self.expires_of_deposit,
+        ]
         return MsgPackForDB.dumps(data)
 
     def __eq__(self, other) -> bool:
@@ -69,14 +82,17 @@ class DepositMeta(object):
 
         :param other: (DepositMeta)
         """
-        return isinstance(other, DepositMeta) \
-            and self.version == other.version \
-            and self.head_id == other.head_id \
-            and self.tail_id == other.tail_id \
-            and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
-            and self.available_head_id_of_deposit == other.available_head_id_of_deposit \
-            and self.expires_of_virtual_step == other.expires_of_virtual_step \
+        return (
+            isinstance(other, DepositMeta)
+            and self.version == other.version
+            and self.head_id == other.head_id
+            and self.tail_id == other.tail_id
+            and self.available_head_id_of_virtual_step
+            == other.available_head_id_of_virtual_step
+            and self.available_head_id_of_deposit == other.available_head_id_of_deposit
+            and self.expires_of_virtual_step == other.expires_of_virtual_step
             and self.expires_of_deposit == other.expires_of_deposit
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding

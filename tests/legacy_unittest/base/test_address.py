@@ -18,8 +18,17 @@ import hashlib
 import random
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix, ICON_EOA_ADDRESS_PREFIX, ICON_CONTRACT_ADDRESS_PREFIX, \
-    SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, is_icon_address_valid, split_icon_address, MalformedAddress
+from iconservice.base.address import (
+    Address,
+    AddressPrefix,
+    ICON_EOA_ADDRESS_PREFIX,
+    ICON_CONTRACT_ADDRESS_PREFIX,
+    SYSTEM_SCORE_ADDRESS,
+    GOVERNANCE_SCORE_ADDRESS,
+    is_icon_address_valid,
+    split_icon_address,
+    MalformedAddress,
+)
 from iconservice.base.exception import ExceptionCode
 from tests import create_address
 
@@ -36,28 +45,28 @@ class TestAddress(unittest.TestCase):
         self.assertTrue(addr.prefix == AddressPrefix.CONTRACT)
 
     def test_eq_EOA(self):
-        addr1 = create_address(data=b'addr')
-        addr2 = create_address(data=b'addr')
+        addr1 = create_address(data=b"addr")
+        addr2 = create_address(data=b"addr")
         self.assertTrue(addr1 == addr2)
 
     def test_eq_CONTRACT(self):
-        addr1 = create_address(prefix=1, data=b'addr')
-        addr2 = create_address(prefix=1, data=b'addr')
+        addr1 = create_address(prefix=1, data=b"addr")
+        addr2 = create_address(prefix=1, data=b"addr")
         self.assertTrue(addr1 == addr2)
 
     def test_ne_EOA(self):
-        addr1 = create_address(data=b'addr1')
-        addr2 = create_address(data=b'addr2')
+        addr1 = create_address(data=b"addr1")
+        addr2 = create_address(data=b"addr2")
         self.assertTrue(addr1 != addr2)
 
     def test_ne_CONTRACT(self):
-        addr1 = create_address(prefix=1, data=b'addr1')
-        addr2 = create_address(prefix=1, data=b'addr2')
+        addr1 = create_address(prefix=1, data=b"addr1")
+        addr2 = create_address(prefix=1, data=b"addr2")
         self.assertTrue(addr1 != addr2)
 
     def test_hash_EOA(self):
-        addr1 = create_address(data=b'addr')
-        addr2 = create_address(data=b'addr')
+        addr1 = create_address(data=b"addr")
+        addr2 = create_address(data=b"addr")
         self.assertEqual(addr1, addr2)
         self.assertEqual(hash(addr1), hash(addr2))
         self.assertTrue(addr1 is not addr2)
@@ -66,8 +75,8 @@ class TestAddress(unittest.TestCase):
         self.assertEqual(table[addr1], table[addr2])
 
     def test_hash_CONTRACT(self):
-        addr1 = create_address(prefix=1, data=b'addr')
-        addr2 = create_address(prefix=1, data=b'addr')
+        addr1 = create_address(prefix=1, data=b"addr")
+        addr2 = create_address(prefix=1, data=b"addr")
         self.assertEqual(addr1, addr2)
         self.assertEqual(hash(addr1), hash(addr2))
         self.assertTrue(addr1 is not addr2)
@@ -91,7 +100,7 @@ class TestAddress(unittest.TestCase):
         addr1 = create_address()
         buf = addr1.to_bytes()
         prefix: int = 0
-        prefix_buf: bytes = prefix.to_bytes(1, 'big')
+        prefix_buf: bytes = prefix.to_bytes(1, "big")
         buf = prefix_buf + buf
         addr2 = Address.from_bytes(buf)
         self.assertEqual(addr1, addr2)
@@ -108,7 +117,7 @@ class TestAddress(unittest.TestCase):
         with self.assertRaises(BaseException) as e:
             Address.from_string(buf)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(e.exception.message, 'Invalid address')
+        self.assertEqual(e.exception.message, "Invalid address")
 
     def test_address_from_to_string_CONTRACT(self):
         addr1 = create_address(prefix=1)
@@ -132,8 +141,9 @@ class TestAddress(unittest.TestCase):
         self.assertFalse(is_icon_address_valid(1234))
 
         # wrong hexadecimal format
-        self.assertFalse(is_icon_address_valid(
-            "0x00c3f694d84074f9145cd0bfa497290ce2d8052f"))
+        self.assertFalse(
+            is_icon_address_valid("0x00c3f694d84074f9145cd0bfa497290ce2d8052f")
+        )
 
     def test_split_icon_address(self):
         address = create_address()
@@ -142,12 +152,21 @@ class TestAddress(unittest.TestCase):
         self.assertEqual(body, bytes.hex(address.body))
 
     def test_prefix_and_int(self):
-        self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0), SYSTEM_SCORE_ADDRESS)
-        self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1), GOVERNANCE_SCORE_ADDRESS)
-        self.assertEqual(str(Address.from_prefix_and_int(AddressPrefix.EOA, 10)),
-                         "hx000000000000000000000000000000000000000a")
-        self.assertEqual(str(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1024)),
-                         "cx0000000000000000000000000000000000000400")
+        self.assertEqual(
+            Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0), SYSTEM_SCORE_ADDRESS
+        )
+        self.assertEqual(
+            Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1),
+            GOVERNANCE_SCORE_ADDRESS,
+        )
+        self.assertEqual(
+            str(Address.from_prefix_and_int(AddressPrefix.EOA, 10)),
+            "hx000000000000000000000000000000000000000a",
+        )
+        self.assertEqual(
+            str(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1024)),
+            "cx0000000000000000000000000000000000000400",
+        )
 
     def test_malformed_address(self):
         address: str = "hx123456"
@@ -164,15 +183,15 @@ class TestAddress(unittest.TestCase):
     def test_from_bytes_including_prefix(self):
         address_prefixes = [AddressPrefix.EOA, AddressPrefix.CONTRACT]
 
-        value: int = random.randint(0, 0xffffffff)
-        input_data: bytes = value.to_bytes(4, 'big')
+        value: int = random.randint(0, 0xFFFFFFFF)
+        input_data: bytes = value.to_bytes(4, "big")
         data: bytes = hashlib.sha3_256(input_data).digest()
 
         for prefix in address_prefixes:
             body: bytes = data[-20:]
             self.assertEqual(20, len(body))
 
-            address_bytes: bytes = prefix.to_bytes(1, 'big') + body
+            address_bytes: bytes = prefix.to_bytes(1, "big") + body
             address = Address.from_bytes_including_prefix(address_bytes)
 
             self.assertEqual(prefix, address.prefix)
@@ -186,7 +205,7 @@ class TestAddress(unittest.TestCase):
             body: bytes = data[-size:]
             self.assertEqual(size, len(body))
 
-            address_bytes: bytes = prefix.to_bytes(1, 'big') + body
+            address_bytes: bytes = prefix.to_bytes(1, "big") + body
             address = Address.from_bytes_including_prefix(address_bytes)
             self.assertIsNone(address)
 
@@ -194,8 +213,8 @@ class TestAddress(unittest.TestCase):
             self.assertIsNone(address)
 
     def test_to_bytes_including_prefix(self):
-        value: int = random.randint(0, 0xffffffff)
-        input_data: bytes = value.to_bytes(4, 'big')
+        value: int = random.randint(0, 0xFFFFFFFF)
+        input_data: bytes = value.to_bytes(4, "big")
         data: bytes = hashlib.sha3_256(input_data).digest()
         body: bytes = data[-20:]
 
@@ -203,11 +222,11 @@ class TestAddress(unittest.TestCase):
             address = Address(prefix, body)
             address_bytes: bytes = address.to_bytes_including_prefix()
 
-            expected_bytes: bytes = prefix.to_bytes(1, 'big') + body
+            expected_bytes: bytes = prefix.to_bytes(1, "big") + body
             self.assertIsInstance(address_bytes, bytes)
             self.assertEqual(21, len(address_bytes))
             self.assertEqual(expected_bytes, address_bytes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

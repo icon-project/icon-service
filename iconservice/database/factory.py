@@ -24,17 +24,16 @@ from ..icon_constant import ICON_DEX_DB_NAME
 
 
 class ContextDatabaseFactory(object):
-
     class Mode(IntEnum):
         SINGLE_DB = 0
         MULTIPLE_DB = 1
 
     _state_db_root_path: str = None
-    _mode: 'Mode' = Mode.SINGLE_DB
-    _shared_context_db: 'ContextDatabase' = None
+    _mode: "Mode" = Mode.SINGLE_DB
+    _shared_context_db: "ContextDatabase" = None
 
     @classmethod
-    def open(cls, state_db_root_path: str, mode: 'Mode'):
+    def open(cls, state_db_root_path: str, mode: "Mode"):
         cls.close()
 
         cls._state_db_root_path = state_db_root_path
@@ -45,13 +44,12 @@ class ContextDatabaseFactory(object):
         if cls._shared_context_db is None:
             path = os.path.join(cls._state_db_root_path, ICON_DEX_DB_NAME)
             key_value_db = KeyValueDatabase.from_path(path)
-            cls._shared_context_db = ContextDatabase(
-                key_value_db, is_shared=True)
+            cls._shared_context_db = ContextDatabase(key_value_db, is_shared=True)
 
         return cls._shared_context_db
 
     @classmethod
-    def create_by_address(cls, address: 'Address') -> ContextDatabase:
+    def create_by_address(cls, address: "Address") -> ContextDatabase:
         if cls._mode == cls.Mode.SINGLE_DB:
             return cls.get_shared_db()
         else:

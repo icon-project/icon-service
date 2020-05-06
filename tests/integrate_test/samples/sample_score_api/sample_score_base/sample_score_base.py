@@ -3,7 +3,9 @@ from iconservice import *
 
 class SampleScoreBaseInterface(InterfaceScore):
     @interface
-    def exchange(self, fromServiceName: str, toServiceName: str, to: Address, value: int) -> bool:
+    def exchange(
+        self, fromServiceName: str, toServiceName: str, to: Address, value: int
+    ) -> bool:
         pass
 
     @interface
@@ -12,16 +14,15 @@ class SampleScoreBaseInterface(InterfaceScore):
 
 
 class SampleScoreBase(IconScoreBase):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
-    def on_install(self, value: int=1000) -> None:
+    def on_install(self, value: int = 1000) -> None:
         super().on_install()
         self._value.set(value)
 
@@ -60,8 +61,8 @@ class SampleScoreBase(IconScoreBase):
     @external
     def test_sha3_256(self, data: bytes):
         sha3_256(data)
-        self._value.set(10**18)
-        self.Changed(10**18)
+        self._value.set(10 ** 18)
+        self.Changed(10 ** 18)
 
     @external(readonly=True)
     def test_json_dumps_readonly(self) -> str:
@@ -73,8 +74,8 @@ class SampleScoreBase(IconScoreBase):
         data = {"key1": 1, "key2": 2, "key3": "value3"}
         return_value = json_dumps(data)
         assert type(return_value) == str
-        self._value.set(10**18)
-        self.Changed(10**18)
+        self._value.set(10 ** 18)
+        self.Changed(10 ** 18)
 
     @external(readonly=True)
     def test_json_dumps_none(self) -> str:
@@ -91,8 +92,8 @@ class SampleScoreBase(IconScoreBase):
         data = json_dumps({"key1": 1, "key2": 2, "key3": "value3"})
         return_value = json_loads(data)
         assert type(return_value) == dict
-        self._value.set(10**18)
-        self.Changed(10**18)
+        self._value.set(10 ** 18)
+        self.Changed(10 ** 18)
 
     @external(readonly=True)
     def test_is_score_active_readonly(self, address: Address) -> bool:
@@ -101,8 +102,8 @@ class SampleScoreBase(IconScoreBase):
     @external
     def test_is_score_active(self, address: Address):
         assert self.is_score_active(address) in (True, False)
-        self._value.set(10**18)
-        self.Changed(10**18)
+        self._value.set(10 ** 18)
+        self.Changed(10 ** 18)
 
     @external(readonly=True)
     def test_get_owner_readonly(self, address: Address) -> Address:
@@ -111,8 +112,8 @@ class SampleScoreBase(IconScoreBase):
     @external
     def test_get_owner(self, address: Address) -> bool:
         assert type(self.get_owner(address)) == Address
-        self._value.set(10**18)
-        self.Changed(10**18)
+        self._value.set(10 ** 18)
+        self.Changed(10 ** 18)
 
     @external(readonly=True)
     def test_create_interface_score_readonly(self, address: Address) -> bool:
@@ -157,4 +158,3 @@ class SampleScoreBase(IconScoreBase):
             assert type(score_address) == Address
         self._value.set(10 ** 18)
         self.Changed(10 ** 18)
-

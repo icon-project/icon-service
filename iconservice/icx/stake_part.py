@@ -36,7 +36,7 @@ class StakePart(BasePart):
         self._unstake_block_height: int = unstake_block_height
 
     @staticmethod
-    def make_key(address: 'Address') -> bytes:
+    def make_key(address: "Address") -> bytes:
         return StakePart.PREFIX + address.to_bytes_including_prefix()
 
     @property
@@ -77,7 +77,9 @@ class StakePart(BasePart):
         assert self.is_set(BasePartState.COMPLETE)
 
         if self.total_stake < value:
-            raise InvalidParamsException(f'Failed to unstake: stake_amount({self._stake}) < value({value})')
+            raise InvalidParamsException(
+                f"Failed to unstake: stake_amount({self._stake}) < value({value})"
+            )
 
         # FIXME: Consider the case when value is 0
         self._stake = self.total_stake - value
@@ -97,7 +99,7 @@ class StakePart(BasePart):
 
     def normalize(self, block_height: int) -> int:
         unstake: int = 0
-        state: 'BasePartState' = BasePartState.COMPLETE
+        state: "BasePartState" = BasePartState.COMPLETE
 
         if 0 < self._unstake_block_height < block_height:
             unstake: int = self._unstake
@@ -111,7 +113,7 @@ class StakePart(BasePart):
         return unstake
 
     @staticmethod
-    def from_bytes(buf: bytes) -> 'StakePart':
+    def from_bytes(buf: bytes) -> "StakePart":
         """Create Account of Stake object from bytes data
 
         :param buf: (bytes) bytes data including Account of Stake information
@@ -133,10 +135,7 @@ class StakePart(BasePart):
 
         assert self.is_set(BasePartState.COMPLETE)
 
-        data = [self._VERSION,
-                self._stake,
-                self._unstake,
-                self._unstake_block_height]
+        data = [self._VERSION, self._stake, self._unstake, self._unstake_block_height]
         return MsgPackForDB.dumps(data)
 
     def __eq__(self, other) -> bool:
@@ -147,10 +146,12 @@ class StakePart(BasePart):
 
         assert self.is_set(BasePartState.COMPLETE)
 
-        return isinstance(other, StakePart) \
-            and self._stake == other.stake \
-            and self._unstake == other.unstake \
+        return (
+            isinstance(other, StakePart)
+            and self._stake == other.stake
+            and self._unstake == other.unstake
             and self._unstake_block_height == other.unstake_block_height
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding

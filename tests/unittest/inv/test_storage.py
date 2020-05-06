@@ -38,28 +38,28 @@ def dummy_invs():
     dummy_revision_code = "1.1.1"
     dummy_service_config: int = 0
     dummy_step_costs = {
-        'default': 0,
-        'contractCall': 0,
-        'contractCreate': 0,
-        'contractUpdate': 0,
-        'contractDestruct': 0,
-        'contractSet': 0,
-        'get': 0,
-        'set': 0,
-        'replace': 0,
-        'delete': -150,
-        'input': 0,
-        'eventLog': 0,
-        'apiCall': 0
+        "default": 0,
+        "contractCall": 0,
+        "contractCreate": 0,
+        "contractUpdate": 0,
+        "contractDestruct": 0,
+        "contractSet": 0,
+        "get": 0,
+        "set": 0,
+        "replace": 0,
+        "delete": -150,
+        "input": 0,
+        "eventLog": 0,
+        "apiCall": 0,
     }
     dummy_step_costs = {StepType(key): val for key, val in dummy_step_costs.items()}
     dummy_max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
-        IconScoreContextType.QUERY: 50_000_000
+        IconScoreContextType.QUERY: 50_000_000,
     }
     dummy_step_price: int = 0
     dummy_score_black_list: list = []
-    dummy_import_white_list = {"iconservice": ['*']}
+    dummy_import_white_list = {"iconservice": ["*"]}
     dummy_invs = {
         IconNetworkValueType.REVISION_CODE: RevisionCode(dummy_revision_number),
         IconNetworkValueType.REVISION_NAME: RevisionName(dummy_revision_code),
@@ -68,7 +68,9 @@ def dummy_invs():
         IconNetworkValueType.STEP_COSTS: StepCosts(dummy_step_costs),
         IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits(dummy_max_step_limits),
         IconNetworkValueType.SERVICE_CONFIG: ServiceConfig(dummy_service_config),
-        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(dummy_import_white_list)
+        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(
+            dummy_import_white_list
+        ),
     }
     return dummy_invs
 
@@ -82,8 +84,9 @@ def context():
 
 
 class TestINVStorage:
-
-    def test_migrate_and_get_container_after_migration(self, context, inv_storage, dummy_invs):
+    def test_migrate_and_get_container_after_migration(
+        self, context, inv_storage, dummy_invs
+    ):
         dummy_inv_list: list = [value for value in dummy_invs.values()]
 
         # TEST: when get container before migration (i.e. INVs have not been recorded on stateDB), should return None

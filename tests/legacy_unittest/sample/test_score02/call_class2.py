@@ -21,4 +21,3 @@ class CallClass2(CallClass1):
     def print_test(self):
         func_test()
         sample_func()
-

@@ -2,7 +2,7 @@ from iconservice import *
 
 
 class SampleScoreSend(IconScoreBase):
-    _SCORE_ADDR = 'score_addr'
+    _SCORE_ADDR = "score_addr"
 
     @eventlog(indexed=1)
     def SendResult(self, result: bool):

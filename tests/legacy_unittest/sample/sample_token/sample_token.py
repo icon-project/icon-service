@@ -3,11 +3,12 @@ from iconservice import *
 
 class SampleToken(IconScoreBase):
 
-    __BALANCES = 'balances'
-    __TOTAL_SUPPLY = 'total_supply'
+    __BALANCES = "balances"
+    __TOTAL_SUPPLY = "total_supply"
 
     @eventlog(indexed=3)
-    def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
+    def Transfer(self, addr_from: Address, addr_to: Address, value: int):
+        pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)

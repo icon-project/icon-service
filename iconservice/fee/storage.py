@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class Storage(StorageBase):
     """Fee and Deposit state manager embedding a state db wrapper"""
 
-    _FEE_PREFIX = b'\x02'
+    _FEE_PREFIX = b"\x02"
 
     def _generate_key(self, key_data: bytes):
         """
@@ -37,7 +37,9 @@ class Storage(StorageBase):
         """
         return self._FEE_PREFIX + sha3_256(key_data).digest()
 
-    def get_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address') -> 'DepositMeta':
+    def get_deposit_meta(
+        self, context: "IconScoreContext", score_address: "Address"
+    ) -> "DepositMeta":
         """Returns the score deposit meta information.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -48,7 +50,12 @@ class Storage(StorageBase):
         value = self._db.get(context, key)
         return DepositMeta.from_bytes(value) if value else None
 
-    def put_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address', deposit_meta: 'DepositMeta'):
+    def put_deposit_meta(
+        self,
+        context: "IconScoreContext",
+        score_address: "Address",
+        deposit_meta: "DepositMeta",
+    ):
         """Puts the score deposit meta information into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -60,7 +67,9 @@ class Storage(StorageBase):
         value = deposit_meta.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address'):
+    def delete_deposit_meta(
+        self, context: "IconScoreContext", score_address: "Address"
+    ):
         """Deletes the score deposit meta information from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -70,7 +79,7 @@ class Storage(StorageBase):
         key = self._generate_key(score_address.to_bytes())
         self._db.delete(context, key)
 
-    def get_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> 'Deposit':
+    def get_deposit(self, context: "IconScoreContext", deposit_id: bytes) -> "Deposit":
         """Returns the deposit.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -86,7 +95,7 @@ class Storage(StorageBase):
 
         return value
 
-    def put_deposit(self, context: 'IconScoreContext', deposit: 'Deposit'):
+    def put_deposit(self, context: "IconScoreContext", deposit: "Deposit"):
         """Puts the deposit data into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -97,7 +106,7 @@ class Storage(StorageBase):
         value = deposit.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_deposit(self, context: 'IconScoreContext', deposit_id: bytes):
+    def delete_deposit(self, context: "IconScoreContext", deposit_id: bytes):
         """Deletes the deposit from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request

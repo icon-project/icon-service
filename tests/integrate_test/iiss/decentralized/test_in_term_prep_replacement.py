@@ -33,9 +33,9 @@ if TYPE_CHECKING:
     from iconservice.base.address import Address
 
 
-def _check_elected_prep_grades(preps: List[Dict[str, int]],
-                               main_prep_count: int,
-                               elected_prep_count: int):
+def _check_elected_prep_grades(
+    preps: List[Dict[str, int]], main_prep_count: int, elected_prep_count: int
+):
     for i, prep in enumerate(preps):
         if i < main_prep_count:
             assert prep["grade"] == PRepGrade.MAIN.value
@@ -45,8 +45,10 @@ def _check_elected_prep_grades(preps: List[Dict[str, int]],
             assert prep["grade"] == PRepGrade.CANDIDATE.value
 
 
-def _get_main_preps(preps: List[Dict[str, 'Address']], main_prep_count: int) -> List['Address']:
-    main_preps: List['Address'] = []
+def _get_main_preps(
+    preps: List[Dict[str, "Address"]], main_prep_count: int
+) -> List["Address"]:
+    main_preps: List["Address"] = []
 
     for i, prep in enumerate(preps):
         if i >= main_prep_count:
@@ -90,20 +92,19 @@ class TestPreps(TestIISSBase):
         for prep in tmp_preps:
             expected_preps.append(self.get_prep(prep["address"]))
 
-        preps_on_block_validation_penalty = \
-            sorted(added_inactive_preps,
-                   key=lambda x: (-x["delegated"], x["blockHeight"], x["txIndex"]))
+        preps_on_block_validation_penalty = sorted(
+            added_inactive_preps,
+            key=lambda x: (-x["delegated"], x["blockHeight"], x["txIndex"]),
+        )
         expected_preps.extend(preps_on_block_validation_penalty)
         assert expected_preps == preps
 
     def _make_init_config(self) -> dict:
         return {
-            ConfigKey.SERVICE: {
-                ConfigKey.SERVICE_FEE: True
-            },
+            ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: True},
             ConfigKey.IISS_META_DATA: {
                 ConfigKey.UN_STAKE_LOCK_MIN: 10,
-                ConfigKey.UN_STAKE_LOCK_MAX: 20
+                ConfigKey.UN_STAKE_LOCK_MAX: 20,
             },
             ConfigKey.IISS_CALCULATE_PERIOD: self.CALCULATE_PERIOD,
             ConfigKey.TERM_PERIOD: self.TERM_PERIOD,
@@ -111,7 +112,7 @@ class TestPreps(TestIISSBase):
             ConfigKey.LOW_PRODUCTIVITY_PENALTY_THRESHOLD: self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
             ConfigKey.PREP_MAIN_PREPS: self.MAIN_PREP_COUNT,
             ConfigKey.PREP_MAIN_AND_SUB_PREPS: self.ELECTED_PREP_COUNT,
-            ConfigKey.PENALTY_GRACE_PERIOD: self.PENALTY_GRACE_PERIOD
+            ConfigKey.PENALTY_GRACE_PERIOD: self.PENALTY_GRACE_PERIOD,
         }
 
     def setUp(self):
@@ -122,14 +123,8 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         for account in self._accounts[:PREP_MAIN_PREPS]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
-        expected_response: dict = {
-            "preps": expected_preps,
-            "totalDelegated": 0
-        }
+            expected_preps.append({"address": account.address, "delegated": 0})
+        expected_response: dict = {"preps": expected_preps, "totalDelegated": 0}
         self.assertEqual(expected_response, response)
 
     def test_replace_prep(self):
@@ -148,11 +143,12 @@ class TestPreps(TestIISSBase):
         response = self.get_prep_term()
         assert response["sequence"] == 2
 
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=icx_to_loop(1))
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=icx_to_loop(1)
+        )
 
         # Distribute 3000 icx to new 100 accounts
-        accounts: List['EOAAccount'] = self.create_eoa_accounts(total_prep_count)
+        accounts: List["EOAAccount"] = self.create_eoa_accounts(total_prep_count)
         self.distribute_icx(accounts=accounts, init_balance=icx_to_loop(3000))
 
         transactions = []
@@ -167,10 +163,7 @@ class TestPreps(TestIISSBase):
 
             # Delegate 1 icx to itself
             tx = self.create_set_delegation_tx(
-                from_=account,
-                origin_delegations=[
-                    (account, icx_to_loop(1))
-                ]
+                from_=account, origin_delegations=[(account, icx_to_loop(1))]
             )
             transactions.append(tx)
         self.process_confirm_block_tx(transactions)
@@ -184,7 +177,7 @@ class TestPreps(TestIISSBase):
         preps = term_3["preps"]
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
-        main_preps_3: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_3: List["Address"] = _get_main_preps(preps, main_prep_count)
 
         assert term_3["totalDelegated"] == icx_to_loop(1) * total_prep_count
 
@@ -192,7 +185,7 @@ class TestPreps(TestIISSBase):
         self.make_empty_blocks(
             count=calculate_period,
             prev_block_generator=main_preps_3[0],
-            prev_block_validators=[address for address in main_preps_3[1:]]
+            prev_block_validators=[address for address in main_preps_3[1:]],
         )
 
         # All main P-Reps succeeded to validate all blocks in a term
@@ -205,23 +198,24 @@ class TestPreps(TestIISSBase):
             assert response["unvalidatedSequenceBlocks"] == 0
 
         # TERM-4: Block validation penalty -----------------------------------------
-        account_on_block_validation_penalty: 'EOAAccount' = accounts[1]
+        account_on_block_validation_penalty: "EOAAccount" = accounts[1]
 
         term_4: dict = self.get_prep_term()
         assert term_4["sequence"] == 4
         preps = term_4["preps"]
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
-        main_preps_4: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_4: List["Address"] = _get_main_preps(preps, main_prep_count)
         assert main_preps_3 == main_preps_4
 
         self.make_empty_blocks(
             count=self.BLOCK_VALIDATION_PENALTY_THRESHOLD + 1,
             prev_block_generator=main_preps_4[0],
             prev_block_validators=[
-                address for address in main_preps_4[1:]
+                address
+                for address in main_preps_4[1:]
                 if address != account_on_block_validation_penalty.address
-            ]
+            ],
         )
 
         term_4: dict = self.get_prep_term()
@@ -230,19 +224,26 @@ class TestPreps(TestIISSBase):
 
         # A main P-Rep got penalized for consecutive 660 block validation failure
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
-        main_preps_4: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_4: List["Address"] = _get_main_preps(preps, main_prep_count)
 
         # The first sub P-Rep replaced the the second main P-Rep
         assert main_preps_4[1] == accounts[main_prep_count].address
         assert main_preps_4[1] != account_on_block_validation_penalty
-        prep_on_penalty: dict = self.get_prep(account_on_block_validation_penalty.address)
+        prep_on_penalty: dict = self.get_prep(
+            account_on_block_validation_penalty.address
+        )
 
         assert prep_on_penalty["status"] == PRepStatus.ACTIVE.value
         assert prep_on_penalty["penalty"] == PenaltyReason.BLOCK_VALIDATION.value
-        assert prep_on_penalty["unvalidatedSequenceBlocks"] == self.BLOCK_VALIDATION_PENALTY_THRESHOLD + 1
-        assert prep_on_penalty["totalBlocks"] == \
-            prep_on_penalty["validatedBlocks"] + \
+        assert (
             prep_on_penalty["unvalidatedSequenceBlocks"]
+            == self.BLOCK_VALIDATION_PENALTY_THRESHOLD + 1
+        )
+        assert (
+            prep_on_penalty["totalBlocks"]
+            == prep_on_penalty["validatedBlocks"]
+            + prep_on_penalty["unvalidatedSequenceBlocks"]
+        )
 
         # checks if adding the prep receiving a block validation penalty on preps of getPRepTerm API
         self._check_preps_on_get_prep_term([prep_on_penalty])
@@ -251,7 +252,7 @@ class TestPreps(TestIISSBase):
         self.make_empty_blocks(
             count=count,
             prev_block_generator=main_preps_4[0],
-            prev_block_validators=main_preps_4[1:]
+            prev_block_validators=main_preps_4[1:],
         )
 
         # Term-5: Unregister P-Rep
@@ -261,7 +262,7 @@ class TestPreps(TestIISSBase):
         preps = term_5["preps"]
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
-        main_preps_5: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_5: List["Address"] = _get_main_preps(preps, main_prep_count)
         assert main_preps_5[1] == account_on_block_validation_penalty.address
 
         prep = self.get_prep(account_on_block_validation_penalty.address)
@@ -275,17 +276,21 @@ class TestPreps(TestIISSBase):
         unregistered_account = accounts[index]
         assert main_preps_5[index] == accounts[index].address
 
-        self.unregister_prep(unregistered_account,
-                             expected_status=True,
-                             prev_block_generator=main_preps_5[0],
-                             prev_block_validators=main_preps_5)
+        self.unregister_prep(
+            unregistered_account,
+            expected_status=True,
+            prev_block_generator=main_preps_5[0],
+            prev_block_validators=main_preps_5,
+        )
 
         # Changed main P-Rep list are applied to the next block
-        self.make_empty_blocks(1,
-                               prev_block_generator=main_preps_5[0],
-                               prev_block_validators=[
-                                   address for address in main_preps_5 if address != unregistered_account
-                               ])
+        self.make_empty_blocks(
+            1,
+            prev_block_generator=main_preps_5[0],
+            prev_block_validators=[
+                address for address in main_preps_5 if address != unregistered_account
+            ],
+        )
 
         unregistered_prep: dict = self.get_prep(unregistered_account.address)
         assert unregistered_prep["status"] == PRepStatus.UNREGISTERED.value
@@ -299,18 +304,20 @@ class TestPreps(TestIISSBase):
         self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
-        main_preps_5: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_5: List["Address"] = _get_main_preps(preps, main_prep_count)
 
         assert preps[index]["address"] != unregistered_account.address
         assert preps[index]["address"] == accounts[main_prep_count].address
 
         count = term_5["endBlockHeight"] - term_5["blockHeight"] + 1
-        self.make_empty_blocks(count,
-                               prev_block_generator=main_preps_5[0],
-                               prev_block_validators=[prep for prep in main_preps_5])
+        self.make_empty_blocks(
+            count,
+            prev_block_generator=main_preps_5[0],
+            prev_block_validators=[prep for prep in main_preps_5],
+        )
 
         # TERM-6: Low productivity penalty
-        account_on_low_productivity_penalty: 'EOAAccount' = account_on_block_validation_penalty
+        account_on_low_productivity_penalty: "EOAAccount" = account_on_block_validation_penalty
 
         term_6 = self.get_prep_term()
         assert term_6["sequence"] == 6
@@ -320,15 +327,16 @@ class TestPreps(TestIISSBase):
         self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
-        main_preps_6: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_6: List["Address"] = _get_main_preps(preps, main_prep_count)
 
         self.make_empty_blocks(
             count=2,
             prev_block_generator=main_preps_6[0],
             prev_block_validators=[
-                address for address in main_preps_6
+                address
+                for address in main_preps_6
                 if address != account_on_low_productivity_penalty.address
-            ]
+            ],
         )
 
         prep_on_penalty = self.get_prep(account_on_low_productivity_penalty)
@@ -336,8 +344,10 @@ class TestPreps(TestIISSBase):
         assert prep_on_penalty["penalty"] == PenaltyReason.LOW_PRODUCTIVITY.value
         assert prep_on_penalty["unvalidatedSequenceBlocks"] == 2
         assert prep_on_penalty["grade"] == PRepGrade.CANDIDATE.value
-        assert prep_on_penalty["validatedBlocks"] * 100 // prep_on_penalty["totalBlocks"] < \
-            self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        assert (
+            prep_on_penalty["validatedBlocks"] * 100 // prep_on_penalty["totalBlocks"]
+            < self.LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+        )
 
         term_6 = self.get_prep_term()
         preps = term_6["preps"]
@@ -346,14 +356,16 @@ class TestPreps(TestIISSBase):
         self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
-        main_preps_6: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_6: List["Address"] = _get_main_preps(preps, main_prep_count)
         assert main_preps_6[1] != account_on_low_productivity_penalty.address
         assert main_preps_6[1] == accounts[main_prep_count + 1].address
 
         count = term_6["endBlockHeight"] - term_6["blockHeight"] + 1
-        self.make_empty_blocks(count,
-                               prev_block_generator=main_preps_6[0],
-                               prev_block_validators=[prep for prep in main_preps_6])
+        self.make_empty_blocks(
+            count,
+            prev_block_generator=main_preps_6[0],
+            prev_block_validators=[prep for prep in main_preps_6],
+        )
 
         # TERM-7: Disqualify P-Rep
         account_on_disqualification = accounts[main_prep_count + 1]
@@ -363,15 +375,16 @@ class TestPreps(TestIISSBase):
         preps = term_7["preps"]
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count)
-        main_preps_7: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_7: List["Address"] = _get_main_preps(preps, main_prep_count)
 
         assert main_preps_7[-1] == account_on_disqualification.address
-        tx_result: 'TransactionResult' = self.register_proposal(
+        tx_result: "TransactionResult" = self.register_proposal(
             main_preps_7[0],
             title="P-Rep Disqualification",
             description="the P-Rep is malicious",
             type_=ProposalType.PREP_DISQUALIFICATION.value,
-            value=account_on_disqualification.address)
+            value=account_on_disqualification.address,
+        )
         assert tx_result.status == TransactionResult.SUCCESS
         assert len(main_preps_7) == main_prep_count
 
@@ -382,17 +395,22 @@ class TestPreps(TestIISSBase):
             tx = self.create_vote_proposal_tx(from_=prep, id_=tx_hash, vote=vote)
             transactions.append(tx)
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block(
+        tx_results: List["TransactionResult"] = self.process_confirm_block(
             transactions,
             prev_block_generator=main_preps_7[0],
-            prev_block_validators=main_preps_7[1:]
+            prev_block_validators=main_preps_7[1:],
         )
         assert tx_results[-1].status == TransactionResult.FAILURE
 
         prep_on_disqualification_penalty = self.get_prep(account_on_disqualification)
-        assert prep_on_disqualification_penalty["status"] == PRepStatus.DISQUALIFIED.value
+        assert (
+            prep_on_disqualification_penalty["status"] == PRepStatus.DISQUALIFIED.value
+        )
         assert prep_on_disqualification_penalty["grade"] == PRepGrade.CANDIDATE.value
-        assert prep_on_disqualification_penalty["penalty"] == PenaltyReason.PREP_DISQUALIFICATION.value
+        assert (
+            prep_on_disqualification_penalty["penalty"]
+            == PenaltyReason.PREP_DISQUALIFICATION.value
+        )
 
         term_7_1 = self.get_prep_term()
         assert term_7_1["sequence"] == 7
@@ -402,7 +420,7 @@ class TestPreps(TestIISSBase):
         self._check_preps_on_get_prep_term([])
 
         _check_elected_prep_grades(preps, main_prep_count, elected_prep_count - 1)
-        main_preps_7: List['Address'] = _get_main_preps(preps, main_prep_count)
+        main_preps_7: List["Address"] = _get_main_preps(preps, main_prep_count)
         assert main_preps_7[-1] != account_on_disqualification.address
         # The first sub P-Rep replaces the main P-Rep which is disqualified by network proposal
         assert main_preps_7[-1] == term_7["preps"][main_prep_count]["address"]

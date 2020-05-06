@@ -3,14 +3,16 @@ from iconservice import *
 
 class SampleInvalidIndexEventLogScore(IconScoreBase):
     @eventlog(indexed=4)
-    def EventLogIndexExceedLimit(self, value1: str, value2: str, value3: str, value4: str):
+    def EventLogIndexExceedLimit(
+        self, value1: str, value2: str, value3: str, value4: str
+    ):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=str)
+        self._value = VarDB("value", db, value_type=str)
 
-    def on_install(self, value: str="default") -> None:
+    def on_install(self, value: str = "default") -> None:
         super().on_install()
         self.set_value(value)
 

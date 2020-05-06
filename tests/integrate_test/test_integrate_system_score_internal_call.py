@@ -36,65 +36,73 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
     In this test, only one success case per external method of System SCORE is checked
     through inter-call to confirm System SCORE inter-call functionality.
     """
-    use_interface : int = 0
+
+    use_interface: int = 0
 
     def setUp(self):
         super().setUp()
         self.update_governance()
         self.set_revision(Revision.IISS.value)
 
-        self.distribute_icx(accounts=self._accounts[:10],
-                            init_balance=10000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:10], init_balance=10000 * ICX_IN_LOOP
+        )
 
-        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
-                                                score_name="sample_system_score_intercall",
-                                                from_=self._accounts[0],
-                                                to_=SYSTEM_SCORE_ADDRESS,
-                                                deploy_params={"use_interface": hex(self.use_interface)})
+        tx1: dict = self.create_deploy_score_tx(
+            score_root="sample_internal_call_scores",
+            score_name="sample_system_score_intercall",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            deploy_params={"use_interface": hex(self.use_interface)},
+        )
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1])
-        self.score_addr: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx([tx1])
+        self.score_addr: "Address" = tx_results[0].score_address
 
     def test_system_score_intercall_stake(self):
         value = 1 * ICX_IN_LOOP
-        self.transfer_icx(from_=self._admin,
-                          to_=self._accounts[0],
-                          value=value * 3)
+        self.transfer_icx(from_=self._admin, to_=self._accounts[0], value=value * 3)
 
         # TEST: stake via 'setStake' system SCORE inter-call
-        self.score_call(from_=self._accounts[0],
-                        to_=self.score_addr,
-                        value=value,
-                        func_name="call_setStake",
-                        params={"value": hex(value)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            value=value,
+            func_name="call_setStake",
+            params={"value": hex(value)},
+        )
 
         # check stake result via 'getStake' system SCORE inter-call
-        expected_response = {'stake': value}
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getStake",
-                                    params={"address": str(self.score_addr)})
+        expected_response = {"stake": value}
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getStake",
+            params={"address": str(self.score_addr)},
+        )
         self.assertEqual(expected_response, response)
 
         # check unstake lock period via 'estimateUnstakeLockPeriod' system SCORE inter-call
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_estimateUnstakeLockPeriod",
-                                    params={})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_estimateUnstakeLockPeriod",
+            params={},
+        )
         self.assertTrue("unstakeLockPeriod" in response)
 
     def test_system_score_intercall_delegation(self):
         value = 1 * ICX_IN_LOOP
         stake = value * IISS_MAX_DELEGATIONS
-        self.transfer_icx(from_=self._admin,
-                          to_=self._accounts[0],
-                          value=stake)
+        self.transfer_icx(from_=self._admin, to_=self._accounts[0], value=stake)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=self.score_addr,
-                        value=stake,
-                        func_name="call_setStake",
-                        params={"value": hex(stake)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            value=stake,
+            func_name="call_setStake",
+            params={"value": hex(stake)},
+        )
 
         # TEST: delegate via 'setDelegation' system SCORE inter-call
         # set delegation 1 icx addr0 ~ addr9
@@ -103,29 +111,30 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
         delegations: list = []
         start_index: int = 0
         for i in range(IISS_MAX_DELEGATIONS):
-            delegation_info: dict = \
-                {
-                    "address": str(self._accounts[start_index + i].address),
-                    "value": hex(delegation_amount)
-                }
+            delegation_info: dict = {
+                "address": str(self._accounts[start_index + i].address),
+                "value": hex(delegation_amount),
+            }
             delegations.append(delegation_info)
             total_delegating += delegation_amount
 
-        self.score_call(from_=self._accounts[0],
-                        to_=self.score_addr,
-                        func_name="call_setDelegation",
-                        params={"delegations": delegations})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_setDelegation",
+            params={"delegations": delegations},
+        )
 
         # check delegation result with 'getStake' system SCORE inter-call
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getDelegation",
-                                    params={"address": str(self.score_addr)})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getDelegation",
+            params={"address": str(self.score_addr)},
+        )
         expected_response: list = [
-            {
-                "address": Address.from_string(d["address"]),
-                "value": int(d["value"], 16)
-            } for d in delegations
+            {"address": Address.from_string(d["address"]), "value": int(d["value"], 16)}
+            for d in delegations
         ]
         self.assertEqual(expected_response, response["delegations"])
         self.assertEqual(total_delegating, response["totalDelegated"])
@@ -140,33 +149,39 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
 
         # TEST: queryIScore
         RewardCalcProxy.query_iscore = Mock(return_value=(iscore, block_height))
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_queryIScore",
-                                    params={"address": str(self.score_addr)})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_queryIScore",
+            params={"address": str(self.score_addr)},
+        )
         expected_response = {
             "iscore": iscore,
             "estimatedICX": icx,
-            "blockHeight": block_height
+            "blockHeight": block_height,
         }
         self.assertEqual(expected_response, response)
 
         # TEST: claimIScore
         RewardCalcProxy.claim_iscore = Mock(return_value=(iscore, block_height))
-        tx_result = self.score_call(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_claimIScore",
-                                    params={})
+        tx_result = self.score_call(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_claimIScore",
+            params={},
+        )
         event_log = tx_result[0].event_logs[0]
         self.assertEqual([iscore, icx], event_log.data)
         self.assertEqual(["IScoreClaimed(int,int)"], event_log.indexed)
         self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
 
     def test_system_score_intercall_getIISSInfo(self):
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getIISSInfo",
-                                    params={})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getIISSInfo",
+            params={},
+        )
         self.assertTrue("blockHeight" in response)
         self.assertTrue("nextCalculation" in response)
         self.assertTrue("nextPRepTerm" in response)
@@ -175,16 +190,20 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
 
     def test_system_score_intercall_getPRep(self):
         with self.assertRaises(InvalidParamsException):
-            self.query_score(from_=self._accounts[0],
-                             to_=self.score_addr,
-                             func_name="call_getPRep",
-                             params={"address": str(self.score_addr)})
+            self.query_score(
+                from_=self._accounts[0],
+                to_=self.score_addr,
+                func_name="call_getPRep",
+                params={"address": str(self.score_addr)},
+            )
 
     def test_system_score_intercall_getPReps(self):
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getPReps",
-                                    params={"startRanking": hex(0), "endRanking": hex(0)})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getPReps",
+            params={"startRanking": hex(0), "endRanking": hex(0)},
+        )
         self.assertTrue("blockHeight" in response, response)
         self.assertTrue("startRanking" in response, response)
         self.assertTrue("totalDelegated" in response, response)
@@ -192,35 +211,45 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
         self.assertTrue("preps" in response, response)
 
     def test_system_score_intercall_getMainPRep(self):
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getMainPReps",
-                                    params={})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getMainPReps",
+            params={},
+        )
         self.assertTrue("totalDelegated" in response, response)
         self.assertTrue("preps" in response, response)
 
     def test_system_score_intercall_getSubPRep(self):
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getSubPReps",
-                                    params={})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getSubPReps",
+            params={},
+        )
         self.assertTrue("totalDelegated" in response, response)
         self.assertTrue("preps" in response, response)
 
     def test_system_score_intercall_getPRepTerm(self):
         with self.assertRaises(ServiceNotReadyException):
-            self.query_score(from_=self._accounts[0],
-                             to_=self.score_addr,
-                             func_name="call_getPRepTerm",
-                             params={})
+            self.query_score(
+                from_=self._accounts[0],
+                to_=self.score_addr,
+                func_name="call_getPRepTerm",
+                params={},
+            )
 
     def test_system_score_intercall_getScoreDepositInfo(self):
-        response = self.query_score(from_=self._accounts[0],
-                                    to_=self.score_addr,
-                                    func_name="call_getScoreDepositInfo",
-                                    params={"address": str(self.score_addr)})
+        response = self.query_score(
+            from_=self._accounts[0],
+            to_=self.score_addr,
+            func_name="call_getScoreDepositInfo",
+            params={"address": str(self.score_addr)},
+        )
         self.assertEqual(None, response)
 
 
-class TestIntegrateSystemScoreInternalCallWithInterface(TestIntegrateSystemScoreInternalCall):
+class TestIntegrateSystemScoreInternalCallWithInterface(
+    TestIntegrateSystemScoreInternalCall
+):
     use_interface = 1

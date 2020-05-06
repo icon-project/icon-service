@@ -38,9 +38,7 @@ class TestPreps(TestIISSBase):
 
     def _make_init_config(self) -> dict:
         config: dict = {
-            ConfigKey.SERVICE: {
-                ConfigKey.SERVICE_FEE: True
-            },
+            ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: True},
             ConfigKey.IISS_CALCULATE_PERIOD: self.calc_period,
             ConfigKey.TERM_PERIOD: self.term_period,
             ConfigKey.PENALTY_GRACE_PERIOD: self.penalty_grace_period,
@@ -49,7 +47,7 @@ class TestPreps(TestIISSBase):
             ConfigKey.PREP_MAIN_PREPS: self.prep_main_preps,
             ConfigKey.PREP_MAIN_AND_SUB_PREPS: self.prep_main_and_sub_preps,
             ConfigKey.DECENTRALIZE_TRIGGER: self.decentralize_trigger,
-            ConfigKey.PREP_REGISTRATION_FEE: self.prep_registration_fee
+            ConfigKey.PREP_REGISTRATION_FEE: self.prep_registration_fee,
         }
         return config
 
@@ -57,8 +55,10 @@ class TestPreps(TestIISSBase):
         self.update_governance()
         self.set_revision(Revision.IISS.value)
 
-        self.distribute_icx(accounts=self._accounts[:self.prep_main_and_sub_preps],
-                            init_balance=1 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[: self.prep_main_and_sub_preps],
+            init_balance=1 * ICX_IN_LOOP,
+        )
 
         tx_list = []
         for i in range(self.prep_main_and_sub_preps):
@@ -73,115 +73,111 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
-        for account in self._accounts[:self.prep_main_preps]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        for account in self._accounts[: self.prep_main_preps]:
+            expected_preps.append({"address": account.address, "delegated": 0})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
     def test_preps_replace_in_term(self):
         self._decentralized()
 
-        self.make_blocks(self._block_height + 1,
-                         prev_block_generator=self._accounts[0].address,
-                         prev_block_votes=
-                         [[account.address, True] for i, account in enumerate(self._accounts[1:self.prep_main_preps])]
-                         )
+        self.make_blocks(
+            self._block_height + 1,
+            prev_block_generator=self._accounts[0].address,
+            prev_block_votes=[
+                [account.address, True]
+                for i, account in enumerate(self._accounts[1 : self.prep_main_preps])
+            ],
+        )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
-        for account in self._accounts[:self.prep_main_preps]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        for account in self._accounts[: self.prep_main_preps]:
+            expected_preps.append({"address": account.address, "delegated": 0})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
-        self.make_blocks(self._block_height + 2,
-                         prev_block_generator=self._accounts[0].address,
-                         prev_block_votes=
-                         [[account.address, False] for i, account in enumerate(self._accounts[1:2])]
-                         +
-                         [[account.address, True] for i, account in enumerate(self._accounts[2:self.prep_main_preps])]
-                         )
+        self.make_blocks(
+            self._block_height + 2,
+            prev_block_generator=self._accounts[0].address,
+            prev_block_votes=[
+                [account.address, False]
+                for i, account in enumerate(self._accounts[1:2])
+            ]
+            + [
+                [account.address, True]
+                for i, account in enumerate(self._accounts[2 : self.prep_main_preps])
+            ],
+        )
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
-        expected_preps.append({
-            'address': self._accounts[0].address,
-            'delegated': 0
-        })
-        expected_preps.append({
-            'address': self._accounts[self.prep_main_preps].address,
-            'delegated': 0
-        })
-        for account in self._accounts[2:self.prep_main_preps]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        expected_preps.append({"address": self._accounts[0].address, "delegated": 0})
+        expected_preps.append(
+            {"address": self._accounts[self.prep_main_preps].address, "delegated": 0}
+        )
+        for account in self._accounts[2 : self.prep_main_preps]:
+            expected_preps.append({"address": account.address, "delegated": 0})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
-        self.make_blocks_to_end_calculation(prev_block_generator=self._accounts[0].address,
-                                            prev_block_votes=
-                                            [[account.address, True] for i, account in enumerate(self._accounts[2:self.prep_main_preps + 1])])
+        self.make_blocks_to_end_calculation(
+            prev_block_generator=self._accounts[0].address,
+            prev_block_votes=[
+                [account.address, True]
+                for i, account in enumerate(
+                    self._accounts[2 : self.prep_main_preps + 1]
+                )
+            ],
+        )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
-        for account in self._accounts[:self.prep_main_preps]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        for account in self._accounts[: self.prep_main_preps]:
+            expected_preps.append({"address": account.address, "delegated": 0})
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)
 
-        self.make_blocks(self._block_height + 2,
-                         prev_block_generator=self._accounts[0].address,
-                         prev_block_votes=
-                         [[account.address, False] for i, account in enumerate(self._accounts[1:2])]
-                         +
-                         [[account.address, True] for i, account in enumerate(self._accounts[2:self.prep_main_preps])]
-                         )
+        self.make_blocks(
+            self._block_height + 2,
+            prev_block_generator=self._accounts[0].address,
+            prev_block_votes=[
+                [account.address, False]
+                for i, account in enumerate(self._accounts[1:2])
+            ]
+            + [
+                [account.address, True]
+                for i, account in enumerate(self._accounts[2 : self.prep_main_preps])
+            ],
+        )
 
         response: dict = self.get_main_prep_list()
         expected_preps: list = []
         expected_total_delegated: int = 0
-        expected_preps.append({
-            'address': self._accounts[0].address,
-            'delegated': 0
-        })
-        expected_preps.append({
-            'address': self._accounts[self.prep_main_preps].address,
-            'delegated': 0
-        })
-        for account in self._accounts[2:self.prep_main_preps]:
-            expected_preps.append({
-                'address': account.address,
-                'delegated': 0
-            })
+        expected_preps.append({"address": self._accounts[0].address, "delegated": 0})
+        expected_preps.append(
+            {"address": self._accounts[self.prep_main_preps].address, "delegated": 0}
+        )
+        for account in self._accounts[2 : self.prep_main_preps]:
+            expected_preps.append({"address": account.address, "delegated": 0})
 
         expected_response: dict = {
             "preps": expected_preps,
-            "totalDelegated": expected_total_delegated
+            "totalDelegated": expected_total_delegated,
         }
         self.assertEqual(expected_response, response)

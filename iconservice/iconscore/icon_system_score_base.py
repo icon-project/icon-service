@@ -18,7 +18,11 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.exception import AccessDeniedException, IconServiceBaseException, InvalidParamsException
+from ..base.exception import (
+    AccessDeniedException,
+    IconServiceBaseException,
+    InvalidParamsException,
+)
 from ..icon_constant import IconNetworkValueType
 from ..inv.container import ValueConverter as INVConverter
 from ..inv.data.value import Value
@@ -32,7 +36,6 @@ if TYPE_CHECKING:
 
 
 class IconSystemScoreBase(IconScoreBase):
-
     @abstractmethod
     def on_install(self, **kwargs) -> None:
         """DB initialization on score install
@@ -46,12 +49,12 @@ class IconSystemScoreBase(IconScoreBase):
         super().on_update(**kwargs)
 
     @abstractmethod
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: "IconScoreDatabase") -> None:
         super().__init__(db)
         if not util_is_builtin_score(str(self.address)):
             raise AccessDeniedException(f"Not a system SCORE ({self.address})")
 
-    def is_builtin_score(self, score_address: 'Address') -> bool:
+    def is_builtin_score(self, score_address: "Address") -> bool:
         return util_is_builtin_score(str(score_address))
 
     # TODO remove after Update 0.0.6
@@ -62,19 +65,21 @@ class IconSystemScoreBase(IconScoreBase):
     def deploy(self, tx_hash: bytes) -> None:
         return IconScoreContextUtil.deploy(self._context, tx_hash)
 
-    def get_deploy_tx_params(self, tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
+    def get_deploy_tx_params(
+        self, tx_hash: bytes
+    ) -> Optional["IconScoreDeployTXParams"]:
         return IconScoreContextUtil.get_deploy_tx_params(self._context, tx_hash)
 
-    def get_deploy_info(self, address: 'Address') -> Optional['IconScoreDeployInfo']:
+    def get_deploy_info(self, address: "Address") -> Optional["IconScoreDeployInfo"]:
         return IconScoreContextUtil.get_deploy_info(self._context, address)
 
-    def is_score_active(self, score_address: 'Address') -> bool:
+    def is_score_active(self, score_address: "Address") -> bool:
         return IconScoreContextUtil.is_score_active(self._context, score_address)
 
-    def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
+    def get_owner(self, score_address: Optional["Address"]) -> Optional["Address"]:
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
-    def migrate_icon_network_value(self, data: Dict['IconNetworkValueType', Any]):
+    def migrate_icon_network_value(self, data: Dict["IconNetworkValueType", Any]):
         converted_data: list = []
         for type_, value in data.items():
             converted_data.append(INVConverter.convert_for_icon_service(type_, value))
@@ -82,29 +87,31 @@ class IconSystemScoreBase(IconScoreBase):
         self._context.storage.inv.migrate(self._context, converted_data)
 
     @classmethod
-    def _check_inv_type(cls, type_: 'IconNetworkValueType'):
+    def _check_inv_type(cls, type_: "IconNetworkValueType"):
         if type_ not in IconNetworkValueType:
             raise InvalidParamsException(f"Invalid INV type: {type_}")
 
-    def get_icon_network_value(self, type_: 'IconNetworkValueType') -> Any:
+    def get_icon_network_value(self, type_: "IconNetworkValueType") -> Any:
         self._check_inv_type(type_)
 
         value: Any = self._context.inv_container.get_by_type(type_)
         converted_value: Any = INVConverter.convert_for_governance(type_, value)
         return converted_value
 
-    def set_icon_network_value(self, type_: 'IconNetworkValueType', value: Any):
+    def set_icon_network_value(self, type_: "IconNetworkValueType", value: Any):
         self._check_inv_type(type_)
 
-        converted_value: 'Value' = INVConverter.convert_for_icon_service(type_, value)
+        converted_value: "Value" = INVConverter.convert_for_icon_service(type_, value)
         self._context.inv_container.set_inv_to_tx_batch(converted_value)
         self._context.storage.inv.put_value(self._context, converted_value)
 
-    def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
+    def disqualify_prep(self, address: "Address") -> Tuple[bool, str]:
         success: bool = True
         reason: str = ""
         try:
-            self._context.engine.prep.impose_prep_disqualified_penalty(self._context, address)
+            self._context.engine.prep.impose_prep_disqualified_penalty(
+                self._context, address
+            )
         except IconServiceBaseException as e:
             success = False
             reason = str(e)

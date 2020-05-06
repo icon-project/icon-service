@@ -18,14 +18,16 @@
 
 import unittest
 
-from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from iconservice.base.address import (
+    ICON_EOA_ADDRESS_BYTES_SIZE,
+    ICON_CONTRACT_ADDRESS_BYTES_SIZE,
+)
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.icx.delegation_part import DelegationPart
 from tests import create_address
 
 
 class TestDelegationPart(unittest.TestCase):
-
     def test_delegation_part_from_bytes_to_bytes(self):
         account = DelegationPart()
         data = account.to_bytes()
@@ -41,7 +43,7 @@ class TestDelegationPart(unittest.TestCase):
         preps: list = []
 
         for _ in range(0, 10):
-            prep: 'DelegationPart' = DelegationPart()
+            prep: "DelegationPart" = DelegationPart()
             prep.update_delegated_amount(10)
             preps.append((prep, 10))
 
@@ -55,10 +57,14 @@ class TestDelegationPart(unittest.TestCase):
 
     def test_delegation_part_make_key(self):
         key = DelegationPart.make_key(create_address())
-        self.assertEqual(ICON_EOA_ADDRESS_BYTES_SIZE + len(DelegationPart.PREFIX) + 1, len(key))
+        self.assertEqual(
+            ICON_EOA_ADDRESS_BYTES_SIZE + len(DelegationPart.PREFIX) + 1, len(key)
+        )
 
         key = DelegationPart.make_key(create_address(1))
-        self.assertEqual(ICON_CONTRACT_ADDRESS_BYTES_SIZE + len(DelegationPart.PREFIX), len(key))
+        self.assertEqual(
+            ICON_CONTRACT_ADDRESS_BYTES_SIZE + len(DelegationPart.PREFIX), len(key)
+        )
 
     def test_delegation_part_delegated_amount(self):
         delegated_amount = 10000
@@ -115,7 +121,7 @@ class TestDelegationPart(unittest.TestCase):
             part.set_delegations(delegations)
 
         self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.exception.code)
-        self.assertEqual('Delegations overflow', e.exception.message)
+        self.assertEqual("Delegations overflow", e.exception.message)
 
     def test_delegation_part_equal(self):
         part1 = DelegationPart()
@@ -129,5 +135,5 @@ class TestDelegationPart(unittest.TestCase):
         self.assertEqual(part1, part3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

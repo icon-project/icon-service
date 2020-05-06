@@ -32,7 +32,9 @@ class IconScoreInfo(object):
     If this class is not necessary anymore, Remove it
     """
 
-    def __init__(self, score_class: type, score_db: 'IconScoreDatabase', tx_hash: bytes) -> None:
+    def __init__(
+        self, score_class: type, score_db: "IconScoreDatabase", tx_hash: bytes
+    ) -> None:
         """Constructor
 
         :param score_class:
@@ -53,14 +55,14 @@ class IconScoreInfo(object):
         return self._score_class
 
     @property
-    def score_db(self) -> 'IconScoreDatabase':
+    def score_db(self) -> "IconScoreDatabase":
         return self._score_db
 
     @property
-    def address(self) -> 'Address':
+    def address(self) -> "Address":
         return self._score_db.address
 
-    def get_score(self, revision: int) -> 'IconScoreBase':
+    def get_score(self, revision: int) -> "IconScoreBase":
         """Provide a score instance according to the revision.
         1. revision <= 2: Returns a cached score instance
         2. revision > 2: Returns a newly created score instance
@@ -76,12 +78,12 @@ class IconScoreInfo(object):
 
         return self.create_score()
 
-    def create_score(self) -> 'IconScoreBase':
+    def create_score(self) -> "IconScoreBase":
         return self._score_class(self._score_db)
 
 
 class IconScoreMapperObject(dict):
-    def __getitem__(self, key: 'Address') -> 'IconScoreInfo':
+    def __getitem__(self, key: "Address") -> "IconScoreInfo":
         """operator[] overriding
 
         :param key:
@@ -90,9 +92,7 @@ class IconScoreMapperObject(dict):
         self._check_key_type(key)
         return super().__getitem__(key)
 
-    def __setitem__(self,
-                    key: 'Address',
-                    value: 'IconScoreInfo') -> None:
+    def __setitem__(self, key: "Address", value: "IconScoreInfo") -> None:
         """
         :param key:
         :param value: IconScoreInfo
@@ -102,20 +102,17 @@ class IconScoreMapperObject(dict):
         super().__setitem__(key, value)
 
     @staticmethod
-    def _check_key_type(address: 'Address') -> None:
+    def _check_key_type(address: "Address") -> None:
         """Check if key type is an icon score address type or not.
 
         :param address: icon score address
         """
         if not isinstance(address, Address):
-            raise InvalidParamsException(
-                f'{address} is an invalid address')
+            raise InvalidParamsException(f"{address} is an invalid address")
         if not address.is_contract:
-            raise InvalidParamsException(
-                f'{address} is not an icon score address.')
+            raise InvalidParamsException(f"{address} is not an icon score address.")
 
     @staticmethod
-    def _check_value_type(info: 'IconScoreInfo') -> None:
+    def _check_value_type(info: "IconScoreInfo") -> None:
         if not isinstance(info, IconScoreInfo):
-            raise InvalidParamsException(
-                f'{info} is not IconScoreInfo type.')
+            raise InvalidParamsException(f"{info} is not IconScoreInfo type.")

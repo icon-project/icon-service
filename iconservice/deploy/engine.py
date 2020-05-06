@@ -21,8 +21,10 @@ from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_path
 from ..base.ComponentBase import EngineBase
 from ..base.address import (
-    Address, SYSTEM_SCORE_ADDRESS,
-    generate_score_address_for_tbears, generate_score_address,
+    Address,
+    SYSTEM_SCORE_ADDRESS,
+    generate_score_address_for_tbears,
+    generate_score_address,
 )
 from ..base.exception import AccessDeniedException, InvalidParamsException
 from ..base.message import Message
@@ -48,7 +50,9 @@ class Engine(EngineBase):
     """It handles transactions to install, update and audit a SCORE
     """
 
-    def invoke(self, context: 'IconScoreContext', to: 'Address', data: dict) -> 'Address':
+    def invoke(
+        self, context: "IconScoreContext", to: "Address", data: dict
+    ) -> "Address":
         """Handle data contained in icx_sendTransaction message
         :param context:
         :param to: If 'to' is SYSTEM_SCORE_ADDRESS, install SCORE. Otherwise update SCORE
@@ -88,32 +92,43 @@ class Engine(EngineBase):
 
         return score_address
 
-    def _invoke(self, context: "IconScoreContext", to: "Address",
-                icon_score_address: "Address", data: dict) -> None:
+    def _invoke(
+        self,
+        context: "IconScoreContext",
+        to: "Address",
+        icon_score_address: "Address",
+        data: dict,
+    ) -> None:
         assert icon_score_address is not None
         assert icon_score_address != SYSTEM_SCORE_ADDRESS
         assert icon_score_address.is_contract
 
         if icon_score_address in (None, SYSTEM_SCORE_ADDRESS):
-            raise InvalidParamsException(f'Invalid SCORE address: {icon_score_address}')
+            raise InvalidParamsException(f"Invalid SCORE address: {icon_score_address}")
 
         try:
-            deploy_type: 'DeployType' = \
-                DeployType.INSTALL if to == SYSTEM_SCORE_ADDRESS else DeployType.UPDATE
+            deploy_type: "DeployType" = DeployType.INSTALL if to == SYSTEM_SCORE_ADDRESS else DeployType.UPDATE
 
             context.storage.deploy.put_deploy_info_and_tx_params(
-                context, icon_score_address, deploy_type,
-                context.tx.origin, context.tx.hash, data)
+                context,
+                icon_score_address,
+                deploy_type,
+                context.tx.origin,
+                context.tx.hash,
+                data,
+            )
 
             if not self._is_audit_needed(context, icon_score_address):
                 self.deploy(context, context.tx.hash)
 
         except BaseException as e:
-            Logger.warning('Failed to write deploy info and tx params', ICON_DEPLOY_LOG_TAG)
+            Logger.warning(
+                "Failed to write deploy info and tx params", ICON_DEPLOY_LOG_TAG
+            )
             raise e
 
     @staticmethod
-    def _is_audit_needed(context: 'IconScoreContext', score_address: Address) -> bool:
+    def _is_audit_needed(context: "IconScoreContext", score_address: Address) -> bool:
         """Check whether audit process is needed or not
         :param context:
         :param score_address:
@@ -125,12 +140,16 @@ class Engine(EngineBase):
             is_system_score = False
 
         # FiXME: SCORE owner check should be done before calling self._is_audit_needed().
-        is_owner: bool = context.tx.origin == IconScoreContextUtil.get_owner(context, score_address)
-        is_audit_enabled: bool = IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.AUDIT)
+        is_owner: bool = context.tx.origin == IconScoreContextUtil.get_owner(
+            context, score_address
+        )
+        is_audit_enabled: bool = IconScoreContextUtil.is_service_flag_on(
+            context, IconServiceFlag.AUDIT
+        )
 
         return is_audit_enabled and not (is_system_score and is_owner)
 
-    def deploy(self, context: 'IconScoreContext', tx_hash: bytes) -> None:
+    def deploy(self, context: "IconScoreContext", tx_hash: bytes) -> None:
         """
         1. Convert a content from hex string to bytes
         2. Decompress zipped SCORE code and write it to filesystem
@@ -142,41 +161,43 @@ class Engine(EngineBase):
         :param tx_hash:
         """
 
-        tx_params: 'IconScoreDeployTXParams' =\
-            context.storage.deploy.get_deploy_tx_params(context, tx_hash)
+        tx_params: "IconScoreDeployTXParams" = context.storage.deploy.get_deploy_tx_params(
+            context, tx_hash
+        )
         if tx_params is None:
-            raise InvalidParamsException(f'tx_params is None: 0x{tx_hash.hex()}')
+            raise InvalidParamsException(f"tx_params is None: 0x{tx_hash.hex()}")
 
-        score_address: 'Address' = tx_params.score_address
+        score_address: "Address" = tx_params.score_address
         tmp_current = context.current_address
         context.current_address = score_address
         self._score_deploy(context, tx_params)
         context.storage.deploy.update_score_info(context, score_address, tx_hash)
         context.current_address = tmp_current
 
-    def _score_deploy(self, context: 'IconScoreContext', tx_params: 'IconScoreDeployTXParams'):
+    def _score_deploy(
+        self, context: "IconScoreContext", tx_params: "IconScoreDeployTXParams"
+    ):
         """
         :param tx_params: use deploy_data from IconScoreDeployTxParams info
         :return:
         """
 
         data: dict = tx_params.deploy_data
-        content_type: str = data.get('contentType')
+        content_type: str = data.get("contentType")
 
-        if content_type == 'application/tbears':
+        if content_type == "application/tbears":
             if not context.legacy_tbears_mode:
-                raise InvalidParamsException(f'Invalid contentType: application/tbears')
-        elif content_type == 'application/zip':
-            data['content'] = bytes.fromhex(data['content'][2:])
+                raise InvalidParamsException(f"Invalid contentType: application/tbears")
+        elif content_type == "application/zip":
+            data["content"] = bytes.fromhex(data["content"][2:])
         else:
-            raise InvalidParamsException(
-                f'Invalid contentType: {content_type}')
+            raise InvalidParamsException(f"Invalid contentType: {content_type}")
 
         self._on_deploy(context, tx_params)
 
-    def _on_deploy(self,
-                   context: 'IconScoreContext',
-                   tx_params: 'IconScoreDeployTXParams') -> None:
+    def _on_deploy(
+        self, context: "IconScoreContext", tx_params: "IconScoreDeployTXParams"
+    ) -> None:
         """
         Decompress a SCORE zip file and write them to file system
         Create a SCORE instance from SCORE class
@@ -187,9 +208,11 @@ class Engine(EngineBase):
 
         data = tx_params.deploy_data
         score_address = tx_params.score_address
-        params: dict = data.get('params', {})
+        params: dict = data.get("params", {})
 
-        deploy_info: 'IconScoreDeployInfo' = context.storage.deploy.get_deploy_info(context, tx_params.score_address)
+        deploy_info: "IconScoreDeployInfo" = context.storage.deploy.get_deploy_info(
+            context, tx_params.score_address
+        )
         next_tx_hash: bytes = deploy_info.next_tx_hash
 
         self._write_score_to_filesystem(context, score_address, next_tx_hash, data)
@@ -199,13 +222,16 @@ class Engine(EngineBase):
         new_tx_score_mapper: dict = {}
 
         try:
-            IconScoreContextUtil.validate_score_package(context, score_address, next_tx_hash)
+            IconScoreContextUtil.validate_score_package(
+                context, score_address, next_tx_hash
+            )
 
-            score_info: 'IconScoreInfo' =\
-                self._create_score_info(context, score_address, next_tx_hash)
+            score_info: "IconScoreInfo" = self._create_score_info(
+                context, score_address, next_tx_hash
+            )
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
-            score: 'IconScoreBase' = score_info.get_score(context.revision)
+            score: "IconScoreBase" = score_info.get_score(context.revision)
             ScoreApiGenerator.check_on_deploy(context, score)
 
             # owner is set in IconScoreBase.__init__()
@@ -215,66 +241,90 @@ class Engine(EngineBase):
             self._initialize_score(tx_params.deploy_type, score, params)
             new_tx_score_mapper[score_address] = score_info
         except BaseException as e:
-            Logger.warning(f'Failed to deploy a SCORE: {score_address}', ICON_DEPLOY_LOG_TAG)
+            Logger.warning(
+                f"Failed to deploy a SCORE: {score_address}", ICON_DEPLOY_LOG_TAG
+            )
             raise e
         finally:
             context.msg = backup_msg
             context.tx = backup_tx
-            self._update_new_score_mapper(context.new_icon_score_mapper, new_tx_score_mapper)
+            self._update_new_score_mapper(
+                context.new_icon_score_mapper, new_tx_score_mapper
+            )
 
-    def _update_new_score_mapper(self, block_mapper: 'IconScoreMapper', tx_mapper: dict):
+    def _update_new_score_mapper(
+        self, block_mapper: "IconScoreMapper", tx_mapper: dict
+    ):
         for address, score_info in tx_mapper.items():
             block_mapper[address] = score_info
 
-    def _write_score_to_filesystem(self, context: 'IconScoreContext',
-                                   score_address: 'Address', tx_hash: bytes, deploy_data: dict):
+    def _write_score_to_filesystem(
+        self,
+        context: "IconScoreContext",
+        score_address: "Address",
+        tx_hash: bytes,
+        deploy_data: dict,
+    ):
 
-        content_type: str = deploy_data.get('contentType')
-        content = deploy_data.get('content')
+        content_type: str = deploy_data.get("contentType")
+        content = deploy_data.get("content")
 
-        if content_type == 'application/tbears':
-            write_score_to_score_deploy_path: callable =\
-                self._write_score_to_score_deploy_path_on_tbears_mode
+        if content_type == "application/tbears":
+            write_score_to_score_deploy_path: callable = self._write_score_to_score_deploy_path_on_tbears_mode
         else:
-            write_score_to_score_deploy_path: callable =\
-                self._write_score_to_score_deploy_path
+            write_score_to_score_deploy_path: callable = self._write_score_to_score_deploy_path
 
         write_score_to_score_deploy_path(context, score_address, tx_hash, content)
 
     @staticmethod
-    def _create_score_info(context: 'IconScoreContext',
-                           score_address: 'Address', tx_hash: bytes) -> 'IconScoreInfo':
+    def _create_score_info(
+        context: "IconScoreContext", score_address: "Address", tx_hash: bytes
+    ) -> "IconScoreInfo":
         """Create the score_info instance associated with the SCORE to deploy
         :param context:
         :param score_address:
         :param tx_hash:
         :return:
         """
-        current_score_info: 'IconScoreInfo' = IconScoreContextUtil.get_score_info(context, score_address)
+        current_score_info: "IconScoreInfo" = IconScoreContextUtil.get_score_info(
+            context, score_address
+        )
 
         # Reuse score_db if it has already existed.
         score_db = None
         if current_score_info is not None:
             score_db = current_score_info.score_db
 
-        return IconScoreContextUtil.create_score_info(context, score_address, tx_hash, score_db)
+        return IconScoreContextUtil.create_score_info(
+            context, score_address, tx_hash, score_db
+        )
 
     @staticmethod
     def _write_score_to_score_deploy_path_on_tbears_mode(
-            context: 'IconScoreContext', score_address: 'Address', tx_hash: bytes, content: bytes):
+        context: "IconScoreContext",
+        score_address: "Address",
+        tx_hash: bytes,
+        content: bytes,
+    ):
         score_root_path: str = context.score_root_path
         score_path: str = get_score_path(score_root_path, score_address)
         os.makedirs(score_path, exist_ok=True)
 
-        score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
+        score_deploy_path: str = get_score_deploy_path(
+            score_root_path, score_address, tx_hash
+        )
         try:
             os.symlink(content, score_deploy_path, target_is_directory=True)
         except FileExistsError:
             pass
 
     @staticmethod
-    def _write_score_to_score_deploy_path(context: 'IconScoreContext',
-                                          score_address: 'Address', tx_hash: bytes, content: bytes):
+    def _write_score_to_score_deploy_path(
+        context: "IconScoreContext",
+        score_address: "Address",
+        tx_hash: bytes,
+        content: bytes,
+    ):
         """Write SCORE code to file system
 
         :param context: IconScoreContext instance
@@ -287,13 +337,16 @@ class Engine(EngineBase):
 
         # score_root_path is the directory which contains all deployed scores.
         score_root_path: str = context.score_root_path
-        score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
+        score_deploy_path: str = get_score_deploy_path(
+            score_root_path, score_address, tx_hash
+        )
 
         if revision >= Revision.THREE.value:
             # If the path to deploy a score has been present, remove it before deploying.
             score_root_path: str = context.score_root_path
-            score_path: str =\
-                os.path.join(score_root_path, score_address.to_bytes().hex(), f'0x{tx_hash.hex()}')
+            score_path: str = os.path.join(
+                score_root_path, score_address.to_bytes().hex(), f"0x{tx_hash.hex()}"
+            )
             remove_path(score_path)
 
         if revision >= Revision.TWO.value:
@@ -302,7 +355,9 @@ class Engine(EngineBase):
             IconScoreDeployer.deploy_legacy(score_deploy_path, content)
 
     @staticmethod
-    def _initialize_score(deploy_type: DeployType, score: 'IconScoreBase', params: dict):
+    def _initialize_score(
+        deploy_type: DeployType, score: "IconScoreBase", params: dict
+    ):
         """Call on_install() or on_update() of a SCORE
         only once when installing or updating it
         :param deploy_type: DeployType.INSTALL or DeployType.UPDATE
@@ -314,7 +369,7 @@ class Engine(EngineBase):
         elif deploy_type == DeployType.UPDATE:
             on_init = score.on_update
         else:
-            raise InvalidParamsException(f'Invalid deployType: {deploy_type}')
+            raise InvalidParamsException(f"Invalid deployType: {deploy_type}")
 
         TypeConverter.adjust_params_to_method(on_init, params)
         on_init(**params)

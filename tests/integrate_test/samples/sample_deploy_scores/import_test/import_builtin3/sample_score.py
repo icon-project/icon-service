@@ -1,18 +1,18 @@
 from iconservice import *
+
 tmpOs = __import__("os")
 
 
 class SampleScore(IconScoreBase):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
-    def on_install(self, value: int=1000) -> None:
+    def on_install(self, value: int = 1000) -> None:
         super().on_install()
         self._value.set(value)
 
@@ -31,7 +31,7 @@ class SampleScore(IconScoreBase):
         for filename in tmpOs.listdir(folder):
             fullname = tmpOs.path.join(folder, filename)
             filelist = f"{filelist}, {fullname}"
-            
+
         return filelist
 
     @external(readonly=True)
@@ -49,4 +49,4 @@ class SampleScore(IconScoreBase):
 
     @external
     def increase_value(self):
-        self._value.set(self._value.get()+1)
+        self._value.set(self._value.get() + 1)

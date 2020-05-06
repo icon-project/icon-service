@@ -18,7 +18,9 @@
 """
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP, ConfigKey, IISS_DAY_BLOCK
-from tests.legacy_unittest.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
+from tests.legacy_unittest.iiss.test_iiss_engine import (
+    EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT,
+)
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -28,7 +30,7 @@ class TestIISSUnStakeLockPeriod(TestIISSBase):
         return {
             ConfigKey.IISS_META_DATA: {
                 ConfigKey.UN_STAKE_LOCK_MIN: IISS_DAY_BLOCK * 5,
-                ConfigKey.UN_STAKE_LOCK_MAX: IISS_DAY_BLOCK * 20
+                ConfigKey.UN_STAKE_LOCK_MAX: IISS_DAY_BLOCK * 20,
             }
         }
 
@@ -40,21 +42,24 @@ class TestIISSUnStakeLockPeriod(TestIISSBase):
 
         # get almost total supply (total supply - 3 ICX)
         genesis_balance: int = TOTAL_SUPPLY * ICX_IN_LOOP - 3 * ICX_IN_LOOP
-        self.transfer_icx(from_=self._admin,
-                          to_=self._accounts[0],
-                          value=genesis_balance)
+        self.transfer_icx(
+            from_=self._admin, to_=self._accounts[0], value=genesis_balance
+        )
 
         # set stake (from total stake percent 1% ~ 99%)
         for stake_percent in range(1, 100):
             stake: int = int(TOTAL_SUPPLY * ICX_IN_LOOP * (stake_percent / 100))
-            self.set_stake(from_=self._accounts[0],
-                           value=stake)
+            self.set_stake(from_=self._accounts[0], value=stake)
 
             stake: int = 0
-            self.set_stake(from_=self._accounts[0],
-                           value=stake)
+            self.set_stake(from_=self._accounts[0], value=stake)
 
             actual_response: dict = self.get_stake(self._accounts[0])
-            actual_lockup_period = actual_response['unstakeBlockHeight'] - self._block_height
-            diff = abs(actual_lockup_period - EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT[stake_percent])
+            actual_lockup_period = (
+                actual_response["unstakeBlockHeight"] - self._block_height
+            )
+            diff = abs(
+                actual_lockup_period
+                - EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT[stake_percent]
+            )
             assert diff <= 1

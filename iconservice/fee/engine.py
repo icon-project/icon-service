@@ -34,7 +34,7 @@ if typing.TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 FIXED_TERM = True
-FIXED_RATIO_PER_MONTH = '0.08'
+FIXED_RATIO_PER_MONTH = "0.08"
 BLOCKS_IN_ONE_MONTH = 1_296_000
 
 
@@ -43,9 +43,9 @@ class DepositInfo:
     Deposit information of a SCORE
     """
 
-    def __init__(self, score_address: 'Address'):
+    def __init__(self, score_address: "Address"):
         # SCORE address
-        self.score_address: 'Address' = score_address
+        self.score_address: "Address" = score_address
         # List of deposits
         self.deposits: List[Deposit] = []
         # available virtual STEPs to use
@@ -66,7 +66,9 @@ class DepositInfo:
 
             new_key = casing(key) if casing else key
             if isinstance(value, list):
-                new_dict[new_key] = [v.to_dict(casing) for v in value if isinstance(v, Deposit)]
+                new_dict[new_key] = [
+                    v.to_dict(casing) for v in value if isinstance(v, Deposit)
+                ]
             else:
                 new_dict[new_key] = value
 
@@ -87,10 +89,9 @@ class Engine(EngineBase):
     _MIN_DEPOSIT_TERM = BLOCKS_IN_ONE_MONTH
     _MAX_DEPOSIT_TERM = _MIN_DEPOSIT_TERM if FIXED_TERM else BLOCKS_IN_ONE_MONTH * 24
 
-    def get_deposit_info(self,
-                         context: 'IconScoreContext',
-                         score_address: 'Address',
-                         block_height: int) -> 'DepositInfo':
+    def get_deposit_info(
+        self, context: "IconScoreContext", score_address: "Address", block_height: int
+    ) -> "DepositInfo":
         """
         Gets the SCORE deposit information
 
@@ -117,19 +118,22 @@ class Engine(EngineBase):
             # Retrieves available virtual STEPs and deposits
             if block_height < deposit.expires:
                 deposit_info.available_virtual_step += deposit.remaining_virtual_step
-                deposit_info.available_deposit += \
-                    max(deposit.remaining_deposit - deposit.min_remaining_deposit, 0)
+                deposit_info.available_deposit += max(
+                    deposit.remaining_deposit - deposit.min_remaining_deposit, 0
+                )
 
         return deposit_info if len(deposit_info.deposits) > 0 else None
 
-    def add_deposit(self,
-                    context: 'IconScoreContext',
-                    tx_hash: bytes,
-                    sender: 'Address',
-                    score_address: 'Address',
-                    amount: int,
-                    block_height: int,
-                    term: int):
+    def add_deposit(
+        self,
+        context: "IconScoreContext",
+        tx_hash: bytes,
+        sender: "Address",
+        score_address: "Address",
+        amount: int,
+        block_height: int,
+        term: int,
+    ):
         """
         Deposits ICXs for the SCORE.
         It may be issued the virtual STEPs for the SCORE to be able to pay share fees.
@@ -147,12 +151,13 @@ class Engine(EngineBase):
         # - Calculates Virtual Step
         # - Updates Deposit Data
 
-        if (FIXED_TERM and amount < self._MIN_DEPOSIT_AMOUNT) \
-                or not (self._MIN_DEPOSIT_AMOUNT <= amount <= self._MAX_DEPOSIT_AMOUNT):
-            raise InvalidRequestException('Invalid deposit amount')
+        if (FIXED_TERM and amount < self._MIN_DEPOSIT_AMOUNT) or not (
+            self._MIN_DEPOSIT_AMOUNT <= amount <= self._MAX_DEPOSIT_AMOUNT
+        ):
+            raise InvalidRequestException("Invalid deposit amount")
 
         if not (self._MIN_DEPOSIT_TERM <= term <= self._MAX_DEPOSIT_TERM):
-            raise InvalidRequestException('Invalid deposit term')
+            raise InvalidRequestException("Invalid deposit term")
 
         self._check_score_ownership(context, sender, score_address)
 
@@ -166,12 +171,13 @@ class Engine(EngineBase):
         deposit.expires = block_height + term
 
         step_price = context.step_counter.step_price
-        deposit.virtual_step_issued = \
-            VirtualStepCalculator.calculate_virtual_step(amount, term, step_price)
+        deposit.virtual_step_issued = VirtualStepCalculator.calculate_virtual_step(
+            amount, term, step_price
+        )
 
         self._append_deposit(context, deposit)
 
-    def _append_deposit(self, context: 'IconScoreContext', deposit: 'Deposit'):
+    def _append_deposit(self, context: "IconScoreContext", deposit: "Deposit"):
         """
         Append deposit data to storage
         """
@@ -204,13 +210,17 @@ class Engine(EngineBase):
             deposit_meta.expires_of_deposit = deposit.expires
 
         deposit_meta.tail_id = deposit.id
-        context.storage.fee.put_deposit_meta(context, deposit.score_address, deposit_meta)
+        context.storage.fee.put_deposit_meta(
+            context, deposit.score_address, deposit_meta
+        )
 
-    def withdraw_deposit(self,
-                         context: 'IconScoreContext',
-                         sender: 'Address',
-                         deposit_id: bytes,
-                         block_height: int) -> (int, int):
+    def withdraw_deposit(
+        self,
+        context: "IconScoreContext",
+        sender: "Address",
+        deposit_id: bytes,
+        block_height: int,
+    ) -> (int, int):
         """
         Withdraws deposited ICXs from given id.
         It may be paid the penalty if the expiry has not been met.
@@ -229,9 +239,9 @@ class Engine(EngineBase):
         deposit = self.get_deposit(context, deposit_id)
 
         if deposit.sender != sender:
-            raise InvalidRequestException('Invalid sender')
+            raise InvalidRequestException("Invalid sender")
         if deposit.score_address != context.tx.to:
-            raise InvalidRequestException('Invalid SCORE address')
+            raise InvalidRequestException("Invalid SCORE address")
 
         step_price = context.step_counter.step_price
         penalty = self._calculate_penalty(deposit, block_height, step_price)
@@ -257,7 +267,9 @@ class Engine(EngineBase):
 
         return withdrawal_amount, penalty
 
-    def _delete_deposit(self, context: 'IconScoreContext', deposit: 'Deposit', block_height: int) -> None:
+    def _delete_deposit(
+        self, context: "IconScoreContext", deposit: "Deposit", block_height: int
+    ) -> None:
         """
         Deletes deposit information from storage
         """
@@ -274,19 +286,28 @@ class Engine(EngineBase):
             context.storage.fee.put_deposit(context, next_deposit)
 
         # Update index info
-        deposit_meta = context.storage.fee.get_deposit_meta(context, deposit.score_address)
+        deposit_meta = context.storage.fee.get_deposit_meta(
+            context, deposit.score_address
+        )
         deposit_meta_changed = False
 
         if deposit_meta.head_id == deposit.id:
             deposit_meta.head_id = deposit.next_id
             deposit_meta_changed = True
 
-        if deposit.id in (deposit_meta.available_head_id_of_virtual_step, deposit_meta.available_head_id_of_deposit):
+        if deposit.id in (
+            deposit_meta.available_head_id_of_virtual_step,
+            deposit_meta.available_head_id_of_deposit,
+        ):
             gen = self._deposit_generator(context, deposit.next_id)
-            next_available_deposit = \
-                next(filter(lambda d: block_height < d.expires, gen), None)
-            next_deposit_id = \
-                next_available_deposit.id if next_available_deposit is not None else None
+            next_available_deposit = next(
+                filter(lambda d: block_height < d.expires, gen), None
+            )
+            next_deposit_id = (
+                next_available_deposit.id
+                if next_available_deposit is not None
+                else None
+            )
 
             if deposit_meta.available_head_id_of_virtual_step == deposit.id:
                 # Search for next deposit id which is available to use virtual step
@@ -299,15 +320,23 @@ class Engine(EngineBase):
             deposit_meta_changed = True
 
         if deposit_meta.expires_of_virtual_step == deposit.expires:
-            gen = self._deposit_generator(context, deposit_meta.available_head_id_of_virtual_step)
+            gen = self._deposit_generator(
+                context, deposit_meta.available_head_id_of_virtual_step
+            )
             max_expires = max(map(lambda d: d.expires, gen), default=-1)
-            deposit_meta.expires_of_virtual_step = max_expires if max_expires > block_height else -1
+            deposit_meta.expires_of_virtual_step = (
+                max_expires if max_expires > block_height else -1
+            )
             deposit_meta_changed = True
 
         if deposit_meta.expires_of_deposit == deposit.expires:
-            gen = self._deposit_generator(context, deposit_meta.available_head_id_of_deposit)
+            gen = self._deposit_generator(
+                context, deposit_meta.available_head_id_of_deposit
+            )
             max_expires = max(map(lambda d: d.expires, gen), default=-1)
-            deposit_meta.expires_of_deposit = max_expires if max_expires > block_height else -1
+            deposit_meta.expires_of_deposit = (
+                max_expires if max_expires > block_height else -1
+            )
             deposit_meta_changed = True
 
         if deposit_meta.tail_id == deposit.id:
@@ -316,12 +345,14 @@ class Engine(EngineBase):
 
         if deposit_meta_changed:
             # Updates if the information has been changed
-            context.storage.fee.put_deposit_meta(context, deposit.score_address, deposit_meta)
+            context.storage.fee.put_deposit_meta(
+                context, deposit.score_address, deposit_meta
+            )
 
         # Deletes deposit info
         context.storage.fee.delete_deposit(context, deposit.id)
 
-    def get_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> Deposit:
+    def get_deposit(self, context: "IconScoreContext", deposit_id: bytes) -> Deposit:
         """
         Gets the deposit data.
         Raise an exception if the deposit from the given id does not exist.
@@ -335,11 +366,13 @@ class Engine(EngineBase):
 
         deposit = context.storage.fee.get_deposit(context, deposit_id)
         if deposit is None:
-            raise InvalidRequestException('Deposit not found')
+            raise InvalidRequestException("Deposit not found")
 
         return deposit
 
-    def check_score_available(self, context: 'IconScoreContext', score_address: 'Address', block_height: int):
+    def check_score_available(
+        self, context: "IconScoreContext", score_address: "Address", block_height: int
+    ):
         """
         Check if the SCORE is available.
         If the SCORE is sharing fee, SCORE should be able to pay the fee,
@@ -349,25 +382,31 @@ class Engine(EngineBase):
         :param score_address: SCORE address
         :param block_height: current block height
         """
-        deposit_meta: 'DepositMeta' = self._get_or_create_deposit_meta(context, score_address)
+        deposit_meta: "DepositMeta" = self._get_or_create_deposit_meta(
+            context, score_address
+        )
 
         if self._is_score_sharing_fee(deposit_meta):
-            virtual_step_available = \
-                block_height < deposit_meta.expires_of_virtual_step \
+            virtual_step_available = (
+                block_height < deposit_meta.expires_of_virtual_step
                 and deposit_meta.available_head_id_of_virtual_step is not None
+            )
 
-            deposit_available = \
-                block_height < deposit_meta.expires_of_deposit \
+            deposit_available = (
+                block_height < deposit_meta.expires_of_deposit
                 and deposit_meta.available_head_id_of_deposit is not None
+            )
 
             if not virtual_step_available and not deposit_available:
-                raise InvalidRequestException('Out of deposit balance')
+                raise InvalidRequestException("Out of deposit balance")
 
     @staticmethod
-    def _is_score_sharing_fee(deposit_meta: 'DepositMeta') -> bool:
+    def _is_score_sharing_fee(deposit_meta: "DepositMeta") -> bool:
         return deposit_meta is not None and deposit_meta.head_id is not None
 
-    def _get_fee_sharing_proportion(self, context: 'IconScoreContext', deposit_meta: 'DepositMeta'):
+    def _get_fee_sharing_proportion(
+        self, context: "IconScoreContext", deposit_meta: "DepositMeta"
+    ):
 
         if not self._is_score_sharing_fee(deposit_meta):
             # If there are no deposits, ignores the fee sharing ratio that the SCORE set.
@@ -375,13 +414,15 @@ class Engine(EngineBase):
 
         return context.fee_sharing_proportion
 
-    def charge_transaction_fee(self,
-                               context: 'IconScoreContext',
-                               sender: 'Address',
-                               to: 'Address',
-                               step_price: int,
-                               used_step: int,
-                               block_height: int) -> Dict['Address', int]:
+    def charge_transaction_fee(
+        self,
+        context: "IconScoreContext",
+        sender: "Address",
+        to: "Address",
+        step_price: int,
+        used_step: int,
+        block_height: int,
+    ) -> Dict["Address", int]:
         """
         Charges fees for the used STEPs.
         It can pay by shared if the msg recipient set to share fees.
@@ -399,7 +440,8 @@ class Engine(EngineBase):
 
         if to.is_contract:
             recipient_step = self._charge_fee_from_score(
-                context, to, step_price, used_step, block_height)
+                context, to, step_price, used_step, block_height
+            )
 
         sender_step = used_step - recipient_step
         context.engine.icx.charge_fee(context, sender, sender_step * step_price)
@@ -414,12 +456,14 @@ class Engine(EngineBase):
 
         return step_used_details
 
-    def _charge_fee_from_score(self,
-                               context: 'IconScoreContext',
-                               score_address: 'Address',
-                               step_price: int,
-                               used_step: int,
-                               block_height: int) -> int:
+    def _charge_fee_from_score(
+        self,
+        context: "IconScoreContext",
+        score_address: "Address",
+        step_price: int,
+        used_step: int,
+        block_height: int,
+    ) -> int:
         """
         Charges fees from SCORE
         Returns total STEPs SCORE paid
@@ -428,32 +472,40 @@ class Engine(EngineBase):
         deposit_meta = context.storage.fee.get_deposit_meta(context, score_address)
 
         # Amount of STEPs that SCORE will pay
-        required_step = used_step * self._get_fee_sharing_proportion(context, deposit_meta) // 100
+        required_step = (
+            used_step * self._get_fee_sharing_proportion(context, deposit_meta) // 100
+        )
         score_used_step = 0
 
         if required_step > 0:
             score_used_step, deposit_meta_changed = self._charge_fee_from_virtual_step(
-                context, deposit_meta, required_step, block_height)
+                context, deposit_meta, required_step, block_height
+            )
 
             if score_used_step < required_step:
                 required_icx = (required_step - score_used_step) * step_price
                 charged_icx, deposit_indices_changed = self._charge_fee_from_deposit(
-                    context, deposit_meta, required_icx, block_height)
+                    context, deposit_meta, required_icx, block_height
+                )
 
                 score_used_step += charged_icx // step_price
                 deposit_meta_changed: bool = deposit_meta_changed or deposit_indices_changed
 
             if deposit_meta_changed:
                 # Updates if the information has been changed
-                context.storage.fee.put_deposit_meta(context, score_address, deposit_meta)
+                context.storage.fee.put_deposit_meta(
+                    context, score_address, deposit_meta
+                )
 
         return score_used_step
 
-    def _charge_fee_from_virtual_step(self,
-                                      context: 'IconScoreContext',
-                                      deposit_meta: 'DepositMeta',
-                                      required_step: int,
-                                      block_height: int) -> (int, bytes):
+    def _charge_fee_from_virtual_step(
+        self,
+        context: "IconScoreContext",
+        deposit_meta: "DepositMeta",
+        required_step: int,
+        block_height: int,
+    ) -> (int, bytes):
         """
         Charges fees from available virtual STEPs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
@@ -462,7 +514,9 @@ class Engine(EngineBase):
         should_update_expire = False
         last_paid_deposit = None
 
-        gen = self._deposit_generator(context, deposit_meta.available_head_id_of_virtual_step)
+        gen = self._deposit_generator(
+            context, deposit_meta.available_head_id_of_virtual_step
+        )
         for deposit in filter(lambda d: block_height < d.expires, gen):
             available_virtual_step = deposit.remaining_virtual_step
 
@@ -488,28 +542,38 @@ class Engine(EngineBase):
                     break
 
         indices_changed = self._update_virtual_step_indices(
-            context, deposit_meta, last_paid_deposit, should_update_expire, block_height)
+            context, deposit_meta, last_paid_deposit, should_update_expire, block_height
+        )
 
         return charged_step, indices_changed
 
-    def _update_virtual_step_indices(self,
-                                     context: 'IconScoreContext',
-                                     deposit_meta: 'DepositMeta',
-                                     last_paid_deposit: 'Deposit',
-                                     should_update_expire: bool,
-                                     block_height: int) -> bool:
+    def _update_virtual_step_indices(
+        self,
+        context: "IconScoreContext",
+        deposit_meta: "DepositMeta",
+        last_paid_deposit: "Deposit",
+        should_update_expire: bool,
+        block_height: int,
+    ) -> bool:
         """
         Updates indices of virtual steps to DepositMeta and returns whether there exist changes.
         """
         next_available_deposit = last_paid_deposit
 
-        if last_paid_deposit is not None and last_paid_deposit.remaining_virtual_step == 0:
+        if (
+            last_paid_deposit is not None
+            and last_paid_deposit.remaining_virtual_step == 0
+        ):
             # All virtual steps have been consumed in the current deposit
             # so should find the next available virtual steps
             gen = self._deposit_generator(context, last_paid_deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
+            next_available_deposit = next(
+                filter(lambda d: block_height < d.expires, gen), None
+            )
 
-        next_available_deposit_id = next_available_deposit.id if next_available_deposit else None
+        next_available_deposit_id = (
+            next_available_deposit.id if next_available_deposit else None
+        )
         next_expires = deposit_meta.expires_of_virtual_step
 
         if next_available_deposit_id is None:
@@ -520,8 +584,10 @@ class Engine(EngineBase):
             gen = self._deposit_generator(context, next_available_deposit_id)
             next_expires = max(map(lambda d: d.expires, gen), default=-1)
 
-        if deposit_meta.available_head_id_of_virtual_step != next_available_deposit_id \
-                or deposit_meta.expires_of_virtual_step != next_expires:
+        if (
+            deposit_meta.available_head_id_of_virtual_step != next_available_deposit_id
+            or deposit_meta.expires_of_virtual_step != next_expires
+        ):
             # Updates and return True if some changes exist
             deposit_meta.available_head_id_of_virtual_step = next_available_deposit_id
             deposit_meta.expires_of_virtual_step = next_expires
@@ -529,11 +595,13 @@ class Engine(EngineBase):
 
         return False
 
-    def _charge_fee_from_deposit(self,
-                                 context: 'IconScoreContext',
-                                 deposit_meta: 'DepositMeta',
-                                 required_icx: int,
-                                 block_height: int) -> (int, bool):
+    def _charge_fee_from_deposit(
+        self,
+        context: "IconScoreContext",
+        deposit_meta: "DepositMeta",
+        required_icx: int,
+        block_height: int,
+    ) -> (int, bool):
         """
         Charges fees from available deposit ICXs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
@@ -548,9 +616,13 @@ class Engine(EngineBase):
         last_paid_deposit = None
 
         # Search for next available deposit id
-        gen = self._deposit_generator(context, deposit_meta.available_head_id_of_deposit)
+        gen = self._deposit_generator(
+            context, deposit_meta.available_head_id_of_deposit
+        )
         for deposit in filter(lambda d: block_height < d.expires, gen):
-            available_deposit = deposit.remaining_deposit - deposit.min_remaining_deposit
+            available_deposit = (
+                deposit.remaining_deposit - deposit.min_remaining_deposit
+            )
 
             if remaining_required_icx < available_deposit:
                 charged_icx = remaining_required_icx
@@ -586,29 +658,39 @@ class Engine(EngineBase):
                         break
 
         indices_changed = self._update_deposit_indices(
-            context, deposit_meta, last_paid_deposit, should_update_expire, block_height)
+            context, deposit_meta, last_paid_deposit, should_update_expire, block_height
+        )
 
         return required_icx - remaining_required_icx, indices_changed
 
-    def _update_deposit_indices(self,
-                                context: 'IconScoreContext',
-                                deposit_meta: 'DepositMeta',
-                                last_paid_deposit: 'Deposit',
-                                should_update_expire: bool,
-                                block_height: int) -> bool:
+    def _update_deposit_indices(
+        self,
+        context: "IconScoreContext",
+        deposit_meta: "DepositMeta",
+        last_paid_deposit: "Deposit",
+        should_update_expire: bool,
+        block_height: int,
+    ) -> bool:
         """
         Updates indices of deposit to deposit_meta and returns whether there exist changes.
         """
 
         next_available_deposit = last_paid_deposit
 
-        if last_paid_deposit.remaining_deposit <= last_paid_deposit.min_remaining_deposit:
+        if (
+            last_paid_deposit.remaining_deposit
+            <= last_paid_deposit.min_remaining_deposit
+        ):
             # All available deposits have been consumed in the current deposit
             # so should find the next available deposits
             gen = self._deposit_generator(context, last_paid_deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
+            next_available_deposit = next(
+                filter(lambda d: block_height < d.expires, gen), None
+            )
 
-        next_available_deposit_id = next_available_deposit.id if next_available_deposit else None
+        next_available_deposit_id = (
+            next_available_deposit.id if next_available_deposit else None
+        )
         next_expires = deposit_meta.expires_of_deposit
 
         if next_available_deposit_id is None:
@@ -619,8 +701,10 @@ class Engine(EngineBase):
             gen = self._deposit_generator(context, next_available_deposit_id)
             next_expires = max(map(lambda d: d.expires, gen), default=-1)
 
-        if deposit_meta.available_head_id_of_deposit != next_available_deposit_id \
-                or deposit_meta.expires_of_deposit != next_expires:
+        if (
+            deposit_meta.available_head_id_of_deposit != next_available_deposit_id
+            or deposit_meta.expires_of_deposit != next_expires
+        ):
             # Updates and return True if changes are exist
             deposit_meta.available_head_id_of_deposit = next_available_deposit_id
             deposit_meta.expires_of_deposit = next_expires
@@ -628,7 +712,9 @@ class Engine(EngineBase):
 
         return False
 
-    def _deposit_generator(self, context: 'IconScoreContext', start_id: Optional[bytes]):
+    def _deposit_generator(
+        self, context: "IconScoreContext", start_id: Optional[bytes]
+    ):
         next_id = start_id
         while next_id is not None:
             deposit = context.storage.fee.get_deposit(context, next_id)
@@ -638,38 +724,47 @@ class Engine(EngineBase):
             yield deposit
             next_id = deposit.next_id
 
-    def _get_score_deploy_info(self, context: 'IconScoreContext', score_address: 'Address') -> 'IconScoreDeployInfo':
-        deploy_info: 'IconScoreDeployInfo' = context.storage.deploy.get_deploy_info(context, score_address)
+    def _get_score_deploy_info(
+        self, context: "IconScoreContext", score_address: "Address"
+    ) -> "IconScoreDeployInfo":
+        deploy_info: "IconScoreDeployInfo" = context.storage.deploy.get_deploy_info(
+            context, score_address
+        )
 
         if deploy_info is None:
-            raise InvalidRequestException('Invalid SCORE')
+            raise InvalidRequestException("Invalid SCORE")
 
         return deploy_info
 
-    def _check_score_valid(self, context: 'IconScoreContext', score_address: 'Address') -> None:
+    def _check_score_valid(
+        self, context: "IconScoreContext", score_address: "Address"
+    ) -> None:
         deploy_info = self._get_score_deploy_info(context, score_address)
         assert deploy_info is not None
 
-    def _check_score_ownership(self, context: 'IconScoreContext', sender: 'Address', score_address: 'Address') -> None:
+    def _check_score_ownership(
+        self, context: "IconScoreContext", sender: "Address", score_address: "Address"
+    ) -> None:
         deploy_info = self._get_score_deploy_info(context, score_address)
 
         if deploy_info.owner != sender:
-            raise InvalidRequestException('Invalid SCORE owner')
+            raise InvalidRequestException("Invalid SCORE owner")
 
     @staticmethod
     def _check_deposit_id(deposit_id: bytes) -> None:
         if not (isinstance(deposit_id, bytes) and len(deposit_id) == 32):
-            raise InvalidRequestException('Invalid deposit ID')
+            raise InvalidRequestException("Invalid deposit ID")
 
     def _get_or_create_deposit_meta(
-            self, context: 'IconScoreContext', score_address: 'Address') -> 'DepositMeta':
+        self, context: "IconScoreContext", score_address: "Address"
+    ) -> "DepositMeta":
         deposit_meta = context.storage.fee.get_deposit_meta(context, score_address)
         return deposit_meta if deposit_meta else DepositMeta()
 
     @staticmethod
-    def _calculate_penalty(deposit: 'Deposit',
-                           block_height: int,
-                           step_price: int) -> int:
+    def _calculate_penalty(
+        deposit: "Deposit", block_height: int, step_price: int
+    ) -> int:
         assert isinstance(deposit, Deposit)
         assert isinstance(block_height, int)
         assert isinstance(step_price, int)
@@ -678,8 +773,8 @@ class Engine(EngineBase):
             return 0
 
         return VirtualStepCalculator.calculate_penalty(
-            deposit.virtual_step_used,
-            step_price)
+            deposit.virtual_step_used, step_price
+        )
 
 
 class VirtualStepCalculator:
@@ -688,10 +783,9 @@ class VirtualStepCalculator:
     """
 
     @classmethod
-    def calculate_virtual_step(cls,
-                               deposit_amount: int,
-                               term: int,
-                               step_price: int) -> int:
+    def calculate_virtual_step(
+        cls, deposit_amount: int, term: int, step_price: int
+    ) -> int:
         """Returns issuance of virtual-step according to deposit_amount and term
 
         :param deposit_amount: deposit amount in loop unit
@@ -699,12 +793,14 @@ class VirtualStepCalculator:
         :param step_price:
         """
         assert term == BLOCKS_IN_ONE_MONTH
-        return int(Decimal(deposit_amount) * Decimal(FIXED_RATIO_PER_MONTH) / Decimal(step_price))
+        return int(
+            Decimal(deposit_amount)
+            * Decimal(FIXED_RATIO_PER_MONTH)
+            / Decimal(step_price)
+        )
 
     @classmethod
-    def calculate_penalty(cls,
-                          virtual_step_used: int,
-                          step_price: int) -> int:
+    def calculate_penalty(cls, virtual_step_used: int, step_price: int) -> int:
         """Returns penalty according to given parameters
 
         :param virtual_step_used:
@@ -725,19 +821,19 @@ class DepositHandler:
 
     SIGNATURE_AND_INDEX = (
         # DepositAdded(id: bytes, from_: Address, amount: int, term: int)
-        ('DepositAdded(bytes,Address,int,int)', 2),
+        ("DepositAdded(bytes,Address,int,int)", 2),
         # DepositWithdrawn(id: bytes, from_: Address, returnAmount: int, penalty: int)
-        ('DepositWithdrawn(bytes,Address,int,int)', 2)
+        ("DepositWithdrawn(bytes,Address,int,int)", 2),
     )
 
     @staticmethod
-    def get_signature_and_index_count(event_type: 'EventType') -> (str, int):
+    def get_signature_and_index_count(event_type: "EventType") -> (str, int):
         return DepositHandler.SIGNATURE_AND_INDEX[event_type]
 
     def __init__(self):
         pass
 
-    def handle_deposit_request(self, context: 'IconScoreContext', data: dict):
+    def handle_deposit_request(self, context: "IconScoreContext", data: dict):
         """
         Handles fee request(querying or invoking)
 
@@ -746,40 +842,57 @@ class DepositHandler:
         :return:
         """
         converted_data = TypeConverter.convert(data, ParamType.DEPOSIT_DATA)
-        action = converted_data['action']
+        action = converted_data["action"]
 
         try:
-            if action == 'add':
-                term: int = BLOCKS_IN_ONE_MONTH if FIXED_TERM else converted_data['term']
+            if action == "add":
+                term: int = BLOCKS_IN_ONE_MONTH if FIXED_TERM else converted_data[
+                    "term"
+                ]
                 self._add_deposit(context, term)
-            elif action == 'withdraw':
-                self._withdraw_deposit(context, converted_data['id'])
+            elif action == "withdraw":
+                self._withdraw_deposit(context, converted_data["id"])
             else:
                 raise InvalidRequestException(f"Invalid action: {action}")
         except KeyError:
             # missing required params for the action
             raise InvalidParamsException("Required params not found")
 
-    def _add_deposit(self, context: 'IconScoreContext', term: int):
-        context.engine.fee.add_deposit(context, context.tx.hash, context.msg.sender, context.tx.to,
-                                       context.msg.value, context.block.height, term)
+    def _add_deposit(self, context: "IconScoreContext", term: int):
+        context.engine.fee.add_deposit(
+            context,
+            context.tx.hash,
+            context.msg.sender,
+            context.tx.to,
+            context.msg.value,
+            context.block.height,
+            term,
+        )
 
         event_log_args = [context.tx.hash, context.msg.sender, context.msg.value, term]
         self._emit_event(context, DepositHandler.EventType.DEPOSIT, event_log_args)
 
-    def _withdraw_deposit(self, context: 'IconScoreContext', deposit_id: bytes):
+    def _withdraw_deposit(self, context: "IconScoreContext", deposit_id: bytes):
         if context.msg.value != 0:
-            raise InvalidRequestException(f'Invalid value: must be zero')
+            raise InvalidRequestException(f"Invalid value: must be zero")
         withdrawal_amount, penalty = context.engine.fee.withdraw_deposit(
-            context, context.msg.sender, deposit_id, context.block.height)
+            context, context.msg.sender, deposit_id, context.block.height
+        )
 
         event_log_args = [deposit_id, context.msg.sender, withdrawal_amount, penalty]
         self._emit_event(context, DepositHandler.EventType.WITHDRAW, event_log_args)
 
     @staticmethod
-    def _emit_event(context: 'IconScoreContext', event_type: 'DepositHandler.EventType', event_log_args: list):
-        signature, index_count = DepositHandler.get_signature_and_index_count(event_type)
+    def _emit_event(
+        context: "IconScoreContext",
+        event_type: "DepositHandler.EventType",
+        event_log_args: list,
+    ):
+        signature, index_count = DepositHandler.get_signature_and_index_count(
+            event_type
+        )
 
         fee_charge: bool = True if context.revision < Revision.IISS.value else False
         EventLogEmitter.emit_event_log(
-            context, context.tx.to, signature, event_log_args, index_count, fee_charge)
+            context, context.tx.to, signature, event_log_args, index_count, fee_charge
+        )

@@ -36,18 +36,29 @@ def test_make_flag(engine, fee, audit, validator):
     table = {
         ConfigKey.SERVICE_FEE: fee,
         ConfigKey.SERVICE_AUDIT: audit,
-        ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: validator
+        ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: validator,
     }
     fee_flag_value = IconServiceFlag.FEE.value if fee else 0
     audit_flag_value = IconServiceFlag.AUDIT.value if audit else 0
-    validator_flag_value = IconServiceFlag.SCORE_PACKAGE_VALIDATOR.value if validator else 0
+    validator_flag_value = (
+        IconServiceFlag.SCORE_PACKAGE_VALIDATOR.value if validator else 0
+    )
     flag = engine._make_service_flag(table)
     assert flag == (fee_flag_value | audit_flag_value | validator_flag_value)
 
 
-@pytest.mark.parametrize("method", [
-    "icx_getBalance", "icx_getTotalSupply", "icx_call", "icx_sendTransaction",
-    "debug_estimateStep", "icx_getScoreApi", "ise_getStatus"])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "icx_getBalance",
+        "icx_getTotalSupply",
+        "icx_call",
+        "icx_sendTransaction",
+        "debug_estimateStep",
+        "icx_getScoreApi",
+        "ise_getStatus",
+    ],
+)
 def test_call_method(engine, method):
     call_method = engine._handlers[method] = Mock()
     ctx = Mock()

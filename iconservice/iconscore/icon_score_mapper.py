@@ -43,42 +43,42 @@ class IconScoreMapper(object):
         else:
             self._lock = None
 
-    def __contains__(self, address: 'Address'):
+    def __contains__(self, address: "Address"):
         if self._lock is None:
             return address in self._score_mapper
 
         with self._lock:
             return address in self._score_mapper
 
-    def __getitem__(self, key: 'Address') -> 'IconScoreInfo':
+    def __getitem__(self, key: "Address") -> "IconScoreInfo":
         if self._lock is None:
             return self._score_mapper[key]
 
         with self._lock:
             return self._score_mapper[key]
 
-    def __setitem__(self, key: 'Address', value: 'IconScoreInfo'):
+    def __setitem__(self, key: "Address", value: "IconScoreInfo"):
         if self._lock is None:
             self._score_mapper[key] = value
         else:
             with self._lock:
                 self._score_mapper[key] = value
 
-    def __delitem__(self, key: 'Address'):
+    def __delitem__(self, key: "Address"):
         if self._lock is None:
             del self._score_mapper[key]
         else:
             with self._lock:
                 del self._score_mapper[key]
 
-    def get(self, key: 'Address') -> 'IconScoreInfo':
+    def get(self, key: "Address") -> "IconScoreInfo":
         if self._lock is None:
             return self._score_mapper.get(key)
 
         with self._lock:
             return self._score_mapper.get(key)
 
-    def update(self, mapper: 'IconScoreMapper'):
+    def update(self, mapper: "IconScoreMapper"):
         if self._lock is None:
             self._score_mapper.update(mapper._score_mapper)
         else:

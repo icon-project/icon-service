@@ -23,9 +23,20 @@ from typing import TYPE_CHECKING, Callable, Any, List, Tuple
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import InterfaceScore, revert, Block
-from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
-    ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
+from .icon_score_constant import (
+    CONST_INDEXED_ARGS_COUNT,
+    FORMAT_IS_NOT_FUNCTION_OBJECT,
+    CONST_BIT_FLAG,
+    ConstBitFlag,
+    FORMAT_DECORATOR_DUPLICATED,
+    FORMAT_IS_NOT_DERIVED_OF_OBJECT,
+    STR_FALLBACK,
+    CONST_CLASS_EXTERNALS,
+    CONST_CLASS_PAYABLES,
+    CONST_CLASS_API,
+    T,
+    BaseType,
+)
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
@@ -53,12 +64,16 @@ def interface(func):
     If other SCORE has the function whose signature is the same as defined with @interface decorator,
     the function can be invoked via InterfaceScore class instance
     """
-    cls_name, func_name = str(func.__qualname__).split('.')
+    cls_name, func_name = str(func.__qualname__).split(".")
     if not isfunction(func):
-        raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+        raise IllegalFormatException(
+            FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name)
+        )
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Interface:
-        raise InvalidInterfaceException(FORMAT_DECORATOR_DUPLICATED.format('interface', func_name, cls_name))
+        raise InvalidInterfaceException(
+            FORMAT_DECORATOR_DUPLICATED.format("interface", func_name, cls_name)
+        )
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Interface
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -67,17 +82,22 @@ def interface(func):
     def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
             raise InvalidInstanceException(
-                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__)
+            )
 
         context = ContextContainer._get_context()
         addr_to = calling_obj.addr_to
         amount = calling_obj.value
-        addr_from: 'Address' = context.current_address
+        addr_from: "Address" = context.current_address
 
         if addr_to is None:
-            raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')
+            raise InvalidInterfaceException(
+                "Cannot create an interface SCORE with a None address"
+            )
 
-        return InternalCall.other_external_call(context, addr_from, addr_to, amount, func_name, args, kwargs)
+        return InternalCall.other_external_call(
+            context, addr_from, addr_to, amount, func_name, args, kwargs
+        )
 
     return __wrapper
 
@@ -101,22 +121,27 @@ def eventlog(func=None, *, indexed=0):
     if func is None:
         return partial(eventlog, indexed=indexed)
 
-    cls_name, func_name = str(func.__qualname__).split('.')
+    cls_name, func_name = str(func.__qualname__).split(".")
     if not isfunction(func):
-        raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+        raise IllegalFormatException(
+            FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name)
+        )
 
-    if not list(signature(func).parameters.keys())[0] == 'self':
+    if not list(signature(func).parameters.keys())[0] == "self":
         raise InvalidEventLogException("'self' is not declared as the first parameter")
     if indexed > INDEXED_ARGS_LIMIT:
         raise InvalidEventLogException(
-            f'Indexed arguments overflow: limit={INDEXED_ARGS_LIMIT}')
+            f"Indexed arguments overflow: limit={INDEXED_ARGS_LIMIT}"
+        )
 
     parameters = signature(func).parameters.values()
     if len(parameters) - 1 < indexed:
         raise InvalidEventLogException("Index exceeds the number of parameters")
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
-        raise InvalidEventLogException(FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
+        raise InvalidEventLogException(
+            FORMAT_DECORATOR_DUPLICATED.format("eventlog", func_name, cls_name)
+        )
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -125,10 +150,11 @@ def eventlog(func=None, *, indexed=0):
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
-    def __wrapper(calling_obj: 'IconScoreBase', *args, **kwargs):
+    def __wrapper(calling_obj: "IconScoreBase", *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise InvalidInstanceException(
-                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__)
+            )
         try:
             arguments = __resolve_arguments(func_name, parameters, args, kwargs)
         except IllegalFormatException as e:
@@ -137,14 +163,17 @@ def eventlog(func=None, *, indexed=0):
         if event_signature == ICX_TRANSFER_EVENT_LOG:
             # 'ICXTransfer(Address,Address,int)' is reserved
             raise InvalidEventLogException(
-                f'The event log \'{ICX_TRANSFER_EVENT_LOG}\' is reserved')
+                f"The event log '{ICX_TRANSFER_EVENT_LOG}' is reserved"
+            )
 
-        return EventLogEmitter.emit_event_log(context=calling_obj._context,
-                                              score_address=calling_obj.address,
-                                              event_signature=event_signature,
-                                              arguments=arguments,
-                                              indexed_args_count=indexed,
-                                              fee_charge=True)
+        return EventLogEmitter.emit_event_log(
+            context=calling_obj._context,
+            score_address=calling_obj.address,
+            event_signature=event_signature,
+            arguments=arguments,
+            indexed_args_count=indexed,
+            fee_charge=True,
+        )
 
     return __wrapper
 
@@ -163,18 +192,20 @@ def __retrieve_event_signature(function_name, parameters) -> str:
             # raise an exception
             if param.annotation is Parameter.empty:
                 raise IllegalFormatException(
-                    f"Missing argument hint for '{function_name}': '{param.name}'")
+                    f"Missing argument hint for '{function_name}': '{param.name}'"
+                )
 
             main_type = None
             if isinstance(param.annotation, type):
                 main_type = param.annotation
-            elif param.annotation == 'Address':
+            elif param.annotation == "Address":
                 main_type = Address
 
             # Raises an exception if the types are not supported
             if main_type is None or not issubclass(main_type, BaseType.__constraints__):
                 raise IllegalFormatException(
-                    f"Unsupported type for '{param.name}: {param.annotation}'")
+                    f"Unsupported type for '{param.name}: {param.annotation}'"
+                )
 
             type_names.append(str(main_type.__name__))
     return f"{function_name}({','.join(type_names)})"
@@ -191,7 +222,8 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
     arguments = []
     if len(parameters) - 1 < len(args) + len(kwargs):
         raise IllegalFormatException(
-            f"The maximum number of arguments which event log method({function_name}) can accept is exceeded")
+            f"The maximum number of arguments which event log method({function_name}) can accept is exceeded"
+        )
 
     for i, parameter in enumerate(parameters, -1):
         if i < 0:
@@ -204,7 +236,8 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             value = args[i]
             if name in kwargs:
                 raise IllegalFormatException(
-                    f"Duplicated argument value for '{function_name}': {name}")
+                    f"Duplicated argument value for '{function_name}': {name}"
+                )
         else:
             # If arg is over, the argument should be searched on kwargs
             try:
@@ -214,16 +247,18 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
                     value = parameter.default
                 else:
                     raise IllegalFormatException(
-                        f"Missing argument value for '{function_name}': {name}")
+                        f"Missing argument value for '{function_name}': {name}"
+                    )
 
         main_type = get_main_type_from_annotations_type(annotation)
 
-        if main_type == 'Address':
+        if main_type == "Address":
             main_type = Address
 
         if value is not None and not isinstance(value, main_type):
             raise IllegalFormatException(
-                f"Type mismatch of '{name}': {type(value)}, expected: {main_type}")
+                f"Type mismatch of '{name}': {type(value)}, expected: {main_type}"
+            )
         arguments.append(value)
     return arguments
 
@@ -245,15 +280,19 @@ def external(func=None, *, readonly=False):
     if func is None:
         return partial(external, readonly=readonly)
 
-    cls_name, func_name = str(func.__qualname__).split('.')
+    cls_name, func_name = str(func.__qualname__).split(".")
     if not isfunction(func):
-        raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+        raise IllegalFormatException(
+            FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name)
+        )
 
     if func_name == STR_FALLBACK:
         raise InvalidExternalException(f"{func_name} cannot be declared as external")
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External:
-        raise InvalidExternalException(FORMAT_DECORATOR_DUPLICATED.format('external', func_name, cls_name))
+        raise InvalidExternalException(
+            FORMAT_DECORATOR_DUPLICATED.format("external", func_name, cls_name)
+        )
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.External | int(readonly)
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -262,7 +301,8 @@ def external(func=None, *, readonly=False):
     def __wrapper(calling_obj: Any, *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise InvalidInstanceException(
-                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__)
+            )
         res = func(calling_obj, *args, **kwargs)
         return res
 
@@ -277,12 +317,16 @@ def payable(func):
     it can receive the ICXs and process further works for it.
     If ICXs (msg.value) are passed to a non-payable function, that transaction will fail.
     """
-    cls_name, func_name = str(func.__qualname__).split('.')
+    cls_name, func_name = str(func.__qualname__).split(".")
     if not isfunction(func):
-        raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+        raise IllegalFormatException(
+            FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name)
+        )
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable:
-        raise InvalidPayableException(FORMAT_DECORATOR_DUPLICATED.format('payable', func_name, cls_name))
+        raise InvalidPayableException(
+            FORMAT_DECORATOR_DUPLICATED.format("payable", func_name, cls_name)
+        )
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Payable
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -291,7 +335,8 @@ def payable(func):
     def __wrapper(calling_obj: Any, *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise InvalidInstanceException(
-                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__)
+            )
         res = func(calling_obj, *args, **kwargs)
         return res
 
@@ -299,7 +344,6 @@ def payable(func):
 
 
 class IconScoreObject(ABC):
-
     def __init__(self, *args, **kwargs) -> None:
         pass
 
@@ -311,7 +355,6 @@ class IconScoreObject(ABC):
 
 
 class IconScoreBaseMeta(ABCMeta):
-
     def __new__(mcs, name, bases, namespace, **kwargs):
         if IconScoreObject in bases or name == "IconSystemScoreBase":
             return super().__new__(mcs, name, bases, namespace, **kwargs)
@@ -319,18 +362,30 @@ class IconScoreBaseMeta(ABCMeta):
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
         if not isinstance(namespace, dict):
-            raise InvalidParamsException('namespace is not dict!')
+            raise InvalidParamsException("namespace is not dict!")
 
-        custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
-                        if not key.startswith('__')]
+        custom_funcs = [
+            value
+            for key, value in getmembers(cls, predicate=isfunction)
+            if not key.startswith("__")
+        ]
 
-        external_funcs = {func.__name__: signature(func) for func in custom_funcs
-                          if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External}
-        payable_funcs = [func for func in custom_funcs
-                         if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable]
+        external_funcs = {
+            func.__name__: signature(func)
+            for func in custom_funcs
+            if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External
+        }
+        payable_funcs = [
+            func
+            for func in custom_funcs
+            if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable
+        ]
 
-        readonly_payables = [func for func in payable_funcs
-                             if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
+        readonly_payables = [
+            func
+            for func in payable_funcs
+            if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly
+        ]
 
         if bool(readonly_payables):
             raise IllegalFormatException(f"Payable method cannot be readonly")
@@ -347,8 +402,7 @@ class IconScoreBaseMeta(ABCMeta):
         return cls
 
 
-class IconScoreBase(IconScoreObject, ContextGetter,
-                    metaclass=IconScoreBaseMeta):
+class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
     """
     A base class of SCOREs. This class provides facilities and environments to SCORE to run.
     """
@@ -371,7 +425,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         super().on_update(**kwargs)
 
     @abstractmethod
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: "IconScoreDatabase") -> None:
         """
         A Python init function. Invoked when the contract is loaded at each node.
         Do not put state-changing works in here.
@@ -383,7 +437,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__icx = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
-            raise InvalidExternalException('There is no external method in the SCORE')
+            raise InvalidExternalException("There is no external method in the SCORE")
 
         self.__db.set_observer(self.__create_db_observer())
 
@@ -409,26 +463,29 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if not self.__is_external_method(func_name):
             raise MethodNotFoundException(
-                f"Method not found: {type(self).__name__}.{func_name}")
+                f"Method not found: {type(self).__name__}.{func_name}"
+            )
 
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
         return getattr(cls, attr, {})
 
-    def __create_db_observer(self) -> 'DatabaseObserver':
-        return DatabaseObserver(
-            self.__on_db_get, self.__on_db_put, self.__on_db_delete)
+    def __create_db_observer(self) -> "DatabaseObserver":
+        return DatabaseObserver(self.__on_db_get, self.__on_db_put, self.__on_db_delete)
 
-    def __call(self,
-               func_name: str,
-               arg_params: Optional[list] = None,
-               kw_params: Optional[dict] = None) -> Any:
+    def __call(
+        self,
+        func_name: str,
+        arg_params: Optional[list] = None,
+        kw_params: Optional[dict] = None,
+    ) -> Any:
 
         if func_name == STR_FALLBACK:
             if self._context.revision >= Revision.THREE.value:
                 if not self.__is_payable_method(func_name):
                     raise MethodNotFoundException(
-                        f"Method not found: {type(self).__name__}.{func_name}")
+                        f"Method not found: {type(self).__name__}.{func_name}"
+                    )
             else:
                 self.__check_payable(func_name)
 
@@ -448,7 +505,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __check_payable(self, func_name: str):
         if self.msg.value > 0 and not self.__is_payable_method(func_name):
             raise MethodNotPayableException(
-                f"Method not payable: {type(self).__name__}.{func_name}")
+                f"Method not payable: {type(self).__name__}.{func_name}"
+            )
 
     def __is_external_method(self, func_name) -> bool:
         return func_name in self.__get_attr_dict(CONST_CLASS_EXTERNALS)
@@ -465,9 +523,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     # noinspection PyUnusedLocal
     @staticmethod
-    def __on_db_get(context: 'IconScoreContext',
-                    key: bytes,
-                    value: bytes):
+    def __on_db_get(context: "IconScoreContext", key: bytes, value: bytes):
         """Invoked when `get` is called in `ContextDatabase`.
 
         # All steps are managed in the score
@@ -478,8 +534,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param value: value
         """
 
-        if context and context.step_counter and \
-                context.type != IconScoreContextType.DIRECT:
+        if (
+            context
+            and context.step_counter
+            and context.type != IconScoreContextType.DIRECT
+        ):
             length = 1
             if value:
                 length = len(value)
@@ -487,10 +546,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     # noinspection PyUnusedLocal
     @staticmethod
-    def __on_db_put(context: 'IconScoreContext',
-                    key: bytes,
-                    old_value: bytes,
-                    new_value: bytes):
+    def __on_db_put(
+        context: "IconScoreContext", key: bytes, old_value: bytes, new_value: bytes
+    ):
         """Invoked when `put` is called in `ContextDatabase`.
 
         # All steps are managed in the score
@@ -505,18 +563,14 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if context and context.step_counter and not context.readonly:
             if old_value:
                 # modifying a value
-                context.step_counter.apply_step(
-                    StepType.REPLACE, len(new_value))
+                context.step_counter.apply_step(StepType.REPLACE, len(new_value))
             else:
                 # newly storing a value
-                context.step_counter.apply_step(
-                    StepType.SET, len(new_value))
+                context.step_counter.apply_step(StepType.SET, len(new_value))
 
     # noinspection PyUnusedLocal
     @staticmethod
-    def __on_db_delete(context: 'IconScoreContext',
-                       key: bytes,
-                       old_value: bytes):
+    def __on_db_delete(context: "IconScoreContext", key: bytes, old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
 
         # All steps are managed in the score
@@ -527,11 +581,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         """
 
         if context and context.step_counter and not context.readonly:
-            context.step_counter.apply_step(
-                StepType.DELETE, len(old_value))
+            context.step_counter.apply_step(StepType.DELETE, len(old_value))
 
     @property
-    def msg(self) -> 'Message':
+    def msg(self) -> "Message":
         """
         Holds information of calling the SCORE
 
@@ -545,7 +598,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.msg
 
     @property
-    def address(self) -> 'Address':
+    def address(self) -> "Address":
         """
         The current SCORE address
 
@@ -554,7 +607,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self.__address
 
     @property
-    def tx(self) -> 'Transaction':
+    def tx(self) -> "Transaction":
         """
         Holds information of the transaction
 
@@ -563,17 +616,19 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.tx
 
     @property
-    def block(self) -> 'Block':
+    def block(self) -> "Block":
         """
         Deprecated property
 
         Use block_height and now() instead.
         """
-        warnings.warn("Use block_height and now() instead", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "Use block_height and now() instead", DeprecationWarning, stacklevel=2
+        )
         return Block(self._context.block.height, self._context.block.timestamp)
 
     @property
-    def db(self) -> 'IconScoreDatabase':
+    def db(self) -> "IconScoreDatabase":
         """
         An instance used to access state DB
 
@@ -582,7 +637,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self.__db
 
     @property
-    def owner(self) -> 'Address':
+    def owner(self) -> "Address":
         """
         Address of the account who deployed the contract
 
@@ -591,7 +646,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self.__owner
 
     @property
-    def icx(self) -> 'Icx':
+    def icx(self) -> "Icx":
         """
         An object used to transfer icx coin
 
@@ -633,7 +688,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         """
         return self._context.block.timestamp
 
-    def call(self, addr_to: 'Address', func_name: str, kw_dict: dict, amount: int = 0):
+    def call(self, addr_to: "Address", func_name: str, kw_dict: dict, amount: int = 0):
         """
         Calls an external function provided by another SCORE.
         `func_name` can be `None` if fallback calls
@@ -644,7 +699,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param amount: amount of ICX to transfer in loop
         :return: returning value of the external function
         """
-        return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
+        return InternalCall.other_external_call(
+            self._context, self.address, addr_to, amount, func_name, (), kw_dict
+        )
 
     @staticmethod
     def revert(message: Optional[str] = None, code: int = 0):
@@ -653,26 +710,29 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         Use global function `revert()` instead.
         """
-        warnings.warn("Use global function revert() instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "Use global function revert() instead.", DeprecationWarning, stacklevel=2
+        )
         revert(message, code)
 
-    def is_score_active(self, score_address: 'Address') -> bool:
+    def is_score_active(self, score_address: "Address") -> bool:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         if self._context.revision <= Revision.THREE.value:
             return IconScoreContextUtil.is_score_active(self._context, score_address)
         else:
-            raise AccessDeniedException('No permission')
+            raise AccessDeniedException("No permission")
 
-    def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
+    def get_owner(self, score_address: Optional["Address"]) -> Optional["Address"]:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         if self._context.revision <= Revision.THREE.value:
             return IconScoreContextUtil.get_owner(self._context, score_address)
         else:
-            raise AccessDeniedException('No permission')
+            raise AccessDeniedException("No permission")
 
     @staticmethod
-    def create_interface_score(addr_to: 'Address',
-                               interface_cls: Callable[['Address'], T]) -> T:
+    def create_interface_score(
+        addr_to: "Address", interface_cls: Callable[["Address"], T]
+    ) -> T:
         """
         Creates an object, through which you have an access to the designated SCORE’s external functions.
 
@@ -682,17 +742,21 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         """
 
         if interface_cls is InterfaceScore:
-            raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
+            raise InvalidInstanceException(
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__)
+            )
         return interface_cls(addr_to)
 
     def deploy(self, tx_hash: bytes):
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision <= Revision.THREE.value and \
-                self.address == GOVERNANCE_SCORE_ADDRESS:
+        if (
+            self._context.revision <= Revision.THREE.value
+            and self.address == GOVERNANCE_SCORE_ADDRESS
+        ):
             # switch
-            score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
-            owner: 'Address' = self.get_owner(score_addr)
-            tmp_sender: 'Address' = self._context.msg.sender
+            score_addr: "Address" = self.get_score_address_by_tx_hash(tx_hash)
+            owner: "Address" = self.get_owner(score_addr)
+            tmp_sender: "Address" = self._context.msg.sender
 
             self._context.msg.sender = owner
             try:
@@ -700,23 +764,27 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             finally:
                 self._context.msg.sender = tmp_sender
         else:
-            raise AccessDeniedException('No permission')
+            raise AccessDeniedException("No permission")
 
-    def get_tx_hashes_by_score_address(self,
-                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+    def get_tx_hashes_by_score_address(
+        self, score_address: "Address"
+    ) -> Tuple[Optional[bytes], Optional[bytes]]:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         if self._context.revision <= Revision.THREE.value:
-            return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
+            return IconScoreContextUtil.get_tx_hashes_by_score_address(
+                self._context, score_address
+            )
         else:
-            raise AccessDeniedException('No permission')
+            raise AccessDeniedException("No permission")
 
-    def get_score_address_by_tx_hash(self,
-                                     tx_hash: bytes) -> Optional['Address']:
+    def get_score_address_by_tx_hash(self, tx_hash: bytes) -> Optional["Address"]:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         if self._context.revision <= Revision.THREE.value:
-            return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
+            return IconScoreContextUtil.get_score_address_by_tx_hash(
+                self._context, tx_hash
+            )
         else:
-            raise AccessDeniedException('No permission')
+            raise AccessDeniedException("No permission")
 
     def get_fee_sharing_proportion(self):
         return self._context.fee_sharing_proportion
@@ -724,8 +792,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def set_fee_sharing_proportion(self, proportion: int):
         if self._context.tx.to == self.address:
             if self._context.type == IconScoreContextType.QUERY:
-                raise InvalidRequestException("Cannot set fee sharing proportion in read-only context")
+                raise InvalidRequestException(
+                    "Cannot set fee sharing proportion in read-only context"
+                )
             if proportion < 0 or proportion > 100:
-                raise InvalidRequestException("Invalid proportion: should be between 0 and 100")
+                raise InvalidRequestException(
+                    "Invalid proportion: should be between 0 and 100"
+                )
 
             self._context.fee_sharing_proportion = proportion

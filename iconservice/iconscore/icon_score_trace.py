@@ -44,10 +44,8 @@ class Trace(object):
     """
 
     def __init__(
-            self,
-            score_address: 'Address',
-            trace: TraceType,
-            data: list = None) -> None:
+        self, score_address: "Address", trace: TraceType, data: list = None
+    ) -> None:
         """
         Constructor
 
@@ -60,12 +58,12 @@ class Trace(object):
             revert: [CODE, MESSAGE]
             throw: [CODE, MESSAGE]
         """
-        self.score_address: 'Address' = score_address
+        self.score_address: "Address" = score_address
         self.trace: TraceType = trace
         self.data: list = data
 
     def __str__(self) -> str:
-        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+        return "\n".join([f"{k}: {v}" for k, v in self.__dict__.items()])
 
     def to_dict(self, casing: Optional = None) -> dict:
         """

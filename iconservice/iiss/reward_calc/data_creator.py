@@ -17,8 +17,17 @@
 from typing import TYPE_CHECKING, List, Iterable, Tuple
 
 from iconcommons import Logger
-from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, \
-    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
+from ..reward_calc.msg_data import (
+    Header,
+    GovernanceVariable,
+    PRepsData,
+    TxData,
+    DelegationTx,
+    DelegationInfo,
+    PRepRegisterTx,
+    PRepUnregisterTx,
+    BlockProduceInfoData,
+)
 
 if TYPE_CHECKING:
     from ...base.address import Address
@@ -30,7 +39,7 @@ class DataCreator:
     TAG = "IISS"
 
     @staticmethod
-    def create_header(version: int, block_height: int, revision: int) -> 'Header':
+    def create_header(version: int, block_height: int, revision: int) -> "Header":
         data = Header()
         data.version = version
         data.block_height = block_height
@@ -38,25 +47,31 @@ class DataCreator:
         return data
 
     @staticmethod
-    def create_gv_variable(version: int,
-                           block_height: int,
-                           calculated_irep: int,
-                           reward_rep: int,
-                           config_main_prep_count: int,
-                           config_main_and_sub_prep_count: int) -> 'GovernanceVariable':
+    def create_gv_variable(
+        version: int,
+        block_height: int,
+        calculated_irep: int,
+        reward_rep: int,
+        config_main_prep_count: int,
+        config_main_and_sub_prep_count: int,
+    ) -> "GovernanceVariable":
         data = GovernanceVariable()
         data.version = version
         data.block_height = block_height
         data.calculated_irep = calculated_irep
         data.reward_rep = reward_rep
         data.config_main_prep_count = config_main_prep_count
-        data.config_sub_prep_count = config_main_and_sub_prep_count - config_main_prep_count
+        data.config_sub_prep_count = (
+            config_main_and_sub_prep_count - config_main_prep_count
+        )
         return data
 
     @staticmethod
-    def create_block_produce_info_data(block_height: int,
-                                       block_generator: 'Address',
-                                       block_votes: List[Tuple['Address', int]]) -> 'BlockProduceInfoData':
+    def create_block_produce_info_data(
+        block_height: int,
+        block_generator: "Address",
+        block_votes: List[Tuple["Address", int]],
+    ) -> "BlockProduceInfoData":
 
         block_validators = [address for address, is_valid in block_votes if is_valid]
 
@@ -67,10 +82,9 @@ class DataCreator:
         return data
 
     @classmethod
-    def create_prep_data(cls,
-                         block_height: int,
-                         total_delegation: int,
-                         preps: Iterable['PRepSnapshot']) -> 'PRepsData':
+    def create_prep_data(
+        cls, block_height: int, total_delegation: int, preps: Iterable["PRepSnapshot"]
+    ) -> "PRepsData":
         """
 
         :param block_height:
@@ -79,10 +93,14 @@ class DataCreator:
         :return:
         """
 
-        converted_preps: List['DelegationInfo'] = []
+        converted_preps: List["DelegationInfo"] = []
         for prep_snapshot in preps:
-            Logger.debug(tag=cls.TAG, msg=f"create_prep_data: {str(prep_snapshot.address)}")
-            info = DataCreator.create_delegation_info(prep_snapshot.address, prep_snapshot.delegated)
+            Logger.debug(
+                tag=cls.TAG, msg=f"create_prep_data: {str(prep_snapshot.address)}"
+            )
+            info = DataCreator.create_delegation_info(
+                prep_snapshot.address, prep_snapshot.delegated
+            )
             converted_preps.append(info)
 
         data = PRepsData()
@@ -92,7 +110,7 @@ class DataCreator:
         return data
 
     @staticmethod
-    def create_tx(address: 'Address', block_height: int, tx_data: 'Tx') -> 'TxData':
+    def create_tx(address: "Address", block_height: int, tx_data: "Tx") -> "TxData":
         data = TxData()
         data.address = address
         data.block_height = block_height
@@ -100,13 +118,13 @@ class DataCreator:
         return data
 
     @staticmethod
-    def create_tx_delegation(delegation_infos: list) -> 'DelegationTx':
+    def create_tx_delegation(delegation_infos: list) -> "DelegationTx":
         tx = DelegationTx()
         tx.delegation_info = delegation_infos
         return tx
 
     @classmethod
-    def create_delegation_info(cls, address: 'Address', value: int) -> 'DelegationInfo':
+    def create_delegation_info(cls, address: "Address", value: int) -> "DelegationInfo":
         info = DelegationInfo()
         info.address = address
         info.value = value
@@ -114,11 +132,11 @@ class DataCreator:
         return info
 
     @staticmethod
-    def create_tx_prep_reg() -> 'PRepRegisterTx':
+    def create_tx_prep_reg() -> "PRepRegisterTx":
         tx = PRepRegisterTx()
         return tx
 
     @staticmethod
-    def create_tx_prep_unreg() -> 'PRepUnregisterTx':
+    def create_tx_prep_unreg() -> "PRepUnregisterTx":
         tx = PRepUnregisterTx()
         return tx

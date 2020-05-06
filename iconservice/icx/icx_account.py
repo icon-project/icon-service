@@ -26,16 +26,21 @@ if TYPE_CHECKING:
 
 
 class Account(object):
-    def __init__(self, address: 'Address', current_block_height: int, *,
-                 coin_part: Optional['CoinPart'] = None,
-                 stake_part: Optional['StakePart'] = None,
-                 delegation_part: Optional['DelegationPart'] = None):
-        self._address: 'Address' = address
+    def __init__(
+        self,
+        address: "Address",
+        current_block_height: int,
+        *,
+        coin_part: Optional["CoinPart"] = None,
+        stake_part: Optional["StakePart"] = None,
+        delegation_part: Optional["DelegationPart"] = None,
+    ):
+        self._address: "Address" = address
         self._current_block_height: int = current_block_height
 
-        self._coin_part: 'CoinPart' = coin_part
-        self._stake_part: 'StakePart' = stake_part
-        self._delegation_part: 'DelegationPart' = delegation_part
+        self._coin_part: "CoinPart" = coin_part
+        self._stake_part: "StakePart" = stake_part
+        self._delegation_part: "DelegationPart" = delegation_part
 
         self.normalize()
 
@@ -44,15 +49,15 @@ class Account(object):
         return self._address
 
     @property
-    def coin_part(self) -> 'CoinPart':
+    def coin_part(self) -> "CoinPart":
         return self._coin_part
 
     @property
-    def stake_part(self) -> 'StakePart':
+    def stake_part(self) -> "StakePart":
         return self._stake_part
 
     @property
-    def delegation_part(self) -> 'DelegationPart':
+    def delegation_part(self) -> "DelegationPart":
         return self._delegation_part
 
     @property
@@ -112,18 +117,22 @@ class Account(object):
     @property
     def voting_power(self) -> int:
         if self.stake_part and self.delegation_part:
-            return self.stake_part.voting_weight - self.delegation_part.delegations_amount
-        raise InvalidParamsException("Invalid intend: stake_part or delegation_part is None")
+            return (
+                self.stake_part.voting_weight - self.delegation_part.delegations_amount
+            )
+        raise InvalidParamsException(
+            "Invalid intend: stake_part or delegation_part is None"
+        )
 
     def deposit(self, value: int):
         if self.coin_part is None:
-            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+            raise InvalidParamsException("Failed to delegation: InvalidAccount")
 
         self.coin_part.deposit(value)
 
     def withdraw(self, value: int):
         if self.coin_part is None:
-            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+            raise InvalidParamsException("Failed to delegation: InvalidAccount")
 
         self.coin_part.withdraw(value)
 
@@ -134,22 +143,26 @@ class Account(object):
         balance: int = self.stake_part.normalize(self._current_block_height)
         if balance > 0:
             if self.coin_part is None:
-                raise InvalidParamsException('Failed to normalize: no coin part')
+                raise InvalidParamsException("Failed to normalize: no coin part")
 
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
     def set_stake(self, value: int, unstake_lock_period: int):
         if self.coin_part is None or self.stake_part is None:
-            raise InvalidParamsException('Failed to stake: InvalidAccount')
+            raise InvalidParamsException("Failed to stake: InvalidAccount")
 
         if not isinstance(value, int) or value < 0:
-            raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
+            raise InvalidParamsException(
+                "Failed to stake: value is not int type or value < 0"
+            )
 
         total: int = self.balance + self.total_stake
 
         if total < value:
-            raise InvalidParamsException(f'Failed to stake: total{total} < stake{value}')
+            raise InvalidParamsException(
+                f"Failed to stake: total{total} < stake{value}"
+            )
 
         offset: int = value - self.total_stake
 
@@ -162,18 +175,18 @@ class Account(object):
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
             self.coin_part.toggle_has_unstake(True)
-            self.stake_part.set_unstake(unlock_block_height,  self.total_stake - value)
+            self.stake_part.set_unstake(unlock_block_height, self.total_stake - value)
 
     def update_delegated_amount(self, offset: int):
         if self.delegation_part is None:
-            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+            raise InvalidParamsException("Failed to delegation: InvalidAccount")
 
         self.delegation_part.update_delegated_amount(offset)
 
     def set_delegations(self, new_delegations: list):
         if self.delegation_part is None:
-            raise InvalidParamsException('Failed to delegation: InvalidAccount')
-        
+            raise InvalidParamsException("Failed to delegation: InvalidAccount")
+
         self.delegation_part.set_delegations(new_delegations)
 
     def __eq__(self, other) -> bool:
@@ -181,11 +194,13 @@ class Account(object):
 
         :param other: (CoinPart)
         """
-        return isinstance(other, Account) \
-            and self._address == other.address \
-            and self._coin_part == other.coin_part \
-            and self._stake_part == other.stake_part \
+        return (
+            isinstance(other, Account)
+            and self._address == other.address
+            and self._coin_part == other.coin_part
+            and self._stake_part == other.stake_part
             and self._delegation_part == other.delegation_part
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding

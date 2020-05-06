@@ -19,13 +19,14 @@ from iconservice import *
 
 class Governance(IconSystemScoreBase):
     """Governance Score for testing failure case during migration (that is on_update)"""
-    _SCORE_STATUS = 'score_status'  # legacy
-    _AUDITOR_LIST = 'auditor_list'
-    _DEPLOYER_LIST = 'deployer_list'
-    _VERSION = 'version'
-    _SERVICE_CONFIG = 'service_config'
-    _AUDIT_STATUS = 'audit_status'
-    _REJECT_STATUS = 'reject_status'
+
+    _SCORE_STATUS = "score_status"  # legacy
+    _AUDITOR_LIST = "auditor_list"
+    _DEPLOYER_LIST = "deployer_list"
+    _VERSION = "version"
+    _SERVICE_CONFIG = "service_config"
+    _AUDIT_STATUS = "audit_status"
+    _REJECT_STATUS = "reject_status"
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
@@ -43,7 +44,7 @@ class Governance(IconSystemScoreBase):
     def on_update(self) -> None:
         super().on_update()
         self._migrate_v1_0_1()
-        self._version.set('1.0.1')
+        self._version.set("1.0.1")
 
     def _migrate_v1_0_1(self):
         # Migrate and Remove all icon network variables

@@ -31,27 +31,30 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateSendingIcx(TestIntegrateBase):
-
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: True}}
 
     def test_fail_icx_validator(self):
         icx = 3 * FIXED_FEE
-        self.transfer_icx(from_=self._admin,
-                          to_=self._accounts[0],
-                          value=icx)
+        self.transfer_icx(from_=self._admin, to_=self._accounts[0], value=icx)
 
         self.assertEqual(icx, self.get_balance(self._accounts[0]))
 
-        tx1 = self.create_transfer_icx_tx(from_=self._accounts[0],
-                                          to_=self._accounts[1],
-                                          value=1 * FIXED_FEE,
-                                          support_v2=True)
-        tx2 = self.create_transfer_icx_tx(from_=self._accounts[0],
-                                          to_=self._accounts[1],
-                                          value=1 * FIXED_FEE,
-                                          support_v2=True)
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        tx1 = self.create_transfer_icx_tx(
+            from_=self._accounts[0],
+            to_=self._accounts[1],
+            value=1 * FIXED_FEE,
+            support_v2=True,
+        )
+        tx2 = self.create_transfer_icx_tx(
+            from_=self._accounts[0],
+            to_=self._accounts[1],
+            value=1 * FIXED_FEE,
+            support_v2=True,
+        )
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx(
+            [tx1, tx2]
+        )
 
         self.assertEqual(tx_results[0].step_used, 1_000_000)
         # wrong!
@@ -62,25 +65,27 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         self.set_revision(Revision.THREE.value)
 
         icx = 3 * FIXED_FEE
-        self.transfer_icx(from_=self._admin,
-                          to_=self._accounts[0],
-                          value=icx)
+        self.transfer_icx(from_=self._admin, to_=self._accounts[0], value=icx)
 
         self.assertEqual(icx, self.get_balance(self._accounts[0]))
 
-        tx1 = self.create_transfer_icx_tx(from_=self._accounts[0],
-                                          to_=self._accounts[1],
-                                          value=1 * FIXED_FEE,
-                                          support_v2=True)
-        tx2 = self.create_transfer_icx_tx(from_=self._accounts[0],
-                                          to_=self._accounts[1],
-                                          value=1 * FIXED_FEE,
-                                          support_v2=True)
+        tx1 = self.create_transfer_icx_tx(
+            from_=self._accounts[0],
+            to_=self._accounts[1],
+            value=1 * FIXED_FEE,
+            support_v2=True,
+        )
+        tx2 = self.create_transfer_icx_tx(
+            from_=self._accounts[0],
+            to_=self._accounts[1],
+            value=1 * FIXED_FEE,
+            support_v2=True,
+        )
 
         prev_block, hash_list = self.make_and_req_block([tx1, tx2])
         self._write_precommit_state(prev_block)
 
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+        tx_results: List["TransactionResult"] = self.get_tx_results(hash_list)
         self.assertEqual(tx_results[0].step_used, 1_000_000)
         self.assertEqual(tx_results[1].status, 0)
 
@@ -100,7 +105,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
             self.assertTrue(balance0 > 0)
 
             # Check "to" address balance. It should be 0
-            to: 'Address' = create_address()
+            to: "Address" = create_address()
             to_balance: int = self.get_balance(to)
             self.assertEqual(0, to_balance)
 
@@ -113,10 +118,9 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
             else:
                 step_limit = default_step_cost
 
-            tx_results: List['TransactionResult'] = self.transfer_icx(from_=self._admin,
-                                                                      to_=to,
-                                                                      value=value,
-                                                                      step_limit=step_limit)
+            tx_results: List["TransactionResult"] = self.transfer_icx(
+                from_=self._admin, to_=to, value=value, step_limit=step_limit
+            )
             self.assertEqual(step_limit, tx_results[0].step_used)
             self.assertEqual(to, tx_results[0].to)
             self.assertIsNone(tx_results[0].failure)
@@ -125,7 +129,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
             fee: int = tx_results[0].step_used * step_price
             self.assertTrue(fee > 0)
 
-            to_balance: int = self._query({"address": to}, 'icx_getBalance')
+            to_balance: int = self._query({"address": to}, "icx_getBalance")
             self.assertEqual(value, to_balance)
 
             balance: int = self.get_balance(self._admin)

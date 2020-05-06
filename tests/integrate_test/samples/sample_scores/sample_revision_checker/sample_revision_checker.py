@@ -2,7 +2,6 @@ from iconservice import *
 
 
 class SampleRevisionChecker(IconScoreBase):
-
     @eventlog(indexed=1)
     def RevisionChecked(self, revision: int):
         pass

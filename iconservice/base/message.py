@@ -24,7 +24,7 @@ class Message(object):
     """Data which is sent to receipt through icx_sendTransaction json-rpc api
     """
 
-    def __init__(self, sender: Optional['Address']=None, value: int=0) -> None:
+    def __init__(self, sender: Optional["Address"] = None, value: int = 0) -> None:
         """Constructor
 
         :param sender: sender of the message (current call)

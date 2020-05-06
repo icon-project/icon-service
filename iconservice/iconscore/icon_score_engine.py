@@ -19,8 +19,12 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
-    ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
+from .icon_score_constant import (
+    STR_FALLBACK,
+    ATTR_SCORE_GET_API,
+    ATTR_SCORE_CALL,
+    ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD,
+)
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
@@ -37,10 +41,12 @@ class IconScoreEngine(object):
     """
 
     @staticmethod
-    def invoke(context: 'IconScoreContext',
-               icon_score_address: 'Address',
-               data_type: str,
-               data: dict) -> None:
+    def invoke(
+        context: "IconScoreContext",
+        icon_score_address: "Address",
+        data_type: str,
+        data: dict,
+    ) -> None:
         """Handle calldata contained in icx_sendTransaction message
 
         :param icon_score_address:
@@ -48,30 +54,34 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
-        if data_type == 'call':
+        if data_type == "call":
             IconScoreEngine._validate_score_blacklist(context, icon_score_address)
             IconScoreEngine._call(context, icon_score_address, data)
         else:
             IconScoreEngine._fallback(context, icon_score_address)
 
     @staticmethod
-    def query(context: IconScoreContext,
-              icon_score_address: Address,
-              data_type: str,
-              data: dict) -> object:
+    def query(
+        context: IconScoreContext,
+        icon_score_address: Address,
+        data_type: str,
+        data: dict,
+    ) -> object:
         """Execute an external method of SCORE without state changing
 
         Handles messagecall of icx_call
         """
         IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
-        if data_type == 'call':
+        if data_type == "call":
             return IconScoreEngine._call(context, icon_score_address, data)
         else:
-            raise InvalidParamsException(f'Invalid dataType: ({data_type})')
+            raise InvalidParamsException(f"Invalid dataType: ({data_type})")
 
     @staticmethod
-    def get_score_api(context: 'IconScoreContext', icon_score_address: 'Address') -> object:
+    def get_score_api(
+        context: "IconScoreContext", icon_score_address: "Address"
+    ) -> object:
         """Handle get score api
 
         :param context:
@@ -84,30 +94,36 @@ class IconScoreEngine(object):
         return get_api()
 
     @staticmethod
-    def _validate_score_blacklist(context: 'IconScoreContext', icon_score_address: 'Address'):
+    def _validate_score_blacklist(
+        context: "IconScoreContext", icon_score_address: "Address"
+    ):
         if icon_score_address is None or not icon_score_address.is_contract:
-            raise InvalidParamsException(f"Invalid score address: ({icon_score_address})")
+            raise InvalidParamsException(
+                f"Invalid score address: ({icon_score_address})"
+            )
 
         IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
     @staticmethod
-    def _call(context: 'IconScoreContext',
-              icon_score_address: 'Address',
-              data: dict) -> Any:
+    def _call(
+        context: "IconScoreContext", icon_score_address: "Address", data: dict
+    ) -> Any:
         """Handle jsonrpc including both invoke and query
 
         :param context:
         :param icon_score_address:
         :param data: data to call the method of score
         """
-        func_name: str = data['method']
-        kw_params: dict = data.get('params', {})
+        func_name: str = data["method"]
+        kw_params: dict = data.get("params", {})
 
         icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
 
-        converted_params = IconScoreEngine._convert_score_params_by_annotations(context, icon_score, func_name, kw_params)
+        converted_params = IconScoreEngine._convert_score_params_by_annotations(
+            context, icon_score, func_name, kw_params
+        )
         context.set_func_type_by_icon_score(icon_score, func_name)
-        context.current_address: 'Address' = icon_score_address
+        context.current_address: "Address" = icon_score_address
 
         score_func = getattr(icon_score, ATTR_SCORE_CALL)
         ret = score_func(func_name=func_name, kw_params=converted_params)
@@ -116,27 +132,35 @@ class IconScoreEngine(object):
         return deepcopy(ret)
 
     @staticmethod
-    def _convert_score_params_by_annotations(context: 'IconScoreContext',
-                                             icon_score: 'IconScoreBase',
-                                             func_name: str,
-                                             kw_params: dict) -> dict:
+    def _convert_score_params_by_annotations(
+        context: "IconScoreContext",
+        icon_score: "IconScoreBase",
+        func_name: str,
+        kw_params: dict,
+    ) -> dict:
         tmp_params = deepcopy(kw_params)
 
-        validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
+        validate_external_method = getattr(
+            icon_score, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
+        )
         validate_external_method(func_name)
 
         remove_invalid_params = False
-        if icon_score.address == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value:
+        if (
+            icon_score.address == SYSTEM_SCORE_ADDRESS
+            and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value
+        ):
             remove_invalid_params = True
 
         score_func = getattr(icon_score, func_name)
-        TypeConverter.adjust_params_to_method(score_func, tmp_params, remove_invalid_params)
+        TypeConverter.adjust_params_to_method(
+            score_func, tmp_params, remove_invalid_params
+        )
 
         return tmp_params
 
     @staticmethod
-    def _fallback(context: 'IconScoreContext',
-                  score_address: 'Address'):
+    def _fallback(context: "IconScoreContext", score_address: "Address"):
         """When an IconScore receives some coins and calldata is None,
         fallback function is called.
 
@@ -148,9 +172,8 @@ class IconScoreEngine(object):
         score_func(STR_FALLBACK)
 
     @staticmethod
-    def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):
+    def _get_icon_score(context: "IconScoreContext", icon_score_address: "Address"):
         icon_score = IconScoreContextUtil.get_icon_score(context, icon_score_address)
         if icon_score is None:
-            raise ScoreNotFoundException(
-                f'SCORE not found: {icon_score_address}')
+            raise ScoreNotFoundException(f"SCORE not found: {icon_score_address}")
         return icon_score

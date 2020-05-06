@@ -22,7 +22,6 @@ from tests import create_address
 
 
 class TestTypeConverter(unittest.TestCase):
-
     def test_set_delegation(self):
         address1 = create_address()
         value1 = 1 * 10 ** 18
@@ -31,18 +30,16 @@ class TestTypeConverter(unittest.TestCase):
         value2 = 2 * 10 ** 18
 
         request = [
-            {
-                ConstantKeys.ADDRESS: str(address1),
-                ConstantKeys.VALUE: hex(value1)
-            },
-            {
-                ConstantKeys.ADDRESS: str(address2),
-                ConstantKeys.VALUE: hex(value2)
-            }
+            {ConstantKeys.ADDRESS: str(address1), ConstantKeys.VALUE: hex(value1)},
+            {ConstantKeys.ADDRESS: str(address2), ConstantKeys.VALUE: hex(value2)},
         ]
 
         ret_delegations = TypeConverter.convert(request, ParamType.IISS_SET_DELEGATION)
-        self.assertEqual(address1, ret_delegations[0][ConstantKeys.ADDRESS], f'{type(ret_delegations[0][ConstantKeys.ADDRESS])}')
+        self.assertEqual(
+            address1,
+            ret_delegations[0][ConstantKeys.ADDRESS],
+            f"{type(ret_delegations[0][ConstantKeys.ADDRESS])}",
+        )
         self.assertEqual(value1, ret_delegations[0][ConstantKeys.VALUE])
         self.assertEqual(address2, ret_delegations[1][ConstantKeys.ADDRESS])
         self.assertEqual(value2, ret_delegations[1][ConstantKeys.VALUE])

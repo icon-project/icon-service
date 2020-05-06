@@ -40,27 +40,40 @@ class RollbackManager(object):
     Related databases: state_db, iiss_db
     """
 
-    def __init__(self, backup_root_path: str, rc_data_path: str, state_db: 'KeyValueDatabase'):
+    def __init__(
+        self, backup_root_path: str, rc_data_path: str, state_db: "KeyValueDatabase"
+    ):
         self._backup_root_path = backup_root_path
         self._rc_data_path = rc_data_path
         self._state_db = state_db
 
-    def run(self, last_block_height: int, rollback_block_height: int, term_start_block_height: int):
+    def run(
+        self,
+        last_block_height: int,
+        rollback_block_height: int,
+        term_start_block_height: int,
+    ):
         """Rollback to the previous block state
 
         :param last_block_height: the last confirmed block height
         :param rollback_block_height: the height of block to rollback to
         :param term_start_block_height: the start block height of the current term
         """
-        Logger.info(tag=TAG, msg=f"run() start: "
-                                 f"last_block_height={last_block_height} "
-                                 f"rollback_block_height={rollback_block_height} "
-                                 f"term_start_block_height={term_start_block_height}")
+        Logger.info(
+            tag=TAG,
+            msg=f"run() start: "
+            f"last_block_height={last_block_height} "
+            f"rollback_block_height={rollback_block_height} "
+            f"term_start_block_height={term_start_block_height}",
+        )
 
-        self._validate_block_heights(last_block_height, rollback_block_height, term_start_block_height)
+        self._validate_block_heights(
+            last_block_height, rollback_block_height, term_start_block_height
+        )
 
-        term_change_exists = \
-            self._term_change_exists(last_block_height, rollback_block_height, term_start_block_height)
+        term_change_exists = self._term_change_exists(
+            last_block_height, rollback_block_height, term_start_block_height
+        )
         calc_end_block_height = term_start_block_height - 1
         reader = WriteAheadLogReader()
         state_db_batch = {}
@@ -75,11 +88,15 @@ class RollbackManager(object):
             reader.open(path)
 
             # Merge backup data into state_db_batch
-            self._write_batch(reader.get_iterator(WALDBType.STATE.value), state_db_batch)
+            self._write_batch(
+                reader.get_iterator(WALDBType.STATE.value), state_db_batch
+            )
 
             # Merge backup data into iiss_db_batch
             if not (term_change_exists and block_height > calc_end_block_height):
-                self._write_batch(reader.get_iterator(WALDBType.RC.value), iiss_db_batch)
+                self._write_batch(
+                    reader.get_iterator(WALDBType.RC.value), iiss_db_batch
+                )
 
             reader.close()
 
@@ -97,22 +114,33 @@ class RollbackManager(object):
         Logger.info(tag=TAG, msg="run() end")
 
     @staticmethod
-    def _validate_block_heights(last_block_height: int, rollback_block_height: int, term_start_block_height: int):
+    def _validate_block_heights(
+        last_block_height: int, rollback_block_height: int, term_start_block_height: int
+    ):
         if last_block_height < 0:
-            raise InvalidParamsException(f"Invalid lastBlockHeight: {last_block_height}")
+            raise InvalidParamsException(
+                f"Invalid lastBlockHeight: {last_block_height}"
+            )
 
         if rollback_block_height < 0:
-            raise InvalidParamsException(f"Invalid rollbackBlockHeight: {rollback_block_height}")
+            raise InvalidParamsException(
+                f"Invalid rollbackBlockHeight: {rollback_block_height}"
+            )
 
         if term_start_block_height < 0:
-            raise InvalidParamsException(f"Invalid termStartBlockHeight: {term_start_block_height}")
+            raise InvalidParamsException(
+                f"Invalid termStartBlockHeight: {term_start_block_height}"
+            )
 
         if rollback_block_height >= last_block_height:
             raise InvalidParamsException(
-                f"lastBlockHeight({last_block_height}) <= rollbackBlockHeight({rollback_block_height}")
-        
-    @staticmethod        
-    def _term_change_exists(last_block_height: int, rollback_block_height: int, term_start_block_height: int) -> bool:
+                f"lastBlockHeight({last_block_height}) <= rollbackBlockHeight({rollback_block_height}"
+            )
+
+    @staticmethod
+    def _term_change_exists(
+        last_block_height: int, rollback_block_height: int, term_start_block_height: int
+    ) -> bool:
         return rollback_block_height < term_start_block_height <= last_block_height
 
     @staticmethod
@@ -121,7 +149,7 @@ class RollbackManager(object):
             batch[key] = value
 
     @staticmethod
-    def _commit_batch(batch: dict, db: 'KeyValueDatabase'):
+    def _commit_batch(batch: dict, db: "KeyValueDatabase"):
         db.write_batch(batch.items())
 
     def _get_backup_file_path(self, block_height: int) -> str:
@@ -148,13 +176,19 @@ class RollbackManager(object):
         """Rename iiss_db to current_db
 
         """
-        Logger.debug(tag=TAG,
-                     msg=f"_rename_iiss_db_to_current_db() start: calc_end_block_height={calc_end_block_height}")
+        Logger.debug(
+            tag=TAG,
+            msg=f"_rename_iiss_db_to_current_db() start: calc_end_block_height={calc_end_block_height}",
+        )
 
         filename = RewardCalcStorage.get_iiss_rc_db_name(calc_end_block_height)
         src_path = os.path.join(self._rc_data_path, filename)
-        dst_path = os.path.join(self._rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME)
-        Logger.info(tag=TAG, msg=f"rename_iiss_db: src_path={src_path} dst_path={dst_path}")
+        dst_path = os.path.join(
+            self._rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME
+        )
+        Logger.info(
+            tag=TAG, msg=f"rename_iiss_db: src_path={src_path} dst_path={dst_path}"
+        )
 
         # Consider the case that renaming iiss_db to current_db has been already done
         if os.path.isdir(src_path):
@@ -173,8 +207,10 @@ class RollbackManager(object):
         :param block_height: the end block of the previous term
         :return:
         """
-        Logger.debug(tag=TAG,
-                     msg=f"_remove_block_produce_info() start: block_height={block_height}")
+        Logger.debug(
+            tag=TAG,
+            msg=f"_remove_block_produce_info() start: block_height={block_height}",
+        )
 
         # Remove the end calc block from iiss_db
         key: bytes = make_block_produce_info_key(block_height)

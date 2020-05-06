@@ -36,44 +36,38 @@ class TestIntegrateRevision(TestIntegrateBase):
         self.update_governance("0_0_4")
 
     def test_governance_call_about_set_revision(self):
-        expected_status = {
-            "code": Revision.TWO.value,
-            "name": "1.1.0"
-        }
+        expected_status = {"code": Revision.TWO.value, "name": "1.1.0"}
 
         query_request = {
             "version": self._version,
             "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getRevision",
-                "params": {}
-            }
+            "data": {"method": "getRevision", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
         next_revision = Revision.TWO.value + 1
 
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name="setRevision",
-                        params={"code": hex(next_revision), "name": "1.1.1"})
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="setRevision",
+            params={"code": hex(next_revision), "name": "1.1.1"},
+        )
 
-        expected_status = {
-            "code": next_revision,
-            "name": "1.1.1"
-        }
+        expected_status = {"code": next_revision, "name": "1.1.1"}
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
     def test_revision_update_on_block(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_revision_checker",
-            from_=self._accounts[0])
-        score_address: 'Address' = tx_results[0].score_address
+            from_=self._accounts[0],
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         first_revision = Revision.TWO.value
         next_revision = first_revision + 1
@@ -82,20 +76,28 @@ class TestIntegrateRevision(TestIntegrateBase):
         # 2-revision update
         # 3-revision check
 
-        tx1: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                              to_=score_address,
-                                              func_name="checkRevision",
-                                              params={})
-        tx2: dict = self.create_score_call_tx(from_=self._admin,
-                                              to_=GOVERNANCE_SCORE_ADDRESS,
-                                              func_name="setRevision",
-                                              params={"code": hex(next_revision), "name": "1.1.1"})
-        tx3: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                              to_=score_address,
-                                              func_name="checkRevision",
-                                              params={})
+        tx1: dict = self.create_score_call_tx(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="checkRevision",
+            params={},
+        )
+        tx2: dict = self.create_score_call_tx(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="setRevision",
+            params={"code": hex(next_revision), "name": "1.1.1"},
+        )
+        tx3: dict = self.create_score_call_tx(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="checkRevision",
+            params={},
+        )
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2, tx3])
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx(
+            [tx1, tx2, tx3]
+        )
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[0].event_logs[0].indexed[1], first_revision)
@@ -108,23 +110,19 @@ class TestIntegrateRevision(TestIntegrateBase):
             "from": self._accounts[0],
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getRevision",
-                "params": {}
-            }
+            "data": {"method": "getRevision", "params": {}},
         }
 
-        expected_status = {
-            "code": next_revision,
-            "name": "1.1.1"
-        }
+        expected_status = {"code": next_revision, "name": "1.1.1"}
         response = self._query(query_request)
         self.assertEqual(expected_status, response)
 
-        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=score_address,
-                                             func_name="checkRevision",
-                                             params={})
+        tx: dict = self.create_score_call_tx(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="checkRevision",
+            params={},
+        )
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx])
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx([tx])
         self.assertEqual(tx_results[0].event_logs[0].indexed[1], next_revision)

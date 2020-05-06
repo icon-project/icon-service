@@ -36,7 +36,7 @@ class TestScore:
     def func_param_address1(self, value: Address) -> Address:
         return value
 
-    def func_param_address2(self, value: 'Address') -> 'Address':
+    def func_param_address2(self, value: "Address") -> "Address":
         return value
 
 
@@ -52,7 +52,7 @@ def test_func_param_int():
 
 
 def test_func_param_str():
-    value = 'a'
+    value = "a"
     params = {"value": value}
     annotations = TypeConverter.make_annotations_from_method(TEST_SCORE.func_param_str)
     TypeConverter.convert_data_params(annotations, params)
@@ -60,9 +60,11 @@ def test_func_param_str():
 
 
 def test_func_param_bytes():
-    value = b'bytes'
+    value = b"bytes"
     params = {"value": bytes.hex(value)}
-    annotations = TypeConverter.make_annotations_from_method(TEST_SCORE.func_param_bytes)
+    annotations = TypeConverter.make_annotations_from_method(
+        TEST_SCORE.func_param_bytes
+    )
     TypeConverter.convert_data_params(annotations, params)
     assert value == TEST_SCORE.func_param_bytes(**params)
 
@@ -78,7 +80,9 @@ def test_func_param_bool():
 def test_func_param_address1():
     value = create_address()
     params = {"value": str(value)}
-    annotations = TypeConverter.make_annotations_from_method(TEST_SCORE.func_param_address1)
+    annotations = TypeConverter.make_annotations_from_method(
+        TEST_SCORE.func_param_address1
+    )
     TypeConverter.convert_data_params(annotations, params)
     assert value == TEST_SCORE.func_param_address1(**params)
 
@@ -86,7 +90,9 @@ def test_func_param_address1():
 def test_func_param_address2():
     value = create_address()
     params = {"value": str(value)}
-    annotations = TypeConverter.make_annotations_from_method(TEST_SCORE.func_param_address2)
+    annotations = TypeConverter.make_annotations_from_method(
+        TEST_SCORE.func_param_address2
+    )
     TypeConverter.convert_data_params(annotations, params)
     assert value == TEST_SCORE.func_param_address2(**params)
 
@@ -110,7 +116,9 @@ def test_func_param_str_none():
 def test_func_param_bytes_none():
     value = None
     params = {"value": value}
-    annotations = TypeConverter.make_annotations_from_method(TEST_SCORE.func_param_bytes)
+    annotations = TypeConverter.make_annotations_from_method(
+        TEST_SCORE.func_param_bytes
+    )
     TypeConverter.convert_data_params(annotations, params)
     assert value == TEST_SCORE.func_param_bytes(**params)
 
@@ -126,6 +134,8 @@ def test_func_param_bool_none():
 def test_func_param_address_none():
     value = None
     params = {"value": value}
-    annotations = TypeConverter.make_annotations_from_method(TEST_SCORE.func_param_address1)
+    annotations = TypeConverter.make_annotations_from_method(
+        TEST_SCORE.func_param_address1
+    )
     TypeConverter.convert_data_params(annotations, params)
     assert value == TEST_SCORE.func_param_address1(**params)

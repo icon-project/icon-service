@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 class TestIissDataConverter(unittest.TestCase):
     def test_iiss_codec_eoa_address(self):
-        codec: 'BaseCodec' = BaseCodec()
+        codec: "BaseCodec" = BaseCodec()
 
         eoa_addr = create_address()
         tag, data = codec.encode(eoa_addr)
@@ -37,7 +37,7 @@ class TestIissDataConverter(unittest.TestCase):
         self.assertEqual(eoa_addr, ret_addr)
 
     def test_iiss_codec_eoa_address_raise_exception(self):
-        codec: 'BaseCodec' = BaseCodec()
+        codec: "BaseCodec" = BaseCodec()
 
         with self.assertRaises(InvalidParamsException) as cm:
             addr = "invalid address"
@@ -54,7 +54,7 @@ class TestIissDataConverter(unittest.TestCase):
         self.assertEqual(cm.exception.message, f"UnknownType: {type(wrong_type)}")
 
     def test_iiss_codec_score_address(self):
-        codec: 'BaseCodec' = BaseCodec()
+        codec: "BaseCodec" = BaseCodec()
 
         score_addr = create_address(1)
         tag, data = codec.encode(score_addr)
@@ -75,7 +75,7 @@ class TestIissDataConverter(unittest.TestCase):
         self.assertEqual(str_value, ret_str)
 
     def test_iiss_data_converter_encode_decode_bytes(self):
-        bytes_value: bytes = b'byte_value'
+        bytes_value: bytes = b"byte_value"
         data: bytes = MsgPackForIpc.encode(bytes_value)
         ret_bytes: bytes = MsgPackForIpc.decode(TypeTag.BYTES, data)
         self.assertEqual(bytes_value, ret_bytes)
@@ -97,7 +97,9 @@ class TestIissDataConverter(unittest.TestCase):
             none_value = "wrong_data"
             data: bytes = MsgPackForIpc.encode(none_value)
             MsgPackForIpc.decode(TypeTag.NIL, data)
-        self.assertEqual(cm.exception.message, f"Invalid tag type:{TypeTag.NIL} value: {data}")
+        self.assertEqual(
+            cm.exception.message, f"Invalid tag type:{TypeTag.NIL} value: {data}"
+        )
 
     def test_iiss_data_converter_encode_decode_any_int(self):
         int_value: int = 10
@@ -130,7 +132,7 @@ class TestIissDataConverter(unittest.TestCase):
         self.assertEqual(none_value, ret_none)
 
     def test_iiss_data_converter_encode_decode_any_list(self):
-        list_value: list = [1,2,[3,4,[5,6]]]
+        list_value: list = [1, 2, [3, 4, [5, 6]]]
         data: tuple = MsgPackForIpc.encode_any(list_value)
         ret_list = MsgPackForIpc.decode_any(data)
         self.assertEqual(list_value, ret_list)
@@ -142,5 +144,5 @@ class TestIissDataConverter(unittest.TestCase):
         self.assertEqual(dict_value, ret_dict)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

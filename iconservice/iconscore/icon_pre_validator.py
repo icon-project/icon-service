@@ -18,8 +18,19 @@ from typing import TYPE_CHECKING, Any
 
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
-from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
-from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
+from ..base.exception import (
+    InvalidRequestException,
+    InvalidParamsException,
+    OutOfBalanceException,
+)
+from ..icon_constant import (
+    FIXED_FEE,
+    MAX_DATA_SIZE,
+    DEFAULT_BYTE_SIZE,
+    DATA_BYTE_ORDER,
+    Revision,
+    DeployState,
+)
 from ..utils import is_lowercase_hex_string
 
 if TYPE_CHECKING:
@@ -38,7 +49,13 @@ class IconPreValidator:
         """
         pass
 
-    def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int):
+    def execute(
+        self,
+        context: "IconScoreContext",
+        params: dict,
+        step_price: int,
+        minimum_step: int,
+    ):
         """Validate a transaction on icx_sendTransaction
         If failed to validate a tx, raise an exception
 
@@ -53,7 +70,7 @@ class IconPreValidator:
 
         self._check_input_data(params)
 
-        value: int = params.get('value', 0)
+        value: int = params.get("value", 0)
         if value < 0:
             raise InvalidParamsException("value < 0")
         try:
@@ -61,14 +78,16 @@ class IconPreValidator:
         except OverflowError:
             raise InvalidParamsException("exceed ICX amount you can send at one time")
 
-        version: int = params.get('version', 2)
+        version: int = params.get("version", 2)
         if version < 3:
             self._validate_transaction_v2(context, params)
         else:
             self._validate_transaction_v3(context, params, step_price, minimum_step)
 
-    def execute_to_check_out_of_balance(self, context: 'IconScoreContext', params: dict, step_price: int):
-        version: int = params.get('version', 2)
+    def execute_to_check_out_of_balance(
+        self, context: "IconScoreContext", params: dict, step_price: int
+    ):
+        version: int = params.get("version", 2)
 
         if version < 3:
             self._check_from_can_charge_fee_v2(context, params)
@@ -84,8 +103,8 @@ class IconPreValidator:
         :return:
         """
 
-        input_data = params.get('data', None)
-        if 'message' == params.get('dataType', None):
+        input_data = params.get("data", None)
+        if "message" == params.get("dataType", None):
             IconPreValidator._check_message_data(input_data)
         else:
             IconPreValidator._check_input_data_type(input_data)
@@ -99,13 +118,15 @@ class IconPreValidator:
 
         :param data: input data of message type
         """
-        if isinstance(data, str) \
-                and data.startswith('0x') \
-                and is_lowercase_hex_string(data[2:]) \
-                and len(data) % 2 == 0:
+        if (
+            isinstance(data, str)
+            and data.startswith("0x")
+            and is_lowercase_hex_string(data[2:])
+            and len(data) % 2 == 0
+        ):
             return
 
-        raise InvalidRequestException('Invalid message data')
+        raise InvalidRequestException("Invalid message data")
 
     @staticmethod
     def _check_input_data_type(data: Any):
@@ -120,7 +141,7 @@ class IconPreValidator:
                 IconPreValidator._check_input_data_type(v)
         elif data is not None and not isinstance(data, str):
             # The leaf value should be None or str.
-            raise InvalidRequestException('Invalid data type')
+            raise InvalidRequestException("Invalid data type")
 
     @staticmethod
     def _check_input_data_size(input_data: Any):
@@ -139,19 +160,19 @@ class IconPreValidator:
             size = get_input_data_size(Revision.LATEST.value, input_data)
 
             if size > MAX_DATA_SIZE:
-                raise InvalidRequestException('Invalid message length')
+                raise InvalidRequestException("Invalid message length")
 
-    def _check_from_can_charge_fee_v2(self, context: 'IconScoreContext', params: dict):
-        fee: int = params['fee']
+    def _check_from_can_charge_fee_v2(self, context: "IconScoreContext", params: dict):
+        fee: int = params["fee"]
         if fee != FIXED_FEE:
-            raise InvalidRequestException(f'Invalid fee: {fee}')
+            raise InvalidRequestException(f"Invalid fee: {fee}")
 
-        from_: 'Address' = params['from']
-        value: int = params.get('value', 0)
+        from_: "Address" = params["from"]
+        value: int = params.get("value", 0)
 
         self._check_balance(context, from_, value, fee)
 
-    def _validate_transaction_v2(self, context: 'IconScoreContext', params: dict):
+    def _validate_transaction_v2(self, context: "IconScoreContext", params: dict):
         """Validate transfer transaction based on protocol v2
 
         :param params:
@@ -161,12 +182,19 @@ class IconPreValidator:
         self._check_from_can_charge_fee_v2(context, params)
 
         # Check 'to' is not a SCORE address
-        to: 'Address' = params['to']
+        to: "Address" = params["to"]
         if to.is_contract:
             raise InvalidRequestException(
-                'Not allowed to transfer coin to SCORE on protocol v2')
+                "Not allowed to transfer coin to SCORE on protocol v2"
+            )
 
-    def _validate_transaction_v3(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int):
+    def _validate_transaction_v3(
+        self,
+        context: "IconScoreContext",
+        params: dict,
+        step_price: int,
+        minimum_step: int,
+    ):
         """Validate transfer transaction based on protocol v3
 
         :param params:
@@ -176,103 +204,107 @@ class IconPreValidator:
         self._check_from_can_charge_fee_v3(context, params, step_price)
 
         # Check if "to" address is valid
-        to: 'Address' = params['to']
+        to: "Address" = params["to"]
 
         if self._is_inactive_score(context, to):
-            raise InvalidRequestException(f'{to} is inactive SCORE')
+            raise InvalidRequestException(f"{to} is inactive SCORE")
 
         # Check data_type-specific elements
-        data_type = params.get('dataType', None)
-        if data_type == 'call':
+        data_type = params.get("dataType", None)
+        if data_type == "call":
             self._validate_call_transaction(context, params)
-        elif data_type == 'deploy':
+        elif data_type == "deploy":
             self._validate_deploy_transaction(context, params)
-        elif data_type == 'deposit':
+        elif data_type == "deposit":
             self._validate_deposit_transaction(context, params)
 
     @staticmethod
     def _check_minimum_step(params: dict, minimum_step: int):
-        step_limit = params.get('stepLimit', 0)
+        step_limit = params.get("stepLimit", 0)
         if step_limit < minimum_step:
-            raise InvalidRequestException('Step limit too low')
+            raise InvalidRequestException("Step limit too low")
 
-    def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict, step_price: int):
-        from_: 'Address' = params['from']
-        to: 'Address' = params['to']
-        value: int = params.get('value', 0)
+    def _check_from_can_charge_fee_v3(
+        self, context: "IconScoreContext", params: dict, step_price: int
+    ):
+        from_: "Address" = params["from"]
+        to: "Address" = params["to"]
+        value: int = params.get("value", 0)
 
-        step_limit = params.get('stepLimit', 0)
+        step_limit = params.get("stepLimit", 0)
         fee = step_limit * step_price
 
         self._check_balance(context, from_, value, fee)
 
-        data_type: str = params.get('dataType')
-        if to.is_contract and data_type in (None, 'call', 'message'):
+        data_type: str = params.get("dataType")
+        if to.is_contract and data_type in (None, "call", "message"):
             # Check if the SCORE can be called when fee-sharing ON.
             # If data_type is None or message and the recipient is SCORE,
             # it works like `call`.(calling fallback)
             context.engine.fee.check_score_available(context, to, context.block.height)
 
-    def _validate_call_transaction(self, context: 'IconScoreContext', params: dict):
+    def _validate_call_transaction(self, context: "IconScoreContext", params: dict):
         """Validate call transaction
         It is not icx_call
 
         :param params:
         :return:
         """
-        to: 'Address' = params['to']
+        to: "Address" = params["to"]
 
         if self._is_inactive_score(context, to):
-            raise InvalidRequestException(f'{to} is inactive SCORE')
+            raise InvalidRequestException(f"{to} is inactive SCORE")
 
-        data = params.get('data', None)
+        data = params.get("data", None)
         if not isinstance(data, dict):
-            raise InvalidRequestException('Data not found')
+            raise InvalidRequestException("Data not found")
 
-        if 'method' not in data:
-            raise InvalidRequestException('Method not found')
+        if "method" not in data:
+            raise InvalidRequestException("Method not found")
 
-    def _validate_deploy_transaction(self, context: 'IconScoreContext', params: dict):
-        to: 'Address' = params['to']
+    def _validate_deploy_transaction(self, context: "IconScoreContext", params: dict):
+        to: "Address" = params["to"]
 
-        value: int = params.get('value', 0)
+        value: int = params.get("value", 0)
         if value != 0:
-            raise InvalidParamsException('value must be 0 in a deploy transaction')
+            raise InvalidParamsException("value must be 0 in a deploy transaction")
 
         if self._is_inactive_score(context, to):
-            raise InvalidRequestException(f'{to} is an inactive SCORE')
+            raise InvalidRequestException(f"{to} is an inactive SCORE")
 
-        data = params.get('data', None)
+        data = params.get("data", None)
         if not isinstance(data, dict):
-            raise InvalidRequestException('Data not found')
+            raise InvalidRequestException("Data not found")
 
-        if 'contentType' not in data:
-            raise InvalidRequestException('ContentType not found')
+        if "contentType" not in data:
+            raise InvalidRequestException("ContentType not found")
 
-        if 'content' not in data:
-            raise InvalidRequestException('Content not found')
+        if "content" not in data:
+            raise InvalidRequestException("Content not found")
 
         self._validate_new_score_address_on_deploy_transaction(context, params)
 
-    def _validate_deposit_transaction(self, context: 'IconScoreContext', params: dict):
+    def _validate_deposit_transaction(self, context: "IconScoreContext", params: dict):
         """Validate deposit transaction
 
         :param params:
         :return:
         """
-        to: 'Address' = params['to']
+        to: "Address" = params["to"]
 
         if self._is_inactive_score(context, to):
-            raise InvalidRequestException(f'{to} is inactive SCORE')
+            raise InvalidRequestException(f"{to} is inactive SCORE")
 
-        data = params.get('data', None)
+        data = params.get("data", None)
         if not isinstance(data, dict):
-            raise InvalidRequestException('Data not found')
+            raise InvalidRequestException("Data not found")
 
-        if 'action' not in data:
-            raise InvalidRequestException('Action not found')
+        if "action" not in data:
+            raise InvalidRequestException("Action not found")
 
-    def _validate_new_score_address_on_deploy_transaction(self, context: 'IconScoreContext', params: dict):
+    def _validate_new_score_address_on_deploy_transaction(
+        self, context: "IconScoreContext", params: dict
+    ):
         """Check if a newly generated score address is available
         Assume that data_type is 'deploy'
 
@@ -280,50 +312,65 @@ class IconPreValidator:
         :return:
         """
 
-        to: 'Address' = params['to']
+        to: "Address" = params["to"]
         if to != SYSTEM_SCORE_ADDRESS:
             return
 
         try:
-            data: dict = params['data']
-            content_type: str = data['contentType']
+            data: dict = params["data"]
+            content_type: str = data["contentType"]
 
-            if content_type == 'application/zip':
-                from_: 'Address' = params['from']
-                timestamp: int = params['timestamp']
-                nonce: int = params.get('nonce')
+            if content_type == "application/zip":
+                from_: "Address" = params["from"]
+                timestamp: int = params["timestamp"]
+                nonce: int = params.get("nonce")
 
-                score_address: 'Address' = generate_score_address(from_, timestamp, nonce)
+                score_address: "Address" = generate_score_address(
+                    from_, timestamp, nonce
+                )
 
-                deploy_info = context.storage.deploy.get_deploy_info(context, score_address)
+                deploy_info = context.storage.deploy.get_deploy_info(
+                    context, score_address
+                )
                 if deploy_info is not None:
-                    raise InvalidRequestException(f'SCORE address already in use: {score_address}')
-            elif content_type == 'application/tbears':
+                    raise InvalidRequestException(
+                        f"SCORE address already in use: {score_address}"
+                    )
+            elif content_type == "application/tbears":
                 pass
             else:
-                raise InvalidRequestException(f'Invalid contentType: {content_type}')
+                raise InvalidRequestException(f"Invalid contentType: {content_type}")
 
         except KeyError as ke:
-            raise InvalidParamsException(f'Invalid params: {ke}')
+            raise InvalidParamsException(f"Invalid params: {ke}")
         except BaseException as e:
             raise e
 
-    def _check_balance(self, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
+    def _check_balance(
+        self, context: "IconScoreContext", from_: "Address", value: int, fee: int
+    ):
         balance = context.engine.icx.get_balance(context, from_)
 
         if balance < value + fee:
             raise OutOfBalanceException(
-                f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
+                f"Out of balance: balance({balance}) < value({value}) + fee({fee})"
+            )
 
-    def _is_inactive_score(self, context: 'IconScoreContext', address: 'Address') -> bool:
+    def _is_inactive_score(
+        self, context: "IconScoreContext", address: "Address"
+    ) -> bool:
         is_contract = address.is_contract
         is_zero_score_address = address == SYSTEM_SCORE_ADDRESS
         is_score_active = self._is_score_active(context, address)
-        _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
+        _is_inactive_score = (
+            is_contract and not is_zero_score_address and not is_score_active
+        )
         return _is_inactive_score
 
-    def _is_score_active(self, context: 'IconScoreContext', address: 'Address') -> bool:
-        deploy_info: 'IconScoreDeployInfo' = context.storage.deploy.get_deploy_info(context, address)
+    def _is_score_active(self, context: "IconScoreContext", address: "Address") -> bool:
+        deploy_info: "IconScoreDeployInfo" = context.storage.deploy.get_deploy_info(
+            context, address
+        )
 
         if deploy_info is None:
             return False

@@ -37,7 +37,8 @@ class HashGenerator:
             if HashGenerator._SALT is not None:
                 yield HashGenerator._SALT
             yield cls.generate_origin(origin_data)
-        return '.'.join(_gen())
+
+        return ".".join(_gen())
 
     @classmethod
     def generate_hash(cls, origin_data: dict) -> bytes:
@@ -47,7 +48,9 @@ class HashGenerator:
 
 class RootHashGenerator:
     @classmethod
-    def generate_root_hash(cls, values: Union[Iterable, bytes, bytearray], do_hash=False) -> bytes:
+    def generate_root_hash(
+        cls, values: Union[Iterable, bytes, bytearray], do_hash=False
+    ) -> bytes:
         merkle_tree = MerkleTree()
         merkle_tree.add_leaf(values, do_hash)
         merkle_tree.make_tree()

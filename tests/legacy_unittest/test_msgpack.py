@@ -29,25 +29,34 @@ debug = False
 
 
 class TestMsgpackForIpc(unittest.TestCase):
-
     def test_msgpack_loads_dumps(self):
-        expected_struct: list = [1, -1,
-                                 b'123456', b'',
-                                 [1, 2, 3, 4, 5],
-                                 {1: 2, 3: 4},
-                                 True, False,
-                                 None]
+        expected_struct: list = [
+            1,
+            -1,
+            b"123456",
+            b"",
+            [1, 2, 3, 4, 5],
+            {1: 2, 3: 4},
+            True,
+            False,
+            None,
+        ]
 
         data: bytes = MsgPackForIpc.dumps(expected_struct)
         struct: list = MsgPackForIpc.loads(data)
         self.assertEqual(expected_struct, struct)
 
     def test_msgpack_for_ipc_encode_deoode(self):
-        expected_struct: list = [1, -1,
-                                 b'123456', b'',
-                                 "hello", "",
-                                 create_address(),
-                                 None]
+        expected_struct: list = [
+            1,
+            -1,
+            b"123456",
+            b"",
+            "hello",
+            "",
+            create_address(),
+            None,
+        ]
 
         data_list: list = []
         for value in expected_struct:
@@ -64,23 +73,30 @@ class TestMsgpackForIpc(unittest.TestCase):
             MsgPackForIpc.decode(TypeTag.STRING, struct[4]),
             MsgPackForIpc.decode(TypeTag.STRING, struct[5]),
             MsgPackForIpc.decode(TypeTag.ADDRESS, struct[6]),
-            MsgPackForIpc.decode(TypeTag.NIL, struct[7])]
+            MsgPackForIpc.decode(TypeTag.NIL, struct[7]),
+        ]
 
         self.assertEqual(expected_struct, actual_struct)
 
     def test_length_check(self):
         int_table = [-1, 0, 1, 10 ** 30]
-        bytes_table = [b'hello', b'', SYSTEM_SCORE_ADDRESS.to_bytes()]
+        bytes_table = [b"hello", b"", SYSTEM_SCORE_ADDRESS.to_bytes()]
         str_table = ["hello", ""]
         address_table = [create_address(), create_address(1)]
         dict_table = {"1": 1, "2": 2, "3": 3}
-        list_table = [1,2,3,4,5]
+        list_table = [1, 2, 3, 4, 5]
         bool_table = [True, False]
 
         if debug:
             expected_struct: list = [
-                int_table, bytes_table, str_table, address_table,
-                dict_table, list_table, bool_table]
+                int_table,
+                bytes_table,
+                str_table,
+                address_table,
+                dict_table,
+                list_table,
+                bool_table,
+            ]
             self._prt_length_info("all", expected_struct)
 
             expected_struct: list = [int_table]
@@ -107,9 +123,9 @@ class TestMsgpackForIpc(unittest.TestCase):
             expected_struct: list = [SYSTEM_SCORE_ADDRESS]
             self._prt_length_info("zero_addr", expected_struct)
 
-            expected_struct: list = b'hello'
+            expected_struct: list = b"hello"
             self._prt_length_info("hello_bin", expected_struct)
-            expected_struct: list = b''
+            expected_struct: list = b""
             self._prt_length_info("empty_bin", expected_struct)
             expected_struct: list = SYSTEM_SCORE_ADDRESS.to_bytes()
             self._prt_length_info("addr_bin", expected_struct)
@@ -138,20 +154,25 @@ class TestMsgpackForIpc(unittest.TestCase):
 
 
 class TestMsgpackForStateDB(unittest.TestCase):
-
     def test_msgpack_for_db_loads_dumps(self):
         int_table = [-1, 0, 1, 10 ** 30]
-        bytes_table = [b'hello', b'', SYSTEM_SCORE_ADDRESS.to_bytes()]
+        bytes_table = [b"hello", b"", SYSTEM_SCORE_ADDRESS.to_bytes()]
         str_table = ["hello", ""]
         address_table = [create_address(), create_address(1)]
         dict_table = {"1": 1, "2": 2, "3": 3}
-        list_table = [1,2,3,4,5]
+        list_table = [1, 2, 3, 4, 5]
         bool_table = [True, False]
         None_table = [None]
 
         expected_struct: list = [
-            int_table, bytes_table, str_table, address_table,
-            dict_table, list_table, bool_table, None_table
+            int_table,
+            bytes_table,
+            str_table,
+            address_table,
+            dict_table,
+            list_table,
+            bool_table,
+            None_table,
         ]
 
         data: bytes = MsgPackForDB.dumps(expected_struct)
@@ -160,17 +181,23 @@ class TestMsgpackForStateDB(unittest.TestCase):
 
     def test_msgpack_for_db_length(self):
         int_table = [-1, 0, 1, 10 ** 30]
-        bytes_table = [b'hello', b'', SYSTEM_SCORE_ADDRESS.to_bytes()]
+        bytes_table = [b"hello", b"", SYSTEM_SCORE_ADDRESS.to_bytes()]
         str_table = ["hello", ""]
         address_table = [create_address(), create_address(1)]
         dict_table = {"1": 1, "2": 2, "3": 3}
-        list_table = [1,2,3,4,5]
+        list_table = [1, 2, 3, 4, 5]
         bool_table = [True, False]
 
         if debug:
             expected_struct: list = [
-                int_table, bytes_table, str_table, address_table,
-                dict_table, list_table, bool_table]
+                int_table,
+                bytes_table,
+                str_table,
+                address_table,
+                dict_table,
+                list_table,
+                bool_table,
+            ]
             self._prt_length_info("all", expected_struct)
 
             expected_struct: list = [int_table]
@@ -197,9 +224,9 @@ class TestMsgpackForStateDB(unittest.TestCase):
             expected_struct: list = [SYSTEM_SCORE_ADDRESS]
             self._prt_length_info("zero_addr", expected_struct)
 
-            expected_struct: list = b'hello'
+            expected_struct: list = b"hello"
             self._prt_length_info("hello_bin", expected_struct)
-            expected_struct: list = b''
+            expected_struct: list = b""
             self._prt_length_info("empty_bin", expected_struct)
             expected_struct: list = SYSTEM_SCORE_ADDRESS.to_bytes()
             self._prt_length_info("addr_bin", expected_struct)
@@ -210,5 +237,5 @@ class TestMsgpackForStateDB(unittest.TestCase):
         print(f"{tag} length: {len(data)}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

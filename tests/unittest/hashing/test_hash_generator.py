@@ -18,46 +18,53 @@ import pytest
 from iconservice.utils.hashing.hash_generator import HashGenerator
 
 tx_data1 = {
-        "from": "hx930eb8a0e793253aad876503367c344fe8d4e282",
-        "to": "cx502c47463314f01e84b1b203c315180501eb2481",
-        "version": "0x3",
-        "nid": "0x1",
-        "stepLimit": "0x7a120",
-        "timestamp": "0x58d2588ab7288",
-        "nonce": "0x3059",
-        "dataType": "call",
-        "data": {
-            "method": "transfer",
-            "params": {
-                "_to": "hx1ada76577eac29b1e60efee22aac66af9f434036",
-                "_value": "0x2b5e3af16b1880000",
-                "_data": "20"
-            }
-        }
-    }
-tx_hash1 = bytes.fromhex("c64119ddd6b0d5034cdcd8b903dadca34e3d79cfe3e00bb2bca8a9ec48e25978")
+    "from": "hx930eb8a0e793253aad876503367c344fe8d4e282",
+    "to": "cx502c47463314f01e84b1b203c315180501eb2481",
+    "version": "0x3",
+    "nid": "0x1",
+    "stepLimit": "0x7a120",
+    "timestamp": "0x58d2588ab7288",
+    "nonce": "0x3059",
+    "dataType": "call",
+    "data": {
+        "method": "transfer",
+        "params": {
+            "_to": "hx1ada76577eac29b1e60efee22aac66af9f434036",
+            "_value": "0x2b5e3af16b1880000",
+            "_data": "20",
+        },
+    },
+}
+tx_hash1 = bytes.fromhex(
+    "c64119ddd6b0d5034cdcd8b903dadca34e3d79cfe3e00bb2bca8a9ec48e25978"
+)
 tx_data2 = {
-        "version": "0x3",
-        "from": "hx226e6e4340136836b36977bd76ca83746b8b071c",
-        "to": "cxb7ef03fea5fa9b2fe1f00f548d6da7ff2ddfebd5",
-        "stepLimit": "0x989680",
-        "timestamp": "0x58d25822f154c",
-        "nid": "0x1",
-        "nonce": "0x64",
-        "dataType": "call",
-        "data": {
-            "method": "transaction_RT",
-            "params": {
-                "_date": "20190708",
-                "_time": "0625",
-                "_div": "GOOGLE",
-                "_value": "[\"Earthquake\", \"Concacaf Gold Cup\", \"Concacaf Gold Cup\", \"Bella Thorne\", \"New York Knicks\"]"
-            }
-        }}
-tx_hash2 = bytes.fromhex("77a6109d6be90643e54e4ebfbea86f966937cc7978c7105ffea9e852ef447ae3")
+    "version": "0x3",
+    "from": "hx226e6e4340136836b36977bd76ca83746b8b071c",
+    "to": "cxb7ef03fea5fa9b2fe1f00f548d6da7ff2ddfebd5",
+    "stepLimit": "0x989680",
+    "timestamp": "0x58d25822f154c",
+    "nid": "0x1",
+    "nonce": "0x64",
+    "dataType": "call",
+    "data": {
+        "method": "transaction_RT",
+        "params": {
+            "_date": "20190708",
+            "_time": "0625",
+            "_div": "GOOGLE",
+            "_value": '["Earthquake", "Concacaf Gold Cup", "Concacaf Gold Cup", "Bella Thorne", "New York Knicks"]',
+        },
+    },
+}
+tx_hash2 = bytes.fromhex(
+    "77a6109d6be90643e54e4ebfbea86f966937cc7978c7105ffea9e852ef447ae3"
+)
 
 
-@pytest.mark.parametrize("tx_data,tx_hash", [(tx_data1, tx_hash1), (tx_data2, tx_hash2)])
+@pytest.mark.parametrize(
+    "tx_data,tx_hash", [(tx_data1, tx_hash1), (tx_data2, tx_hash2)]
+)
 def test_generate_hash(tx_data, tx_hash):
     actual_tx_hash = HashGenerator.generate_hash(tx_data)
 

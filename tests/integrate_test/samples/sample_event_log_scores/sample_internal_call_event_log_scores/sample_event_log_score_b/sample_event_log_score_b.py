@@ -1,8 +1,11 @@
 from iconservice import *
 
+
 class ScoreCInterFace(InterfaceScore):
     @interface
-    def called_by_score_b(self) -> None: pass
+    def called_by_score_b(self) -> None:
+        pass
+
 
 class SampleEventLogScoreB(IconScoreBase):
     @eventlog
@@ -11,9 +14,9 @@ class SampleEventLogScoreB(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=str)
+        self._value = VarDB("value", db, value_type=str)
 
-    def on_install(self, value: str="default") -> None:
+    def on_install(self, value: str = "default") -> None:
         super().on_install()
         self.set_value(value)
 
@@ -42,4 +45,3 @@ class SampleEventLogScoreB(IconScoreBase):
         score_c = self.create_interface_score(score_addr_c, ScoreCInterFace)
         score_c.called_by_score_b()
         return "BC"
-

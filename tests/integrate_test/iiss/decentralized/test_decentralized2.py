@@ -16,8 +16,13 @@
 from typing import Dict, Union
 
 from iconservice.base.address import Address
-from iconservice.icon_constant import Revision, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_constant import (
+    Revision,
+    PREP_MAIN_PREPS,
+    ICX_IN_LOOP,
+    ConfigKey,
+    PREP_MAIN_AND_SUB_PREPS,
+)
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -28,16 +33,14 @@ class TestIISSDecentralized2(TestIISSBase):
 
     def _make_init_config(self) -> dict:
         return {
-            ConfigKey.SERVICE: {
-                ConfigKey.SERVICE_FEE: True
-            },
+            ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: True},
             ConfigKey.IISS_CALCULATE_PERIOD: self.CALCULATE_PERIOD,
             ConfigKey.TERM_PERIOD: self.TERM_PERIOD,
             ConfigKey.IISS_META_DATA: {
                 ConfigKey.UN_STAKE_LOCK_MIN: 10,
-                ConfigKey.UN_STAKE_LOCK_MAX: 20
+                ConfigKey.UN_STAKE_LOCK_MAX: 20,
             },
-            ConfigKey.PREP_REGISTRATION_FEE: 0
+            ConfigKey.PREP_REGISTRATION_FEE: 0,
         }
 
     def _decentralized(self):
@@ -48,21 +51,25 @@ class TestIISSDecentralized2(TestIISSBase):
         init_balance: int = minimum_delegate_amount_for_decentralization * 2
 
         # distribute icx to PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_SUB_PREPS - 1
-        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
-                            init_balance=init_balance)
+        self.distribute_icx(
+            accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+            init_balance=init_balance,
+        )
 
         # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         stake_amount: int = minimum_delegate_amount_for_decentralization
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_stake_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
-                                                value=stake_amount)
+            tx: dict = self.create_set_stake_tx(
+                from_=self._accounts[PREP_MAIN_PREPS + i], value=stake_amount
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
-        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=3000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:PREP_MAIN_PREPS], init_balance=3000 * ICX_IN_LOOP
+        )
 
         # register PRep
         tx_list: list = []
@@ -74,22 +81,18 @@ class TestIISSDecentralized2(TestIISSBase):
         # delegate to PRep
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
-                                                     origin_delegations=[
-                                                         (
-                                                             self._accounts[i],
-                                                             minimum_delegate_amount_for_decentralization
-                                                         )
-                                                     ])
+            tx: dict = self.create_set_delegation_tx(
+                from_=self._accounts[PREP_MAIN_PREPS + i],
+                origin_delegations=[
+                    (self._accounts[i], minimum_delegate_amount_for_decentralization)
+                ],
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         # get main prep
         response: dict = self.get_main_prep_list()
-        expected_response: dict = {
-            "preps": [],
-            "totalDelegated": 0
-        }
+        expected_response: dict = {"preps": [], "totalDelegated": 0}
         self.assertEqual(expected_response, response)
 
         # set Revision REV_IISS (decentralization)
@@ -107,15 +110,11 @@ class TestIISSDecentralized2(TestIISSBase):
         # get iiss info
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height,
-            'nextCalculation': block_height + calc_period + 1,
-            'nextPRepTerm': 0,
-            'variable': {
-                "irep": 0,
-                "rrep": 1200
-            },
-            'rcResult': {
-            }
+            "blockHeight": block_height,
+            "nextCalculation": block_height + calc_period + 1,
+            "nextPRepTerm": 0,
+            "variable": {"irep": 0, "rrep": 1200},
+            "rcResult": {},
         }
         self.assertEqual(expected_response, response)
 
@@ -124,20 +123,17 @@ class TestIISSDecentralized2(TestIISSBase):
 
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height + 1,
-            'nextCalculation': block_height + calc_period + 1,
-            'nextPRepTerm': 0,
-            'variable': {
-                "irep": 0,
-                "rrep": 1200
-            },
-            'rcResult': {
+            "blockHeight": block_height + 1,
+            "nextCalculation": block_height + calc_period + 1,
+            "nextPRepTerm": 0,
+            "variable": {"irep": 0, "rrep": 1200},
+            "rcResult": {
                 "iscore": 0,
                 "estimatedICX": 0,
                 "startBlockHeight": block_height - calc_period + 1,
                 "endBlockHeight": block_height,
-                'stateHash': b'mocked_response'
-            }
+                "stateHash": b"mocked_response",
+            },
         }
         self.assertEqual(expected_response, response)
 
@@ -150,20 +146,17 @@ class TestIISSDecentralized2(TestIISSBase):
 
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height + 1,
-            'nextCalculation': block_height + calc_period - 1,
-            'nextPRepTerm': block_height + calc_period - 1,
-            'variable': {
-                'irep': 50000000000000000000000,
-                'rrep': 1078
-            },
-            'rcResult': {
+            "blockHeight": block_height + 1,
+            "nextCalculation": block_height + calc_period - 1,
+            "nextPRepTerm": block_height + calc_period - 1,
+            "variable": {"irep": 50000000000000000000000, "rrep": 1078},
+            "rcResult": {
                 "iscore": 0,
                 "estimatedICX": 0,
                 "startBlockHeight": block_height - prev_calc_period + 1,
                 "endBlockHeight": block_height,
-                'stateHash': b'mocked_response'
-            }
+                "stateHash": b"mocked_response",
+            },
         }
         self.assertEqual(expected_response, response)
 
@@ -178,7 +171,7 @@ class TestIISSDecentralized2(TestIISSBase):
         self.make_blocks(self._block_height + 1)
 
         response: dict = self.get_main_prep_list()
-        address: 'Address' = response["preps"][0]["address"]
+        address: "Address" = response["preps"][0]["address"]
         assert isinstance(address, Address)
 
         response: dict = self.get_prep(address)
@@ -189,8 +182,9 @@ class TestIISSDecentralized2(TestIISSBase):
         self.distribute_icx([address], ICX_IN_LOOP)
 
         # set prep 1
-        tx: dict = self.create_set_prep_tx(from_=address,
-                                           set_data={"p2pEndpoint": new_p2p_endpoint})
+        tx: dict = self.create_set_prep_tx(
+            from_=address, set_data={"p2pEndpoint": new_p2p_endpoint}
+        )
 
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertIsNone(main_prep_as_dict)
@@ -200,15 +194,17 @@ class TestIISSDecentralized2(TestIISSBase):
 
         # set prep 2
         new_p2p_endpoint = "192.168.0.1:7200"
-        tx: dict = self.create_set_prep_tx(from_=address,
-                                           set_data={"p2pEndpoint": new_p2p_endpoint})
+        tx: dict = self.create_set_prep_tx(
+            from_=address, set_data={"p2pEndpoint": new_p2p_endpoint}
+        )
 
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(new_p2p_endpoint, main_prep_as_dict["preps"][0]["p2pEndpoint"])
 
         # set prep with the same p2pEndpoint as the old one
-        tx: dict = self.create_set_prep_tx(from_=address,
-                                           set_data={"p2pEndpoint": old_p2p_endpoint})
+        tx: dict = self.create_set_prep_tx(
+            from_=address, set_data={"p2pEndpoint": old_p2p_endpoint}
+        )
 
         # main_prep_as_dict should not be modified
         _, _, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
@@ -245,8 +241,10 @@ class TestIISSDecentralized2(TestIISSBase):
             new_p2p_endpoint: str = f"192.168.0.{start + i}:7100"
 
             # set prep
-            tx: dict = self.create_set_prep_tx(from_=self._accounts[i + main_preps_count],
-                                               set_data={"p2pEndpoint": new_p2p_endpoint})
+            tx: dict = self.create_set_prep_tx(
+                from_=self._accounts[i + main_preps_count],
+                set_data={"p2pEndpoint": new_p2p_endpoint},
+            )
             tx_list.append(tx)
 
         # To change the p2pEndpoints of sub P-Reps cannot affect main_prep_as_dict

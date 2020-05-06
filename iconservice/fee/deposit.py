@@ -25,6 +25,7 @@ class Deposit(object):
     Deposit Information Class
     implementing functions to serialize, deserialize and convert to dict type.
     """
+
     _VERSION = 0
 
     # Percentage of the minimum remaining deposit amount to pay fee.
@@ -32,20 +33,30 @@ class Deposit(object):
     _MIN_REMAINING_PROPORTION = 10
 
     _EXPOSING_ITEM_KEYS = (
-        'id',
-        'sender',
-        'deposit_amount',
-        'deposit_used',
-        'created',
-        'expires',
-        'virtual_step_issued',
-        'virtual_step_used'
+        "id",
+        "sender",
+        "deposit_amount",
+        "deposit_used",
+        "created",
+        "expires",
+        "virtual_step_issued",
+        "virtual_step_used",
     )
 
-    def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
-                 deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = -1,
-                 virtual_step_issued: int = 0, virtual_step_used: int = 0,
-                 prev_id: bytes = None, next_id: bytes = None):
+    def __init__(
+        self,
+        deposit_id: bytes = None,
+        score_address: "Address" = None,
+        sender: "Address" = None,
+        deposit_amount: int = 0,
+        deposit_used: int = 0,
+        created: int = 0,
+        expires: int = -1,
+        virtual_step_issued: int = 0,
+        virtual_step_used: int = 0,
+        prev_id: bytes = None,
+        next_id: bytes = None,
+    ):
         self.version = self._VERSION
         # deposit id, should be tx hash of deposit transaction
         self.id = deposit_id
@@ -99,17 +110,19 @@ class Deposit(object):
 
         :return: deposit info in bytes
         """
-        data: list = [self.version,
-                      self.score_address,
-                      self.sender,
-                      self.deposit_amount,
-                      self.deposit_used,
-                      self.created,
-                      self.expires,
-                      self.virtual_step_issued,
-                      self.virtual_step_used,
-                      self.prev_id,
-                      self.next_id]
+        data: list = [
+            self.version,
+            self.score_address,
+            self.sender,
+            self.deposit_amount,
+            self.deposit_used,
+            self.created,
+            self.expires,
+            self.virtual_step_issued,
+            self.virtual_step_used,
+            self.prev_id,
+            self.next_id,
+        ]
 
         return MsgPackForDB.dumps(data)
 
@@ -133,18 +146,20 @@ class Deposit(object):
 
         :param other: (Deposit)
         """
-        return isinstance(other, Deposit) \
-            and self.version == other.version \
-            and self.score_address == other.score_address \
-            and self.sender == other.sender \
-            and self.deposit_amount == other.deposit_amount \
-            and self.deposit_used == other.deposit_used \
-            and self.created == other.created \
-            and self.expires == other.expires \
-            and self.virtual_step_issued == other.virtual_step_issued \
-            and self.virtual_step_used == other.virtual_step_used \
-            and self.prev_id == other.prev_id \
+        return (
+            isinstance(other, Deposit)
+            and self.version == other.version
+            and self.score_address == other.score_address
+            and self.sender == other.sender
+            and self.deposit_amount == other.deposit_amount
+            and self.deposit_used == other.deposit_used
+            and self.created == other.created
+            and self.expires == other.expires
+            and self.virtual_step_issued == other.virtual_step_issued
+            and self.virtual_step_used == other.virtual_step_used
+            and self.prev_id == other.prev_id
             and self.next_id == other.next_id
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding

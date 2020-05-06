@@ -24,10 +24,10 @@ class Sortable(metaclass=ABCMeta):
 
 
 class SortedList(object):
-    def __init__(self, sorted_list: 'SortedList' = ()):
+    def __init__(self, sorted_list: "SortedList" = ()):
         self._items = list(sorted_list)
 
-    def add(self, new_item: 'Sortable'):
+    def add(self, new_item: "Sortable"):
         """
 
         :param new_item:
@@ -44,20 +44,20 @@ class SortedList(object):
 
         self._items.insert(index, new_item)
 
-    def get(self, index: int) -> Optional['Sortable']:
+    def get(self, index: int) -> Optional["Sortable"]:
         try:
             return self._items[index]
         except IndexError:
             return None
 
-    def extend(self, iterable: Iterable['Sortable']):
+    def extend(self, iterable: Iterable["Sortable"]):
         self._items.extend(iterable)
 
-    def reorder(self, item: 'Sortable'):
+    def reorder(self, item: "Sortable"):
         self._items.remove(item)
         self.add(item)
 
-    def index(self, item: 'Sortable') -> int:
+    def index(self, item: "Sortable") -> int:
         order = item.order()
 
         left: int = 0
@@ -65,7 +65,7 @@ class SortedList(object):
 
         while left < right:
             i = (left + right) // 2
-            item_in_list: 'Sortable' = self._items[i]
+            item_in_list: "Sortable" = self._items[i]
 
             if order == item_in_list.order():
                 return self._precise_index(i, item)
@@ -77,13 +77,13 @@ class SortedList(object):
 
         return -1
 
-    def _precise_index(self, base_index: int, target_item: 'Sortable') -> int:
+    def _precise_index(self, base_index: int, target_item: "Sortable") -> int:
         if id(target_item) == id(self._items[base_index]):
             return base_index
 
         # Check the previous items
         for i in range(base_index - 1, -1, -1):
-            item: 'Sortable' = self._items[i]
+            item: "Sortable" = self._items[i]
             if target_item.order() != item.order():
                 break
 
@@ -92,7 +92,7 @@ class SortedList(object):
 
         # Check the next items
         for i in range(base_index + 1, len(self._items)):
-            item: 'Sortable' = self._items[i]
+            item: "Sortable" = self._items[i]
             if target_item.order() != item.order():
                 break
 
@@ -101,7 +101,7 @@ class SortedList(object):
 
         return -1
 
-    def remove(self, item: 'Sortable') -> 'Sortable':
+    def remove(self, item: "Sortable") -> "Sortable":
         index: int = self.index(item)
 
         if index > -1:
@@ -109,10 +109,10 @@ class SortedList(object):
 
         raise ValueError(f"Value not found")
 
-    def pop(self, index: int) -> 'Sortable':
+    def pop(self, index: int) -> "Sortable":
         return self._items.pop(index)
 
-    def append(self, item: 'Sortable'):
+    def append(self, item: "Sortable"):
         """Add an item to the end
 
         :param item:
@@ -132,12 +132,12 @@ class SortedList(object):
         for item in self._items:
             yield item
 
-    def __getitem__(self, k: Union[int, slice]) -> Union['Sortable', List['Sortable']]:
+    def __getitem__(self, k: Union[int, slice]) -> Union["Sortable", List["Sortable"]]:
         if isinstance(k, slice):
             return self._items[k]
         return self._items[k]
 
-    def __setitem__(self, index: int, item: 'Sortable'):
+    def __setitem__(self, index: int, item: "Sortable"):
         index = self._to_positive_index(index)
 
         # prev_item.order() should be not more than item.order()

@@ -26,7 +26,12 @@ from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 from ..base.block import Block, EMPTY_BLOCK
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG
+from ..icon_constant import (
+    DEFAULT_BYTE_SIZE,
+    DATA_BYTE_ORDER,
+    ICX_LOG_TAG,
+    ROLLBACK_LOG_TAG,
+)
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -37,6 +42,7 @@ if TYPE_CHECKING:
 class AccountPartFlag(IntFlag):
     """PartFlag Type
     """
+
     NONE = 0
     COIN = 1
     STAKE = 2
@@ -54,14 +60,14 @@ class Intent(IntEnum):
 class Storage(StorageBase):
     """Icx coin state manager embedding a state db wrapper"""
 
-    _GENESIS_DB_KEY = 'genesis'
-    _TREASURY_DB_KEY = 'fee_treasury'
+    _GENESIS_DB_KEY = "genesis"
+    _TREASURY_DB_KEY = "fee_treasury"
 
     # Level db keys
-    LAST_BLOCK_KEY = b'last_block'
-    _TOTAL_SUPPLY_KEY = b'total_supply'
+    LAST_BLOCK_KEY = b"last_block"
+    _TOTAL_SUPPLY_KEY = b"total_supply"
 
-    def __init__(self, db: 'ContextDatabase'):
+    def __init__(self, db: "ContextDatabase"):
         """Constructor
 
         :param db: (Database) state db wrapper
@@ -69,16 +75,20 @@ class Storage(StorageBase):
         super().__init__(db)
         self._db = db
         self._last_block = EMPTY_BLOCK
-        self._genesis: Optional['Address'] = None
-        self._fee_treasury: Optional['Address'] = None
+        self._genesis: Optional["Address"] = None
+        self._fee_treasury: Optional["Address"] = None
 
-    def open(self, context: 'IconScoreContext'):
+    def open(self, context: "IconScoreContext"):
         self._load_special_address(context, self._GENESIS_DB_KEY)
         self._load_special_address(context, self._TREASURY_DB_KEY)
 
-    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
-        Logger.info(tag=ROLLBACK_LOG_TAG,
-                    msg=f"rollback() start: block_height={block_height} block_hash={bytes_to_hex(block_hash)}")
+    def rollback(
+        self, context: "IconScoreContext", block_height: int, block_hash: bytes
+    ):
+        Logger.info(
+            tag=ROLLBACK_LOG_TAG,
+            msg=f"rollback() start: block_height={block_height} block_hash={bytes_to_hex(block_hash)}",
+        )
 
         self._load_special_address(context, self._GENESIS_DB_KEY)
         self._load_special_address(context, self._TREASURY_DB_KEY)
@@ -87,85 +97,92 @@ class Storage(StorageBase):
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() end")
 
     @property
-    def last_block(self) -> 'Block':
+    def last_block(self) -> "Block":
         return self._last_block
 
     @property
-    def genesis(self) -> 'Address':
+    def genesis(self) -> "Address":
         return self._genesis
 
     @property
-    def fee_treasury(self) -> 'Address':
+    def fee_treasury(self) -> "Address":
         return self._fee_treasury
 
-    def load_last_block_info(self, context: 'IconScoreContext'):
+    def load_last_block_info(self, context: "IconScoreContext"):
         block_bytes = self._db.get(context, self.LAST_BLOCK_KEY)
         if block_bytes is None:
             return
 
         self._last_block = Block.from_bytes(block_bytes)
 
-    def _load_special_address(self,
-                              context: 'IconScoreContext',
-                              db_key: str):
+    def _load_special_address(self, context: "IconScoreContext", db_key: str):
         """Load address info from state db according to db_key
 
         :param context:
         :param db_key: db key info
         """
-        Logger.debug(f'_load_address_from_storage() start(address type: {db_key})', ICX_LOG_TAG)
+        Logger.debug(
+            f"_load_address_from_storage() start(address type: {db_key})", ICX_LOG_TAG
+        )
         text = context.storage.icx.get_text(context, db_key)
         if text:
             obj = json.loads(text)
 
             # Support to load MainNet 1.0 db
-            address: str = obj['address']
+            address: str = obj["address"]
             if len(address) == 40:
-                address = f'hx{address}'
+                address = f"hx{address}"
 
             address: Address = Address.from_string(address)
             if db_key == self._GENESIS_DB_KEY:
-                self._genesis: 'Address' = address
+                self._genesis: "Address" = address
             elif db_key == self._TREASURY_DB_KEY:
-                self._fee_treasury: 'Address' = address
-            Logger.info(f'{db_key}: {address}', ICX_LOG_TAG)
-        Logger.debug(f'_load_address_from_storage() end(address type: {db_key})', ICX_LOG_TAG)
+                self._fee_treasury: "Address" = address
+            Logger.info(f"{db_key}: {address}", ICX_LOG_TAG)
+        Logger.debug(
+            f"_load_address_from_storage() end(address type: {db_key})", ICX_LOG_TAG
+        )
 
-    def set_last_block(self, block: 'Block'):
+    def set_last_block(self, block: "Block"):
         self._last_block = block
 
-    def put_genesis_accounts(self, context: 'IconScoreContext', accounts: list):
+    def put_genesis_accounts(self, context: "IconScoreContext", accounts: list):
         genesis = accounts[0]
         treasury = accounts[1]
         others = accounts[2:]
 
-        __ADDRESS_KEY = 'address'
-        __AMOUNT_KEY = 'balance'
+        __ADDRESS_KEY = "address"
+        __AMOUNT_KEY = "balance"
 
         self._put_genesis_data_account(
             context=context,
             coin_part_type=CoinPartType.GENESIS,
             address=genesis[__ADDRESS_KEY],
-            amount=genesis[__AMOUNT_KEY])
+            amount=genesis[__AMOUNT_KEY],
+        )
 
         self._put_genesis_data_account(
             context=context,
             coin_part_type=CoinPartType.TREASURY,
             address=treasury[__ADDRESS_KEY],
-            amount=treasury[__AMOUNT_KEY])
+            amount=treasury[__AMOUNT_KEY],
+        )
 
         for other in others:
             self._put_genesis_data_account(
                 context=context,
                 coin_part_type=CoinPartType.GENERAL,
                 address=other[__ADDRESS_KEY],
-                amount=other[__AMOUNT_KEY])
+                amount=other[__AMOUNT_KEY],
+            )
 
-    def _put_genesis_data_account(self,
-                                  context: 'IconScoreContext',
-                                  coin_part_type: 'CoinPartType',
-                                  address: 'Address',
-                                  amount: int):
+    def _put_genesis_data_account(
+        self,
+        context: "IconScoreContext",
+        coin_part_type: "CoinPartType",
+        address: "Address",
+        amount: int,
+    ):
         """This method is called only on invoking the genesis block
 
         :param context:
@@ -175,8 +192,8 @@ class Storage(StorageBase):
         :return:
         """
 
-        coin_part: 'CoinPart' = CoinPart(coin_part_type)
-        account: 'Account' = Account(address, context.block.height, coin_part=coin_part)
+        coin_part: "CoinPart" = CoinPart(coin_part_type)
+        account: "Account" = Account(address, context.block.height, coin_part=coin_part)
         account.deposit(int(amount))
         if not account.coin_part.is_dirty():
             account.coin_part.set_dirty(True)
@@ -189,9 +206,7 @@ class Storage(StorageBase):
         if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
             self._put_special_account(context, account)
 
-    def _put_special_account(self,
-                             context: 'IconScoreContext',
-                             account: 'Account'):
+    def _put_special_account(self, context: "IconScoreContext", account: "Account"):
         """Compared to other general accounts,
         additional tasks should be processed
         for special accounts (genesis, treasury)
@@ -210,12 +225,12 @@ class Storage(StorageBase):
             db_key = self._TREASURY_DB_KEY
             self._fee_treasury = account.address
 
-        obj = {'version': 0, 'address': str(account.address)}
+        obj = {"version": 0, "address": str(account.address)}
         text = json.dumps(obj)
 
         context.storage.icx.put_text(context, db_key, text)
 
-    def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
+    def get_text(self, context: "IconScoreContext", name: str) -> Optional[str]:
         """Returns text format value from db
 
         :return: (str or None)
@@ -229,10 +244,7 @@ class Storage(StorageBase):
         else:
             return None
 
-    def put_text(self,
-                 context: 'IconScoreContext',
-                 name: str,
-                 text: str):
+    def put_text(self, context: "IconScoreContext", name: str, text: str):
         """Saves text to db with name as a key
         All text are utf8 encoded.
 
@@ -244,10 +256,12 @@ class Storage(StorageBase):
         value = text.encode()
         self._db.put(context, key, value)
 
-    def get_account(self,
-                    context: 'IconScoreContext',
-                    address: 'Address',
-                    intent: 'Intent' = Intent.TRANSFER) -> 'Account':
+    def get_account(
+        self,
+        context: "IconScoreContext",
+        address: "Address",
+        intent: "Intent" = Intent.TRANSFER,
+    ) -> "Account":
 
         """Returns the account indicated by address.
 
@@ -259,48 +273,56 @@ class Storage(StorageBase):
             create a new account.
         """
 
-        coin_part: Optional['CoinPart'] = None
-        stake_part: Optional['StakePart'] = None
-        delegation_part: Optional['DelegationPart'] = None
+        coin_part: Optional["CoinPart"] = None
+        stake_part: Optional["StakePart"] = None
+        delegation_part: Optional["DelegationPart"] = None
 
-        part_flags: 'AccountPartFlag' = AccountPartFlag(intent)
+        part_flags: "AccountPartFlag" = AccountPartFlag(intent)
 
         if AccountPartFlag.COIN in part_flags:
-            coin_part: 'CoinPart' = self._get_part(context, CoinPart, address)
+            coin_part: "CoinPart" = self._get_part(context, CoinPart, address)
 
             if CoinPartFlag.HAS_UNSTAKE in coin_part.flags:
                 part_flags |= AccountPartFlag.STAKE
 
         if AccountPartFlag.STAKE in part_flags:
-            stake_part: 'StakePart' = self._get_part(context, StakePart, address)
+            stake_part: "StakePart" = self._get_part(context, StakePart, address)
 
         if AccountPartFlag.DELEGATION in part_flags:
-            delegation_part: 'DelegationPart' = self._get_part(context, DelegationPart, address)
+            delegation_part: "DelegationPart" = self._get_part(
+                context, DelegationPart, address
+            )
 
-        return Account(address, context.block.height,
-                       coin_part=coin_part,
-                       stake_part=stake_part,
-                       delegation_part=delegation_part)
+        return Account(
+            address,
+            context.block.height,
+            coin_part=coin_part,
+            stake_part=stake_part,
+            delegation_part=delegation_part,
+        )
 
-    def get_treasury_account(self, context: 'IconScoreContext') -> 'Account':
+    def get_treasury_account(self, context: "IconScoreContext") -> "Account":
         """Returns the instance of treasury account
 
         :param context:
         :return: Account
         """
-        return context.storage.icx.get_account(context, context.storage.icx.fee_treasury)
+        return context.storage.icx.get_account(
+            context, context.storage.icx.fee_treasury
+        )
 
-    def _get_part(self, context: 'IconScoreContext',
-                  part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
-                  address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
+    def _get_part(
+        self,
+        context: "IconScoreContext",
+        part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
+        address: "Address",
+    ) -> Union["CoinPart", "StakePart", "DelegationPart"]:
         key: bytes = part_class.make_key(address)
         value: bytes = self._db.get(context, key)
 
         return part_class.from_bytes(value) if value else part_class()
 
-    def put_account(self,
-                    context: 'IconScoreContext',
-                    account: 'Account'):
+    def put_account(self, context: "IconScoreContext", account: "Account"):
 
         """Put account into to db.
 
@@ -320,9 +342,7 @@ class Storage(StorageBase):
 
                 self._db.put(context, key, value)
 
-    def delete_account(self,
-                       context: 'IconScoreContext',
-                       account: 'Account'):
+    def delete_account(self, context: "IconScoreContext", account: "Account"):
         """Delete account info from db.
 
         :param context:
@@ -330,9 +350,9 @@ class Storage(StorageBase):
         """
         raise Exception("not implemented")
 
-    def is_address_present(self,
-                           context: 'IconScoreContext',
-                           address: 'Address') -> bool:
+    def is_address_present(
+        self, context: "IconScoreContext", address: "Address"
+    ) -> bool:
         """Checks whether value indicated by address is present or not.
 
         :param context:
@@ -344,7 +364,7 @@ class Storage(StorageBase):
 
         return bool(value)
 
-    def get_total_supply(self, context: 'IconScoreContext') -> int:
+    def get_total_supply(self, context: "IconScoreContext") -> int:
         """Returns the total supply.
 
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
@@ -357,9 +377,7 @@ class Storage(StorageBase):
 
         return amount
 
-    def put_total_supply(self,
-                         context: 'IconScoreContext',
-                         value: int):
+    def put_total_supply(self, context: "IconScoreContext", value: int):
         """Saves the total supply to db.
 
         :param context:

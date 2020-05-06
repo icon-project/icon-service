@@ -28,7 +28,9 @@ def _get_backup_file_path(backup_root_path: str, block_height: int) -> str:
     return os.path.join(backup_root_path, filename)
 
 
-def _create_dummy_backup_files(backup_root_path: str, start_block_height: int, end_block_height: int):
+def _create_dummy_backup_files(
+    backup_root_path: str, start_block_height: int, end_block_height: int
+):
     for block_height in range(start_block_height, end_block_height + 1):
         if block_height < 0:
             break
@@ -43,7 +45,11 @@ def _create_dummy_file(path: str):
 
 
 def _check_if_backup_files_exists(
-        backup_root_path: str, start_block_height: int, end_block_height: int, expected: bool):
+    backup_root_path: str,
+    start_block_height: int,
+    end_block_height: int,
+    expected: bool,
+):
     for block_height in range(start_block_height, end_block_height + 1):
         path: str = _get_backup_file_path(backup_root_path, block_height)
         assert os.path.exists(path) == expected
@@ -83,7 +89,14 @@ class TestBackupCleaner(unittest.TestCase):
         backup_root_path: str = self.backup_root_path
         backup_cleaner = BackupCleaner(backup_root_path, backup_files=10)
 
-        filenames = ["0000000001.bak", "0123456789.bak", "tmp.bak", "12345.bak", "ff.bak", "000000001f.bak"]
+        filenames = [
+            "0000000001.bak",
+            "0123456789.bak",
+            "tmp.bak",
+            "12345.bak",
+            "ff.bak",
+            "000000001f.bak",
+        ]
         expected_results = [True, True, False, False, False, False]
 
         for i in range(len(filenames)):
@@ -136,14 +149,18 @@ class TestBackupCleaner(unittest.TestCase):
         start_block_height = 101
         end_block_height = 200
         count = end_block_height - start_block_height + 1
-        _create_dummy_backup_files(backup_root_path, start_block_height, end_block_height)
+        _create_dummy_backup_files(
+            backup_root_path, start_block_height, end_block_height
+        )
 
         # Remove all dummy backup files above: 101 ~ 200
         ret = backup_cleaner.run(start_block_height, end_block_height)
         assert ret == count
 
         # Check if the latest backup files exist (block-96.bak ~ block-100.bak)
-        _check_if_backup_files_exists(backup_root_path, start_block_height, end_block_height, expected=False)
+        _check_if_backup_files_exists(
+            backup_root_path, start_block_height, end_block_height, expected=False
+        )
 
     def test_run_with_some_dropped_files(self):
         backup_files = 10
@@ -154,7 +171,9 @@ class TestBackupCleaner(unittest.TestCase):
         start_block_height = 101
         end_block_height = 200
         count = end_block_height - start_block_height + 1
-        _create_dummy_backup_files(backup_root_path, start_block_height, end_block_height)
+        _create_dummy_backup_files(
+            backup_root_path, start_block_height, end_block_height
+        )
 
         # Choose 5 block_heights randomly and remove them for test
         # Although block_heights are overlapped by accident, no problem
@@ -177,7 +196,9 @@ class TestBackupCleaner(unittest.TestCase):
         assert ret == count - len(dropped_block_heights)
 
         # Check if the latest backup files exist (block-96.bak ~ block-100.bak)
-        _check_if_backup_files_exists(backup_root_path, start_block_height, end_block_height, expected=False)
+        _check_if_backup_files_exists(
+            backup_root_path, start_block_height, end_block_height, expected=False
+        )
 
     def test_run_sanity_check(self):
         backup_files = 10
@@ -200,12 +221,16 @@ class TestBackupCleaner(unittest.TestCase):
         start_block_height = 10
         end_block_height = 10
         count = 1
-        _create_dummy_backup_files(backup_root_path, start_block_height, end_block_height)
+        _create_dummy_backup_files(
+            backup_root_path, start_block_height, end_block_height
+        )
 
         ret = backup_cleaner.run(start_block_height, end_block_height)
         assert ret == count
 
-        _check_if_backup_files_exists(backup_root_path, start_block_height, end_block_height, expected=False)
+        _check_if_backup_files_exists(
+            backup_root_path, start_block_height, end_block_height, expected=False
+        )
 
     def test_run_on_init(self):
         current_block_height = 101
@@ -236,7 +261,14 @@ class TestBackupCleaner(unittest.TestCase):
         _create_dummy_backup_files(backup_root_path, 81, 100)
 
         # Create invalid files
-        filenames = ["10.bak", "tmp", "011.bak", "tmp123.bak", "000000001f.bak", "000000001F.bak"]
+        filenames = [
+            "10.bak",
+            "tmp",
+            "011.bak",
+            "tmp123.bak",
+            "000000001f.bak",
+            "000000001F.bak",
+        ]
         for filename in filenames:
             path = os.path.join(backup_root_path, filename)
             _create_dummy_file(path)

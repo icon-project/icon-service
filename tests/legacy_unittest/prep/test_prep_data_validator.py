@@ -32,27 +32,67 @@ TX_INDEX = 0
 
 
 def test_validate_uri():
-    invalid_uri_list = ["http://", "http://.", "http://..", "http://../", "http://?", "http://??", "http://??/",
-                        "http://#", "http://##", "http://##/", "http://foo.bar?q=Spaces should be encoded",
-                        "//", "//a", "///a", "///", "http:///a", "foo.com", "rdar://1234", "h://test",
-                        "http:// shouldfail.com", "http://foo.bar/foo(bar)baz quux", "ftps://foo.bar/",
-                        "http://-error-.invalid/", "http://-a.b.co", "http://a.b-.co", "http://3628126748",
-                        "http://.www.foo.bar/", "http://www.foo.bar./", "http://.www.foo.bar./",
-                        "http://022.107.254.1"]
+    invalid_uri_list = [
+        "http://",
+        "http://.",
+        "http://..",
+        "http://../",
+        "http://?",
+        "http://??",
+        "http://??/",
+        "http://#",
+        "http://##",
+        "http://##/",
+        "http://foo.bar?q=Spaces should be encoded",
+        "//",
+        "//a",
+        "///a",
+        "///",
+        "http:///a",
+        "foo.com",
+        "rdar://1234",
+        "h://test",
+        "http:// shouldfail.com",
+        "http://foo.bar/foo(bar)baz quux",
+        "ftps://foo.bar/",
+        "http://-error-.invalid/",
+        "http://-a.b.co",
+        "http://a.b-.co",
+        "http://3628126748",
+        "http://.www.foo.bar/",
+        "http://www.foo.bar./",
+        "http://.www.foo.bar./",
+        "http://022.107.254.1",
+    ]
 
-    valid_uri_list = ["http://foo.com/blah_blah", "http://foo.com/blah_blah/", "http://foo.com/blah_blah_(wikipedia)",
-                      "http://foo.com/blah_blah_(wikipedia)_(again)", "http://www.example.com/wpstyle/?p=364",
-                      "https://www.example.com/foo/?bar=baz&inga=42&quux", "http://odf.ws/123",
-                      "http://foo.com/blah_(wikipedia)#cite-1", "http://foo.com/blah_(wikipedia)_blah#cite-1",
-                      "http://foo.com/unicode_(✪)_in_parens", "http://foo.com/(something)?after=parens",
-                      "http://code.google.com/events/#&product=browser", "http://foo.bar/?q=Test%20URL-encoded%20stuff",
-                      "http://1337.net", "http://223.255.255.254", "http://foo.bar:8080", "https://foo.bar:8000",
-                      "https://192.10.2.3:1234", "https://localhost:1234", "http://localhost:1234", "http://localhost",
-                      "https://localhost"]
+    valid_uri_list = [
+        "http://foo.com/blah_blah",
+        "http://foo.com/blah_blah/",
+        "http://foo.com/blah_blah_(wikipedia)",
+        "http://foo.com/blah_blah_(wikipedia)_(again)",
+        "http://www.example.com/wpstyle/?p=364",
+        "https://www.example.com/foo/?bar=baz&inga=42&quux",
+        "http://odf.ws/123",
+        "http://foo.com/blah_(wikipedia)#cite-1",
+        "http://foo.com/blah_(wikipedia)_blah#cite-1",
+        "http://foo.com/unicode_(✪)_in_parens",
+        "http://foo.com/(something)?after=parens",
+        "http://code.google.com/events/#&product=browser",
+        "http://foo.bar/?q=Test%20URL-encoded%20stuff",
+        "http://1337.net",
+        "http://223.255.255.254",
+        "http://foo.bar:8080",
+        "https://foo.bar:8000",
+        "https://192.10.2.3:1234",
+        "https://localhost:1234",
+        "http://localhost:1234",
+        "http://localhost",
+        "https://localhost",
+    ]
     for uri in invalid_uri_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_uri(uri)
-        assert e.value.message == 'Invalid uri format'
+        assert e.value.message == "Invalid uri format"
 
     for uri in valid_uri_list:
         try:
@@ -62,21 +102,68 @@ def test_validate_uri():
 
 
 def test_validate_endpoint():
-    invalid_endpoint_list = ["http://", "http://.", "http://..", "http://../", "http://?", "http://??", "http://??/",
-                             "http://#", "http://##", "http://##/", "http://foo.bar?q=Spaces should be encoded",
-                             "//", "//a", "///a", "///", "http:///a", "foo.com", "rdar://1234", "h://test",
-                             "http:// shouldfail.com", "http://foo.bar/foo(bar)baz quux", "ftps://foo.bar/",
-                             "http://-error-.invalid/", "http://-a.b.co", "http://a.b-.co", "http://0.0.0.0:8080",
-                             "http://3628126748", "http://.www.foo.bar/", "http://www.foo.bar./",
-                             "http://.www.foo.bar./", "http://:8080", "http://.:8080", "http://..:8080",
-                             "http://../:8080", "http://?:8080", "http://??:8080", "http://??/:8080", "http://#:8080",
-                             "http://##:8080", "http://##/:8080", "http://foo.bar?q=Spaces should be encoded:8080",
-                             "//:8080", "//a:8080", "///a:8080", "///:8080", "http:///a:8080", "rdar://1234:8080",
-                             "h://test:8080", "http:// shouldfail.com:8080",  "http://foo.bar/foo(bar)baz quux:8080",
-                             "ftps://foo.bar/:8080", "http://-error-.invalid/:8080", "http://-a.b.co:8080",
-                             "http://a.b-.co:8080", "http://3628126748:8080", "http://.www.foo.bar/:8080",
-                             "http://www.foo.bar./:8080", "http://.www.foo.bar./:8080", "022.107.254.1:8080",
-                             "256.123.1.1:8000"]
+    invalid_endpoint_list = [
+        "http://",
+        "http://.",
+        "http://..",
+        "http://../",
+        "http://?",
+        "http://??",
+        "http://??/",
+        "http://#",
+        "http://##",
+        "http://##/",
+        "http://foo.bar?q=Spaces should be encoded",
+        "//",
+        "//a",
+        "///a",
+        "///",
+        "http:///a",
+        "foo.com",
+        "rdar://1234",
+        "h://test",
+        "http:// shouldfail.com",
+        "http://foo.bar/foo(bar)baz quux",
+        "ftps://foo.bar/",
+        "http://-error-.invalid/",
+        "http://-a.b.co",
+        "http://a.b-.co",
+        "http://0.0.0.0:8080",
+        "http://3628126748",
+        "http://.www.foo.bar/",
+        "http://www.foo.bar./",
+        "http://.www.foo.bar./",
+        "http://:8080",
+        "http://.:8080",
+        "http://..:8080",
+        "http://../:8080",
+        "http://?:8080",
+        "http://??:8080",
+        "http://??/:8080",
+        "http://#:8080",
+        "http://##:8080",
+        "http://##/:8080",
+        "http://foo.bar?q=Spaces should be encoded:8080",
+        "//:8080",
+        "//a:8080",
+        "///a:8080",
+        "///:8080",
+        "http:///a:8080",
+        "rdar://1234:8080",
+        "h://test:8080",
+        "http:// shouldfail.com:8080",
+        "http://foo.bar/foo(bar)baz quux:8080",
+        "ftps://foo.bar/:8080",
+        "http://-error-.invalid/:8080",
+        "http://-a.b.co:8080",
+        "http://a.b-.co:8080",
+        "http://3628126748:8080",
+        "http://.www.foo.bar/:8080",
+        "http://www.foo.bar./:8080",
+        "http://.www.foo.bar./:8080",
+        "022.107.254.1:8080",
+        "256.123.1.1:8000",
+    ]
 
     valid_endpoint_list = ["foo.com:1", "192.10.6.2:8000", "localhost:1234"]
     for endpoint in invalid_endpoint_list:
@@ -91,16 +178,26 @@ def test_validate_endpoint():
 
 
 def test_validate_email():
-    invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', 'invalid@a', 'invalid@a.', 'invalid@.com',
-                          'invalid.@asdf.com-', "email@domain..com", "invalid@abcd@abcd.com",
-                          'john..doe@example.com', ".invalid@email.com"]
+    invalid_email_list = [
+        "invalid email",
+        "invalid.com",
+        "invalid@",
+        "invalid@a",
+        "invalid@a.",
+        "invalid@.com",
+        "invalid.@asdf.com-",
+        "email@domain..com",
+        "invalid@abcd@abcd.com",
+        "john..doe@example.com",
+        ".invalid@email.com",
+    ]
 
     for email in invalid_email_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_email(Revision.DECENTRALIZATION.value, email)
         assert e.value.message == "Invalid email format"
 
-    valid_email_list = ['example@localhost', 'user@email.com']
+    valid_email_list = ["example@localhost", "user@email.com"]
     for email in valid_email_list:
         try:
             _validate_email(Revision.DECENTRALIZATION.value, email)
@@ -109,16 +206,33 @@ def test_validate_email():
 
 
 def test_validate_fixed_email():
-    invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', f"{'a'*65}@example.com",
-                          f"{'a'*253}@aa", '@invalid', f'{"가"*64}@example.com', '@@', 'a@@']
+    invalid_email_list = [
+        "invalid email",
+        "invalid.com",
+        "invalid@",
+        f"{'a'*65}@example.com",
+        f"{'a'*253}@aa",
+        "@invalid",
+        f'{"가"*64}@example.com',
+        "@@",
+        "a@@",
+    ]
 
     for email in invalid_email_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_email(Revision.FIX_EMAIL_VALIDATION.value, email)
         assert e.value.message == "Invalid email format"
 
-    valid_email_list = ['example@localhost', 'user@email.com', f'{"a"*63}@example.com',
-                        f"{'a'*64}@{'b'*189}", 'user-_-;+_+:)@example.com', 'a@a', ' @ ', '@@ ']
+    valid_email_list = [
+        "example@localhost",
+        "user@email.com",
+        f'{"a"*63}@example.com',
+        f"{'a'*64}@{'b'*189}",
+        "user-_-;+_+:)@example.com",
+        "a@a",
+        " @ ",
+        "@@ ",
+    ]
     for email in valid_email_list:
         try:
             _validate_email(Revision.FIX_EMAIL_VALIDATION.value, email)
@@ -127,7 +241,16 @@ def test_validate_fixed_email():
 
 
 def test_validate_country():
-    valid_country_codes: List[str] = ["KOR", "USA", "CHN", "JPN", "FRA", "RUS", "DEU", "CAN"]
+    valid_country_codes: List[str] = [
+        "KOR",
+        "USA",
+        "CHN",
+        "JPN",
+        "FRA",
+        "RUS",
+        "DEU",
+        "CAN",
+    ]
     invalid_country_codes: List[str] = ["123", "hello", "KR", "US", "CA", "FR"]
 
     for code in valid_country_codes:

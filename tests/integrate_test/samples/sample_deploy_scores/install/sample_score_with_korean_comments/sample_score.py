@@ -1,10 +1,10 @@
 from iconservice import *
 
-# ÁÖ¼® Á¾·ùµµ ¿©·¯°³·Î ÇÏÀÚ
+# ì£¼ì„ ì¢…ë¥˜ë„ ì—¬ëŸ¬ê°œë¡œ í•˜ìž
 
 
 class TestScore(IconScoreBase):
-    """ÇÑ±Û·Î ÁÖ¼®À» ´Þ¸é ¹«½¼ ÀÏÀÌ ¹ß»ýÇÒ±î?
+    """í•œê¸€ë¡œ ì£¼ì„ì„ ë‹¬ë©´ ë¬´ìŠ¨ ì¼ì´ ë°œìƒí• ê¹Œ?
     """
 
     @eventlog(indexed=1)
@@ -13,7 +13,7 @@ class TestScore(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
     def on_install(self, value: int) -> None:
         super().on_install()

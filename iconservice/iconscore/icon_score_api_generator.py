@@ -17,8 +17,15 @@
 from inspect import signature, Signature, Parameter, isclass, getmembers, isfunction
 from typing import Any, Optional, TYPE_CHECKING
 
-from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, BaseType, \
-    STR_FALLBACK, STR_ON_INSTALL, STR_ON_UPDATE
+from .icon_score_constant import (
+    ConstBitFlag,
+    CONST_BIT_FLAG,
+    CONST_INDEXED_ARGS_COUNT,
+    BaseType,
+    STR_FALLBACK,
+    STR_ON_INSTALL,
+    STR_ON_UPDATE,
+)
 from ..base.address import Address
 from ..base.exception import IllegalFormatException, InvalidParamsException
 from ..base.type_converter import TypeConverter
@@ -32,18 +39,18 @@ if TYPE_CHECKING:
 
 class ScoreApiGenerator:
 
-    __API_TYPE = 'type'
-    __API_NAME = 'name'
-    __API_INPUTS = 'inputs'
-    __API_OUTPUTS = 'outputs'
-    __API_PAYABLE = 'payable'
-    __API_READONLY = 'readonly'
-    __API_INPUTS_INDEXED = 'indexed'
-    __API_INPUTS_DEFAULT = 'default'
-    __API_PARAMS_ADDRESS = 'Address'
-    __API_PARAMS_INDEXED = 'Indexed'
-    __API_TYPE_FUNCTION = 'function'
-    __API_TYPE_EVENT = 'eventlog'
+    __API_TYPE = "type"
+    __API_NAME = "name"
+    __API_INPUTS = "inputs"
+    __API_OUTPUTS = "outputs"
+    __API_PAYABLE = "payable"
+    __API_READONLY = "readonly"
+    __API_INPUTS_INDEXED = "indexed"
+    __API_INPUTS_DEFAULT = "default"
+    __API_PARAMS_ADDRESS = "Address"
+    __API_PARAMS_INDEXED = "Indexed"
+    __API_TYPE_FUNCTION = "function"
+    __API_TYPE_EVENT = "eventlog"
 
     __API_TYPE_FALLBACK = STR_FALLBACK
     __API_TYPE_ON_INSTALL = STR_ON_INSTALL
@@ -59,50 +66,68 @@ class ScoreApiGenerator:
         return api
 
     @staticmethod
-    def check_on_deploy(context: 'IconScoreContext', score: 'IconScoreBase') -> None:
-        custom_funcs = [value for key, value in getmembers(score.__class__, predicate=isfunction)
-                        if key in ScoreApiGenerator.__on_deploy]
+    def check_on_deploy(context: "IconScoreContext", score: "IconScoreBase") -> None:
+        custom_funcs = [
+            value
+            for key, value in getmembers(score.__class__, predicate=isfunction)
+            if key in ScoreApiGenerator.__on_deploy
+        ]
         for func in custom_funcs:
             ScoreApiGenerator.__check_on_deploy_function(context, signature(func))
 
     @staticmethod
-    def __check_on_deploy_function(context: 'IconScoreContext', sig_info: 'Signature') -> None:
+    def __check_on_deploy_function(
+        context: "IconScoreContext", sig_info: "Signature"
+    ) -> None:
         params = dict(sig_info.parameters)
         for param_name, param in params.items():
-            if param_name == 'self' or param_name == 'cls':
+            if param_name == "self" or param_name == "cls":
                 continue
-            if context.revision > Revision.TWO.value or param.kind != Parameter.VAR_KEYWORD:
+            if (
+                context.revision > Revision.TWO.value
+                or param.kind != Parameter.VAR_KEYWORD
+            ):
                 ScoreApiGenerator.__generate_input([], param, False)
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
         for func in score_funcs:
             const_bit_flag = getattr(func, CONST_BIT_FLAG, 0)
-            is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
+            is_readonly = (
+                const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
+            )
             is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
 
             try:
                 if const_bit_flag & ConstBitFlag.External:
-                    src.append(ScoreApiGenerator.__generate_normal_function(
-                        func.__name__, is_readonly, is_payable, signature(func)))
+                    src.append(
+                        ScoreApiGenerator.__generate_normal_function(
+                            func.__name__, is_readonly, is_payable, signature(func)
+                        )
+                    )
                 elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
                     if is_payable:
-                        src.append(ScoreApiGenerator.__generate_fallback_function(
-                            func.__name__, is_payable, signature(func)))
+                        src.append(
+                            ScoreApiGenerator.__generate_fallback_function(
+                                func.__name__, is_payable, signature(func)
+                            )
+                        )
             except IllegalFormatException as e:
                 raise IllegalFormatException(f"{e.message} at {func.__name__}")
 
     @staticmethod
-    def __generate_normal_function(func_name: str, is_readonly: bool, is_payable: bool, sig_info: 'Signature') -> dict:
+    def __generate_normal_function(
+        func_name: str, is_readonly: bool, is_payable: bool, sig_info: "Signature"
+    ) -> dict:
         info = dict()
-        info[ScoreApiGenerator.__API_TYPE] = \
-            ScoreApiGenerator.__API_TYPE_FUNCTION
+        info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_FUNCTION
         info[ScoreApiGenerator.__API_NAME] = func_name
-        info[ScoreApiGenerator.__API_INPUTS] = \
-            ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
-        info[ScoreApiGenerator.__API_OUTPUTS] = \
-            ScoreApiGenerator.__generate_output(
-                sig_info.return_annotation, is_readonly)
+        info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(
+            dict(sig_info.parameters)
+        )
+        info[ScoreApiGenerator.__API_OUTPUTS] = ScoreApiGenerator.__generate_output(
+            sig_info.return_annotation, is_readonly
+        )
 
         if is_readonly:
             info[ScoreApiGenerator.__API_READONLY] = is_readonly
@@ -112,7 +137,9 @@ class ScoreApiGenerator:
         return info
 
     @staticmethod
-    def __generate_fallback_function(func_name: str, is_payable: bool, sig_info: 'Signature') -> dict:
+    def __generate_fallback_function(
+        func_name: str, is_payable: bool, sig_info: "Signature"
+    ) -> dict:
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_FALLBACK
         info[ScoreApiGenerator.__API_NAME] = func_name
@@ -130,24 +157,34 @@ class ScoreApiGenerator:
 
     @staticmethod
     def __generate_events(src: list, score_funcs: list) -> None:
-        event_funcs = {func.__name__: signature(func) for func in score_funcs
-                       if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog}
+        event_funcs = {
+            func.__name__: signature(func)
+            for func in score_funcs
+            if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog
+        }
 
-        indexed_args_counts = {func.__name__: getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
-                               for func in score_funcs
-                               if getattr(func, CONST_INDEXED_ARGS_COUNT, 0)}
+        indexed_args_counts = {
+            func.__name__: getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
+            for func in score_funcs
+            if getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
+        }
 
         for func_name, event in event_funcs.items():
             index_args_count = indexed_args_counts.get(func_name, 0)
-            src.append(ScoreApiGenerator.__generate_event(func_name, event, index_args_count))
+            src.append(
+                ScoreApiGenerator.__generate_event(func_name, event, index_args_count)
+            )
 
     @staticmethod
-    def __generate_event(func_name: str, sig_info: 'Signature', index_args_count: int) -> dict:
+    def __generate_event(
+        func_name: str, sig_info: "Signature", index_args_count: int
+    ) -> dict:
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_EVENT
         info[ScoreApiGenerator.__API_NAME] = func_name
-        info[ScoreApiGenerator.__API_INPUTS] = \
-            ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters), index_args_count)
+        info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(
+            dict(sig_info.parameters), index_args_count
+        )
         return info
 
     @staticmethod
@@ -159,15 +196,17 @@ class ScoreApiGenerator:
 
         if params_type is Signature.empty:
             raise IllegalFormatException(
-                "Returning type should be declared in read-only functions")
+                "Returning type should be declared in read-only functions"
+            )
 
         main_type = get_main_type_from_annotations_type(params_type)
         main_type = ScoreApiGenerator.__convert_str_to_type(main_type)
 
         # At first, finds if the type is a 'list' or a 'dict'
         # if not, finds a base type
-        find = (t for t in [list, dict]
-                if isclass(main_type) and issubclass(main_type, t))
+        find = (
+            t for t in [list, dict] if isclass(main_type) and issubclass(main_type, t)
+        )
         api_type = next(find, None)
         if api_type is None:
             api_type = ScoreApiGenerator.__find_base_super_type(main_type)
@@ -184,7 +223,7 @@ class ScoreApiGenerator:
         if not isinstance(params_type, str):
             return params_type
 
-        if params_type == 'Address':
+        if params_type == "Address":
             return Address
         else:
             return params_type
@@ -194,7 +233,7 @@ class ScoreApiGenerator:
         tmp_list = []
         args_index = 0
         for param_name, param in params.items():
-            if param_name == 'self' or param_name == 'cls':
+            if param_name == "self" or param_name == "cls":
                 continue
             is_indexed = args_index < index_args_count
             args_index += 1
@@ -202,7 +241,7 @@ class ScoreApiGenerator:
         return tmp_list
 
     @staticmethod
-    def __generate_input(src: list, param: 'Parameter', is_indexed: bool):
+    def __generate_input(src: list, param: "Parameter", is_indexed: bool):
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if param.annotation is Parameter.empty:
@@ -213,7 +252,8 @@ class ScoreApiGenerator:
         api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
             raise IllegalFormatException(
-                f"Unsupported type for '{param.name}: {param.annotation}'")
+                f"Unsupported type for '{param.name}: {param.annotation}'"
+            )
         info = dict()
         info[ScoreApiGenerator.__API_NAME] = param.name
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
@@ -221,8 +261,12 @@ class ScoreApiGenerator:
             info[ScoreApiGenerator.__API_INPUTS_INDEXED] = is_indexed
         if param.default is not Parameter.empty:
             if param.default is not None and not isinstance(param.default, main_type):
-                raise InvalidParamsException(f'Default params type mismatch. value: {param.default} type: {main_type}')
-            info[ScoreApiGenerator.__API_INPUTS_DEFAULT] = TypeConverter.convert_type_reverse(param.default)
+                raise InvalidParamsException(
+                    f"Default params type mismatch. value: {param.default} type: {main_type}"
+                )
+            info[
+                ScoreApiGenerator.__API_INPUTS_DEFAULT
+            ] = TypeConverter.convert_type_reverse(param.default)
         src.append(info)
 
     @staticmethod
@@ -232,6 +276,9 @@ class ScoreApiGenerator:
         :param t: target
         :return: base_super_type
         """
-        find = (base_type for base_type in BaseType.__constraints__
-                if isclass(t) and issubclass(t, base_type))
+        find = (
+            base_type
+            for base_type in BaseType.__constraints__
+            if isclass(t) and issubclass(t, base_type)
+        )
         return next(find, None)

@@ -19,11 +19,20 @@ from unittest.mock import Mock
 
 import pytest
 
-from iconservice.icon_constant import PRepFlag, TermFlag, Revision, PRepGrade, PenaltyReason, \
-    PRepStatus
+from iconservice.icon_constant import (
+    PRepFlag,
+    TermFlag,
+    Revision,
+    PRepGrade,
+    PenaltyReason,
+    PRepStatus,
+)
 from iconservice.inv import INVContainer, INVEngine
 from iconservice.inv.data.value import *
-from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import (
+    IconScoreContext,
+    IconScoreContextFactory,
+)
 from iconservice.prep.data import Term, PRep
 from iconservice.prep.data.prep_container import PRepContainer
 from iconservice.prep.engine import Engine as PRepEngine
@@ -36,40 +45,44 @@ TOTAL_PREPS = 110
 TERM_PERIOD = 43120
 
 
-def _impose_penalty_on_prep(prep: 'PRep', penalty: 'PenaltyReason'):
+def _impose_penalty_on_prep(prep: "PRep", penalty: "PenaltyReason"):
     assert not prep.is_frozen()
 
     prep.penalty = penalty
     prep.grade = PRepGrade.CANDIDATE
-    prep.status = PRepStatus.ACTIVE if penalty == PenaltyReason.BLOCK_VALIDATION else PRepStatus.DISQUALIFIED
+    prep.status = (
+        PRepStatus.ACTIVE
+        if penalty == PenaltyReason.BLOCK_VALIDATION
+        else PRepStatus.DISQUALIFIED
+    )
 
 
 @pytest.fixture(scope="module")
 def settable_inv_container():
     default_service_config: int = 0
     default_step_costs = {
-        'default': 1_000_000,
-        'contractCall': 15_000,
-        'contractCreate': 200_000,
-        'contractUpdate': 80_000,
-        'contractDestruct': -70_000,
-        'contractSet': 30_000,
-        'get': 0,
-        'set': 200,
-        'replace': 50,
-        'delete': -150,
-        'input': 200,
-        'eventLog': 100,
-        'apiCall': 0
+        "default": 1_000_000,
+        "contractCall": 15_000,
+        "contractCreate": 200_000,
+        "contractUpdate": 80_000,
+        "contractDestruct": -70_000,
+        "contractSet": 30_000,
+        "get": 0,
+        "set": 200,
+        "replace": 50,
+        "delete": -150,
+        "input": 200,
+        "eventLog": 100,
+        "apiCall": 0,
     }
     default_step_costs = {StepType(key): val for key, val in default_step_costs.items()}
     default_max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
-        IconScoreContextType.QUERY: 50_000_000
+        IconScoreContextType.QUERY: 50_000_000,
     }
     default_step_price: int = 0
     default_score_black_list: list = []
-    default_import_white_list = {"iconservice": ['*']}
+    default_import_white_list = {"iconservice": ["*"]}
     inv_container = INVContainer(is_migrated=False)
     inv_container._icon_network_values = {
         IconNetworkValueType.REVISION_CODE: RevisionCode(0),
@@ -78,24 +91,30 @@ def settable_inv_container():
         IconNetworkValueType.STEP_COSTS: StepCosts(default_step_costs),
         IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits(default_max_step_limits),
         IconNetworkValueType.SERVICE_CONFIG: ServiceConfig(default_service_config),
-        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(default_import_white_list)
+        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(
+            default_import_white_list
+        ),
     }
     return inv_container
 
 
 @pytest.fixture
 def prep_engine():
-    preps = utils.create_dummy_preps(size=TOTAL_PREPS, main_preps=MAIN_PREPS, elected_preps=ELECTED_PREPS)
+    preps = utils.create_dummy_preps(
+        size=TOTAL_PREPS, main_preps=MAIN_PREPS, elected_preps=ELECTED_PREPS
+    )
     preps.freeze()
     assert preps.is_frozen()
     assert not preps.is_dirty()
 
-    term = Term(sequence=0,
-                start_block_height=100,
-                period=TERM_PERIOD,
-                irep=icx_to_loop(50000),
-                total_supply=preps.total_delegated,
-                total_delegated=preps.total_delegated)
+    term = Term(
+        sequence=0,
+        start_block_height=100,
+        period=TERM_PERIOD,
+        irep=icx_to_loop(50000),
+        total_supply=preps.total_delegated,
+        total_delegated=preps.total_delegated,
+    )
     term.set_preps(preps, MAIN_PREPS, ELECTED_PREPS)
     term.freeze()
     assert term.is_frozen()
@@ -110,9 +129,11 @@ def prep_engine():
 
 
 @pytest.fixture
-def context_factory(settable_inv_container: 'INVContainer', prep_engine: 'PRepEngine'):
+def context_factory(settable_inv_container: "INVContainer", prep_engine: "PRepEngine"):
     inv_engine = INVEngine()
-    settable_inv_container.set_inv(RevisionCode(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value))
+    settable_inv_container.set_inv(
+        RevisionCode(Revision.REALTIME_P2P_ENDPOINT_UPDATE.value)
+    )
     inv_engine._inv_container = settable_inv_container
 
     IconScoreContext.engine = ContextEngine(prep=prep_engine, inv=inv_engine)
@@ -122,18 +143,21 @@ def context_factory(settable_inv_container: 'INVContainer', prep_engine: 'PRepEn
 
 
 class TestIconScoreContext:
-
-    def test_update_dirty_prep_batch_with_p2p_endpoint_changed_main_prep(self, prep_engine, context_factory):
-        old_preps: 'PRepContainer' = prep_engine.preps
-        old_term: 'Term' = prep_engine.term
+    def test_update_dirty_prep_batch_with_p2p_endpoint_changed_main_prep(
+        self, prep_engine, context_factory
+    ):
+        old_preps: "PRepContainer" = prep_engine.preps
+        old_term: "Term" = prep_engine.term
 
         block = utils.create_dummy_block()
-        context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+        context: "IconScoreContext" = context_factory.create(
+            IconScoreContextType.INVOKE, block
+        )
         self._check_initial_context(context)
 
         # Case 1: the p2p_endpoint of a main P-Rep is changed
         index = random.randint(0, MAIN_PREPS - 1)
-        dirty_prep: 'PRep' = old_preps.get_by_index(index).copy()
+        dirty_prep: "PRep" = old_preps.get_by_index(index).copy()
         dirty_prep.set(p2p_endpoint=f"new_address_{index}:1234")
         assert dirty_prep.is_dirty()
         assert dirty_prep.flags == PRepFlag.P2P_ENDPOINT
@@ -164,17 +188,21 @@ class TestIconScoreContext:
         assert new_prep != old_prep
         assert dirty_prep.address == new_prep.address == old_prep.address
 
-    def test_update_dirty_prep_batch_with_p2p_endpoint_changed_sub_prep_and_candidate(self, prep_engine, context_factory):
-        old_preps: 'PRepContainer' = prep_engine.preps
-        old_term: 'Term' = prep_engine.term
+    def test_update_dirty_prep_batch_with_p2p_endpoint_changed_sub_prep_and_candidate(
+        self, prep_engine, context_factory
+    ):
+        old_preps: "PRepContainer" = prep_engine.preps
+        old_term: "Term" = prep_engine.term
 
         block = utils.create_dummy_block()
-        context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+        context: "IconScoreContext" = context_factory.create(
+            IconScoreContextType.INVOKE, block
+        )
         self._check_initial_context(context)
 
         # the p2p_endpoint of a sub P-Rep is changed
         sub_index = random.randint(MAIN_PREPS, ELECTED_PREPS - 1)
-        dirty_sub_prep: 'PRep' = old_preps.get_by_index(sub_index).copy()
+        dirty_sub_prep: "PRep" = old_preps.get_by_index(sub_index).copy()
         dirty_sub_prep.set(p2p_endpoint=f"new_address_{sub_index}:1234")
         assert dirty_sub_prep.is_dirty()
         assert dirty_sub_prep.flags == PRepFlag.P2P_ENDPOINT
@@ -182,8 +210,10 @@ class TestIconScoreContext:
         context.put_dirty_prep(dirty_sub_prep)
 
         # the p2p_endpoint of a P-Rep candidate is changed
-        candidate_index = random.randint(ELECTED_PREPS, old_preps.size(active_prep_only=True) - 1)
-        dirty_prep_candidate: 'PRep' = old_preps.get_by_index(candidate_index).copy()
+        candidate_index = random.randint(
+            ELECTED_PREPS, old_preps.size(active_prep_only=True) - 1
+        )
+        dirty_prep_candidate: "PRep" = old_preps.get_by_index(candidate_index).copy()
         dirty_prep_candidate.set(p2p_endpoint=f"new_address_{candidate_index}:1234")
         assert dirty_prep_candidate.is_dirty()
         assert dirty_prep_candidate.flags == PRepFlag.P2P_ENDPOINT
@@ -205,15 +235,19 @@ class TestIconScoreContext:
         assert context.preps.get_by_index(sub_index) == dirty_sub_prep
         assert context.preps.get_by_index(candidate_index) == dirty_prep_candidate
 
-    def test_update_dirty_prep_batch_with_penalized_main_prep(self, prep_engine, context_factory):
+    def test_update_dirty_prep_batch_with_penalized_main_prep(
+        self, prep_engine, context_factory
+    ):
         block = utils.create_dummy_block()
-        context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+        context: "IconScoreContext" = context_factory.create(
+            IconScoreContextType.INVOKE, block
+        )
         self._check_initial_context(context)
 
         penalties = [
             PenaltyReason.LOW_PRODUCTIVITY,
             PenaltyReason.PREP_DISQUALIFICATION,
-            PenaltyReason.BLOCK_VALIDATION
+            PenaltyReason.BLOCK_VALIDATION,
         ]
 
         sub_prep_count = ELECTED_PREPS - MAIN_PREPS
@@ -224,7 +258,7 @@ class TestIconScoreContext:
             address = context.term.main_preps[i].address
 
             # Duplicate a main P-Rep indicated by address to dirty_prep
-            dirty_prep: 'PRep' = context.get_prep(address, mutable=True)
+            dirty_prep: "PRep" = context.get_prep(address, mutable=True)
             assert dirty_prep.address == address
             assert dirty_prep.grade == PRepGrade.MAIN
             assert not dirty_prep.is_frozen()
@@ -233,7 +267,9 @@ class TestIconScoreContext:
             # Impose low productivity penalty on the main P-Rep chosen above
             _impose_penalty_on_prep(dirty_prep, penalty)
             assert dirty_prep.is_flags_on(PRepFlag.GRADE | PRepFlag.PENALTY)
-            assert dirty_prep.is_flags_on(PRepFlag.STATUS) == (penalty != PenaltyReason.BLOCK_VALIDATION)
+            assert dirty_prep.is_flags_on(PRepFlag.STATUS) == (
+                penalty != PenaltyReason.BLOCK_VALIDATION
+            )
 
             context.put_dirty_prep(dirty_prep)
             context.update_dirty_prep_batch()
@@ -254,14 +290,16 @@ class TestIconScoreContext:
             assert id(dirty_prep) == id(context.preps.get_by_address(address))
 
             address = context.term.main_preps[i].address
-            new_main_prep: 'PRep' = context.preps.get_by_address(address)
+            new_main_prep: "PRep" = context.preps.get_by_address(address)
 
             # The grade update for a new main P-Rep will be batched
             # in iconservice.prep.engine.Engine._update_prep_grades()
             assert new_main_prep.grade == PRepGrade.SUB
             assert not new_main_prep.is_dirty()
 
-    def test_update_dirty_prep_batch_by_elected_prep_unregistration(self, prep_engine, context_factory):
+    def test_update_dirty_prep_batch_by_elected_prep_unregistration(
+        self, prep_engine, context_factory
+    ):
         items = [
             (random.randint(0, MAIN_PREPS - 1), PRepGrade.MAIN),
             (random.randint(MAIN_PREPS, ELECTED_PREPS - 1), PRepGrade.SUB),
@@ -269,10 +307,12 @@ class TestIconScoreContext:
 
         for index, grade in items:
             block = utils.create_dummy_block()
-            context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+            context: "IconScoreContext" = context_factory.create(
+                IconScoreContextType.INVOKE, block
+            )
             self._check_initial_context(context)
 
-            prep: 'PRep' = context.preps.get_by_index(index)
+            prep: "PRep" = context.preps.get_by_index(index)
             assert prep.grade == grade
 
             # Duplicate the P-Rep specified by address to dirty_prep
@@ -303,21 +343,27 @@ class TestIconScoreContext:
             assert dirty_prep.address not in context.term
             assert dirty_prep == context.preps.get_by_address(dirty_prep.address)
 
-    def test_update_dirty_prep_batch_by_prep_candidate_unregistration(self, prep_engine, context_factory):
+    def test_update_dirty_prep_batch_by_prep_candidate_unregistration(
+        self, prep_engine, context_factory
+    ):
         for i in range(3):
             index = ELECTED_PREPS + i
             grade = PRepGrade.CANDIDATE
 
             block = utils.create_dummy_block()
-            context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+            context: "IconScoreContext" = context_factory.create(
+                IconScoreContextType.INVOKE, block
+            )
             self._check_initial_context(context)
 
             old_active_prep_count: int = context.preps.size(active_prep_only=True)
-            old_total_prep_count: int = context.preps.size(active_prep_only=False)  # active + inactive
+            old_total_prep_count: int = context.preps.size(
+                active_prep_only=False
+            )  # active + inactive
             # There is no inactive P-Rep at this moment
             assert old_active_prep_count == old_total_prep_count
 
-            prep: 'PRep' = context.preps.get_by_index(index)
+            prep: "PRep" = context.preps.get_by_index(index)
             assert prep.grade == grade
 
             # Duplicate the P-Rep specified by address to dirty_prep
@@ -353,11 +399,13 @@ class TestIconScoreContext:
             assert dirty_prep == context.preps.get_by_address(dirty_prep.address)
 
             # The number of active P-Reps will be decreased by one compared to the previous one
-            assert context.preps.size(active_prep_only=True) == old_active_prep_count - 1
+            assert (
+                context.preps.size(active_prep_only=True) == old_active_prep_count - 1
+            )
             assert context.preps.size(active_prep_only=False) == old_total_prep_count
 
     @staticmethod
-    def _check_initial_context(context: 'IconScoreContext'):
+    def _check_initial_context(context: "IconScoreContext"):
         assert context.revision >= Revision.REALTIME_P2P_ENDPOINT_UPDATE.value
 
         assert isinstance(context.preps, PRepContainer)

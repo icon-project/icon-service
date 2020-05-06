@@ -65,7 +65,7 @@ def is_lowercase_hex_string(value: str) -> bool:
     """
 
     try:
-        result = re.match('[0-9a-f]+', value)
+        result = re.match("[0-9a-f]+", value)
         return len(result.group(0)) == len(value)
     except:
         pass
@@ -78,22 +78,25 @@ def sha3_256(data: bytes) -> bytes:
 
 
 def to_camel_case(snake_str: str) -> str:
-    str_array = snake_str.split('_')
-    return str_array[0] + ''.join(sub.title() for sub in str_array[1:])
+    str_array = snake_str.split("_")
+    return str_array[0] + "".join(sub.title() for sub in str_array[1:])
 
 
 def check_error_response(result: Any):
-    return isinstance(result, dict) and result.get('error')
+    return isinstance(result, dict) and result.get("error")
 
 
 def get_main_type_from_annotations_type(annotations_type: type) -> type:
     main_type = None
 
-    if hasattr(annotations_type, '__origin__') and annotations_type.__origin__ is not Union:
+    if (
+        hasattr(annotations_type, "__origin__")
+        and annotations_type.__origin__ is not Union
+    ):
         return annotations_type.__origin__
 
     # in python 3.7, _subs_tree method has excluded.
-    if hasattr(annotations_type, '__args__'):
+    if hasattr(annotations_type, "__args__"):
         annotations = annotations_type.__args__
         for annotation_type in annotations:
             if annotation_type is not None:
@@ -138,6 +141,7 @@ class BytesToHexJSONEncoder(json.JSONEncoder):
     """Used to make logging message more readable
 
     """
+
     def default(self, obj):
         if isinstance(obj, bytes):
             return bytes_to_hex(obj)

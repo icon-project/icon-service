@@ -2,21 +2,22 @@ from iconservice import *
 
 
 class SampleDbReturns(IconScoreBase):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value1 = VarDB('value1', db, value_type=int)
-        self._value2 = VarDB('value2', db, value_type=str)
-        self._value3 = VarDB('value3', db, value_type=bytes)
-        self._value4 = VarDB('value4', db, value_type=Address)
-        self._value5 = VarDB('value5', db, value_type=bool)
-        self._value6 = VarDB('value6', db, value_type=Address)
+        self._value1 = VarDB("value1", db, value_type=int)
+        self._value2 = VarDB("value2", db, value_type=str)
+        self._value3 = VarDB("value3", db, value_type=bytes)
+        self._value4 = VarDB("value4", db, value_type=Address)
+        self._value5 = VarDB("value5", db, value_type=bool)
+        self._value6 = VarDB("value6", db, value_type=Address)
 
-    def on_install(self, value: 'Address' = None, value1: Address = None, value2: int = None) -> None:
+    def on_install(
+        self, value: "Address" = None, value1: Address = None, value2: int = None
+    ) -> None:
         super().on_install()
         self._value4.set(value)
         self._value6.set(value1)
@@ -49,11 +50,11 @@ class SampleDbReturns(IconScoreBase):
         self._value3.set(value)
 
     @external(readonly=True)
-    def get_value4(self) -> 'Address':
+    def get_value4(self) -> "Address":
         return self._value4.get()
 
     @external(readonly=False)
-    def set_value4(self, value: 'Address'=None) -> None:
+    def set_value4(self, value: "Address" = None) -> None:
         self._value4.set(value)
 
     @external(readonly=True)

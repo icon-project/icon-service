@@ -21,7 +21,13 @@ from .regulator import Regulator
 from ... import SYSTEM_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
 from ...base.exception import OutOfBalanceException
-from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG, Revision
+from ...icon_constant import (
+    ISSUE_CALCULATE_ORDER,
+    ISSUE_EVENT_LOG_MAPPER,
+    IssueDataKey,
+    ICX_LOG_TAG,
+    Revision,
+)
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
@@ -31,27 +37,30 @@ if TYPE_CHECKING:
 
 
 class Engine(EngineBase):
-
     def __init__(self):
         super().__init__()
 
-        self._formula: Optional['IssueFormula'] = None
+        self._formula: Optional["IssueFormula"] = None
 
-    def open(self, context: 'IconScoreContext'):
+    def open(self, context: "IconScoreContext"):
         self._formula = IssueFormula(context.main_prep_count)
 
-    def create_icx_issue_info(self, context: 'IconScoreContext') -> dict:
+    def create_icx_issue_info(self, context: "IconScoreContext") -> dict:
         irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             IssueDataKey.PREP: {
                 IssueDataKey.IREP: irep,
-                IssueDataKey.RREP: context.storage.iiss.get_reward_rate(context).reward_prep,
-                IssueDataKey.TOTAL_DELEGATION: context.preps.total_delegated
+                IssueDataKey.RREP: context.storage.iiss.get_reward_rate(
+                    context
+                ).reward_prep,
+                IssueDataKey.TOTAL_DELEGATION: context.preps.total_delegated,
             }
         }
         total_issue_amount = 0
         for group in iiss_data_for_issue:
-            issue_amount_per_group = self._formula.calculate(context, group, iiss_data_for_issue[group])
+            issue_amount_per_group = self._formula.calculate(
+                context, group, iiss_data_for_issue[group]
+            )
             iiss_data_for_issue[group][IssueDataKey.VALUE] = issue_amount_per_group
             total_issue_amount += issue_amount_per_group
 
@@ -60,28 +69,28 @@ class Engine(EngineBase):
         iiss_data_for_issue[IssueDataKey.ISSUE_RESULT] = {
             IssueDataKey.COVERED_BY_FEE: context.regulator.covered_icx_by_fee,
             IssueDataKey.COVERED_BY_OVER_ISSUED_ICX: context.regulator.covered_icx_by_over_issue,
-            IssueDataKey.ISSUE: context.regulator.corrected_icx_issue_amount
+            IssueDataKey.ISSUE: context.regulator.corrected_icx_issue_amount,
         }
         return iiss_data_for_issue
 
     @staticmethod
-    def _issue(context: 'IconScoreContext',
-               to: 'Address',
-               amount: int):
+    def _issue(context: "IconScoreContext", to: "Address", amount: int):
         if amount > 0:
-            to_account: 'Account' = context.storage.icx.get_account(context, to)
+            to_account: "Account" = context.storage.icx.get_account(context, to)
             to_account.deposit(amount)
             current_total_supply = context.storage.icx.get_total_supply(context)
             context.storage.icx.put_account(context, to_account)
             context.storage.icx.put_total_supply(context, current_total_supply + amount)
-            Logger.info(f"Issue icx. amount: {amount} "
-                        f"Total supply: {current_total_supply + amount} "
-                        f"Treasury: {to_account.balance}", ICX_LOG_TAG)
+            Logger.info(
+                f"Issue icx. amount: {amount} "
+                f"Total supply: {current_total_supply + amount} "
+                f"Treasury: {to_account.balance}",
+                ICX_LOG_TAG,
+            )
 
-    def issue(self,
-              context: 'IconScoreContext',
-              to_address: 'Address',
-              issue_data: dict):
+    def issue(
+        self, context: "IconScoreContext", to_address: "Address", issue_data: dict
+    ):
         assert isinstance(context.regulator, Regulator)
 
         self._issue(context, to_address, context.regulator.corrected_icx_issue_amount)
@@ -91,28 +100,41 @@ class Engine(EngineBase):
             if group_key not in issue_data:
                 continue
             event_signature: str = ISSUE_EVENT_LOG_MAPPER[group_key]["event_signature"]
-            data: list = [issue_data[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
-            EventLogEmitter.emit_event_log(context,
-                                           score_address=SYSTEM_SCORE_ADDRESS,
-                                           event_signature=event_signature,
-                                           arguments=data,
-                                           indexed_args_count=0)
+            data: list = [
+                issue_data[group_key][data_key]
+                for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]
+            ]
+            EventLogEmitter.emit_event_log(
+                context,
+                score_address=SYSTEM_SCORE_ADDRESS,
+                event_signature=event_signature,
+                arguments=data,
+                indexed_args_count=0,
+            )
 
-        EventLogEmitter.emit_event_log(context,
-                                       score_address=SYSTEM_SCORE_ADDRESS,
-                                       event_signature=ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["event_signature"],
-                                       arguments=[context.regulator.covered_icx_by_fee,
-                                                  context.regulator.covered_icx_by_over_issue,
-                                                  context.regulator.corrected_icx_issue_amount,
-                                                  context.regulator.remain_over_issued_icx],
-                                       indexed_args_count=0)
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=SYSTEM_SCORE_ADDRESS,
+            event_signature=ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL][
+                "event_signature"
+            ],
+            arguments=[
+                context.regulator.covered_icx_by_fee,
+                context.regulator.covered_icx_by_over_issue,
+                context.regulator.corrected_icx_issue_amount,
+                context.regulator.remain_over_issued_icx,
+            ],
+            indexed_args_count=0,
+        )
 
     @staticmethod
-    def _burn(context: 'IconScoreContext', address: 'Address', amount: int):
-        account: 'Account' = context.storage.icx.get_account(context, address)
+    def _burn(context: "IconScoreContext", address: "Address", amount: int):
+        account: "Account" = context.storage.icx.get_account(context, address)
         if account.balance < amount:
-            raise OutOfBalanceException(f'Not enough ICX to Burn: '
-                                        f'balance({account.balance}) < intended burn amount({amount})')
+            raise OutOfBalanceException(
+                f"Not enough ICX to Burn: "
+                f"balance({account.balance}) < intended burn amount({amount})"
+            )
         else:
             account.withdraw(amount)
             current_total_supply = context.storage.icx.get_total_supply(context)
@@ -120,15 +142,17 @@ class Engine(EngineBase):
             context.storage.icx.put_account(context, account)
             context.storage.icx.put_total_supply(context, current_total_supply - amount)
 
-    def burn(self, context: 'IconScoreContext', address: 'Address', amount: int):
+    def burn(self, context: "IconScoreContext", address: "Address", amount: int):
         self._burn(context, address, amount)
         event_sig: str = "ICXBurned"
         # Before 'FIX_BURN_EVENT_SIGNATURE' revision, event signature format was correct.
         # So fix this bugs.
         if context.revision >= Revision.FIX_BURN_EVENT_SIGNATURE.value:
             event_sig: str = "ICXBurned(int)"
-        EventLogEmitter.emit_event_log(context,
-                                       score_address=SYSTEM_SCORE_ADDRESS,
-                                       event_signature=event_sig,
-                                       arguments=[amount],
-                                       indexed_args_count=0)
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=SYSTEM_SCORE_ADDRESS,
+            event_signature=event_sig,
+            arguments=[amount],
+            indexed_args_count=0,
+        )

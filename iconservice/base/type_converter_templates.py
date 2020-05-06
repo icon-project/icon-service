@@ -78,9 +78,9 @@ class ValueType(IntEnum):
 
 
 type_convert_templates = {}
-CONVERT_USING_SWITCH_KEY = 'CONVERT_USING_SWITCH_KEY'
+CONVERT_USING_SWITCH_KEY = "CONVERT_USING_SWITCH_KEY"
 SWITCH_KEY = "SWITCH_KEY"
-KEY_CONVERTER = 'KEY_CONVERTER'
+KEY_CONVERTER = "KEY_CONVERTER"
 
 
 class ConstantKeys:
@@ -149,7 +149,7 @@ class ConstantKeys:
     BLOCK = "block"
     TRANSACTIONS = "transactions"
 
-    IS_BLOCK_EDITABLE = 'isBlockEditable'
+    IS_BLOCK_EDITABLE = "isBlockEditable"
     PREV_BLOCK_GENERATOR = "prevBlockGenerator"
     PREV_BLOCK_VALIDATORS = "prevBlockValidators"
     PREV_BLOCK_VOTES = "prevBlockVotes"
@@ -169,11 +169,11 @@ class ConstantKeys:
     DELEGATIONS = "delegations"
     COUNTRY = "country"
     CITY = "city"
-    EMAIL = 'email'
-    WEBSITE = 'website'
-    DETAILS = 'details'
-    P2P_ENDPOINT = 'p2pEndpoint'
-    PREP_ID = 'id'
+    EMAIL = "email"
+    WEBSITE = "website"
+    DETAILS = "details"
+    P2P_ENDPOINT = "p2pEndpoint"
+    PREP_ID = "id"
     START_RANKING = "startRanking"
     END_RANKING = "endRanking"
     IREP = "irep"
@@ -191,18 +191,18 @@ type_convert_templates[ParamType.BLOCK] = {
 type_convert_templates[ParamType.ACCOUNT_DATA] = {
     ConstantKeys.NAME: ValueType.STRING,
     ConstantKeys.ADDRESS: ValueType.ADDRESS,
-    ConstantKeys.BALANCE: ValueType.INT
+    ConstantKeys.BALANCE: ValueType.INT,
 }
 
 type_convert_templates[ParamType.CALL_DATA] = {
     ConstantKeys.METHOD: ValueType.STRING,
-    ConstantKeys.PARAMS: ValueType.LATER
+    ConstantKeys.PARAMS: ValueType.LATER,
 }
 
 type_convert_templates[ParamType.DEPLOY_DATA] = {
     ConstantKeys.CONTENT_TYPE: ValueType.STRING,
     ConstantKeys.CONTENT: ValueType.IGNORE,
-    ConstantKeys.PARAMS: ValueType.LATER
+    ConstantKeys.PARAMS: ValueType.LATER,
 }
 
 type_convert_templates[ParamType.BASE_DATA] = {
@@ -210,26 +210,25 @@ type_convert_templates[ParamType.BASE_DATA] = {
         ConstantKeys.PREP_INCENTIVE: ValueType.INT,
         ConstantKeys.PREP_REWARD_RATE: ValueType.INT,
         ConstantKeys.PREP_TOTAL_DELEGATION: ValueType.INT,
-        ConstantKeys.PREP_VALUE: ValueType.INT
+        ConstantKeys.PREP_VALUE: ValueType.INT,
     },
     ConstantKeys.EEP: {
         ConstantKeys.EEP_INCENTIVE: ValueType.INT,
         ConstantKeys.EEP_REWARD_RATE: ValueType.INT,
         ConstantKeys.EEP_TOTAL_DELEGATION: ValueType.INT,
-        ConstantKeys.EEP_VALUE: ValueType.INT
+        ConstantKeys.EEP_VALUE: ValueType.INT,
     },
     ConstantKeys.DAPP: {
         ConstantKeys.DAPP_INCENTIVE: ValueType.INT,
         ConstantKeys.DAPP_REWARD_RATE: ValueType.INT,
         ConstantKeys.DAPP_TOTAL_DELEGATION: ValueType.INT,
-        ConstantKeys.DAPP_VALUE: ValueType.INT
+        ConstantKeys.DAPP_VALUE: ValueType.INT,
     },
     ConstantKeys.ISSUE_RESULT: {
         ConstantKeys.COVERED_BY_FEE: ValueType.INT,
         ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: ValueType.INT,
-        ConstantKeys.ISSUE: ValueType.INT
-    }
-
+        ConstantKeys.ISSUE: ValueType.INT,
+    },
 }
 
 type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
@@ -249,39 +248,28 @@ type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
             SWITCH_KEY: ConstantKeys.DATA_TYPE,
             ConstantKeys.CALL: type_convert_templates[ParamType.CALL_DATA],
             ConstantKeys.DEPLOY: type_convert_templates[ParamType.DEPLOY_DATA],
-            ConstantKeys.BASE: type_convert_templates[ParamType.BASE_DATA]
+            ConstantKeys.BASE: type_convert_templates[ParamType.BASE_DATA],
         }
     },
-    KEY_CONVERTER: {
-        ConstantKeys.OLD_TX_HASH: ConstantKeys.TX_HASH
-    }
+    KEY_CONVERTER: {ConstantKeys.OLD_TX_HASH: ConstantKeys.TX_HASH},
 }
 
 type_convert_templates[ParamType.INVOKE_TRANSACTION] = {
     ConstantKeys.METHOD: ValueType.STRING,
     ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA],
     ConstantKeys.GENESIS_DATA: {
-        ConstantKeys.ACCOUNTS: [
-            type_convert_templates[ParamType.ACCOUNT_DATA]
-        ],
-        ConstantKeys.MESSAGE: ValueType.STRING
-    }
+        ConstantKeys.ACCOUNTS: [type_convert_templates[ParamType.ACCOUNT_DATA]],
+        ConstantKeys.MESSAGE: ValueType.STRING,
+    },
 }
 
 type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.BLOCK: type_convert_templates[ParamType.BLOCK],
-    ConstantKeys.TRANSACTIONS: [
-        type_convert_templates[ParamType.INVOKE_TRANSACTION]
-    ],
+    ConstantKeys.TRANSACTIONS: [type_convert_templates[ParamType.INVOKE_TRANSACTION]],
     ConstantKeys.IS_BLOCK_EDITABLE: ValueType.BOOL,
     ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
     ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS],
-    ConstantKeys.PREV_BLOCK_VOTES: [
-        [
-            ValueType.ADDRESS,
-            ValueType.INT
-        ]
-    ]
+    ConstantKeys.PREV_BLOCK_VOTES: [[ValueType.ADDRESS, ValueType.INT]],
 }
 
 type_convert_templates[ParamType.ICX_CALL] = {
@@ -289,16 +277,18 @@ type_convert_templates[ParamType.ICX_CALL] = {
     ConstantKeys.FROM: ValueType.ADDRESS,
     ConstantKeys.TO: ValueType.ADDRESS,
     ConstantKeys.DATA_TYPE: ValueType.STRING,
-    ConstantKeys.DATA: ValueType.LATER
+    ConstantKeys.DATA: ValueType.LATER,
 }
 type_convert_templates[ParamType.ICX_GET_BALANCE] = {
     ConstantKeys.VERSION: ValueType.INT,
-    ConstantKeys.ADDRESS: ValueType.ADDRESS_OR_MALFORMED_ADDRESS
+    ConstantKeys.ADDRESS: ValueType.ADDRESS_OR_MALFORMED_ADDRESS,
 }
 type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
     ConstantKeys.VERSION: ValueType.INT
 }
-type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[ParamType.ICX_GET_BALANCE]
+type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[
+    ParamType.ICX_GET_BALANCE
+]
 
 type_convert_templates[ParamType.ISE_GET_STATUS] = {
     ConstantKeys.FILTER: [ValueType.STRING]
@@ -310,31 +300,41 @@ type_convert_templates[ParamType.QUERY] = {
         CONVERT_USING_SWITCH_KEY: {
             SWITCH_KEY: ConstantKeys.METHOD,
             ConstantKeys.ICX_CALL: type_convert_templates[ParamType.ICX_CALL],
-            ConstantKeys.ICX_GET_BALANCE: type_convert_templates[ParamType.ICX_GET_BALANCE],
-            ConstantKeys.ICX_GET_TOTAL_SUPPLY: type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
-            ConstantKeys.ICX_GET_SCORE_API: type_convert_templates[ParamType.ICX_GET_SCORE_API],
-            ConstantKeys.ISE_GET_STATUS: type_convert_templates[ParamType.ISE_GET_STATUS]
+            ConstantKeys.ICX_GET_BALANCE: type_convert_templates[
+                ParamType.ICX_GET_BALANCE
+            ],
+            ConstantKeys.ICX_GET_TOTAL_SUPPLY: type_convert_templates[
+                ParamType.ICX_GET_TOTAL_SUPPLY
+            ],
+            ConstantKeys.ICX_GET_SCORE_API: type_convert_templates[
+                ParamType.ICX_GET_SCORE_API
+            ],
+            ConstantKeys.ISE_GET_STATUS: type_convert_templates[
+                ParamType.ISE_GET_STATUS
+            ],
         }
-    }
+    },
 }
 
 type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
     ConstantKeys.BLOCK_HASH: ValueType.BYTES,
     ConstantKeys.OLD_BLOCK_HASH: ValueType.BYTES,
-    ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES
+    ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES,
 }
 
-type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
+type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[
+    ParamType.WRITE_PRECOMMIT
+]
 
 type_convert_templates[ParamType.ROLLBACK] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
-    ConstantKeys.BLOCK_HASH: ValueType.BYTES
+    ConstantKeys.BLOCK_HASH: ValueType.BYTES,
 }
 
 type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.METHOD: ValueType.STRING,
-    ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA]
+    ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA],
 }
 
 # DEPOSIT
@@ -344,26 +344,25 @@ type_convert_templates[ParamType.DEPOSIT_DATA] = {
 }
 
 # IISS
-type_convert_templates[ParamType.IISS_SET_STAKE] = {
-    ConstantKeys.VALUE: ValueType.INT
-}
+type_convert_templates[ParamType.IISS_SET_STAKE] = {ConstantKeys.VALUE: ValueType.INT}
 
 type_convert_templates[ParamType.IISS_GET_STAKE] = {
     ConstantKeys.ADDRESS: ValueType.ADDRESS
 }
 
 type_convert_templates[ParamType.IISS_SET_DELEGATION] = [
-    {
-        ConstantKeys.ADDRESS: ValueType.ADDRESS,
-        ConstantKeys.VALUE: ValueType.INT
-    }
+    {ConstantKeys.ADDRESS: ValueType.ADDRESS, ConstantKeys.VALUE: ValueType.INT}
 ]
 
-type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[
+    ParamType.IISS_GET_STAKE
+]
 
 type_convert_templates[ParamType.IISS_CLAIM_ISCORE] = {}
 
-type_convert_templates[ParamType.IISS_QUERY_ISCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_QUERY_ISCORE] = type_convert_templates[
+    ParamType.IISS_GET_STAKE
+]
 
 type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.NAME: ValueType.STRING,
@@ -384,21 +383,28 @@ type_convert_templates[ParamType.IISS_SET_PREP] = {
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
     ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
-    ConstantKeys.NODE_ADDRESS: ValueType.ADDRESS
+    ConstantKeys.NODE_ADDRESS: ValueType.ADDRESS,
 }
 
-type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
+type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[
+    ParamType.IISS_CLAIM_ISCORE
+]
 
-type_convert_templates[ParamType.IISS_GET_PREP] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_GET_PREP] = type_convert_templates[
+    ParamType.IISS_GET_STAKE
+]
 
-type_convert_templates[ParamType.IISS_GET_PREP_DELEGATION_INFO] = \
-    type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[
+    ParamType.IISS_GET_PREP_DELEGATION_INFO
+] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_GET_MAIN_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
+type_convert_templates[ParamType.IISS_GET_MAIN_PREP_LIST] = type_convert_templates[
+    ParamType.IISS_CLAIM_ISCORE
+]
 
 type_convert_templates[ParamType.IISS_GET_PREP_LIST] = {
     ConstantKeys.START_RANKING: ValueType.INT,
-    ConstantKeys.END_RANKING: ValueType.INT
+    ConstantKeys.END_RANKING: ValueType.INT,
 }
 
 type_convert_templates[ParamType.IISS_SET_GOVERNANCE_VARIABLES] = {

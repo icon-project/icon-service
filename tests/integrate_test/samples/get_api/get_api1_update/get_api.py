@@ -3,7 +3,6 @@ from .base import BaseScore
 
 
 class GetApi(BaseScore):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass

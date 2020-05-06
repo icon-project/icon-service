@@ -19,7 +19,11 @@ import plyvel
 from iconcommons.logger import Logger
 
 from .batch import TransactionBatchValue
-from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
+from ..base.exception import (
+    DatabaseException,
+    InvalidParamsException,
+    AccessDeniedException,
+)
 from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType
 from ..iconscore.context.context import ContextGetter
 
@@ -28,7 +32,7 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 
-def _is_db_writable_on_context(context: 'IconScoreContext'):
+def _is_db_writable_on_context(context: "IconScoreContext"):
     """Check if db is writable on a given context
 
     :param context:
@@ -42,8 +46,7 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
 
 class KeyValueDatabase(object):
     @staticmethod
-    def from_path(path: str,
-                  create_if_missing: bool = True) -> 'KeyValueDatabase':
+    def from_path(path: str, create_if_missing: bool = True) -> "KeyValueDatabase":
         """
 
         :param path: db path
@@ -90,7 +93,7 @@ class KeyValueDatabase(object):
             self._db.close()
             self._db = None
 
-    def get_sub_db(self, prefix: bytes) -> 'KeyValueDatabase':
+    def get_sub_db(self, prefix: bytes) -> "KeyValueDatabase":
         """Return a new prefixed database.
 
         :param prefix: (bytes): prefix to use
@@ -129,13 +132,12 @@ class DatabaseObserver(object):
     """ An abstract class of database observer.
     """
 
-    def __init__(self,
-                 get_func: callable, put_func: callable, delete_func: callable):
+    def __init__(self, get_func: callable, put_func: callable, delete_func: callable):
         self.__get_func = get_func
         self.__put_func = put_func
         self.__delete_func = delete_func
 
-    def on_get(self, context: 'IconScoreContext', key: bytes, value: bytes):
+    def on_get(self, context: "IconScoreContext", key: bytes, value: bytes):
         """
         Invoked when `get` is called in `ContextDatabase`
 
@@ -144,14 +146,16 @@ class DatabaseObserver(object):
         :param value: value
         """
         if not self.__get_func:
-            Logger.warning('__get_func is None', ICON_DB_LOG_TAG)
+            Logger.warning("__get_func is None", ICON_DB_LOG_TAG)
         self.__get_func(context, key, value)
 
-    def on_put(self,
-               context: 'IconScoreContext',
-               key: bytes,
-               old_value: bytes,
-               new_value: bytes):
+    def on_put(
+        self,
+        context: "IconScoreContext",
+        key: bytes,
+        old_value: bytes,
+        new_value: bytes,
+    ):
         """Invoked when `put` is called in `ContextDatabase`.
 
         :param context: SCORE context
@@ -160,13 +164,10 @@ class DatabaseObserver(object):
         :param new_value: new value
         """
         if not self.__put_func:
-            Logger.warning('__put_func is None', ICON_DB_LOG_TAG)
+            Logger.warning("__put_func is None", ICON_DB_LOG_TAG)
         self.__put_func(context, key, old_value, new_value)
 
-    def on_delete(self,
-                  context: 'IconScoreContext',
-                  key: bytes,
-                  old_value: bytes):
+    def on_delete(self, context: "IconScoreContext", key: bytes, old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
 
 
@@ -175,7 +176,7 @@ class DatabaseObserver(object):
         :param old_value:
         """
         if not self.__delete_func:
-            Logger.warning('__delete_func is None', ICON_DB_LOG_TAG)
+            Logger.warning("__delete_func is None", ICON_DB_LOG_TAG)
         self.__delete_func(context, key, old_value)
 
 
@@ -186,7 +187,7 @@ class ContextDatabase(object):
     Cache + LevelDB
     """
 
-    def __init__(self, db: 'KeyValueDatabase', is_shared: bool = False) -> None:
+    def __init__(self, db: "KeyValueDatabase", is_shared: bool = False) -> None:
         """Constructor
 
         :param db: KeyValueDatabase instance
@@ -195,7 +196,7 @@ class ContextDatabase(object):
         # True: this db is shared with all SCOREs
         self._is_shared = is_shared
 
-    def get(self, context: Optional['IconScoreContext'], key: bytes) -> bytes:
+    def get(self, context: Optional["IconScoreContext"], key: bytes) -> bytes:
         """Returns value indicated by key from batch or StateDB
 
         :param context:
@@ -209,9 +210,7 @@ class ContextDatabase(object):
         else:
             return self.get_from_batch(context, key)
 
-    def get_from_batch(self,
-                       context: 'IconScoreContext',
-                       key: bytes) -> bytes:
+    def get_from_batch(self, context: "IconScoreContext", key: bytes) -> bytes:
         """Returns a value for a given key
 
         Search order
@@ -239,23 +238,25 @@ class ContextDatabase(object):
         return self.key_value_db.get(key)
 
     @staticmethod
-    def _check_tx_batch_value(context: Optional['IconScoreContext'],
-                              key: bytes,
-                              include_state_root_hash: bool):
-        tx_batch_value: 'TransactionBatchValue' = context.tx_batch.get(key)
+    def _check_tx_batch_value(
+        context: Optional["IconScoreContext"], key: bytes, include_state_root_hash: bool
+    ):
+        tx_batch_value: "TransactionBatchValue" = context.tx_batch.get(key)
         if tx_batch_value is None:
             return
 
         if not isinstance(tx_batch_value, TransactionBatchValue):
             raise DatabaseException(
-                f'Only TransactionBatchValue type is allowed on tx_batch: {type(tx_batch_value)}')
+                f"Only TransactionBatchValue type is allowed on tx_batch: {type(tx_batch_value)}"
+            )
         elif tx_batch_value.include_state_root_hash != include_state_root_hash:
-            raise DatabaseException('Do not change the include_state_root_hash on the same data')
+            raise DatabaseException(
+                "Do not change the include_state_root_hash on the same data"
+            )
 
-    def put(self,
-            context: Optional['IconScoreContext'],
-            key: bytes,
-            value: Optional[bytes]) -> None:
+    def put(
+        self, context: Optional["IconScoreContext"], key: bytes, value: Optional[bytes]
+    ) -> None:
         """Set the value to StateDB or cache it according to context type
 
         :param context:
@@ -264,13 +265,15 @@ class ContextDatabase(object):
         """
         self._put(context, key, value, include_state_root_hash=True)
 
-    def _put(self,
-             context: Optional['IconScoreContext'],
-             key: bytes,
-             value: Optional[bytes],
-             include_state_root_hash: bool) -> None:
+    def _put(
+        self,
+        context: Optional["IconScoreContext"],
+        key: bytes,
+        value: Optional[bytes],
+        include_state_root_hash: bool,
+    ) -> None:
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('No permission to write')
+            raise DatabaseException("No permission to write")
 
         context_type = context.type
 
@@ -278,11 +281,11 @@ class ContextDatabase(object):
             self.key_value_db.put(key, value)
         else:
             self._check_tx_batch_value(context, key, include_state_root_hash)
-            context.tx_batch[key] = TransactionBatchValue(value, include_state_root_hash)
+            context.tx_batch[key] = TransactionBatchValue(
+                value, include_state_root_hash
+            )
 
-    def delete(self,
-               context: Optional['IconScoreContext'],
-               key: bytes):
+    def delete(self, context: Optional["IconScoreContext"], key: bytes):
         """Delete key from db
 
         :param context:
@@ -290,12 +293,14 @@ class ContextDatabase(object):
         """
         self._delete(context, key, include_state_root_hash=True)
 
-    def _delete(self,
-                context: Optional['IconScoreContext'],
-                key: bytes,
-                include_state_root_hash: bool):
+    def _delete(
+        self,
+        context: Optional["IconScoreContext"],
+        key: bytes,
+        include_state_root_hash: bool,
+    ):
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('No permission to delete')
+            raise DatabaseException("No permission to delete")
 
         context_type = context.type
 
@@ -305,39 +310,36 @@ class ContextDatabase(object):
             self._check_tx_batch_value(context, key, include_state_root_hash)
             context.tx_batch[key] = TransactionBatchValue(None, include_state_root_hash)
 
-    def close(self, context: 'IconScoreContext') -> None:
+    def close(self, context: "IconScoreContext") -> None:
         """close db
 
         :param context:
         """
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('No permission to close')
+            raise DatabaseException("No permission to close")
 
         if not self._is_shared:
             return self.key_value_db.close()
 
-    def write_batch(self,
-                    context: 'IconScoreContext',
-                    it: Iterable[Tuple[bytes, Optional[bytes]]]):
+    def write_batch(
+        self, context: "IconScoreContext", it: Iterable[Tuple[bytes, Optional[bytes]]]
+    ):
 
         if not _is_db_writable_on_context(context):
-            raise DatabaseException(
-                'write_batch is not allowed on readonly context')
+            raise DatabaseException("write_batch is not allowed on readonly context")
 
         return self.key_value_db.write_batch(it)
 
     @staticmethod
-    def from_path(path: str,
-                  create_if_missing: bool = True) -> 'ContextDatabase':
+    def from_path(path: str, create_if_missing: bool = True) -> "ContextDatabase":
         db = KeyValueDatabase.from_path(path, create_if_missing)
         return ContextDatabase(db)
 
 
 class MetaContextDatabase(ContextDatabase):
-    def put(self,
-            context: Optional['IconScoreContext'],
-            key: bytes,
-            value: Optional[bytes]) -> None:
+    def put(
+        self, context: Optional["IconScoreContext"], key: bytes, value: Optional[bytes]
+    ) -> None:
         """Set the value to StateDB or cache it according to context type
 
         :param context:
@@ -346,9 +348,7 @@ class MetaContextDatabase(ContextDatabase):
         """
         self._put(context, key, value, include_state_root_hash=False)
 
-    def delete(self,
-               context: Optional['IconScoreContext'],
-               key: bytes) -> None:
+    def delete(self, context: Optional["IconScoreContext"], key: bytes) -> None:
         """Set the value to StateDB or cache it according to context type
 
         :param context:
@@ -357,8 +357,7 @@ class MetaContextDatabase(ContextDatabase):
         self._delete(context, key, include_state_root_hash=False)
 
     @staticmethod
-    def from_path(path: str,
-                  create_if_missing: bool = True) -> 'MetaContextDatabase':
+    def from_path(path: str, create_if_missing: bool = True) -> "MetaContextDatabase":
         db = KeyValueDatabase.from_path(path, create_if_missing)
         return MetaContextDatabase(db)
 
@@ -369,10 +368,9 @@ class IconScoreDatabase(ContextGetter):
     IconScore can access its states only through IconScoreDatabase
     """
 
-    def __init__(self,
-                 address: 'Address',
-                 context_db: 'ContextDatabase',
-                 prefix: bytes = None) -> None:
+    def __init__(
+        self, address: "Address", context_db: "ContextDatabase", prefix: bytes = None
+    ) -> None:
         """Constructor
 
         :param address: the address of SCORE which this db is assigned to
@@ -390,7 +388,7 @@ class IconScoreDatabase(ContextGetter):
         data = [self.address.to_bytes()]
         if self._prefix is not None:
             data.append(self._prefix)
-        return b'|'.join(data)
+        return b"|".join(data)
 
     def get(self, key: bytes) -> bytes:
         """
@@ -423,7 +421,7 @@ class IconScoreDatabase(ContextGetter):
                 self._observer.on_delete(self._context, key, old_value)
         self._context_db.put(self._context, hashed_key, value)
 
-    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
+    def get_sub_db(self, prefix: bytes) -> "IconScoreSubDatabase":
         """
         Returns sub db with a prefix
 
@@ -432,11 +430,11 @@ class IconScoreDatabase(ContextGetter):
         """
         if prefix is None:
             raise InvalidParamsException(
-                'Invalid params: '
-                'prefix is None in IconScoreDatabase.get_sub_db()')
+                "Invalid params: " "prefix is None in IconScoreDatabase.get_sub_db()"
+            )
 
         if self._prefix is not None:
-            prefix = b'|'.join((self._prefix, prefix))
+            prefix = b"|".join((self._prefix, prefix))
 
         return IconScoreSubDatabase(self.address, self, prefix)
 
@@ -458,7 +456,7 @@ class IconScoreDatabase(ContextGetter):
     def close(self):
         self._context_db.close(self._context)
 
-    def set_observer(self, observer: 'DatabaseObserver'):
+    def set_observer(self, observer: "DatabaseObserver"):
         self._observer = observer
 
     def _hash_key(self, key: bytes) -> bytes:
@@ -469,7 +467,7 @@ class IconScoreDatabase(ContextGetter):
         :return: key bytes
         """
 
-        return b'|'.join((self._prefix_hash_key, key))
+        return b"|".join((self._prefix_hash_key, key))
 
     def _validate_ownership(self):
         """Prevent a SCORE from accessing the database of another SCORE
@@ -480,7 +478,9 @@ class IconScoreDatabase(ContextGetter):
 
 
 class IconScoreSubDatabase(object):
-    def __init__(self, address: 'Address', score_db: 'IconScoreDatabase', prefix: bytes):
+    def __init__(
+        self, address: "Address", score_db: "IconScoreDatabase", prefix: bytes
+    ):
         """Constructor
 
         :param address: the address of SCORE which this db is assigned to
@@ -500,7 +500,7 @@ class IconScoreSubDatabase(object):
         data = []
         if self._prefix is not None:
             data.append(self._prefix)
-        return b'|'.join(data)
+        return b"|".join(data)
 
     def get(self, key: bytes) -> bytes:
         """
@@ -522,7 +522,7 @@ class IconScoreSubDatabase(object):
         hashed_key = self._hash_key(key)
         self._score_db.put(hashed_key, value)
 
-    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
+    def get_sub_db(self, prefix: bytes) -> "IconScoreSubDatabase":
         """
         Returns sub db with a prefix
 
@@ -533,7 +533,7 @@ class IconScoreSubDatabase(object):
             raise InvalidParamsException("Invalid prefix")
 
         if self._prefix is not None:
-            prefix = b'|'.join((self._prefix, prefix))
+            prefix = b"|".join((self._prefix, prefix))
 
         return IconScoreSubDatabase(self.address, self._score_db, prefix)
 
@@ -557,4 +557,4 @@ class IconScoreSubDatabase(object):
         :return: key bytes
         """
 
-        return b'|'.join((self._prefix_hash_key, key))
+        return b"|".join((self._prefix_hash_key, key))

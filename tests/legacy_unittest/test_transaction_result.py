@@ -34,18 +34,21 @@ class TestTransactionResult(unittest.TestCase):
 
         tx = Transaction(tx_hash, tx_index)
 
-        block = Block(block_height=0,
-                      block_hash=block_hash,
-                      timestamp=0x1234567890,
-                      prev_hash=None,
-                      cumulative_fee=0)
+        block = Block(
+            block_height=0,
+            block_hash=block_hash,
+            timestamp=0x1234567890,
+            prev_hash=None,
+            cumulative_fee=0,
+        )
 
         tx_result = TransactionResult(tx=tx, block=block, to=to)
 
         tx_result.event_logs = []
 
         tx_result.failure = TransactionResult.Failure(
-            code=ExceptionCode.SYSTEM_ERROR, message=str('Server error'))
+            code=ExceptionCode.SYSTEM_ERROR, message=str("Server error")
+        )
 
         self.tx_result = tx_result
 
@@ -56,22 +59,21 @@ class TestTransactionResult(unittest.TestCase):
         tx_result = self.tx_result
         d = tx_result.to_dict()
         self.assertTrue(isinstance(d, dict))
-        self.assertTrue(
-            isinstance(tx_result.failure, TransactionResult.Failure))
+        self.assertTrue(isinstance(tx_result.failure, TransactionResult.Failure))
 
         # If status is SUCCESS,
         # dict created by tx_result.to_dict() should not contain failure.
         tx_result.status = TransactionResult.SUCCESS
         tx_result.failure = TransactionResult.Failure(
-            code=ExceptionCode.INVALID_PARAMETER, message='Invalid params')
+            code=ExceptionCode.INVALID_PARAMETER, message="Invalid params"
+        )
 
         d = tx_result.to_dict()
-        self.assertFalse('failure' in d)
+        self.assertFalse("failure" in d)
 
         tx_result.status = TransactionResult.FAILURE
         d = tx_result.to_dict()
-        self.assertTrue('failure' in d)
+        self.assertTrue("failure" in d)
 
         print(d)
         print(hex(tx_result.failure.code))
-

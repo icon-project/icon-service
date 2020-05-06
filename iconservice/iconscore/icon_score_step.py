@@ -18,7 +18,11 @@ import json
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any, List, Tuple, Optional
 
-from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
+from ..base.exception import (
+    ExceptionCode,
+    IconServiceBaseException,
+    InvalidRequestException,
+)
 from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, Revision
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
@@ -45,7 +49,7 @@ def get_input_data_size(revision: int, input_data: Any) -> int:
 
 
 def get_data_size_using_json_dumps(data) -> int:
-    data = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+    data = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     return len(data.encode())
 
 
@@ -62,14 +66,16 @@ def get_deploy_content_size(revision: int, content: str) -> int:
     if revision < Revision.THREE.value:
         return get_data_size_recursively(content)
 
-    if isinstance(content, str) \
-            and content.startswith('0x') \
-            and is_lowercase_hex_string(content[2:]) \
-            and len(content) % 2 == 0:
+    if (
+        isinstance(content, str)
+        and content.startswith("0x")
+        and is_lowercase_hex_string(content[2:])
+        and len(content) % 2 == 0
+    ):
 
         return len(content[2:]) // 2
     else:
-        raise InvalidRequestException('Invalid content data')
+        raise InvalidRequestException("Invalid content data")
 
 
 def get_data_size_recursively(data) -> int:
@@ -91,14 +97,14 @@ def get_data_size_recursively(data) -> int:
         elif isinstance(data, str):
             # If the value is hexstring, it is calculated as bytes otherwise
             # string
-            data_body = data[2:] if data.startswith('0x') else data
+            data_body = data[2:] if data.startswith("0x") else data
             if is_lowercase_hex_string(data_body):
                 data_body_length = len(data_body)
                 size = data_body_length // 2
                 if data_body_length % 2 == 1:
                     size += 1
             else:
-                size = len(data.encode('utf-8'))
+                size = len(data.encode("utf-8"))
         else:
             # int and bool
             if isinstance(data, int):
@@ -133,11 +139,9 @@ class OutOfStepException(IconServiceBaseException):
     """ An Exception which is thrown when steps are exhausted.
     """
 
-    def __init__(self,
-                 step_limit: int,
-                 step_used: int,
-                 requested_step: int,
-                 step_type: StepType):
+    def __init__(
+        self, step_limit: int, step_used: int, requested_step: int, step_type: StepType
+    ):
         """Constructor
 
         :param step_limit: step limit of the transaction
@@ -161,7 +165,7 @@ class OutOfStepException(IconServiceBaseException):
         Returns the exception message
         :return: the exception message
         """
-        return f'Out of step: {self.__step_type.value}'
+        return f"Out of step: {self.__step_type.value}"
 
     @property
     def step_limit(self) -> int:
@@ -223,7 +227,7 @@ class StepTracer(object):
         self._cumulative_step = 0
         self._steps.clear()
 
-    def add(self, step_type: 'StepType', step: int, cumulative_step: int):
+    def add(self, step_type: "StepType", step: int, cumulative_step: int):
         assert cumulative_step == self._cumulative_step + step
 
         self._cumulative_step += step
@@ -234,11 +238,13 @@ class IconScoreStepCounter(object):
     """ Counts steps in a transaction
     """
 
-    def __init__(self,
-                 step_price: int,
-                 step_costs: dict,
-                 step_limit: int,
-                 step_trace_flag: bool = False) -> None:
+    def __init__(
+        self,
+        step_price: int,
+        step_costs: dict,
+        step_limit: int,
+        step_trace_flag: bool = False,
+    ) -> None:
         """Constructor
 
         :param step_price: step price
@@ -252,7 +258,9 @@ class IconScoreStepCounter(object):
         self._step_used: int = 0
         self._external_call_count: int = 0
         self._max_step_used: int = 0
-        self._step_tracer: Optional[StepTracer] = StepTracer() if step_trace_flag else None
+        self._step_tracer: Optional[
+            StepTracer
+        ] = StepTracer() if step_trace_flag else None
 
     @property
     def step_price(self) -> int:
@@ -276,8 +284,7 @@ class IconScoreStepCounter(object):
         Returns used steps in the transaction
         :return: used steps in the transaction
         """
-        return max(self._step_used,
-                   self._step_costs.get(StepType.DEFAULT, 0))
+        return max(self._step_used, self._step_costs.get(StepType.DEFAULT, 0))
 
     @property
     def max_step_used(self) -> int:
@@ -298,7 +305,7 @@ class IconScoreStepCounter(object):
         if step_type == StepType.CONTRACT_CALL:
             self._external_call_count += 1
             if self._external_call_count > MAX_EXTERNAL_CALL_COUNT:
-                raise InvalidRequestException('Too many external calls')
+                raise InvalidRequestException("Too many external calls")
 
         step: int = self._step_costs.get(step_type, 0) * count
 
@@ -312,8 +319,7 @@ class IconScoreStepCounter(object):
         if step_used > self._step_limit:
             step_used = self._step_used
             self._step_used = self._step_limit
-            raise OutOfStepException(
-                self._step_limit, step_used, step, step_type)
+            raise OutOfStepException(self._step_limit, step_used, step, step_type)
 
         self._step_used = step_used
 

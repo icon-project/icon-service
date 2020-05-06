@@ -2,7 +2,6 @@ from iconservice import *
 
 
 class SampleScorePass(IconScoreBase):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass
@@ -24,4 +23,3 @@ class SampleScorePass(IconScoreBase):
     @external
     def set_value1(self) -> None:
         pass
-

@@ -2,10 +2,9 @@ from iconservice import *
 
 
 class SampleArrayDB(IconScoreBase):
-
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._array_db = ArrayDB('array_db', db, value_type=str)
+        self._array_db = ArrayDB("array_db", db, value_type=str)
 
     def on_install(self) -> None:
         super().on_install()
@@ -23,4 +22,3 @@ class SampleArrayDB(IconScoreBase):
     @external
     def set_values(self) -> None:
         self._array_db.put(str(self.msg.sender))
-

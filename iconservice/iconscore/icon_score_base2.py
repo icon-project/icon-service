@@ -25,7 +25,11 @@ from coincurve import PublicKey
 
 from .icon_score_constant import FORMAT_IS_NOT_DERIVED_OF_OBJECT, T
 from ..base.address import Address, AddressPrefix
-from ..base.exception import InvalidParamsException, IconScoreException, InvalidInstanceException
+from ..base.exception import (
+    InvalidParamsException,
+    IconScoreException,
+    InvalidInstanceException,
+)
 from ..icon_constant import CHARSET_ENCODING
 from ..icon_constant import Revision
 from ..iconscore.context.context import ContextContainer
@@ -48,7 +52,8 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     """
     An interface class that is used to invoke other SCORE’s external method.
     """
-    def __init__(self, addr_to: 'Address'):
+
+    def __init__(self, addr_to: "Address"):
         """
         A Python init function. Invoked when the contract call create_interface_score()
         """
@@ -56,7 +61,7 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
         self.__value = 0
 
     @property
-    def addr_to(self) -> 'Address':
+    def addr_to(self) -> "Address":
         """
         The address of SCORE to invoke
 
@@ -111,7 +116,9 @@ class ScoreApiStepRatio(IntEnum):
     RECOVER_KEY = 70000
 
 
-def _get_api_call_step_cost(context: 'IconScoreContext', ratio: ScoreApiStepRatio) -> int:
+def _get_api_call_step_cost(
+    context: "IconScoreContext", ratio: ScoreApiStepRatio
+) -> int:
     """Returns the step cost for a given SCORE API
 
     API CALL step cost in context.step_counter means the step cost of sha3_256(b'')
@@ -209,7 +216,7 @@ def json_dumps(obj: Any) -> str:
     assert context
 
     if context and context.revision >= Revision.THREE.value:
-        ret: str = json.dumps(obj, separators=(',', ':'))
+        ret: str = json.dumps(obj, separators=(",", ":"))
 
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_DUMPS)
         step: int = step_cost + step_cost * len(ret.encode(CHARSET_ENCODING)) // 100
@@ -243,7 +250,7 @@ def json_loads(src: str) -> Any:
     return json.loads(src)
 
 
-def create_address_with_key(public_key: bytes) -> Optional['Address']:
+def create_address_with_key(public_key: bytes) -> Optional["Address"]:
     """Create an address with a given public key
 
     :param public_key: Public key based on secp256k1
@@ -276,7 +283,7 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
         return None
 
 
-def _create_address_with_key(public_key: bytes) -> Optional['Address']:
+def _create_address_with_key(public_key: bytes) -> Optional["Address"]:
     assert isinstance(public_key, bytes)
     assert len(public_key) in (33, 65)
 
@@ -304,7 +311,9 @@ def _convert_key(public_key: bytes, compressed: bool) -> Optional[bytes]:
     return public_key_object.format(compressed=not compressed)
 
 
-def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
+def recover_key(
+    msg_hash: bytes, signature: bytes, compressed: bool = True
+) -> Optional[bytes]:
     """Returns the public key from message hash and recoverable signature
 
     :param msg_hash: 32 bytes data
@@ -326,18 +335,24 @@ def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> O
         return None
 
 
-def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optional[bytes]:
-    if isinstance(msg_hash, bytes) \
-            and len(msg_hash) == 32 \
-            and isinstance(signature, bytes) \
-            and len(signature) == 65:
-        return PublicKey.from_signature_and_message(signature, msg_hash, hasher=None).format(compressed)
+def _recover_key(
+    msg_hash: bytes, signature: bytes, compressed: bool
+) -> Optional[bytes]:
+    if (
+        isinstance(msg_hash, bytes)
+        and len(msg_hash) == 32
+        and isinstance(signature, bytes)
+        and len(signature) == 65
+    ):
+        return PublicKey.from_signature_and_message(
+            signature, msg_hash, hasher=None
+        ).format(compressed)
 
     return None
 
 
 class PRepInfo(object):
-    def __init__(self, address: 'Address', delegated: int, name: str):
+    def __init__(self, address: "Address", delegated: int, name: str):
         self.address = address
         self.delegated = delegated
         self.name = name
@@ -354,11 +369,9 @@ def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
     prep_info_list: List[PRepInfo] = []
     for prep_snapshot in term.main_preps:
         prep = context.get_prep(prep_snapshot.address)
-        prep_info_list.append(PRepInfo(
-            prep_snapshot.address,
-            prep_snapshot.delegated,
-            prep.name
-        ))
+        prep_info_list.append(
+            PRepInfo(prep_snapshot.address, prep_snapshot.delegated, prep.name)
+        )
     return prep_info_list, term.end_block_height
 
 
@@ -373,17 +386,16 @@ def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
     prep_info_list: List[PRepInfo] = []
     for prep_snapshot in term.sub_preps:
         prep = context.get_prep(prep_snapshot.address)
-        prep_info_list.append(PRepInfo(
-            prep_snapshot.address,
-            prep_snapshot.delegated,
-            prep.name
-        ))
+        prep_info_list.append(
+            PRepInfo(prep_snapshot.address, prep_snapshot.delegated, prep.name)
+        )
     return prep_info_list, term.end_block_height
 
 
-def create_interface_score(addr_to: 'Address',
-                           interface_cls: Callable[['Address'], T]) -> T:
-        """
+def create_interface_score(
+    addr_to: "Address", interface_cls: Callable[["Address"], T]
+) -> T:
+    """
         Creates an object, through which you have an access to the designated SCORE’s external functions.
 
         :param addr_to: SCORE address
@@ -391,6 +403,8 @@ def create_interface_score(addr_to: 'Address',
         :return: An instance of given class
         """
 
-        if interface_cls is InterfaceScore:
-            raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
-        return interface_cls(addr_to)
+    if interface_cls is InterfaceScore:
+        raise InvalidInstanceException(
+            FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__)
+        )
+    return interface_cls(addr_to)

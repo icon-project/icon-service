@@ -28,11 +28,15 @@ from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
 from iconservice.base.exception import FatalException
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
+from iconservice.icon_constant import (
+    ICON_SERVICE_PROCTITLE_FORMAT,
+    ICON_SCORE_QUEUE_NAME_FORMAT,
+    ConfigKey,
+)
 from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_service_cli import ICON_SERVICE_CLI, ExitCode
 
-_TAG = 'CLI'
+_TAG = "CLI"
 
 
 class IconService(object):
@@ -47,10 +51,10 @@ class IconService(object):
         self._amqp_target = None
         self._inner_service = None
 
-    def serve(self, config: 'IconConfig'):
+    def serve(self, config: "IconConfig"):
         async def _serve():
             await self._inner_service.connect(exclusive=True)
-            Logger.info(f'Start IconService Service serve!', _TAG)
+            Logger.info(f"Start IconService Service serve!", _TAG)
 
         channel = config[ConfigKey.CHANNEL]
         amqp_key = config[ConfigKey.AMQP_KEY]
@@ -61,15 +65,15 @@ class IconService(object):
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
-        Logger.info(f'==========IconService Service params==========', _TAG)
+        Logger.info(f"==========IconService Service params==========", _TAG)
 
-        Logger.info(f'version : {version}', _TAG)
-        Logger.info(f'score_root_path : {score_root_path}', _TAG)
-        Logger.info(f'icon_score_state_db_root_path  : {db_root_path}', _TAG)
-        Logger.info(f'amqp_target  : {amqp_target}', _TAG)
-        Logger.info(f'amqp_key  :  {amqp_key}', _TAG)
-        Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', _TAG)
-        Logger.info(f'==========IconService Service params==========', _TAG)
+        Logger.info(f"version : {version}", _TAG)
+        Logger.info(f"score_root_path : {score_root_path}", _TAG)
+        Logger.info(f"icon_score_state_db_root_path  : {db_root_path}", _TAG)
+        Logger.info(f"amqp_target  : {amqp_target}", _TAG)
+        Logger.info(f"amqp_key  :  {amqp_key}", _TAG)
+        Logger.info(f"icon_score_queue_name  : {self._icon_score_queue_name}", _TAG)
+        Logger.info(f"==========IconService Service params==========", _TAG)
 
         # Before creating IconScoreInnerService instance,
         # loop SHOULD be set as a current event loop for the current thread.
@@ -78,7 +82,9 @@ class IconService(object):
         asyncio.set_event_loop(loop)
 
         try:
-            self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
+            self._inner_service = IconScoreInnerService(
+                amqp_target, self._icon_score_queue_name, conf=config
+            )
         except FatalException as e:
             Logger.exception(e, _TAG)
             Logger.error(e, _TAG)
@@ -106,40 +112,71 @@ class IconService(object):
     def close(self):
         self._inner_service.clean_close()
 
-    def _set_icon_score_stub_params(self, channel: str, amqp_key: str, amqp_target: str):
-        self._icon_score_queue_name = \
-            ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key)
+    def _set_icon_score_stub_params(
+        self, channel: str, amqp_key: str, amqp_target: str
+    ):
+        self._icon_score_queue_name = ICON_SCORE_QUEUE_NAME_FORMAT.format(
+            channel_name=channel, amqp_key=amqp_key
+        )
         self._amqp_target = amqp_target
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-sc", dest=ConfigKey.SCORE_ROOT_PATH, type=str, default=None,
-                        help="icon score root path  example : .score")
-    parser.add_argument("-st", dest=ConfigKey.STATE_DB_ROOT_PATH, type=str, default=None,
-                        help="icon score state db root path  example : .statedb")
-    parser.add_argument("-ch", dest=ConfigKey.CHANNEL, type=str, default=None,
-                        help="icon score channel")
-    parser.add_argument("-ak", dest=ConfigKey.AMQP_KEY, type=str, default=None,
-                        help="icon score amqp_key : [amqp_key]")
-    parser.add_argument("-at", dest=ConfigKey.AMQP_TARGET, type=str, default=None,
-                        help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=None,
-                        help="icon score config")
-    parser.add_argument("-tbears", dest=ConfigKey.TBEARS_MODE, action='store_true',
-                        help="tbears mode")
-    parser.add_argument("-steptrace", dest=ConfigKey.STEP_TRACE_FLAG, action="store_true", help="enable step tracing")
+    parser.add_argument(
+        "-sc",
+        dest=ConfigKey.SCORE_ROOT_PATH,
+        type=str,
+        default=None,
+        help="icon score root path  example : .score",
+    )
+    parser.add_argument(
+        "-st",
+        dest=ConfigKey.STATE_DB_ROOT_PATH,
+        type=str,
+        default=None,
+        help="icon score state db root path  example : .statedb",
+    )
+    parser.add_argument(
+        "-ch", dest=ConfigKey.CHANNEL, type=str, default=None, help="icon score channel"
+    )
+    parser.add_argument(
+        "-ak",
+        dest=ConfigKey.AMQP_KEY,
+        type=str,
+        default=None,
+        help="icon score amqp_key : [amqp_key]",
+    )
+    parser.add_argument(
+        "-at",
+        dest=ConfigKey.AMQP_TARGET,
+        type=str,
+        default=None,
+        help="icon score amqp_target : [127.0.0.1]",
+    )
+    parser.add_argument(
+        "-c", dest=ConfigKey.CONFIG, type=str, default=None, help="icon score config"
+    )
+    parser.add_argument(
+        "-tbears", dest=ConfigKey.TBEARS_MODE, action="store_true", help="tbears mode"
+    )
+    parser.add_argument(
+        "-steptrace",
+        dest=ConfigKey.STEP_TRACE_FLAG,
+        action="store_true",
+        help="enable step tracing",
+    )
 
     args = parser.parse_args()
 
     args_params = dict(vars(args))
-    del args_params['config']
+    del args_params["config"]
     setproctitle.setproctitle(ICON_SERVICE_PROCTITLE_FORMAT.format(**args_params))
 
     conf_path = args.config
     if conf_path is not None:
         if not IconConfig.valid_conf_path(conf_path):
-            print(f'invalid config file : {conf_path}')
+            print(f"invalid config file : {conf_path}")
             sys.exit(ExitCode.COMMAND_IS_WRONG.value)
     if conf_path is None:
         conf_path = str()
@@ -153,10 +190,10 @@ def main():
     _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
     icon_service.serve(config=conf)
-    Logger.info(f'==========IconService Done==========', ICON_SERVICE_CLI)
+    Logger.info(f"==========IconService Done==========", ICON_SERVICE_CLI)
 
 
-def run_in_foreground(conf: 'IconConfig'):
+def run_in_foreground(conf: "IconConfig"):
     _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
     icon_service.serve(config=conf)
@@ -172,7 +209,9 @@ async def _check_rabbitmq(amqp_target: str):
     try:
         amqp_user_name = os.getenv("AMQP_USERNAME", "guest")
         amqp_password = os.getenv("AMQP_PASSWORD", "guest")
-        connection = await aio_pika.connect(host=amqp_target, login=amqp_user_name, password=amqp_password)
+        connection = await aio_pika.connect(
+            host=amqp_target, login=amqp_user_name, password=amqp_password
+        )
         connection.connect()
     except ConnectionRefusedError:
         Logger.error("rabbitmq-service disable", ICON_SERVICE_CLI)
@@ -183,7 +222,7 @@ async def _check_rabbitmq(amqp_target: str):
 
 
 DIR_PATH = os.path.abspath(os.path.dirname(__file__))
-PROJECT_ROOT_PATH = os.path.abspath(os.path.join(DIR_PATH, '..'))
+PROJECT_ROOT_PATH = os.path.abspath(os.path.join(DIR_PATH, ".."))
 
 
 def get_version() -> str:
@@ -192,15 +231,15 @@ def get_version() -> str:
     :return: version of tbears.
     """
     try:
-        version = pkg_resources.get_distribution('iconservice').version
+        version = pkg_resources.get_distribution("iconservice").version
     except pkg_resources.DistributionNotFound:
-        version_path = os.path.join(PROJECT_ROOT_PATH, 'VERSION')
-        with open(version_path, mode='r') as version_file:
+        version_path = os.path.join(PROJECT_ROOT_PATH, "VERSION")
+        with open(version_path, mode="r") as version_file:
             version = version_file.read()
     except:
-        version = 'unknown'
+        version = "unknown"
     return version
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

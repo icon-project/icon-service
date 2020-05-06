@@ -36,7 +36,6 @@ class TypeTag(IntEnum):
 
 
 class BaseCodec(object):
-
     def encode(self, obj: Any) -> Tuple[int, bytes]:
         if isinstance(obj, Address):
             return TypeTag.ADDRESS, obj.to_bytes_including_prefix()
@@ -50,12 +49,12 @@ class BaseCodec(object):
 
 
 class MsgPackForIpc(object):
-    codec: 'BaseCodec' = BaseCodec()
+    codec: "BaseCodec" = BaseCodec()
 
     @classmethod
-    def decode(cls, tag: int, val: bytes) -> 'Any':
+    def decode(cls, tag: int, val: bytes) -> "Any":
         if tag == TypeTag.NIL:
-            if val == b'':
+            if val == b"":
                 return None
             else:
                 raise InvalidParamsException(f"Invalid tag type:{tag} value: {val}")
@@ -79,7 +78,7 @@ class MsgPackForIpc(object):
         elif isinstance(o, bytes):
             return o
         elif isinstance(o, bool):
-            return b'\x01' if o else b'\x00'
+            return b"\x01" if o else b"\x00"
         else:
             t, v = cls.codec.encode(o)
             return v
@@ -108,7 +107,7 @@ class MsgPackForIpc(object):
     @classmethod
     def encode_any(cls, o: Any) -> Tuple[int, Any]:
         if o is None:
-            return TypeTag.NIL, b''
+            return TypeTag.NIL, b""
         elif isinstance(o, dict):
             m = {}
             for k, v in o.items():

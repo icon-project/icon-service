@@ -89,9 +89,11 @@ class BackupCleaner(object):
         :param: func: function to remove a file with path
         :return: the number of removed files
         """
-        Logger.debug(tag=_TAG,
-                     msg=f"run() start: current_block_height={current_block_height} "
-                         f"backup_files={self._backup_files}")
+        Logger.debug(
+            tag=_TAG,
+            msg=f"run() start: current_block_height={current_block_height} "
+            f"backup_files={self._backup_files}",
+        )
 
         # Remove the oldest backup file only
         start_block_height = current_block_height - self._backup_files - 1
@@ -108,11 +110,17 @@ class BackupCleaner(object):
         :param end_block_height:
         :return: The number of removed files
         """
-        Logger.debug(tag=_TAG, msg=f"run() start: start={start_block_height} end={end_block_height}")
+        Logger.debug(
+            tag=_TAG,
+            msg=f"run() start: start={start_block_height} end={end_block_height}",
+        )
 
         # Parameters sanity check
         if start_block_height < 0 or start_block_height > end_block_height:
-            Logger.warning(tag=_TAG, msg=f"Invalid range: start={start_block_height} end={end_block_height}")
+            Logger.warning(
+                tag=_TAG,
+                msg=f"Invalid range: start={start_block_height} end={end_block_height}",
+            )
             return -1
 
         ret = 0
@@ -126,9 +134,11 @@ class BackupCleaner(object):
             if self._remove_file(path):
                 ret += 1
 
-        Logger.info(tag=_TAG,
-                    msg=f"Clean up old backup files: "
-                        f"start={start_block_height} end={end_block_height} count={ret}")
+        Logger.info(
+            tag=_TAG,
+            msg=f"Clean up old backup files: "
+            f"start={start_block_height} end={end_block_height} count={ret}",
+        )
         Logger.debug(tag=_TAG, msg=f"run() end: ret={ret}")
 
         return ret

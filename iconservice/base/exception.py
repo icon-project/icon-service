@@ -43,7 +43,7 @@ class ExceptionCode(IntEnum):
     END = 99
 
     def __str__(self) -> str:
-        return str(self.name).capitalize().replace('_', ' ')
+        return str(self.name).capitalize().replace("_", " ")
 
 
 class FatalException(BaseException):
@@ -74,7 +74,7 @@ class IconServiceBaseException(BaseException):
         return self.__code
 
     def __str__(self):
-        return f'{self.message} ({self.code})'
+        return f"{self.message} ({self.code})"
 
 
 class ScoreNotFoundException(IconServiceBaseException):
@@ -181,7 +181,7 @@ class IconScoreException(IconServiceBaseException):
     # All the user-defined exceptions should inherit from this exception including revert call
     def __init__(self, message: Optional[str], index: int = 0):
         if not isinstance(index, int):
-            raise InvalidParamsException('Invalid index type: not an integer')
+            raise InvalidParamsException("Invalid index type: not an integer")
         code = ExceptionCode.SCORE_ERROR + index
         if code < ExceptionCode.SCORE_ERROR:
             code = ExceptionCode.SCORE_ERROR

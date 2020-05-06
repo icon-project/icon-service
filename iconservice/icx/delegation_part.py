@@ -33,12 +33,12 @@ class DelegationPart(BasePart):
         if delegations is None:
             delegations = []
 
-        self._delegations: List[List['Address', int], ...] = delegations
+        self._delegations: List[List["Address", int], ...] = delegations
         self._delegated_amount: int = delegated_amount
         self._delegations_amount: int = self._update_delegations_amount(delegations)
 
     @staticmethod
-    def make_key(address: 'Address'):
+    def make_key(address: "Address"):
         return DelegationPart.PREFIX + address.to_bytes_including_prefix()
 
     @property
@@ -48,7 +48,9 @@ class DelegationPart(BasePart):
     @delegated_amount.setter
     def delegated_amount(self, value: int):
         if value < 0:
-            raise InvalidParamsException(f"Invalid params: delegated_amount({value}) < 0")
+            raise InvalidParamsException(
+                f"Invalid params: delegated_amount({value}) < 0"
+            )
 
         if value == self._delegated_amount:
             return
@@ -79,13 +81,15 @@ class DelegationPart(BasePart):
         self._delegated_amount += offset
 
         if self._delegations_amount < 0:
-            raise InvalidParamsException('Fail update_delegated_amount: delegations_amount < 0')
-        
+            raise InvalidParamsException(
+                "Fail update_delegated_amount: delegations_amount < 0"
+            )
+
         self.set_dirty(True)
 
-    def set_delegations(self, new_delegations: List[Tuple['Address', int]]):
+    def set_delegations(self, new_delegations: List[Tuple["Address", int]]):
         if len(new_delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException('Delegations overflow')
+            raise InvalidParamsException("Delegations overflow")
 
         self._delegations: list = new_delegations
         self._delegations_amount: int = self._update_delegations_amount(new_delegations)
@@ -93,7 +97,7 @@ class DelegationPart(BasePart):
         self.set_dirty(True)
 
     @staticmethod
-    def from_bytes(buf: bytes) -> 'DelegationPart':
+    def from_bytes(buf: bytes) -> "DelegationPart":
         """Create DelegationPart object from bytes data
 
         :param buf: (bytes) bytes data including DelegationPart information
@@ -115,7 +119,9 @@ class DelegationPart(BasePart):
 
             delegations.append(item)
 
-        return DelegationPart(delegated_amount=delegated_amount, delegations=delegations)
+        return DelegationPart(
+            delegated_amount=delegated_amount, delegations=delegations
+        )
 
     def to_bytes(self) -> bytes:
         """Convert Account of Stake object to bytes
@@ -123,10 +129,7 @@ class DelegationPart(BasePart):
         :return: data including information of AccountOfDelegation object
         """
 
-        data = [
-            self._VERSION,
-            self.delegated_amount
-        ]
+        data = [self._VERSION, self.delegated_amount]
         delegations: list = []
         for address, value in self._delegations:
             delegations.append(address)
@@ -141,9 +144,11 @@ class DelegationPart(BasePart):
         :param other: (AccountOfDelegation)
         """
 
-        return isinstance(other, DelegationPart) \
-            and self._delegated_amount == other.delegated_amount \
+        return (
+            isinstance(other, DelegationPart)
+            and self._delegated_amount == other.delegated_amount
             and self._delegations == other.delegations
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding

@@ -34,21 +34,20 @@ class PRepSnapshot(object):
     """Contains P-Rep address and the delegated amount when this term started
     """
 
-    def __init__(self, address: 'Address', delegated: int):
+    def __init__(self, address: "Address", delegated: int):
         self._address = address
         self._delegated = delegated
 
     @property
-    def address(self) -> 'Address':
+    def address(self) -> "Address":
         return self._address
 
     @property
     def delegated(self) -> int:
         return self._delegated
 
-    def __eq__(self, other: 'PRepSnapshot') -> bool:
-        return self.address == other.address \
-               and self.delegated == other.delegated
+    def __eq__(self, other: "PRepSnapshot") -> bool:
+        return self.address == other.address and self.delegated == other.delegated
 
 
 class Term(object):
@@ -58,13 +57,15 @@ class Term(object):
     TAG = "TERM"
     _VERSION = 0
 
-    def __init__(self,
-                 sequence: int,
-                 start_block_height: int,
-                 period: int,
-                 irep: int,
-                 total_supply: int,
-                 total_delegated: int):
+    def __init__(
+        self,
+        sequence: int,
+        start_block_height: int,
+        period: int,
+        irep: int,
+        total_supply: int,
+        total_delegated: int,
+    ):
         self._sequence = sequence
 
         self._start_block_height = start_block_height
@@ -76,23 +77,23 @@ class Term(object):
         self._total_elected_prep_delegated = 0
         self._total_elected_prep_delegated_snapshot: int = 0
 
-        self._main_preps: List['PRepSnapshot'] = []
-        self._sub_preps: List['PRepSnapshot'] = []
-        self._preps_dict: Dict['Address', 'PRepSnapshot'] = {}
+        self._main_preps: List["PRepSnapshot"] = []
+        self._sub_preps: List["PRepSnapshot"] = []
+        self._preps_dict: Dict["Address", "PRepSnapshot"] = {}
 
         # made from main P-Rep addresses
         self._merkle_root_hash: Optional[bytes] = None
         self._is_frozen: bool = False
-        self._flags: 'TermFlag' = TermFlag.NONE
+        self._flags: "TermFlag" = TermFlag.NONE
 
     @property
-    def flags(self) -> 'TermFlag':
+    def flags(self) -> "TermFlag":
         return self._flags
 
     def is_dirty(self):
         return utils.is_any_flag_on(self._flags, TermFlag.ALL)
 
-    def on_main_prep_changed(self, flag: 'TermFlag'):
+    def on_main_prep_changed(self, flag: "TermFlag"):
         self._check_access_permission()
         self._flags |= flag
 
@@ -111,19 +112,20 @@ class Term(object):
         return True
 
     def __str__(self) -> str:
-        return \
-            f"Term:" \
-            f"seq={self._sequence} " \
-            f"start_block_height={self._start_block_height} " \
-            f"period={self._period} " \
-            f"irep={self._irep}" \
-            f"total_supply={self._total_supply} " \
-            f"total_delegated={self._total_delegated} " \
-            f"total_elected_prep_delegated={self._total_elected_prep_delegated} " \
-            f"_total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot} " \
+        return (
+            f"Term:"
+            f"seq={self._sequence} "
+            f"start_block_height={self._start_block_height} "
+            f"period={self._period} "
+            f"irep={self._irep}"
+            f"total_supply={self._total_supply} "
+            f"total_delegated={self._total_delegated} "
+            f"total_elected_prep_delegated={self._total_elected_prep_delegated} "
+            f"_total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot} "
             f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
+        )
 
-    def __contains__(self, address: 'Address') -> bool:
+    def __contains__(self, address: "Address") -> bool:
         """Check whether the given address is an elected P-Rep
 
         :param address: P-Rep address
@@ -138,22 +140,26 @@ class Term(object):
         """
         return len(self._preps_dict)
 
-    def __eq__(self, other: 'Term') -> bool:
-        return isinstance(other, Term) \
-            and self._sequence == other._sequence \
-            and self._start_block_height == other._start_block_height \
-            and self._period == other._period \
-            and self._irep == other._irep \
-            and self._total_supply == other._total_supply \
-            and self._total_delegated == other._total_delegated \
-            and self._total_elected_prep_delegated == other._total_elected_prep_delegated \
-            and self._total_elected_prep_delegated_snapshot == other._total_elected_prep_delegated_snapshot \
-            and self._main_preps == other._main_preps \
-            and self._sub_preps == other._sub_preps \
-            and self._preps_dict == other._preps_dict \
+    def __eq__(self, other: "Term") -> bool:
+        return (
+            isinstance(other, Term)
+            and self._sequence == other._sequence
+            and self._start_block_height == other._start_block_height
+            and self._period == other._period
+            and self._irep == other._irep
+            and self._total_supply == other._total_supply
+            and self._total_delegated == other._total_delegated
+            and self._total_elected_prep_delegated
+            == other._total_elected_prep_delegated
+            and self._total_elected_prep_delegated_snapshot
+            == other._total_elected_prep_delegated_snapshot
+            and self._main_preps == other._main_preps
+            and self._sub_preps == other._sub_preps
+            and self._preps_dict == other._preps_dict
             and self._merkle_root_hash == other._merkle_root_hash
+        )
 
-    def is_main_prep(self, address: 'Address') -> bool:
+    def is_main_prep(self, address: "Address") -> bool:
         for prep_snapshot in self._main_preps:
             if address == prep_snapshot.address:
                 return True
@@ -215,15 +221,15 @@ class Term(object):
         return self._total_elected_prep_delegated_snapshot
 
     @property
-    def main_preps(self) -> List['PRepSnapshot']:
+    def main_preps(self) -> List["PRepSnapshot"]:
         return self._main_preps
 
     @property
-    def sub_preps(self) -> List['PRepSnapshot']:
+    def sub_preps(self) -> List["PRepSnapshot"]:
         return self._sub_preps
 
     @property
-    def preps(self) -> Iterable['PRepSnapshot']:
+    def preps(self) -> Iterable["PRepSnapshot"]:
         for snapshot in self._main_preps:
             yield snapshot
         for snapshot in self._sub_preps:
@@ -237,10 +243,9 @@ class Term(object):
     def is_in_term(self, block_height: int):
         return self.start_block_height <= block_height <= self.end_block_height
 
-    def set_preps(self,
-                  it: Iterable['PRep'],
-                  main_prep_count: int,
-                  elected_prep_count: int):
+    def set_preps(
+        self, it: Iterable["PRep"], main_prep_count: int, elected_prep_count: int
+    ):
         """Set elected P-Rep data to term
 
         This method MUST BE called at the end of the term
@@ -281,7 +286,7 @@ class Term(object):
         self._generate_root_hash()
         self._flags = TermFlag.NONE
 
-    def update_invalid_elected_preps(self, invalid_elected_preps: Iterable['PRep']):
+    def update_invalid_elected_preps(self, invalid_elected_preps: Iterable["PRep"]):
         """Update main and sub P-Reps with invalid elected P-Reps
 
         :param invalid_elected_preps:
@@ -289,7 +294,7 @@ class Term(object):
         :return:
         """
         self._check_access_permission()
-        flags: 'TermFlag' = TermFlag.NONE
+        flags: "TermFlag" = TermFlag.NONE
 
         for prep in invalid_elected_preps:
             if self._remove_invalid_main_prep(prep) >= 0:
@@ -306,7 +311,7 @@ class Term(object):
 
         self._flags |= flags
 
-    def _remove_invalid_main_prep(self, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_main_prep(self, invalid_prep: "PRep") -> int:
         """Replace an invalid main P-Rep with the top-ordered sub P-Rep
 
         :param invalid_prep: an invalid main P-Rep
@@ -323,21 +328,26 @@ class Term(object):
 
         if len(self._sub_preps) == 0:
             self._main_preps.pop(index)
-            Logger.warning(tag=self.TAG,
-                           msg=f"Not enough sub P-Rep to replace an invalid main P-Rep")
+            Logger.warning(
+                tag=self.TAG,
+                msg=f"Not enough sub P-Rep to replace an invalid main P-Rep",
+            )
         else:
             self._main_preps[index] = self._sub_preps.pop(0)
             Logger.info(
                 tag=self.TAG,
                 msg=f"Replace a main P-Rep: "
-                    f"index={index} {address} -> {self._main_preps[index].address}")
+                f"index={index} {address} -> {self._main_preps[index].address}",
+            )
 
-        self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
+        self._reduce_total_elected_prep_delegated(
+            invalid_prep, invalid_prep_snapshot.delegated
+        )
         del self._preps_dict[address]
 
         return index
 
-    def _remove_invalid_sub_prep(self, invalid_prep: 'PRep') -> int:
+    def _remove_invalid_sub_prep(self, invalid_prep: "PRep") -> int:
         """Remove an invalid sub P-Rep from self._sub_preps
 
         :param invalid_prep: an invalid sub P-Rep
@@ -348,12 +358,16 @@ class Term(object):
 
         if index >= 0:
             invalid_prep_snapshot = self._sub_preps.pop(index)
-            self._reduce_total_elected_prep_delegated(invalid_prep, invalid_prep_snapshot.delegated)
+            self._reduce_total_elected_prep_delegated(
+                invalid_prep, invalid_prep_snapshot.delegated
+            )
             del self._preps_dict[invalid_prep.address]
 
         return index
 
-    def _reduce_total_elected_prep_delegated(self, invalid_prep: 'PRep', delegated: int):
+    def _reduce_total_elected_prep_delegated(
+        self, invalid_prep: "PRep", delegated: int
+    ):
         """Reduce total_elected_prep_delegated by the delegated amount of the given invalid P-Rep
 
         :param invalid_prep:
@@ -364,22 +378,28 @@ class Term(object):
         # This code is preserved only for state backward compatibility.
         # After revision 7, B2 reward is not provided to the P-Rep
         # which got penalized for consecutive 660 blocks validation failure
-        if invalid_prep.status != PRepStatus.ACTIVE \
-                or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION:
+        if (
+            invalid_prep.status != PRepStatus.ACTIVE
+            or invalid_prep.penalty != PenaltyReason.BLOCK_VALIDATION
+        ):
             self._total_elected_prep_delegated_snapshot -= delegated
-            Logger.info(tag=self.TAG,
-                        msg="total_elected_prep_delegated_snapshot is changed: "
-                            f"delta={-delegated} "
-                            f"total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot}")
+            Logger.info(
+                tag=self.TAG,
+                msg="total_elected_prep_delegated_snapshot is changed: "
+                f"delta={-delegated} "
+                f"total_elected_prep_delegated_snapshot={self._total_elected_prep_delegated_snapshot}",
+            )
 
         self._total_elected_prep_delegated -= delegated
-        Logger.info(tag=self.TAG,
-                    msg="total_elected_prep_delegated is changed: "
-                        f"delta={-delegated} "
-                        f"total_elected_prep_delegated={self._total_elected_prep_delegated}")
+        Logger.info(
+            tag=self.TAG,
+            msg="total_elected_prep_delegated is changed: "
+            f"delta={-delegated} "
+            f"total_elected_prep_delegated={self._total_elected_prep_delegated}",
+        )
 
     @classmethod
-    def _index_of_prep(cls, preps: List['PRepSnapshot'], address: 'Address') -> int:
+    def _index_of_prep(cls, preps: List["PRepSnapshot"], address: "Address") -> int:
         for i, snapshot in enumerate(preps):
             if address == snapshot.address:
                 return i
@@ -387,17 +407,18 @@ class Term(object):
         return -1
 
     def _generate_root_hash(self):
-        def _gen(snapshots: Iterable['PRepSnapshot']) -> bytes:
+        def _gen(snapshots: Iterable["PRepSnapshot"]) -> bytes:
             for snapshot in snapshots:
                 yield snapshot.address.to_bytes_including_prefix()
 
-        self._merkle_root_hash: bytes = \
-            RootHashGenerator.generate_root_hash(values=_gen(self._main_preps), do_hash=True)
+        self._merkle_root_hash: bytes = RootHashGenerator.generate_root_hash(
+            values=_gen(self._main_preps), do_hash=True
+        )
 
     @classmethod
-    def from_list(cls, data: List,
-                  block_height: int,
-                  total_elected_prep_delegated_from_rc: int) -> 'Term':
+    def from_list(
+        cls, data: List, block_height: int, total_elected_prep_delegated_from_rc: int
+    ) -> "Term":
         assert data[0] == cls._VERSION
         sequence: int = data[1]
         start_block_height: int = data[2]
@@ -409,7 +430,9 @@ class Term(object):
         sub_preps = data[8]
         total_elected_prep_delegated = 0
 
-        term = Term(sequence, start_block_height, period, irep, total_supply, total_delegated)
+        term = Term(
+            sequence, start_block_height, period, irep, total_supply, total_delegated
+        )
 
         for address, delegated in main_preps:
             snapshot = PRepSnapshot(address, delegated)
@@ -425,13 +448,18 @@ class Term(object):
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
 
-        if block_height == start_block_height - 1 or total_elected_prep_delegated_from_rc <= 0:
+        if (
+            block_height == start_block_height - 1
+            or total_elected_prep_delegated_from_rc <= 0
+        ):
             # In the case of the first term (prevote -> decentralization),
             # total_elected_prep_delegated_from_rc can be 0.
             # and
             # fix IS-965 Sync fails on block height 10491442 when sync by using a master branch
             total_elected_prep_delegated_from_rc = total_elected_prep_delegated
-        term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
+        term._total_elected_prep_delegated_snapshot = (
+            total_elected_prep_delegated_from_rc
+        )
 
         term._generate_root_hash()
 
@@ -450,7 +478,7 @@ class Term(object):
             [[snapshot.address, snapshot.delegated] for snapshot in self._sub_preps],
         ]
 
-    def copy(self) -> 'Term':
+    def copy(self) -> "Term":
         term = copy.copy(self)
         term._is_frozen = False
         term._flags = TermFlag.NONE

@@ -2,13 +2,12 @@ from iconservice import *
 
 
 class SampleScore(object):
-
     @eventlog(indexed=1)
     def Changed(self, value: int):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
     def on_install(self, value: int) -> None:
         self._value.set(value)

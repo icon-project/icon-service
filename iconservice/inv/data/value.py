@@ -10,9 +10,9 @@ from ...utils.msgpack_for_db import MsgPackForDB
 
 
 class Value(metaclass=ABCMeta):
-    PREFIX: bytes = b'inv'
+    PREFIX: bytes = b"inv"
     # All subclass must have 'TYPE' constant variable
-    TYPE: 'IconNetworkValueType' = None
+    TYPE: "IconNetworkValueType" = None
 
     def __init__(self):
         self._value = None
@@ -42,12 +42,12 @@ class Value(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def from_bytes(cls, bytes_: bytes) -> 'Value':
+    def from_bytes(cls, bytes_: bytes) -> "Value":
         pass
 
 
 class StepCosts(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_COSTS
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.STEP_COSTS
 
     def __init__(self, value: Dict[StepType, int], need_check_value: bool = True):
         super().__init__()
@@ -64,8 +64,13 @@ class StepCosts(Value):
 
         for step_type, cost in value.items():
             if cost < 0:
-                if step_type != StepType.CONTRACT_DESTRUCT and step_type != StepType.DELETE:
-                    raise InvalidParamsException(f"Invalid step costs: {step_type} {cost}")
+                if (
+                    step_type != StepType.CONTRACT_DESTRUCT
+                    and step_type != StepType.DELETE
+                ):
+                    raise InvalidParamsException(
+                        f"Invalid step costs: {step_type} {cost}"
+                    )
 
     @property
     def value(self) -> Dict[StepType, int]:
@@ -87,18 +92,20 @@ class StepCosts(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'StepCosts':
+    def from_bytes(cls, bytes_: bytes) -> "StepCosts":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: dict = items[1]
-        converted_value: Dict[StepType, int] = {StepType(key): val for key, val in value.items()}
+        converted_value: Dict[StepType, int] = {
+            StepType(key): val for key, val in value.items()
+        }
 
         assert version == 0
         return cls(converted_value, need_check_value=False)
 
 
 class StepPrice(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.STEP_PRICE
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.STEP_PRICE
 
     def __init__(self, value: int):
         super().__init__()
@@ -106,7 +113,9 @@ class StepPrice(Value):
         if not isinstance(value, int):
             raise TypeError(f"Invalid step price type. must be integer: {type(value)}")
         if value < 0:
-            raise InvalidParamsException(f"Invalid step price. should not be negative value {value}")
+            raise InvalidParamsException(
+                f"Invalid step price. should not be negative value {value}"
+            )
 
         self._value: int = value
 
@@ -116,7 +125,7 @@ class StepPrice(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'StepPrice':
+    def from_bytes(cls, bytes_: bytes) -> "StepPrice":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: int = items[1]
@@ -126,9 +135,11 @@ class StepPrice(Value):
 
 
 class MaxStepLimits(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.MAX_STEP_LIMITS
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.MAX_STEP_LIMITS
 
-    def __init__(self, value: Dict[IconScoreContextType, int], need_check_value: bool = True):
+    def __init__(
+        self, value: Dict[IconScoreContextType, int], need_check_value: bool = True
+    ):
         super().__init__()
 
         if need_check_value:
@@ -150,7 +161,9 @@ class MaxStepLimits(Value):
             raise TypeError(f"Invalid import white list: {value}")
         for context_type, val in value.items():
             if val < 0:
-                raise InvalidParamsException(f"Invalid max step limits value: {context_type.name}, {val}")
+                raise InvalidParamsException(
+                    f"Invalid max step limits value: {context_type.name}, {val}"
+                )
 
     @property
     def value(self) -> Dict[IconScoreContextType, int]:
@@ -172,27 +185,28 @@ class MaxStepLimits(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'MaxStepLimits':
+    def from_bytes(cls, bytes_: bytes) -> "MaxStepLimits":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: dict = items[1]
-        converted_value: Dict[IconScoreContextType, int] = {IconScoreContextType(key): val
-                                                            for key, val in value.items()}
+        converted_value: Dict[IconScoreContextType, int] = {
+            IconScoreContextType(key): val for key, val in value.items()
+        }
 
         assert version == 0
         return cls(converted_value, need_check_value=False)
 
 
 class ScoreBlackList(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.SCORE_BLACK_LIST
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.SCORE_BLACK_LIST
 
-    def __init__(self, value: List['Address'], need_check_value: bool = True):
+    def __init__(self, value: List["Address"], need_check_value: bool = True):
         super().__init__()
 
         if need_check_value:
             self._check_value_is_valid(value)
 
-        self._value: List['Address'] = value
+        self._value: List["Address"] = value
 
     @classmethod
     def _check_value_is_valid(cls, value: list):
@@ -204,7 +218,7 @@ class ScoreBlackList(Value):
                 raise TypeError(f"Invalid score black list value type: {type(address)}")
 
     @property
-    def value(self) -> List['Address']:
+    def value(self) -> List["Address"]:
         """
         ================================================
         =================== WARNING!!! =================
@@ -218,21 +232,21 @@ class ScoreBlackList(Value):
 
     def to_bytes(self) -> bytes:
         version: int = 0
-        items: List[version, List['Address']] = [version, self._value]
+        items: List[version, List["Address"]] = [version, self._value]
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'ScoreBlackList':
+    def from_bytes(cls, bytes_: bytes) -> "ScoreBlackList":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
-        value: List['Address'] = items[1]
+        value: List["Address"] = items[1]
 
         assert version == 0
         return cls(value, need_check_value=False)
 
 
 class RevisionCode(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.REVISION_CODE
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.REVISION_CODE
 
     def __init__(self, value: int):
         super().__init__()
@@ -245,7 +259,7 @@ class RevisionCode(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'RevisionCode':
+    def from_bytes(cls, bytes_: bytes) -> "RevisionCode":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: int = items[1]
@@ -255,7 +269,7 @@ class RevisionCode(Value):
 
 
 class RevisionName(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.REVISION_NAME
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.REVISION_NAME
 
     def __init__(self, value: str):
         super().__init__()
@@ -268,7 +282,7 @@ class RevisionName(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'RevisionName':
+    def from_bytes(cls, bytes_: bytes) -> "RevisionName":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: str = items[1]
@@ -278,7 +292,7 @@ class RevisionName(Value):
 
 
 class ImportWhiteList(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.IMPORT_WHITE_LIST
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.IMPORT_WHITE_LIST
 
     def __init__(self, value: Dict[str, List[str]], need_check_value: bool = True):
         super().__init__()
@@ -322,7 +336,7 @@ class ImportWhiteList(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'ImportWhiteList':
+    def from_bytes(cls, bytes_: bytes) -> "ImportWhiteList":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: Dict[str, List[str]] = items[1]
@@ -332,7 +346,7 @@ class ImportWhiteList(Value):
 
 
 class ServiceConfig(Value):
-    TYPE: 'IconNetworkValueType' = IconNetworkValueType.SERVICE_CONFIG
+    TYPE: "IconNetworkValueType" = IconNetworkValueType.SERVICE_CONFIG
 
     def __init__(self, value: int):
         super().__init__()
@@ -347,7 +361,7 @@ class ServiceConfig(Value):
         return MsgPackForDB.dumps(items)
 
     @classmethod
-    def from_bytes(cls, bytes_: bytes) -> 'ServiceConfig':
+    def from_bytes(cls, bytes_: bytes) -> "ServiceConfig":
         items: list = MsgPackForDB.loads(bytes_)
         version: int = items[0]
         value: int = items[1]

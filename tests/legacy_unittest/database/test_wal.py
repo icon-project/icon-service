@@ -22,8 +22,14 @@ import pytest
 from iconservice.base.block import Block
 from iconservice.base.exception import IllegalFormatException
 from iconservice.database.wal import (
-    _MAGIC_KEY, _FILE_VERSION, _OFFSET_VERSION, _HEADER_SIZE,
-    WriteAheadLogReader, WriteAheadLogWriter, WALogable, WALState
+    _MAGIC_KEY,
+    _FILE_VERSION,
+    _OFFSET_VERSION,
+    _HEADER_SIZE,
+    WriteAheadLogReader,
+    WriteAheadLogWriter,
+    WALogable,
+    WALState,
 )
 from iconservice.icon_constant import Revision
 from tests import create_block_hash
@@ -39,23 +45,12 @@ class WALogableData(WALogable):
 
 
 class TestWriteAheadLog(unittest.TestCase):
-
     def setUp(self) -> None:
         self.path = "./test.wal"
 
         self.log_data = [
-            {
-                b"a": b"apple",
-                b"b": b"banana",
-                b"c": None,
-                b"d": b""
-            },
-            {
-                b"1": None,
-                b"2": b"2-hello",
-                b"4": b"",
-                b"3": b"3-world"
-            }
+            {b"a": b"apple", b"b": b"banana", b"c": None, b"d": b""},
+            {b"1": None, b"2": b"2-hello", b"4": b"", b"3": b"3-world"},
         ]
 
         self.block = Block(
@@ -63,7 +58,7 @@ class TestWriteAheadLog(unittest.TestCase):
             block_hash=os.urandom(32),
             prev_hash=os.urandom(32),
             timestamp=random.randint(0, 1_000_000),
-            cumulative_fee=random.randint(0, 1_000_000)
+            cumulative_fee=random.randint(0, 1_000_000),
         )
 
     def tearDown(self) -> None:
@@ -77,7 +72,9 @@ class TestWriteAheadLog(unittest.TestCase):
         log_count = 2
         instant_block_hash = create_block_hash()
 
-        writer = WriteAheadLogWriter(revision, log_count, self.block, instant_block_hash)
+        writer = WriteAheadLogWriter(
+            revision, log_count, self.block, instant_block_hash
+        )
         writer.open(self.path)
 
         writer.write_state(WALState.CALC_PERIOD_START_BLOCK.value, add=False)
@@ -118,7 +115,9 @@ class TestWriteAheadLog(unittest.TestCase):
         log_count = 2
         instant_block_hash = create_block_hash()
 
-        writer = WriteAheadLogWriter(revision, log_count, self.block, instant_block_hash)
+        writer = WriteAheadLogWriter(
+            revision, log_count, self.block, instant_block_hash
+        )
         writer.open(self.path)
         writer.close()
 
@@ -136,7 +135,9 @@ class TestWriteAheadLog(unittest.TestCase):
         log_count = 2
         instant_block_hash = create_block_hash()
 
-        writer = WriteAheadLogWriter(revision, log_count, self.block, instant_block_hash)
+        writer = WriteAheadLogWriter(
+            revision, log_count, self.block, instant_block_hash
+        )
         writer.open(self.path)
         writer.close()
 
@@ -157,7 +158,11 @@ class TestWriteAheadLog(unittest.TestCase):
         instant_block_hash = create_block_hash()
 
         writer = WriteAheadLogWriter(
-            revision=revision, max_log_count=log_count, block=self.block, instant_block_hash=instant_block_hash)
+            revision=revision,
+            max_log_count=log_count,
+            block=self.block,
+            instant_block_hash=instant_block_hash,
+        )
         writer.open(self.path)
         writer.close()
 

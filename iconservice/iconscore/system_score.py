@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 
 class SystemScore(IconScoreBase):
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: "IconScoreDatabase") -> None:
         super().__init__(db)
 
     def on_install(self, **kwargs) -> None:
@@ -49,7 +49,9 @@ class SystemScore(IconScoreBase):
 
     @external(readonly=True)
     def getStake(self, address: Address) -> dict:
-        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.iiss.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external
     def setDelegation(self, delegations: list = None) -> None:
@@ -57,7 +59,9 @@ class SystemScore(IconScoreBase):
 
     @external(readonly=True)
     def getDelegation(self, address: Address) -> dict:
-        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.iiss.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external
     def claimIScore(self) -> None:
@@ -65,11 +69,15 @@ class SystemScore(IconScoreBase):
 
     @external(readonly=True)
     def queryIScore(self, address: Address) -> dict:
-        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.iiss.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def estimateUnstakeLockPeriod(self) -> dict:
-        return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.iiss.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getIISSInfo(self) -> dict:
@@ -77,8 +85,17 @@ class SystemScore(IconScoreBase):
 
     @payable
     @external
-    def registerPRep(self, name: str, country: str, city: str, email: str, website: str,
-                     details: str, p2pEndpoint: str, nodeAddress: "Address" = None):
+    def registerPRep(
+        self,
+        name: str,
+        country: str,
+        city: str,
+        email: str,
+        website: str,
+        details: str,
+        p2pEndpoint: str,
+        nodeAddress: "Address" = None,
+    ):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
@@ -86,8 +103,17 @@ class SystemScore(IconScoreBase):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
-    def setPRep(self, name: str = None, country: str = None, city: str = None, email: str = None,
-                website: str = None, details: str = None, p2pEndpoint: str = None, nodeAddress: "Address" = None):
+    def setPRep(
+        self,
+        name: str = None,
+        country: str = None,
+        city: str = None,
+        email: str = None,
+        website: str = None,
+        details: str = None,
+        p2pEndpoint: str = None,
+        nodeAddress: "Address" = None,
+    ):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
@@ -96,27 +122,39 @@ class SystemScore(IconScoreBase):
 
     @external(readonly=True)
     def getPRep(self, address: Address) -> dict:
-        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.prep.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getPReps(self, startRanking: int = None, endRanking: int = None) -> list:
-        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.prep.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getMainPReps(self) -> dict:
-        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.prep.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getSubPReps(self) -> dict:
-        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.prep.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getPRepTerm(self) -> dict:
-        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.prep.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getInactivePReps(self) -> dict:
-        return self._context.engine.prep.query(*self._get_params(locals_params=locals()))
+        return self._context.engine.prep.query(
+            *self._get_params(locals_params=locals())
+        )
 
     @external(readonly=True)
     def getScoreDepositInfo(self, address: Address) -> dict:
@@ -144,58 +182,78 @@ class SystemScore(IconScoreBase):
 
 class InterfaceSystemScore(InterfaceScore):
     @interface
-    def setStake(self, value: int) -> None: pass
+    def setStake(self, value: int) -> None:
+        pass
 
     @interface
-    def getStake(self, address: Address) -> dict: pass
+    def getStake(self, address: Address) -> dict:
+        pass
 
     @interface
-    def estimateUnstakeLockPeriod(self) -> dict: pass
+    def estimateUnstakeLockPeriod(self) -> dict:
+        pass
 
     @interface
-    def setDelegation(self, delegations: list = None): pass
+    def setDelegation(self, delegations: list = None):
+        pass
 
     @interface
-    def getDelegation(self, address: Address) -> dict: pass
+    def getDelegation(self, address: Address) -> dict:
+        pass
 
     @interface
-    def claimIScore(self): pass
+    def claimIScore(self):
+        pass
 
     @interface
-    def queryIScore(self, address: Address) -> dict: pass
+    def queryIScore(self, address: Address) -> dict:
+        pass
 
     @interface
-    def getIISSInfo(self) -> dict: pass
+    def getIISSInfo(self) -> dict:
+        pass
 
     @interface
-    def getPRep(self, address: Address) -> dict: pass
+    def getPRep(self, address: Address) -> dict:
+        pass
 
     @interface
-    def getPReps(self, startRanking: int, endRanking: int) -> list: pass
+    def getPReps(self, startRanking: int, endRanking: int) -> list:
+        pass
 
     @interface
-    def getMainPReps(self) -> dict: pass
+    def getMainPReps(self) -> dict:
+        pass
 
     @interface
-    def getSubPReps(self) -> dict: pass
+    def getSubPReps(self) -> dict:
+        pass
 
     @interface
-    def getPRepTerm(self) -> dict: pass
+    def getPRepTerm(self) -> dict:
+        pass
 
     @interface
-    def getInactivePReps(self) -> dict: pass
+    def getInactivePReps(self) -> dict:
+        pass
 
     @interface
-    def getScoreDepositInfo(self, address: Address) -> dict: pass
+    def getScoreDepositInfo(self, address: Address) -> dict:
+        pass
 
 
-def _create_rc_result(context: "IconScoreContext", start_block: int, end_block: int) -> dict:
+def _create_rc_result(
+    context: "IconScoreContext", start_block: int, end_block: int
+) -> dict:
     rc_result = dict()
     if start_block < 0 or end_block < 0:
         return rc_result
 
-    iscore, request_block_height, rc_state_hash = \
-        context.storage.rc.get_calc_response_from_rc()
+    (
+        iscore,
+        request_block_height,
+        rc_state_hash,
+    ) = context.storage.rc.get_calc_response_from_rc()
     if iscore == -1:
         return rc_result
 
@@ -223,10 +281,7 @@ def _handle_get_iiss_info(context: "IconScoreContext") -> dict:
 
     response = {
         "blockHeight": context.block.height,
-        "variable": {
-            "irep": term.irep if term else 0,
-            "rrep": reward_rate.reward_prep
-        },
+        "variable": {"irep": term.irep if term else 0, "rrep": reward_rate.reward_prep},
     }
 
     calc_start_block, calc_end_block = context.storage.meta.get_last_calc_info(context)

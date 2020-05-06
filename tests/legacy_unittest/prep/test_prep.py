@@ -65,7 +65,7 @@ def prep():
         total_blocks=TOTAL_BLOCKS,
         validated_blocks=VALIDATED_BLOCKS,
         penalty=PENALTY,
-        unvalidated_sequence_blocks=UNVALIDATED_SEQUENCE_BLOCKS
+        unvalidated_sequence_blocks=UNVALIDATED_SEQUENCE_BLOCKS,
     )
 
     assert prep.address == address
@@ -119,7 +119,7 @@ def test_set_irep(prep):
     assert not prep.is_flags_on(PRepFlag.IREP)
 
     prep.set_irep(10_001, 1000)
-    assert prep.is_flags_on(PRepFlag.IREP )
+    assert prep.is_flags_on(PRepFlag.IREP)
     assert prep.is_dirty()
 
     prep.freeze()
@@ -174,7 +174,11 @@ def test_from_bytes_and_to_bytes_with_revision_iiss(prep):
     assert prep.p2p_endpoint == prep2.p2p_endpoint == P2P_END_POINT
     assert prep.irep == prep2.irep == IREP
     assert prep.irep_block_height == prep2.irep_block_height == IREP_BLOCK_HEIGHT
-    assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT
+    assert (
+        prep.last_generate_block_height
+        == prep2.last_generate_block_height
+        == LAST_GENERATE_BLOCK_HEIGHT
+    )
     assert prep.total_blocks == prep2.total_blocks == TOTAL_BLOCKS
     assert prep.validated_blocks == prep2.validated_blocks == VALIDATED_BLOCKS
     assert prep.penalty == PENALTY
@@ -200,11 +204,19 @@ def test_from_bytes_and_to_bytes_with_revision_decentralization(prep):
     assert prep.p2p_endpoint == prep2.p2p_endpoint == P2P_END_POINT
     assert prep.irep == prep2.irep == IREP
     assert prep.irep_block_height == prep2.irep_block_height == IREP_BLOCK_HEIGHT
-    assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT
+    assert (
+        prep.last_generate_block_height
+        == prep2.last_generate_block_height
+        == LAST_GENERATE_BLOCK_HEIGHT
+    )
     assert prep.total_blocks == prep2.total_blocks == TOTAL_BLOCKS
     assert prep.validated_blocks == prep2.validated_blocks == VALIDATED_BLOCKS
     assert prep.penalty == prep2.penalty == PENALTY
-    assert prep.unvalidated_sequence_blocks == prep2.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+    assert (
+        prep.unvalidated_sequence_blocks
+        == prep2.unvalidated_sequence_blocks
+        == UNVALIDATED_SEQUENCE_BLOCKS
+    )
 
     # Properties which is not serialized in PRep.to_bytes()
     assert prep2.stake == 0
@@ -245,7 +257,9 @@ def test_update_block_statistics(prep):
     assert prep.total_blocks == 1
     assert prep.validated_blocks == 0
     assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS + 1
-    assert prep.is_flags_on(PRepFlag.TOTAL_BLOCKS | PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS)
+    assert prep.is_flags_on(
+        PRepFlag.TOTAL_BLOCKS | PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS
+    )
     assert prep.is_dirty()
 
     prep.update_block_statistics(is_validator=True)
@@ -269,7 +283,9 @@ def test_reset_block_validation_penalty(prep):
     assert prep.total_blocks == size
     assert prep.validated_blocks == 0
     assert prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS + size
-    assert prep.is_flags_on(PRepFlag.TOTAL_BLOCKS | PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS)
+    assert prep.is_flags_on(
+        PRepFlag.TOTAL_BLOCKS | PRepFlag.UNVALIDATED_SEQUENCE_BLOCKS
+    )
     assert prep.is_dirty()
 
     prep.penalty = PenaltyReason.BLOCK_VALIDATION
@@ -304,7 +320,11 @@ def test_to_dict_with_full(prep):
     assert info["totalBlocks"] == prep.total_blocks == TOTAL_BLOCKS
     assert info["validatedBlocks"] == prep.validated_blocks == VALIDATED_BLOCKS
     assert info["penalty"] == prep.penalty.value == PENALTY.value
-    assert info["unvalidatedSequenceBlocks"] == prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+    assert (
+        info["unvalidatedSequenceBlocks"]
+        == prep.unvalidated_sequence_blocks
+        == UNVALIDATED_SEQUENCE_BLOCKS
+    )
     assert info["blockHeight"] == prep.block_height
     assert info["txIndex"] == prep.tx_index
 
@@ -332,7 +352,11 @@ def test_to_dict_with_abridged(prep):
     assert info["totalBlocks"] == prep.total_blocks == TOTAL_BLOCKS
     assert info["validatedBlocks"] == prep.validated_blocks == VALIDATED_BLOCKS
     assert info["penalty"] == prep.penalty.value == PENALTY.value
-    assert info["unvalidatedSequenceBlocks"] == prep.unvalidated_sequence_blocks == UNVALIDATED_SEQUENCE_BLOCKS
+    assert (
+        info["unvalidatedSequenceBlocks"]
+        == prep.unvalidated_sequence_blocks
+        == UNVALIDATED_SEQUENCE_BLOCKS
+    )
     assert info["blockHeight"] == prep.block_height
     assert info["txIndex"] == prep.tx_index
 
@@ -355,12 +379,15 @@ def test_setter(prep):
         "grade": (PRepGrade.MAIN, PRepFlag.GRADE),
         "stake": (STAKE + 1, PRepFlag.STAKE),
         "delegated": (DELEGATED + 1, PRepFlag.DELEGATED),
-        "last_generate_block_height": (LAST_GENERATE_BLOCK_HEIGHT + 1, PRepFlag.LAST_GENERATE_BLOCK_HEIGHT)
+        "last_generate_block_height": (
+            LAST_GENERATE_BLOCK_HEIGHT + 1,
+            PRepFlag.LAST_GENERATE_BLOCK_HEIGHT,
+        ),
     }
 
     for key in data:
         new_value = data[key][0]
-        flag: 'PRepFlag' = data[key][1]
+        flag: "PRepFlag" = data[key][1]
 
         # If new value is the same as the old one, flag should not be set
         old_value = getattr(prep, key)

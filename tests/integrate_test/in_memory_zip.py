@@ -39,24 +39,26 @@ class InMemoryZip:
         """
         try:
             if os.path.isfile(path):
-                zf = zipfile.ZipFile(path, 'r', zipfile.ZIP_DEFLATED, False)
+                zf = zipfile.ZipFile(path, "r", zipfile.ZIP_DEFLATED, False)
                 zf.testzip()
-                with open(path, mode='rb') as fp:
+                with open(path, mode="rb") as fp:
                     fp.seek(0)
                     self._in_memory.seek(0)
                     self._in_memory.write(fp.read())
             else:
-                with zipfile.ZipFile(self._in_memory, 'a', zipfile.ZIP_DEFLATED, False) as zf:
+                with zipfile.ZipFile(
+                    self._in_memory, "a", zipfile.ZIP_DEFLATED, False
+                ) as zf:
                     if os.path.isfile(path):
                         zf.write(path)
                     else:
                         for root, folders, files in os.walk(path):
-                            if root.find('__pycache__') != -1:
+                            if root.find("__pycache__") != -1:
                                 continue
-                            if root.find('/.') != -1:
+                            if root.find("/.") != -1:
                                 continue
                             for file in files:
-                                if file.startswith('.'):
+                                if file.startswith("."):
                                     continue
                                 full_path = os.path.join(root, file)
                                 zf.write(full_path)

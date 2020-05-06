@@ -25,32 +25,45 @@ from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidParamsException
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-from iconservice.icon_constant import PRepGrade, IconScoreContextType, PRepStatus, PenaltyReason, Revision
-from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
+from iconservice.icon_constant import (
+    PRepGrade,
+    IconScoreContextType,
+    PRepStatus,
+    PenaltyReason,
+    Revision,
+)
+from iconservice.iconscore.icon_score_context import (
+    IconScoreContext,
+    IconScoreContextFactory,
+)
 from iconservice.prep import PRepEngine
 from iconservice.prep.data import PRepContainer, Term
 from iconservice.prep.data.prep import PRep, PRepDictType
 from iconservice.utils import icx_to_loop
 
 
-def _create_context() -> 'IconScoreContext':
+def _create_context() -> "IconScoreContext":
     context_factory = IconScoreContextFactory()
-    block = Block(block_height=100,
-                  block_hash=os.urandom(32),
-                  timestamp=0,
-                  prev_hash=os.urandom(32),
-                  cumulative_fee=0)
+    block = Block(
+        block_height=100,
+        block_hash=os.urandom(32),
+        timestamp=0,
+        prev_hash=os.urandom(32),
+        cumulative_fee=0,
+    )
 
     return context_factory.create(IconScoreContextType.INVOKE, block)
 
 
 def _create_term(total_supply: int, total_delegated: int):
-    return Term(sequence=0,
-                start_block_height=100,
-                period=43120,
-                irep=icx_to_loop(50000),
-                total_supply=total_supply,
-                total_delegated=total_delegated)
+    return Term(
+        sequence=0,
+        start_block_height=100,
+        period=43120,
+        irep=icx_to_loop(50000),
+        total_supply=total_supply,
+        total_delegated=total_delegated,
+    )
 
 
 def _create_preps(size: int):
@@ -72,7 +85,9 @@ def _create_preps(size: int):
     return preps
 
 
-def _check_prep_grades(new_preps: 'PRepContainer', main_prep_count: int, elected_prep_count: int):
+def _check_prep_grades(
+    new_preps: "PRepContainer", main_prep_count: int, elected_prep_count: int
+):
     for i, prep in enumerate(new_preps):
         if i < main_prep_count:
             assert prep.grade == PRepGrade.MAIN
@@ -82,7 +97,7 @@ def _check_prep_grades(new_preps: 'PRepContainer', main_prep_count: int, elected
             assert prep.grade == PRepGrade.CANDIDATE
 
 
-def _check_prep_grades2(new_preps: 'PRepContainer', new_term: 'Term'):
+def _check_prep_grades2(new_preps: "PRepContainer", new_term: "Term"):
     main_prep_count = len(new_term.main_preps)
     elected_prep_count = len(new_term)
 
@@ -112,13 +127,15 @@ class TestEngine(unittest.TestCase):
         elected_prep_count = PREP_MAIN_AND_SUB_PREPS
         sub_prep_count = elected_prep_count - main_prep_count
 
-        new_preps: 'PRepContainer' = _create_preps(size=elected_prep_count * 2)
-        term = Term(sequence=0,
-                    start_block_height=100,
-                    period=43120,
-                    irep=icx_to_loop(50000),
-                    total_supply=self.total_supply,
-                    total_delegated=self.total_delegated)
+        new_preps: "PRepContainer" = _create_preps(size=elected_prep_count * 2)
+        term = Term(
+            sequence=0,
+            start_block_height=100,
+            period=43120,
+            irep=icx_to_loop(50000),
+            total_supply=self.total_supply,
+            total_delegated=self.total_delegated,
+        )
         term.set_preps(new_preps, main_prep_count, elected_prep_count)
         assert len(term.main_preps) == main_prep_count
         assert len(term.sub_preps) == elected_prep_count - main_prep_count
@@ -126,7 +143,8 @@ class TestEngine(unittest.TestCase):
 
         # Case 0: Network has just decentralized without any delegation
         PRepEngine._update_prep_grades(
-            context, new_preps=new_preps, old_term=None, new_term=term)
+            context, new_preps=new_preps, old_term=None, new_term=term
+        )
         assert len(term.main_preps) == main_prep_count
         assert len(term.sub_preps) == sub_prep_count
         assert len(term) == elected_prep_count
@@ -216,7 +234,7 @@ class TestEngine(unittest.TestCase):
         penalties = [
             PenaltyReason.PREP_DISQUALIFICATION,
             PenaltyReason.LOW_PRODUCTIVITY,
-            PenaltyReason.BLOCK_VALIDATION
+            PenaltyReason.BLOCK_VALIDATION,
         ]
 
         for i in range(len(states)):
@@ -249,7 +267,9 @@ class TestEngine(unittest.TestCase):
             assert len(new_term.sub_preps) == self.sub_prep_count - 1
 
             j = 0
-            for old_snapshot, new_snapshot in zip(old_term.main_preps, new_term.main_preps):
+            for old_snapshot, new_snapshot in zip(
+                old_term.main_preps, new_term.main_preps
+            ):
                 if j == index:
                     old_snapshot = old_term.sub_preps[0]
 
@@ -274,7 +294,7 @@ class TestEngine(unittest.TestCase):
             (PRepStatus.UNREGISTERED, PenaltyReason.NONE),
             (PRepStatus.DISQUALIFIED, PenaltyReason.PREP_DISQUALIFICATION),
             (PRepStatus.DISQUALIFIED, PenaltyReason.LOW_PRODUCTIVITY),
-            (PRepStatus.ACTIVE, PenaltyReason.BLOCK_VALIDATION)
+            (PRepStatus.ACTIVE, PenaltyReason.BLOCK_VALIDATION),
         ]
         for case in cases:
             index = random.randint(0, len(new_term.main_preps) - 1)
@@ -317,7 +337,9 @@ class TestEngine(unittest.TestCase):
 
         # Candidate P-Rep
         for _ in range(3):
-            index = random.randint(1, new_preps.size(active_prep_only=True) - len(new_term) - 1)
+            index = random.randint(
+                1, new_preps.size(active_prep_only=True) - len(new_term) - 1
+            )
 
             prep = new_preps.get_by_index(len(new_term) + index)
             address = prep.address
@@ -336,7 +358,10 @@ class TestEngine(unittest.TestCase):
 
         assert len(new_term.main_preps) == self.main_prep_count
         assert len(new_term.sub_preps) == self.sub_prep_count - 7
-        assert new_preps.size(active_prep_only=True) == old_preps.size(active_prep_only=True) - 9
+        assert (
+            new_preps.size(active_prep_only=True)
+            == old_preps.size(active_prep_only=True) - 9
+        )
         assert new_preps.size() == old_preps.size()
 
     def test_handle_get_prep_term_with_electable_preps(self):
@@ -362,11 +387,11 @@ class TestEngine(unittest.TestCase):
         assert ret["irep"] == term.irep
 
         # Main P-Reps: 22, Sub P-Reps: 78
-        prep_list: List[Dict[str, Union[int, str, 'Address']]] = ret["preps"]
+        prep_list: List[Dict[str, Union[int, str, "Address"]]] = ret["preps"]
         assert len(prep_list) == PREP_MAIN_AND_SUB_PREPS
 
         for i, prep_snapshot in enumerate(term.preps):
-            prep_item: Dict[str, Union[int, str, 'Address']] = prep_list[i]
+            prep_item: Dict[str, Union[int, str, "Address"]] = prep_list[i]
             assert prep_item["address"] == prep_snapshot.address
 
     def test_handle_get_prep_term_with_penalized_preps(self):
@@ -388,12 +413,14 @@ class TestEngine(unittest.TestCase):
         elected_prep_count = 100
         total_prep_count = 106
 
-        term = Term(sequence=sequence,
-                    start_block_height=start_block_height,
-                    period=period,
-                    irep=irep,
-                    total_supply=total_supply,
-                    total_delegated=total_delegated)
+        term = Term(
+            sequence=sequence,
+            start_block_height=start_block_height,
+            period=period,
+            irep=irep,
+            total_supply=total_supply,
+            total_delegated=total_delegated,
+        )
 
         preps = PRepContainer()
         for i in range(total_prep_count):
@@ -404,7 +431,7 @@ class TestEngine(unittest.TestCase):
 
             if 0 <= i <= 4:
                 # block validation penalty preps: 5
-                penalty: 'PenaltyReason' = PenaltyReason.BLOCK_VALIDATION
+                penalty: "PenaltyReason" = PenaltyReason.BLOCK_VALIDATION
             elif i == 5:
                 # unregistered preps: 1
                 status = PRepStatus.UNREGISTERED
@@ -417,7 +444,13 @@ class TestEngine(unittest.TestCase):
                 status = PRepStatus.DISQUALIFIED
                 penalty = PenaltyReason.PREP_DISQUALIFICATION
 
-            prep = PRep(address, block_height=i, delegated=delegated, penalty=penalty, status=status)
+            prep = PRep(
+                address,
+                block_height=i,
+                delegated=delegated,
+                penalty=penalty,
+                status=status,
+            )
             prep.freeze()
             preps.add(prep)
 
@@ -425,7 +458,11 @@ class TestEngine(unittest.TestCase):
         assert preps.size(active_prep_only=False) == total_prep_count
 
         electable_preps = filter(lambda x: x.is_electable(), preps)
-        term.set_preps(electable_preps, main_prep_count=main_prep_count, elected_prep_count=elected_prep_count)
+        term.set_preps(
+            electable_preps,
+            main_prep_count=main_prep_count,
+            elected_prep_count=elected_prep_count,
+        )
 
         engine = PRepEngine()
         engine.term = term
@@ -441,11 +478,11 @@ class TestEngine(unittest.TestCase):
         assert ret["totalDelegated"] == total_delegated
         assert ret["irep"] == irep
 
-        prep_list: List[Dict[str, Union[int, str, 'Address']]] = ret["preps"]
+        prep_list: List[Dict[str, Union[int, str, "Address"]]] = ret["preps"]
         assert len(prep_list) == elected_prep_count
 
         for i, prep_snapshot in enumerate(term.preps):
-            prep_item: Dict[str, Union[int, str, 'Address']] = prep_list[i]
+            prep_item: Dict[str, Union[int, str, "Address"]] = prep_list[i]
             assert prep_item["address"] == prep_snapshot.address
             assert prep_item["status"] == PRepStatus.ACTIVE.value
             assert prep_item["penalty"] == PenaltyReason.NONE.value
@@ -454,7 +491,9 @@ class TestEngine(unittest.TestCase):
         # are located at the end of the P-Rep list
         prev_delegated = -1
         for i, prep_item in enumerate(prep_list[-5:]):
-            assert prep_item["address"] == Address.from_prefix_and_int(AddressPrefix.EOA, i)
+            assert prep_item["address"] == Address.from_prefix_and_int(
+                AddressPrefix.EOA, i
+            )
             assert prep_item["status"] == PRepStatus.ACTIVE.value
             assert prep_item["penalty"] == PenaltyReason.BLOCK_VALIDATION.value
 
@@ -483,7 +522,7 @@ class TestEngine(unittest.TestCase):
             (PRepStatus.DISQUALIFIED, PenaltyReason.PREP_DISQUALIFICATION),
             (PRepStatus.DISQUALIFIED, PenaltyReason.LOW_PRODUCTIVITY),
             (PRepStatus.ACTIVE, PenaltyReason.BLOCK_VALIDATION),
-            (PRepStatus.ACTIVE, PenaltyReason.NONE)
+            (PRepStatus.ACTIVE, PenaltyReason.NONE),
         )
 
         s_data = random.sample([i for i in range(len(new_term.main_preps))], len(cases))
@@ -538,7 +577,9 @@ class TestEngine(unittest.TestCase):
         IconScoreContext.engine.prep = engine
         context = _create_context()
 
-        assert engine.preps.size(active_prep_only=False) == context.preps.size(active_prep_only=False)
+        assert engine.preps.size(active_prep_only=False) == context.preps.size(
+            active_prep_only=False
+        )
         for i in range(engine.preps.size(active_prep_only=True)):
             assert engine.preps.get_by_index(i) == context._preps.get_by_index(i)
 

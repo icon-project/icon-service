@@ -34,30 +34,46 @@ if TYPE_CHECKING:
     pass
 
 FILE_PATH = os.path.dirname(__file__)
-PROJECT_ROOT_PATH = os.path.join(FILE_PATH, '..', '..')
-BUILTIN_SCORE_SRC_ROOT_PATH = os.path.join(PROJECT_ROOT_PATH, 'iconservice', 'builtin_scores')
-GOVERNANCE_SCORE_PATH = os.path.join(BUILTIN_SCORE_SRC_ROOT_PATH, 'governance')
+PROJECT_ROOT_PATH = os.path.join(FILE_PATH, "..", "..")
+BUILTIN_SCORE_SRC_ROOT_PATH = os.path.join(
+    PROJECT_ROOT_PATH, "iconservice", "builtin_scores"
+)
+GOVERNANCE_SCORE_PATH = os.path.join(BUILTIN_SCORE_SRC_ROOT_PATH, "governance")
 
 
 class TestIntegrateExistentScoresAudit(TestIntegrateBase):
 
     # override setUp method for making directory before begin tests.
     def setUp(self):
-        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
+        root_clear(
+            self._score_root_path, self._state_db_root_path, self._iiss_db_root_path
+        )
         self._block_height = -1
         self._prev_block_hash = None
 
         self.config = IconConfig("", default_icon_config)
         self.config.load()
-        self.config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
-        self.config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
-                                 ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
+        self.config.update_conf(
+            {ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)}
+        )
+        self.config.update_conf(
+            {
+                ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
+                ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path,
+            }
+        )
         self.config.update_conf(self._make_init_config())
 
     def _setUp_audit(self):
-        self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True,
-                                                     ConfigKey.SERVICE_FEE: False,
-                                                     ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
+        self.config.update_conf(
+            {
+                ConfigKey.SERVICE: {
+                    ConfigKey.SERVICE_AUDIT: True,
+                    ConfigKey.SERVICE_FEE: False,
+                    ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False,
+                }
+            }
+        )
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
         self._genesis_invoke()
@@ -65,48 +81,67 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
 
     def _make_directories_in_builtin_score_path(self):
         for score_name, address in BUILTIN_SCORE_ADDRESS_MAPPER.items():
-            os.makedirs(os.path.join(self._score_root_path, f'01{address[2:]}', f"0x{'0' * 64}"), exist_ok=True)
+            os.makedirs(
+                os.path.join(
+                    self._score_root_path, f"01{address[2:]}", f"0x{'0' * 64}"
+                ),
+                exist_ok=True,
+            )
 
-    def _make_directory_using_address_and_hash(self, score_address: 'Address', tx_hash: bytes):
+    def _make_directory_using_address_and_hash(
+        self, score_address: "Address", tx_hash: bytes
+    ):
         tx_str = f"0x{bytes.hex(tx_hash)}"
-        os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
+        os.makedirs(
+            os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str)
+        )
 
-    def _create_deploy_score_tx(self,
-                                score_root: str,
-                                score_name: str,
-                                from_: Union['EOAAccount', 'Address', None],
-                                to_: Union['EOAAccount', 'Address'],
-                                deploy_params: dict) -> dict:
-        addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
-        addr_to: 'Address' = self._convert_address_from_address_type(to_)
+    def _create_deploy_score_tx(
+        self,
+        score_root: str,
+        score_name: str,
+        from_: Union["EOAAccount", "Address", None],
+        to_: Union["EOAAccount", "Address"],
+        deploy_params: dict,
+    ) -> dict:
+        addr_from: Optional["Address"] = self._convert_address_from_address_type(from_)
+        addr_to: "Address" = self._convert_address_from_address_type(to_)
 
         timestamp = int(time.time() * 10 ** 6)
-        tx: dict = self.create_deploy_score_tx(score_root=score_root,
-                                               score_name=score_name,
-                                               from_=addr_from,
-                                               to_=addr_to,
-                                               deploy_params=deploy_params,
-                                               timestamp_us=timestamp)
-        score_address: 'Address' = generate_score_address(addr_from, timestamp, nonce=0)
-        tx_hash: bytes = tx['params']['txHash']
+        tx: dict = self.create_deploy_score_tx(
+            score_root=score_root,
+            score_name=score_name,
+            from_=addr_from,
+            to_=addr_to,
+            deploy_params=deploy_params,
+            timestamp_us=timestamp,
+        )
+        score_address: "Address" = generate_score_address(addr_from, timestamp, nonce=0)
+        tx_hash: bytes = tx["params"]["txHash"]
         self._make_directory_using_address_and_hash(score_address, tx_hash)
         return tx
 
-    def _deploy_score(self,
-                      score_root: str,
-                      score_name: str,
-                      from_: Union['EOAAccount', 'Address', None],
-                      to_: Union['EOAAccount', 'Address'],
-                      deploy_params: dict,
-                      expected_status: bool = True) -> List['TransactionResult']:
+    def _deploy_score(
+        self,
+        score_root: str,
+        score_name: str,
+        from_: Union["EOAAccount", "Address", None],
+        to_: Union["EOAAccount", "Address"],
+        deploy_params: dict,
+        expected_status: bool = True,
+    ) -> List["TransactionResult"]:
 
-        tx: dict = self._create_deploy_score_tx(score_root=score_root,
-                                                score_name=score_name,
-                                                from_=from_,
-                                                to_=to_,
-                                                deploy_params=deploy_params)
+        tx: dict = self._create_deploy_score_tx(
+            score_root=score_root,
+            score_name=score_name,
+            from_=from_,
+            to_=to_,
+            deploy_params=deploy_params,
+        )
 
-        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx], expected_status)
+        tx_results: List["TransactionResult"] = self.process_confirm_block_tx(
+            [tx], expected_status
+        )
         return tx_results
 
     def test_existent_builtin_score_audit(self):
@@ -117,7 +152,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         original_governance_api: dict = self.get_score_api(GOVERNANCE_SCORE_ADDRESS)
 
         # update governance SCORE(revision2)
-        tx_results: List['TransactionResult'] = self.update_governance("0_0_4")
+        tx_results: List["TransactionResult"] = self.update_governance("0_0_4")
         self.accept_score(tx_results[0].tx_hash)
 
         # updated SCORE api
@@ -128,52 +163,57 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self._setUp_audit()
 
         # set revision to 3
-        tx_results: List['TransactionResult'] = self.update_governance("0_0_4")
+        tx_results: List["TransactionResult"] = self.update_governance("0_0_4")
         self.accept_score(tx_results[0].tx_hash)
         self.set_revision(3)
         sample_score_params = {"value": hex(1000)}
 
         # deploy SCORE(not python)
-        tx_results: List['TransactionResult'] = self._deploy_score(score_root="sample_deploy_scores",
-                                                                   score_name="install/test_score_no_python",
-                                                                   from_=self._accounts[0],
-                                                                   to_=SYSTEM_SCORE_ADDRESS,
-                                                                   deploy_params=sample_score_params)
-        self.accept_score(tx_hash=tx_results[0].tx_hash,
-                          expected_status=False)
+        tx_results: List["TransactionResult"] = self._deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/test_score_no_python",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            deploy_params=sample_score_params,
+        )
+        self.accept_score(tx_hash=tx_results[0].tx_hash, expected_status=False)
 
         # deploy SCORE(has no external function)
-        tx_results: List['TransactionResult'] = self._deploy_score(score_root="sample_deploy_scores",
-                                                                   score_name="install/test_score_no_external_func",
-                                                                   from_=self._accounts[0],
-                                                                   to_=SYSTEM_SCORE_ADDRESS,
-                                                                   deploy_params=sample_score_params)
-        self.accept_score(tx_hash=tx_results[0].tx_hash,
-                          expected_status=False)
+        tx_results: List["TransactionResult"] = self._deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/test_score_no_external_func",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            deploy_params=sample_score_params,
+        )
+        self.accept_score(tx_hash=tx_results[0].tx_hash, expected_status=False)
 
         # deploy SCORE(no scorebase)
-        tx_results: List['TransactionResult'] = self._deploy_score(score_root="sample_deploy_scores",
-                                                                   score_name="install/test_score_no_scorebase",
-                                                                   from_=self._accounts[0],
-                                                                   to_=SYSTEM_SCORE_ADDRESS,
-                                                                   deploy_params=sample_score_params)
-        self.accept_score(tx_hash=tx_results[0].tx_hash,
-                          expected_status=False)
+        tx_results: List["TransactionResult"] = self._deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/test_score_no_scorebase",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            deploy_params=sample_score_params,
+        )
+        self.accept_score(tx_hash=tx_results[0].tx_hash, expected_status=False)
 
         # deploy SCORE(on install error)
-        tx_results: List['TransactionResult'] = self._deploy_score(score_root="sample_deploy_scores",
-                                                                   score_name="install/test_on_install_error",
-                                                                   from_=self._accounts[0],
-                                                                   to_=SYSTEM_SCORE_ADDRESS,
-                                                                   deploy_params=sample_score_params)
-        self.accept_score(tx_hash=tx_results[0].tx_hash,
-                          expected_status=False)
+        tx_results: List["TransactionResult"] = self._deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/test_on_install_error",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            deploy_params=sample_score_params,
+        )
+        self.accept_score(tx_hash=tx_results[0].tx_hash, expected_status=False)
 
         # deploy SCORE(different encoding)
-        tx_results: List['TransactionResult'] = self._deploy_score(score_root="sample_deploy_scores",
-                                                                   score_name="install/test_score_with_korean_comment",
-                                                                   from_=self._accounts[0],
-                                                                   to_=SYSTEM_SCORE_ADDRESS,
-                                                                   deploy_params=sample_score_params)
-        self.accept_score(tx_hash=tx_results[0].tx_hash,
-                          expected_status=False)
+        tx_results: List["TransactionResult"] = self._deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/test_score_with_korean_comment",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            deploy_params=sample_score_params,
+        )
+        self.accept_score(tx_hash=tx_results[0].tx_hash, expected_status=False)

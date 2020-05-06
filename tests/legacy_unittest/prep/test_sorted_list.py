@@ -29,7 +29,7 @@ class SortedItem(Sortable):
         return self.value
 
 
-def check_sorted_list(items: 'SortedList'):
+def check_sorted_list(items: "SortedList"):
     prev_item = None
 
     for item in items:
@@ -38,6 +38,7 @@ def check_sorted_list(items: 'SortedList'):
             assert prev_item.order() <= item.order()
 
         prev_item = item
+
 
 @pytest.fixture
 def create_sorted_list():
@@ -172,7 +173,7 @@ def test_index_with_the_same_order_items(create_sorted_list):
 def test__setitem__(create_sorted_list):
     items = create_sorted_list(1)
 
-    item0: 'SortedItem' = items[0]
+    item0: "SortedItem" = items[0]
     new_item = SortedItem(value=item0.value + 1)
     items[0] = new_item
 
@@ -181,8 +182,8 @@ def test__setitem__(create_sorted_list):
 
     # Case 1
     items = create_sorted_list(2)
-    item0: 'SortedItem' = items[0]
-    item1: 'SortedItem' = items[1]
+    item0: "SortedItem" = items[0]
+    item1: "SortedItem" = items[1]
 
     new_item0 = SortedItem(item1.value - 1)
     items[0] = new_item0

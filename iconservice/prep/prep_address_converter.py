@@ -32,9 +32,9 @@ class PRepAddressConverter:
     Loopchain distinguishes P-Reps using node address, but iconservice uses an prep address as a identification.
     """
 
-    def __init__(self,
-                 prev_node_address_mapper: dict = None,
-                 node_address_mapper: dict = None):
+    def __init__(
+        self, prev_node_address_mapper: dict = None, node_address_mapper: dict = None
+    ):
         # For P-Rep vote reward
         if prev_node_address_mapper:
             self._prev_node_address_mapper: dict = prev_node_address_mapper
@@ -52,7 +52,7 @@ class PRepAddressConverter:
         return MsgPackForDB.dumps([version, self._prev_node_address_mapper])
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> 'PRepAddressConverter':
+    def from_bytes(cls, data: bytes) -> "PRepAddressConverter":
         if data is None:
             return PRepAddressConverter()
 
@@ -62,39 +62,42 @@ class PRepAddressConverter:
         prev_node_address_mapper: dict = data[1]
         return PRepAddressConverter(prev_node_address_mapper=prev_node_address_mapper)
 
-    def add_node_address(self, node: 'Address', prep: 'Address'):
+    def add_node_address(self, node: "Address", prep: "Address"):
         if node in self._node_address_mapper:
             raise InvalidParamsException(f"nodeAddress already in use: {node}")
         self._node_address_mapper[node] = prep
 
-    def delete_node_address(self, node: 'Address'):
+    def delete_node_address(self, node: "Address"):
         if node in self._node_address_mapper:
             del self._node_address_mapper[node]
 
-    def _add_prev_node_address(self, node: 'Address', prep: 'Address'):
+    def _add_prev_node_address(self, node: "Address", prep: "Address"):
         if prep not in self._prev_node_address_mapper.values():
             self._prev_node_address_mapper[node] = prep
 
-    def replace_node_address(self, node: 'Address', prep: 'Address', prev_node: 'Address'):
+    def replace_node_address(
+        self, node: "Address", prep: "Address", prev_node: "Address"
+    ):
         self._add_prev_node_address(node=prev_node, prep=prep)
         self.delete_node_address(node=prev_node)
         self.add_node_address(node=node, prep=prep)
 
-    def copy(self) -> 'PRepAddressConverter':
-        return PRepAddressConverter(prev_node_address_mapper=copy.copy(self._prev_node_address_mapper),
-                                    node_address_mapper=copy.copy(self._node_address_mapper))
+    def copy(self) -> "PRepAddressConverter":
+        return PRepAddressConverter(
+            prev_node_address_mapper=copy.copy(self._prev_node_address_mapper),
+            node_address_mapper=copy.copy(self._node_address_mapper),
+        )
 
     def reset_prev_node_address(self):
         self._prev_node_address_mapper.clear()
 
-    def validate_node_address(self,
-                              node: 'Address'):
+    def validate_node_address(self, node: "Address"):
 
         if node in self._node_address_mapper:
             raise InvalidParamsException(f"nodeAddress already in use: {node}")
 
-    def get_prep_address_from_node_address(self,
-                                           node_address: 'Address') -> 'Address':
+    def get_prep_address_from_node_address(self, node_address: "Address") -> "Address":
 
-        return self._prev_node_address_mapper.get(node_address,
-                                                  self._node_address_mapper.get(node_address, node_address))
+        return self._prev_node_address_mapper.get(
+            node_address, self._node_address_mapper.get(node_address, node_address)
+        )

@@ -35,8 +35,7 @@ class TestIISSStake(TestIISSBase):
 
         # transfer 100 icx to self.addr_array[0]
         balance: int = 100 * ICX_IN_LOOP
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=balance)
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
 
         # estimate
         tx: dict = self.create_set_stake_tx(self._accounts[0], balance)
@@ -48,15 +47,16 @@ class TestIISSStake(TestIISSBase):
 
         # set full stake
         stake: int = balance
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake,
-                                                               expected_status=False)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake, expected_status=False
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # set full stake - estimated_fee
         stake: int = balance - estimate_fee
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         fee = tx_results[0].step_used * tx_results[0].step_price
         expected_balance: int = balance - stake - fee
         response: int = self.get_balance(self._accounts[0])
@@ -70,22 +70,20 @@ class TestIISSStake(TestIISSBase):
 
         # gain 1000 icx
         balance: int = 1000 * ICX_IN_LOOP
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=balance)
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
 
         # set stake 50 icx
         stake: int = 50 * ICX_IN_LOOP
         unstake: int = 0
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
-        expected_response = {
-            "stake": stake
-        }
+        expected_response = {"stake": stake}
         self.assertEqual(expected_response, actual_response)
 
         # get balance
@@ -96,8 +94,9 @@ class TestIISSStake(TestIISSBase):
         # set stake 100 icx
         stake: int = 100 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
@@ -116,21 +115,22 @@ class TestIISSStake(TestIISSBase):
         stake: int = 50 * ICX_IN_LOOP
         unstake: int = 50 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
         estimate_unstake_lock_period_response: dict = self.estimate_unstake_lock_period()
-        expected_response = {
-            "stake": stake,
-            "unstake": unstake
-        }
-        self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response)
-        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
+        expected_response = {"stake": stake, "unstake": unstake}
+        self.assertEqual(expected_response["stake"], actual_response["stake"])
+        self.assertEqual(expected_response["unstake"], actual_response["unstake"])
+        self.assertIn("unstakeBlockHeight", actual_response)
+        self.assertEqual(
+            estimate_unstake_lock_period_response["unstakeLockPeriod"],
+            actual_response["remainingBlocks"],
+        )
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -141,15 +141,14 @@ class TestIISSStake(TestIISSBase):
         stake: int = 100 * ICX_IN_LOOP
         unstake: int = 0 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
-        expected_response = {
-            "stake": stake
-        }
+        expected_response = {"stake": stake}
         self.assertEqual(expected_response, actual_response)
 
         # get balance
@@ -161,21 +160,22 @@ class TestIISSStake(TestIISSBase):
         stake: int = 50 * ICX_IN_LOOP
         unstake: int = 50 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
         estimate_unstake_lock_period_response: dict = self.estimate_unstake_lock_period()
-        expected_response = {
-            "stake": stake,
-            "unstake": unstake
-        }
-        self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response)
-        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
+        expected_response = {"stake": stake, "unstake": unstake}
+        self.assertEqual(expected_response["stake"], actual_response["stake"])
+        self.assertEqual(expected_response["unstake"], actual_response["unstake"])
+        self.assertIn("unstakeBlockHeight", actual_response)
+        self.assertEqual(
+            estimate_unstake_lock_period_response["unstakeLockPeriod"],
+            actual_response["remainingBlocks"],
+        )
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -186,15 +186,14 @@ class TestIISSStake(TestIISSBase):
         stake: int = 150 * ICX_IN_LOOP
         unstake: int = 0 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
-        expected_response = {
-            "stake": stake
-        }
+        expected_response = {"stake": stake}
         self.assertEqual(expected_response, actual_response)
 
         # get balance
@@ -206,21 +205,22 @@ class TestIISSStake(TestIISSBase):
         stake: int = 50 * ICX_IN_LOOP
         unstake: int = 100 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
         actual_response: dict = self.get_stake(self._accounts[0])
         estimate_unstake_lock_period_response: dict = self.estimate_unstake_lock_period()
-        expected_response = {
-            "stake": stake,
-            "unstake": unstake
-        }
-        self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response)
-        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
+        expected_response = {"stake": stake, "unstake": unstake}
+        self.assertEqual(expected_response["stake"], actual_response["stake"])
+        self.assertEqual(expected_response["unstake"], actual_response["unstake"])
+        self.assertIn("unstakeBlockHeight", actual_response)
+        self.assertEqual(
+            estimate_unstake_lock_period_response["unstakeLockPeriod"],
+            actual_response["remainingBlocks"],
+        )
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -231,8 +231,9 @@ class TestIISSStake(TestIISSBase):
         stake: int = 0 * ICX_IN_LOOP
         unstake: int = 150 * ICX_IN_LOOP
         total_stake = stake + unstake
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         balance -= tx_results[0].step_used * tx_results[0].step_price
 
         # get stake
@@ -241,16 +242,16 @@ class TestIISSStake(TestIISSBase):
             "stake": stake,
             "unstake": unstake,
         }
-        self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response)
+        self.assertEqual(expected_response["stake"], actual_response["stake"])
+        self.assertEqual(expected_response["unstake"], actual_response["unstake"])
+        self.assertIn("unstakeBlockHeight", actual_response)
 
         # get balance
         remain_balance: int = balance - total_stake
         actual_balance: int = self.get_balance(self._accounts[0])
         self.assertEqual(remain_balance, actual_balance)
 
-        expired_block_height: int = actual_response['unstakeBlockHeight']
+        expired_block_height: int = actual_response["unstakeBlockHeight"]
         self.make_blocks(expired_block_height + 1)
 
         # after unstake_lock_period
@@ -260,26 +261,26 @@ class TestIISSStake(TestIISSBase):
 
         # update icx balance
         # estimate
-        tx: dict = self.create_transfer_icx_tx(from_=self._accounts[0],
-                                               to_=self._admin,
-                                               value=0)
+        tx: dict = self.create_transfer_icx_tx(
+            from_=self._accounts[0], to_=self._admin, value=0
+        )
         estimate_step: int = self.estimate_step(tx)
 
         # set full stake
         step_price: int = self.get_step_price()
         estimate_fee: int = step_price * estimate_step
 
-        tx = self.create_transfer_icx_tx(self._accounts[0],
-                                         self._admin,
-                                         balance - estimate_fee,
-                                         step_limit=estimate_step)
+        tx = self.create_transfer_icx_tx(
+            self._accounts[0],
+            self._admin,
+            balance - estimate_fee,
+            step_limit=estimate_step,
+        )
         self.process_confirm_block_tx([tx])
 
         # get balance
         actual_response: dict = self.get_stake(self._accounts[0])
-        expected_response = {
-            "stake": 0
-        }
+        expected_response = {"stake": 0}
         self.assertEqual(expected_response, actual_response)
 
     def test_unstake(self):
@@ -290,13 +291,13 @@ class TestIISSStake(TestIISSBase):
 
         # gain 10 icx
         balance: int = 10 * ICX_IN_LOOP
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=balance)
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
 
         # set stake
         stake: int = 8 * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
-                                                               value=stake)
+        tx_results: List["TransactionResult"] = self.set_stake(
+            from_=self._accounts[0], value=stake
+        )
         fee = tx_results[0].step_used * tx_results[0].step_price
         expected_balance: int = balance - stake - fee
         response: int = self.get_balance(self._accounts[0])
@@ -306,84 +307,79 @@ class TestIISSStake(TestIISSBase):
         total_stake: int = 8
         for i in range(0, total_stake // 2):
             # stake reset
-            self.set_stake(from_=self._accounts[0],
-                           value=total_stake * ICX_IN_LOOP)
+            self.set_stake(from_=self._accounts[0], value=total_stake * ICX_IN_LOOP)
 
             # delegation
             delegation_amount: int = (total_stake - i) * ICX_IN_LOOP
             delegations: list = [(self._accounts[0], delegation_amount)]
-            self.set_delegation(from_=self._accounts[0],
-                                origin_delegations=delegations)
+            self.set_delegation(from_=self._accounts[0], origin_delegations=delegations)
 
             # stake
-            self.set_stake(from_=self._accounts[0],
-                           value=i * ICX_IN_LOOP,
-                           expected_status=False)
+            self.set_stake(
+                from_=self._accounts[0], value=i * ICX_IN_LOOP, expected_status=False
+            )
 
             response: dict = self.get_delegation(self._accounts[0])
-            voting_power: int = response['votingPower']
+            voting_power: int = response["votingPower"]
             self.assertFalse(voting_power < 0)
 
         # test scenario 2
         for i in range(total_stake // 2 + 1, total_stake + 1):
             # stake reset
-            self.set_stake(from_=self._accounts[0],
-                           value=total_stake * ICX_IN_LOOP)
+            self.set_stake(from_=self._accounts[0], value=total_stake * ICX_IN_LOOP)
 
             # delegation
             delegation_amount: int = (total_stake - i) * ICX_IN_LOOP
             delegations: list = [(self._accounts[0], delegation_amount)]
-            self.set_delegation(from_=self._accounts[0],
-                                origin_delegations=delegations)
+            self.set_delegation(from_=self._accounts[0], origin_delegations=delegations)
 
             # stake
-            self.set_stake(from_=self._accounts[0],
-                           value=i * ICX_IN_LOOP)
+            self.set_stake(from_=self._accounts[0], value=i * ICX_IN_LOOP)
 
             response: dict = self.get_delegation(self._accounts[0])
-            voting_power: int = response['votingPower']
+            voting_power: int = response["votingPower"]
             self.assertFalse(voting_power < 0)
 
         # test scenario 3
         # stake reset
-        self.set_stake(from_=self._accounts[0],
-                       value=total_stake * ICX_IN_LOOP)
+        self.set_stake(from_=self._accounts[0], value=total_stake * ICX_IN_LOOP)
 
         # delegation
         delegation_amount: int = total_stake * ICX_IN_LOOP - 1
         delegations: list = [(self._accounts[0], delegation_amount)]
-        self.set_delegation(from_=self._accounts[0],
-                            origin_delegations=delegations)
+        self.set_delegation(from_=self._accounts[0], origin_delegations=delegations)
 
         # unstake 1 loop
-        self.set_stake(from_=self._accounts[0],
-                       value=total_stake * ICX_IN_LOOP - 1)
+        self.set_stake(from_=self._accounts[0], value=total_stake * ICX_IN_LOOP - 1)
 
         response: dict = self.get_delegation(self._accounts[0])
-        voting_power: int = response['votingPower']
+        voting_power: int = response["votingPower"]
         self.assertFalse(voting_power < 0)
 
         # Fail
         # unstake 2 loop
-        self.set_stake(from_=self._accounts[0],
-                       value=total_stake * ICX_IN_LOOP - 2,
-                       expected_status=False)
+        self.set_stake(
+            from_=self._accounts[0],
+            value=total_stake * ICX_IN_LOOP - 2,
+            expected_status=False,
+        )
 
         response: dict = self.get_delegation(self._accounts[0])
-        voting_power: int = response['votingPower']
+        voting_power: int = response["votingPower"]
         self.assertFalse(voting_power < 0)
 
     def test_stake_with_value_should_raise_exception(self):
         self.update_governance()
         self.set_revision(Revision.IISS.value)
         balance: int = 10 * ICX_IN_LOOP
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=balance)
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
 
-        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=SYSTEM_SCORE_ADDRESS,
-                                             func_name='setStake',
-                                             params={"value": hex(8 * ICX_IN_LOOP)},
-                                             value=5)
+        tx: dict = self.create_score_call_tx(
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS,
+            func_name="setStake",
+            params={"value": hex(8 * ICX_IN_LOOP)},
+            value=5,
+        )
 
         return self.process_confirm_block_tx([tx], expected_status=False)

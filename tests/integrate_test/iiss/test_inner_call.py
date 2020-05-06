@@ -31,4 +31,4 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         self.init_decentralized()
         inner_call_response: dict = self.inner_call(inner_call_request)
-        self.assertEqual(len(inner_call_response['result']['preps']), 22)
+        self.assertEqual(len(inner_call_response["result"]["preps"]), 22)

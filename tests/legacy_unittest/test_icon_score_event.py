@@ -26,7 +26,12 @@ from iconservice.database.batch import TransactionBatch
 from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
+from iconservice.iconscore.icon_score_base import (
+    eventlog,
+    IconScoreBase,
+    IconScoreDatabase,
+    external,
+)
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icon_constant import IconScoreContextType, IconScoreFuncType
@@ -40,7 +45,7 @@ class TestEventlog(unittest.TestCase):
     def setUp(self):
         address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         db = Mock(spec=IconScoreDatabase)
-        db.attach_mock(address, 'address')
+        db.attach_mock(address, "address")
         context = IconScoreContext()
         traces = Mock(spec=list)
         step_counter = Mock(spec=IconScoreStepCounter)
@@ -61,7 +66,7 @@ class TestEventlog(unittest.TestCase):
             prep=None,
             issue=None,
             rc=None,
-            meta=None
+            meta=None,
         )
 
         IconScoreContext.icx_engine = Mock(spec=IcxEngine)
@@ -108,17 +113,17 @@ class TestEventlog(unittest.TestCase):
         # Asserts whether the SCORE address is included in the bloom
         self.assert_score_address_in_bloom(logs_bloom)
 
-        zero_event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
+        zero_event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "ZeroIndexEvent(str,Address,int)".encode("utf-8")
         self.assertIn(zero_event_bloom_data, logs_bloom)
 
-        one_event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        one_event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "OneIndexEvent(str,Address,int)".encode("utf-8")
         self.assertIn(one_event_bloom_data, logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
+        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode("utf-8")
         self.assertIn(name_bloom_data, logs_bloom)
 
     def test_call_event_kwarg(self):
@@ -134,29 +139,27 @@ class TestEventlog(unittest.TestCase):
         event_log_ordered_args = context.event_logs[0]
 
         # Call with ordered arguments and keyword arguments
-        self._mock_score.OneIndexEvent(
-            name, age=age, address=address)
+        self._mock_score.OneIndexEvent(name, age=age, address=address)
         self.assertEqual(len(context.event_logs), 2)
         event_log_keyword_args = context.event_logs[1]
 
-        self.assertEqual(event_log_ordered_args.score_address,
-                         event_log_keyword_args.score_address)
-        self.assertEqual(event_log_ordered_args.indexed,
-                         event_log_keyword_args.indexed)
-        self.assertEqual(event_log_ordered_args.data,
-                         event_log_keyword_args.data)
+        self.assertEqual(
+            event_log_ordered_args.score_address, event_log_keyword_args.score_address
+        )
+        self.assertEqual(event_log_ordered_args.indexed, event_log_keyword_args.indexed)
+        self.assertEqual(event_log_ordered_args.data, event_log_keyword_args.data)
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
         # Asserts whether the SCORE address is included in the bloom
         self.assert_score_address_in_bloom(logs_bloom)
 
-        one_event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        one_event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "OneIndexEvent(str,Address,int)".encode("utf-8")
         self.assertIn(one_event_bloom_data, logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
+        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode("utf-8")
         self.assertIn(name_bloom_data, logs_bloom)
 
     def test_call_event_mismatch_arg(self):
@@ -167,20 +170,21 @@ class TestEventlog(unittest.TestCase):
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
-        self.assertRaises(InvalidEventLogException, self._mock_score.OneIndexEvent,
-                          name, address, age)
+        self.assertRaises(
+            InvalidEventLogException, self._mock_score.OneIndexEvent, name, address, age
+        )
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
         # Asserts whether the SCORE address is not included in the bloom
         self.assert_score_address_not_in_bloom(logs_bloom)
 
-        one_event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        one_event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "OneIndexEvent(str,Address,int)".encode("utf-8")
         self.assertNotIn(one_event_bloom_data, logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
+        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode("utf-8")
         self.assertNotIn(name_bloom_data, logs_bloom)
 
     def test_address_index_event(self):
@@ -200,13 +204,16 @@ class TestEventlog(unittest.TestCase):
         # Asserts whether the SCORE address is included in the bloom
         self.assert_score_address_in_bloom(logs_bloom)
 
-        event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'AddressIndexEvent(Address)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "AddressIndexEvent(Address)".encode("utf-8")
         self.assertIn(event_bloom_data, logs_bloom)
 
-        indexed_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + \
-                             address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        indexed_bloom_data = (
+            int(1).to_bytes(1, DATA_BYTE_ORDER)
+            + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER)
+            + address.body
+        )
         self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(indexed_bloom_data))
         self.assertIn(indexed_bloom_data, logs_bloom)
 
@@ -227,13 +234,12 @@ class TestEventlog(unittest.TestCase):
         # Asserts whether the SCORE address is included in the bloom
         self.assert_score_address_in_bloom(logs_bloom)
 
-        event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'BoolIndexEvent(bool)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "BoolIndexEvent(bool)".encode("utf-8")
         self.assertIn(event_bloom_data, logs_bloom)
 
-        indexed_bloom_data = \
-            int(1).to_bytes(1, DATA_BYTE_ORDER) + int_to_bytes(yes_no)
+        indexed_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + int_to_bytes(yes_no)
         self.assertIn(indexed_bloom_data, logs_bloom)
 
     def test_int_index_event(self):
@@ -253,19 +259,18 @@ class TestEventlog(unittest.TestCase):
         # Asserts whether the SCORE address is included in the bloom
         self.assert_score_address_in_bloom(logs_bloom)
 
-        event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'IntIndexEvent(int)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "IntIndexEvent(int)".encode("utf-8")
         self.assertIn(event_bloom_data, logs_bloom)
 
-        indexed_bloom_data = \
-            int(1).to_bytes(1, DATA_BYTE_ORDER) + int_to_bytes(amount)
+        indexed_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + int_to_bytes(amount)
         self.assertIn(indexed_bloom_data, logs_bloom)
 
     def test_bytes_index_event(self):
         context = ContextContainer._get_context()
 
-        data = b'0123456789abc'
+        data = b"0123456789abc"
 
         # Tests simple event emit
         self._mock_score.BytesIndexEvent(data)
@@ -279,13 +284,12 @@ class TestEventlog(unittest.TestCase):
         # Asserts whether the SCORE address is included in the bloom
         self.assert_score_address_in_bloom(logs_bloom)
 
-        event_bloom_data = \
-            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
-            'BytesIndexEvent(bytes)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(
+            1, DATA_BYTE_ORDER
+        ) + "BytesIndexEvent(bytes)".encode("utf-8")
         self.assertIn(event_bloom_data, logs_bloom)
 
-        indexed_bloom_data = \
-            int(1).to_bytes(1, DATA_BYTE_ORDER) + data
+        indexed_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + data
         self.assertIn(indexed_bloom_data, logs_bloom)
 
     def test_to_dict_camel(self):
@@ -293,19 +297,19 @@ class TestEventlog(unittest.TestCase):
 
         address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         age = 10
-        data = b'0123456789abc'
+        data = b"0123456789abc"
 
-        self._mock_score.MixedEvent(b'i_data', address, age, data, 'text')
+        self._mock_score.MixedEvent(b"i_data", address, age, data, "text")
         self.assertEqual(len(context.event_logs), 1)
 
         event_log = context.event_logs[0]
 
         camel_dict = event_log.to_dict(to_camel_case)
-        self.assertIn('scoreAddress', camel_dict)
-        self.assertIn('indexed', camel_dict)
-        self.assertIn('data', camel_dict)
-        self.assertEqual(3, len(camel_dict['indexed']))
-        self.assertEqual(3, len(camel_dict['data']))
+        self.assertIn("scoreAddress", camel_dict)
+        self.assertIn("indexed", camel_dict)
+        self.assertIn("data", camel_dict)
+        self.assertEqual(3, len(camel_dict["indexed"]))
+        self.assertEqual(3, len(camel_dict["data"]))
 
     def test_event_log_on_readonly_method(self):
         context = ContextContainer._get_context()
@@ -338,21 +342,24 @@ class TestEventlog(unittest.TestCase):
     def assert_score_address_in_bloom(self, logs_bloom):
         # Asserts whether the SCORE address is included in the bloom
         address = self._mock_score.address
-        address_bytes = b'\xff' + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        address_bytes = (
+            b"\xff" + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        )
         self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(address_bytes))
         self.assertIn(address_bytes, logs_bloom)
 
     def assert_score_address_not_in_bloom(self, logs_bloom):
         # Asserts whether the SCORE address is not included in the bloom
         address = self._mock_score.address
-        address_bytes = b'\xff' + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        address_bytes = (
+            b"\xff" + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        )
         self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(address_bytes))
         self.assertNotIn(address_bytes, logs_bloom)
 
 
 class EventlogScore(IconScoreBase):
-
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: "IconScoreDatabase") -> None:
         super().__init__(db)
 
     def on_install(self) -> None:
@@ -362,7 +369,7 @@ class EventlogScore(IconScoreBase):
         pass
 
     @eventlog
-    def ZeroIndexEvent(self, name: str, address: 'Address', age: int):
+    def ZeroIndexEvent(self, name: str, address: "Address", age: int):
         pass
 
     @eventlog(indexed=1)
@@ -386,8 +393,9 @@ class EventlogScore(IconScoreBase):
         pass
 
     @eventlog(indexed=2)
-    def MixedEvent(self, i_data: bytes, address: Address, amount: int,
-                   data: bytes, text: str):
+    def MixedEvent(
+        self, i_data: bytes, address: Address, amount: int, data: bytes, text: str
+    ):
         pass
 
     @eventlog(indexed=3)

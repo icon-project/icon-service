@@ -19,7 +19,10 @@ import pytest
 
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.storage import Storage
-from iconservice.iiss import _split_float_to_numerator_and_denominator, get_minimum_delegate_for_bottom_prep
+from iconservice.iiss import (
+    _split_float_to_numerator_and_denominator,
+    get_minimum_delegate_for_bottom_prep,
+)
 from iconservice.utils import ContextStorage
 
 
@@ -38,8 +41,7 @@ def range_positive(start, stop=None, step=None):
 def test__split_float_to_numerator_and_denominator():
     test_step = 0.00003
     for i, float_data in enumerate(range_positive(0, 1, test_step)):
-        numerator, denominator = \
-            _split_float_to_numerator_and_denominator(float_data)
+        numerator, denominator = _split_float_to_numerator_and_denominator(float_data)
         assert float_data == numerator / denominator
 
 
@@ -78,7 +80,9 @@ def test_get_minimum_delegate_for_bottom_prep():
         denominator = 10 ** x
         trigger = 1 / denominator
         context.decentralize_trigger = trigger
-        assert get_minimum_delegate_for_bottom_prep(context) == int(total_supply * trigger)
+        assert get_minimum_delegate_for_bottom_prep(context) == int(
+            total_supply * trigger
+        )
 
     # success case: main net trigger
     main_net_supply: int = 800374000000000000000000000

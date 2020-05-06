@@ -7,16 +7,16 @@ class MemberVariableScore(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._name = '__init__'
+        self._name = "__init__"
 
     def on_install(self) -> None:
         super().on_install()
         # self._name member variable should be defined in __init__().
-        self._name = 'on_install'
+        self._name = "on_install"
 
     def on_update(self) -> None:
         super().on_update()
-        self._name = 'on_update'
+        self._name = "on_update"
 
     @external(readonly=True)
     def getName(self) -> str:

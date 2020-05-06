@@ -49,14 +49,8 @@ def test_set_delegation():
     value2 = 2 * 10 ** 18
 
     request = [
-        {
-            ConstantKeys.ADDRESS: str(address1),
-            ConstantKeys.VALUE: hex(value1)
-        },
-        {
-            ConstantKeys.ADDRESS: str(address2),
-            ConstantKeys.VALUE: hex(value2)
-        }
+        {ConstantKeys.ADDRESS: str(address1), ConstantKeys.VALUE: hex(value1)},
+        {ConstantKeys.ADDRESS: str(address2), ConstantKeys.VALUE: hex(value2)},
     ]
 
     ret_params = TypeConverter.convert(request, ParamType.IISS_SET_DELEGATION)
@@ -98,7 +92,7 @@ def test_query_i_score():
 
 def test_reg_prep():
     name = "name"
-    email = 'email'
+    email = "email"
     website = "website"
     json = "json"
     ip = "ip"
@@ -129,7 +123,7 @@ def test_unreg_prep():
 
 def test_set_prep():
     name = "name"
-    email = 'email'
+    email = "email"
     website = "website"
     json = "json"
     ip = "ip"
@@ -186,7 +180,7 @@ def test_get_prep_list():
 
     request = {
         ConstantKeys.START_RANKING: hex(start_rank),
-        ConstantKeys.END_RANKING: hex(end_rank)
+        ConstantKeys.END_RANKING: hex(end_rank),
     }
 
     ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_LIST)

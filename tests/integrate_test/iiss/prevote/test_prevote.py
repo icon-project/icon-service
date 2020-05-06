@@ -17,7 +17,11 @@
 from unittest.mock import Mock
 
 from iconservice import SYSTEM_SCORE_ADDRESS
-from iconservice.base.exception import MethodNotFoundException, ServiceNotReadyException, FatalException
+from iconservice.base.exception import (
+    MethodNotFoundException,
+    ServiceNotReadyException,
+    FatalException,
+)
 from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -41,15 +45,11 @@ class TestIISS(TestIISSBase):
         # get iiss info
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height,
-            'nextCalculation': block_height + calc_period + 1,
-            'nextPRepTerm': 0,
-            'variable': {
-                "irep": 0,
-                "rrep": 1200
-            },
-            'rcResult': {
-            }
+            "blockHeight": block_height,
+            "nextCalculation": block_height + calc_period + 1,
+            "nextPRepTerm": 0,
+            "variable": {"irep": 0, "rrep": 1200},
+            "rcResult": {},
         }
         self.assertEqual(expected_response, response)
 
@@ -57,20 +57,17 @@ class TestIISS(TestIISSBase):
         self.make_blocks(block_height + 1)
         response: dict = self.get_iiss_info()
         expected_response = {
-            'blockHeight': block_height + 1,
-            'nextCalculation': block_height + calc_period + 1,
-            'nextPRepTerm': 0,
-            'variable': {
-                "irep": 0,
-                "rrep": 1200
-            },
-            'rcResult': {
+            "blockHeight": block_height + 1,
+            "nextCalculation": block_height + calc_period + 1,
+            "nextPRepTerm": 0,
+            "variable": {"irep": 0, "rrep": 1200},
+            "rcResult": {
                 "iscore": 0,
                 "estimatedICX": 0,
                 "startBlockHeight": block_height - calc_period + 1,
                 "endBlockHeight": block_height,
-                'stateHash': b'mocked_response'
-            }
+                "stateHash": b"mocked_response",
+            },
         }
         self.assertEqual(expected_response, response)
 
@@ -81,17 +78,16 @@ class TestIISS(TestIISSBase):
         self.set_revision(Revision.IISS.value)
 
         balance: int = 3000 * ICX_IN_LOOP
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=balance)
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
 
         # set stake
-        tx: dict = self.create_set_stake_tx(from_=self._accounts[0],
-                                            value=0)
+        tx: dict = self.create_set_stake_tx(from_=self._accounts[0], value=0)
         self.estimate_step(tx)
 
         # set delegation
-        tx: dict = self.create_set_delegation_tx(from_=self._accounts[0],
-                                                 origin_delegations=[(self._accounts[0], 0)])
+        tx: dict = self.create_set_delegation_tx(
+            from_=self._accounts[0], origin_delegations=[(self._accounts[0], 0)]
+        )
         self.estimate_step(tx)
 
         # claim iscore
@@ -106,13 +102,15 @@ class TestIISS(TestIISSBase):
         self.register_prep(from_=self._accounts[0])
 
         # set prep
-        tx: dict = self.create_set_prep_tx(from_=self._accounts[0],
-                                           set_data={"name": f"new{str(self._accounts[0])}"})
+        tx: dict = self.create_set_prep_tx(
+            from_=self._accounts[0], set_data={"name": f"new{str(self._accounts[0])}"}
+        )
         self.estimate_step(tx)
 
         # set governance variable
-        tx: dict = self.create_set_governance_variables(from_=self._accounts[0],
-                                                        irep=5_000_000)
+        tx: dict = self.create_set_governance_variables(
+            from_=self._accounts[0], irep=5_000_000
+        )
         with self.assertRaises(MethodNotFoundException):
             self.estimate_step(tx)
 
@@ -145,8 +143,9 @@ class TestIISS(TestIISSBase):
         print(response)
 
         # real register prep
-        self.distribute_icx(accounts=self._accounts[:1],
-                            init_balance=1000 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:1], init_balance=1000 * ICX_IN_LOOP
+        )
         self.register_prep(from_=self._accounts[0])
 
         # get prep
@@ -167,10 +166,7 @@ class TestIISS(TestIISSBase):
             "from": self._admin,
             "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "invalid",
-                "params": {}
-            }
+            "data": {"method": "invalid", "params": {}},
         }
 
         with self.assertRaises(MethodNotFoundException):

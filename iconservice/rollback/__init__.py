@@ -28,7 +28,9 @@ def get_backup_filename(block_height: int) -> str:
     return f"{block_height:010d}.bak"
 
 
-def check_backup_exists(backup_root_path: str, current_block_height: int, rollback_block_height: int) -> bool:
+def check_backup_exists(
+    backup_root_path: str, current_block_height: int, rollback_block_height: int
+) -> bool:
     """Check if backup files for rollback exist
 
     :param backup_root_path: the directory where backup files are located
@@ -36,9 +38,11 @@ def check_backup_exists(backup_root_path: str, current_block_height: int, rollba
     :param rollback_block_height: final state after rollback
     :return: True(exist) False(not exist)
     """
-    if current_block_height < 1 or \
-            rollback_block_height < 0 or \
-            rollback_block_height > current_block_height:
+    if (
+        current_block_height < 1
+        or rollback_block_height < 0
+        or rollback_block_height > current_block_height
+    ):
         return False
 
     for block_height in range(current_block_height - 1, rollback_block_height - 1, -1):

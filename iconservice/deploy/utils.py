@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
 
 
-def get_score_path(score_root_path: str, score_address: 'Address') -> str:
+def get_score_path(score_root_path: str, score_address: "Address") -> str:
     return os.path.join(score_root_path, score_address.to_bytes().hex())
 
 

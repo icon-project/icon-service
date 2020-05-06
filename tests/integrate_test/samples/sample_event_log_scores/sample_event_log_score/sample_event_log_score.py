@@ -7,7 +7,9 @@ class SampleEventLogScore(IconScoreBase):
         pass
 
     @eventlog(indexed=2)
-    def NormalEventLogWithDefault(self, value1: str, value2: str="default2", value3: str="default3"):
+    def NormalEventLogWithDefault(
+        self, value1: str, value2: str = "default2", value3: str = "default3"
+    ):
         pass
 
     @eventlog
@@ -15,7 +17,14 @@ class SampleEventLogScore(IconScoreBase):
         pass
 
     @eventlog
-    def EventLogWithNoneDefault(self, integer: int=None, string: str=None, boolean: bool=None, address: Address=None, bytes: bytes=None):
+    def EventLogWithNoneDefault(
+        self,
+        integer: int = None,
+        string: str = None,
+        boolean: bool = None,
+        address: Address = None,
+        bytes: bytes = None,
+    ):
         pass
 
     @eventlog
@@ -27,7 +36,9 @@ class SampleEventLogScore(IconScoreBase):
         self.set_value(value)
 
     @eventlog
-    def EventLogForCheckingParamsType(self, integer: int, string: str, boolean: bool, bytes: bytes, address: Address):
+    def EventLogForCheckingParamsType(
+        self, integer: int, string: str, boolean: bool, bytes: bytes, address: Address
+    ):
         pass
 
     @eventlog(indexed=-1)
@@ -36,9 +47,9 @@ class SampleEventLogScore(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=str)
+        self._value = VarDB("value", db, value_type=str)
 
-    def on_install(self, value: str="default") -> None:
+    def on_install(self, value: str = "default") -> None:
         super().on_install()
         self.set_value(value)
 
@@ -79,18 +90,28 @@ class SampleEventLogScore(IconScoreBase):
         integer = 0x00
         string = "test"
         boolean = True
-        bytes = b'0'
+        bytes = b"0"
         address = Address.from_string("cx0000000000000000000000000000000000000000")
         if test_type == "integer":
-            self.EventLogWithNoneDefault(string=string, boolean=boolean, bytes=bytes, address=address)
+            self.EventLogWithNoneDefault(
+                string=string, boolean=boolean, bytes=bytes, address=address
+            )
         elif test_type == "string":
-            self.EventLogWithNoneDefault(integer=integer, boolean=boolean, bytes=bytes, address=address)
+            self.EventLogWithNoneDefault(
+                integer=integer, boolean=boolean, bytes=bytes, address=address
+            )
         elif test_type == "boolean":
-            self.EventLogWithNoneDefault(integer=integer, string=string, bytes=bytes, address=address)
+            self.EventLogWithNoneDefault(
+                integer=integer, string=string, bytes=bytes, address=address
+            )
         elif test_type == "bytes":
-            self.EventLogWithNoneDefault(integer=integer, string=string, boolean=boolean, address=address)
+            self.EventLogWithNoneDefault(
+                integer=integer, string=string, boolean=boolean, address=address
+            )
         elif test_type == "address":
-            self.EventLogWithNoneDefault(integer=integer, string=string, boolean=boolean, bytes=bytes)
+            self.EventLogWithNoneDefault(
+                integer=integer, string=string, boolean=boolean, bytes=bytes
+            )
 
     @external
     def call_event_log_params_are_not_defined(self):
@@ -124,14 +145,16 @@ class SampleEventLogScore(IconScoreBase):
 
     @external
     def call_event_log_input_empty_bytes_and_string_data(self):
-        self.EventLogTestingBytesString(string="", bytes=b'')
+        self.EventLogTestingBytesString(string="", bytes=b"")
 
     @external
-    def call_event_log_for_checking_params_type(self, test_type: str, input_params_type: str):
+    def call_event_log_for_checking_params_type(
+        self, test_type: str, input_params_type: str
+    ):
         integer = 0x00
         string = ""
         boolean = True
-        bytes = b'0'
+        bytes = b"0"
         address = Address.from_string("cx0000000000000000000000000000000000000000")
         none = None
 

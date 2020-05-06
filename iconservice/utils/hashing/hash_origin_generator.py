@@ -28,17 +28,11 @@ class HashOriginGenerator(abc.ABC):
 class HashOriginGeneratorV1(HashOriginGenerator):
     version = 1
 
-    _translator = str.maketrans({
-        "\\": "\\\\",
-        "{": "\\{",
-        "}": "\\}",
-        "[": "\\[",
-        "]": "\\]",
-        ".": "\\."
-    })
+    _translator = str.maketrans(
+        {"\\": "\\\\", "{": "\\{", "}": "\\}", "[": "\\[", "]": "\\]", ".": "\\."}
+    )
 
     def generate(self, json_data: dict):
-
         def encode(data):
             if isinstance(data, dict):
                 return encode_dict(data)

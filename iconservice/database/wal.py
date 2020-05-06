@@ -20,7 +20,13 @@ from ..iiss.reward_calc.storage import Storage, get_rc_version
 from ..utils.msgpack_for_db import MsgPackForDB
 
 __all__ = (
-    "WriteAheadLogWriter", "WriteAheadLogReader", "WALogable", "StateWAL", "IissWAL", "WALState", "WALDBType"
+    "WriteAheadLogWriter",
+    "WriteAheadLogReader",
+    "WALogable",
+    "StateWAL",
+    "IissWAL",
+    "WALState",
+    "WALDBType",
 )
 
 import struct
@@ -75,7 +81,7 @@ class WALState(Flag):
     ALL = 0xFFFFFFFF
 
 
-def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> Optional[bytes]:
+def tx_batch_value_to_bytes(tx_batch_value: "TransactionBatchValue") -> Optional[bytes]:
     if not isinstance(tx_batch_value, TransactionBatchValue):
         raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
     return tx_batch_value.value
@@ -87,8 +93,12 @@ class WALogable(metaclass=ABCMeta):
 
 
 class StateWAL(WALogable):
-    def __init__(self, block_batch: 'BlockBatch', converter: Optional[callable] = tx_batch_value_to_bytes):
-        self.block_batch: 'BlockBatch' = block_batch
+    def __init__(
+        self,
+        block_batch: "BlockBatch",
+        converter: Optional[callable] = tx_batch_value_to_bytes,
+    ):
+        self.block_batch: "BlockBatch" = block_batch
         self.converter: callable = converter
 
     def __iter__(self) -> Tuple[bytes, Optional[bytes]]:
@@ -166,11 +176,19 @@ class WriteAheadLogWriter(object):
     Every number is written in big endian format
     """
 
-    def __init__(self, revision: int, max_log_count: int, block: 'Block', instant_block_hash: bytes):
-        Logger.debug(tag=TAG,
-                     msg=f"__init__(revision={revision}, "
-                         f"max_log_out={max_log_count}, "
-                         f"block={block} start")
+    def __init__(
+        self,
+        revision: int,
+        max_log_count: int,
+        block: "Block",
+        instant_block_hash: bytes,
+    ):
+        Logger.debug(
+            tag=TAG,
+            msg=f"__init__(revision={revision}, "
+            f"max_log_out={max_log_count}, "
+            f"block={block} start",
+        )
 
         self._magic_key = _MAGIC_KEY
         self._version = _FILE_VERSION
@@ -204,7 +222,7 @@ class WriteAheadLogWriter(object):
             self._revision,
             self._state,
             self._instant_block_hash,
-            self._log_count
+            self._log_count,
         ]
 
         for _ in range(self._max_log_count):
@@ -308,7 +326,7 @@ class WriteAheadLogReader(object):
         self._log_count: int = 0
         self._log_start_offsets: Optional[List[int]] = None
         self._instant_block_hash: bytes = b""
-        self._block: Optional['Block'] = None
+        self._block: Optional["Block"] = None
 
         self._fp = None
 
@@ -333,7 +351,7 @@ class WriteAheadLogReader(object):
         return self._instant_block_hash
 
     @property
-    def block(self) -> Optional['Block']:
+    def block(self) -> Optional["Block"]:
         return self._block
 
     @property
@@ -341,11 +359,13 @@ class WriteAheadLogReader(object):
         return self._log_count
 
     def __str__(self):
-        return f"version={self._version}, " \
-               f"state={self._state}, " \
-               f"instant_block_hash={bytes_to_hex(self._instant_block_hash)}, " \
-               f"log_count={self._log_count}, " \
-               f"block={self._block}"
+        return (
+            f"version={self._version}, "
+            f"state={self._state}, "
+            f"instant_block_hash={bytes_to_hex(self._instant_block_hash)}, "
+            f"log_count={self._log_count}, "
+            f"block={self._block}"
+        )
 
     def open(self, path: str):
         self._fp = open(path, "rb")
@@ -361,15 +381,22 @@ class WriteAheadLogReader(object):
         data: bytes = self._fp.read(_HEADER_SIZE)
         self._check_bytes_data(data, _HEADER_SIZE)
 
-        magic_key, version, revision, state, instant_block_hash, log_count = \
-            struct.unpack_from(_HEADER_STRUCT_FORMAT, data)
+        (
+            magic_key,
+            version,
+            revision,
+            state,
+            instant_block_hash,
+            log_count,
+        ) = struct.unpack_from(_HEADER_STRUCT_FORMAT, data)
 
         if magic_key != _MAGIC_KEY:
             raise IllegalFormatException(f"Invalid magic key: {bytes_to_hex(data)}")
 
         if version != _FILE_VERSION:
             raise IllegalFormatException(
-                f"Invalid version: Actual({version}) != Expected({_FILE_VERSION})")
+                f"Invalid version: Actual({version}) != Expected({_FILE_VERSION})"
+            )
 
         self._magic_key = magic_key
         self._version = version
@@ -424,4 +451,6 @@ class WriteAheadLogReader(object):
             raise IllegalFormatException("Data is not bytes")
 
         if len(data) != size:
-            raise IllegalFormatException(f"Out of data: data_size({len(data)}) != size_to_read({size})")
+            raise IllegalFormatException(
+                f"Out of data: data_size({len(data)}) != size_to_read({size})"
+            )

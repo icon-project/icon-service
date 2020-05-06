@@ -25,13 +25,15 @@ class Transaction(object):
     Holds information of the transaction
     """
 
-    def __init__(self,
-                 tx_hash: Optional[bytes] = None,
-                 index: int = 0,
-                 origin: Optional['Address'] = None,
-                 to: Optional['Address'] = None,
-                 timestamp: int = None,
-                 nonce: int = None) -> None:
+    def __init__(
+        self,
+        tx_hash: Optional[bytes] = None,
+        index: int = 0,
+        origin: Optional["Address"] = None,
+        to: Optional["Address"] = None,
+        timestamp: int = None,
+        nonce: int = None,
+    ) -> None:
         """Transaction class for icon score context
         """
         self._hash = tx_hash
@@ -42,7 +44,7 @@ class Transaction(object):
         self._nonce = nonce
 
     @property
-    def origin(self) -> 'Address':
+    def origin(self) -> "Address":
         """
         The account who created the transaction.
         """
@@ -80,9 +82,8 @@ class Transaction(object):
         return self._nonce
 
     @property
-    def to(self) -> 'Address':
+    def to(self) -> "Address":
         """
         The account of tx to.
         """
         return self._to
-

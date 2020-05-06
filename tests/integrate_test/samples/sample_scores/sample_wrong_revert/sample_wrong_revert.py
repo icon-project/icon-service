@@ -4,7 +4,7 @@ from iconservice import *
 class SampleWrongRevert(IconScoreBase):
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value1 = VarDB('value1', db, value_type=int)
+        self._value1 = VarDB("value1", db, value_type=int)
 
     def on_install(self) -> None:
         super().on_install()
@@ -23,7 +23,7 @@ class SampleWrongRevert(IconScoreBase):
 
     @external(readonly=False)
     def call_revert_with_invalid_code(self):
-        revert(message='call_revert_with_invalid_code', code='code')
+        revert(message="call_revert_with_invalid_code", code="code")
 
     @external(readonly=False)
     def call_revert_with_none_message(self):
@@ -35,7 +35,7 @@ class SampleWrongRevert(IconScoreBase):
 
     @external(readonly=False)
     def call_exception(self):
-        raise KeyError('Intended exception')
+        raise KeyError("Intended exception")
 
     @payable
     def fallback(self) -> None:

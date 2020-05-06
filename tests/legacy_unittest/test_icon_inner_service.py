@@ -19,7 +19,11 @@ from unittest.mock import Mock, patch
 
 from iconcommons import IconConfig
 
-from iconservice.base.exception import FatalException, InvalidBaseTransactionException, IconServiceBaseException
+from iconservice.base.exception import (
+    FatalException,
+    InvalidBaseTransactionException,
+    IconServiceBaseException,
+)
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
@@ -28,8 +32,12 @@ from tests import create_block_hash
 
 class TestIconInnerService(unittest.TestCase):
     def setUp(self):
-        self.icon_inner_task_open_patcher = patch('iconservice.icon_inner_service.IconScoreInnerTask._open')
-        self.icon_inner_task_close_patcher = patch('iconservice.icon_inner_service.IconScoreInnerTask._close')
+        self.icon_inner_task_open_patcher = patch(
+            "iconservice.icon_inner_service.IconScoreInnerTask._open"
+        )
+        self.icon_inner_task_close_patcher = patch(
+            "iconservice.icon_inner_service.IconScoreInnerTask._close"
+        )
         _ = self.icon_inner_task_open_patcher.start()
         _ = self.icon_inner_task_close_patcher.start()
 
@@ -42,23 +50,27 @@ class TestIconInnerService(unittest.TestCase):
             ConstantKeys.BLOCK_HEIGHT: hex(0),
             ConstantKeys.BLOCK_HASH: create_block_hash().hex(),
             ConstantKeys.TIMESTAMP: hex(0),
-            ConstantKeys.PREV_BLOCK_HASH: create_block_hash().hex()
+            ConstantKeys.PREV_BLOCK_HASH: create_block_hash().hex(),
         }
         self.mocked_invoke_request = {"block": block, "transactions": []}
         self.mocked_write_precommit_request = {
             ConstantKeys.BLOCK_HEIGHT: hex(0),
-            ConstantKeys.BLOCK_HASH: create_block_hash().hex()
+            ConstantKeys.BLOCK_HASH: create_block_hash().hex(),
         }
         self.mocked_query_request = {
             ConstantKeys.METHOD: "icx_call",
-            ConstantKeys.PARAMS: {}
+            ConstantKeys.PARAMS: {},
         }
 
         exception_msg = "non fatal exception"
-        exception_list = [InvalidBaseTransactionException,
-                          IconServiceBaseException,
-                          Exception]
-        self.exception_list = list(map(lambda exception: exception(exception_msg), exception_list))
+        exception_list = [
+            InvalidBaseTransactionException,
+            IconServiceBaseException,
+            Exception,
+        ]
+        self.exception_list = list(
+            map(lambda exception: exception(exception_msg), exception_list)
+        )
 
     def tearDown(self):
         self.icon_inner_task_open_patcher.stop()
@@ -72,10 +84,15 @@ class TestIconInnerService(unittest.TestCase):
         # success case: when input prev write pre-commit data format, block_hash should be None
         prev_precommit_data_format = {
             ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.BLOCK_HASH: instant_block_hash
+            ConstantKeys.BLOCK_HASH: instant_block_hash,
         }
-        actual_block_height, actual_instant_block_hash, actual_block_hash = \
-            IconScoreInnerTask._get_block_info_for_precommit_state(prev_precommit_data_format)
+        (
+            actual_block_height,
+            actual_instant_block_hash,
+            actual_block_hash,
+        ) = IconScoreInnerTask._get_block_info_for_precommit_state(
+            prev_precommit_data_format
+        )
 
         self.assertEqual(block_height, actual_block_height)
         self.assertEqual(instant_block_hash, actual_instant_block_hash)
@@ -85,10 +102,15 @@ class TestIconInnerService(unittest.TestCase):
         new_precommit_data_format = {
             ConstantKeys.BLOCK_HEIGHT: block_height,
             ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
-            ConstantKeys.NEW_BLOCK_HASH: block_hash
+            ConstantKeys.NEW_BLOCK_HASH: block_hash,
         }
-        actual_block_height, actual_instant_block_hash, actual_block_hash = \
-            IconScoreInnerTask._get_block_info_for_precommit_state(new_precommit_data_format)
+        (
+            actual_block_height,
+            actual_instant_block_hash,
+            actual_block_hash,
+        ) = IconScoreInnerTask._get_block_info_for_precommit_state(
+            new_precommit_data_format
+        )
 
         self.assertEqual(block_height, actual_block_height)
         self.assertEqual(instant_block_hash, actual_instant_block_hash)
@@ -99,9 +121,11 @@ class TestIconInnerService(unittest.TestCase):
             ConstantKeys.BLOCK_HEIGHT: block_height,
             ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
         }
-        self.assertRaises(KeyError,
-                          IconScoreInnerTask._get_block_info_for_precommit_state,
-                          invalid_precommit_data_format)
+        self.assertRaises(
+            KeyError,
+            IconScoreInnerTask._get_block_info_for_precommit_state,
+            invalid_precommit_data_format,
+        )
 
     def test_fatal_exception_catch_on_invoke(self):
         # invoke thread: invoke, write_precommit_state, remove_precommit_state
@@ -111,18 +135,20 @@ class TestIconInnerService(unittest.TestCase):
         expected_error_msg = "fatal exception on invoke"
         expected_error_code = 32001
 
-        def mocked_invoke(block,
-                          tx_requests,
-                          prev_block_generator,
-                          prev_block_validators,
-                          prev_block_votes,
-                          is_block_editable):
+        def mocked_invoke(
+            block,
+            tx_requests,
+            prev_block_generator,
+            prev_block_validators,
+            prev_block_votes,
+            is_block_editable,
+        ):
             raise FatalException(expected_error_msg)
 
         self.inner_task._icon_service_engine.invoke = mocked_invoke
         response = self.inner_task._invoke(self.mocked_invoke_request)
-        assert expected_error_code, response['error']['code']
-        assert expected_error_msg, response['error']['message']
+        assert expected_error_code, response["error"]["code"]
+        assert expected_error_msg, response["error"]["message"]
         assert self.inner_task._close.called
 
         self.inner_task._close.reset_mock()
@@ -131,17 +157,19 @@ class TestIconInnerService(unittest.TestCase):
         for exception in self.exception_list:
             expected_error_msg = exception.args[0]
 
-            def mocked_invoke(block,
-                              tx_requests,
-                              prev_block_generator,
-                              prev_block_validators,
-                              prev_block_votes,
-                              is_block_editable):
+            def mocked_invoke(
+                block,
+                tx_requests,
+                prev_block_generator,
+                prev_block_validators,
+                prev_block_votes,
+                is_block_editable,
+            ):
                 raise exception
 
             self.inner_task._icon_service_engine.invoke = mocked_invoke
             response = self.inner_task._invoke(self.mocked_invoke_request)
-            assert expected_error_msg, response['error']['message']
+            assert expected_error_msg, response["error"]["message"]
             assert not self.inner_task._close.called
             self.inner_task._close.reset_mock()
 
@@ -155,9 +183,11 @@ class TestIconInnerService(unittest.TestCase):
             raise FatalException(expected_error_msg)
 
         self.inner_task._icon_service_engine.commit = mocked_write_precommit
-        response = self.inner_task._write_precommit_state(self.mocked_write_precommit_request)
-        assert expected_error_code, response['error']['code']
-        assert expected_error_msg, response['error']['message']
+        response = self.inner_task._write_precommit_state(
+            self.mocked_write_precommit_request
+        )
+        assert expected_error_code, response["error"]["code"]
+        assert expected_error_msg, response["error"]["message"]
         assert self.inner_task._close.called
 
         self.inner_task._close.reset_mock()
@@ -171,7 +201,7 @@ class TestIconInnerService(unittest.TestCase):
 
             self.inner_task._icon_service_engine.invoke = mocked_write_precommit
             response = self.inner_task._invoke(self.mocked_write_precommit_request)
-            assert expected_error_msg, response['error']['message']
+            assert expected_error_msg, response["error"]["message"]
             assert not self.inner_task._close.called
             self.inner_task._close.reset_mock()
 
@@ -183,14 +213,13 @@ class TestIconInnerService(unittest.TestCase):
         expected_error_msg = "fatal exception on query"
         expected_error_code = 32001
 
-        def mocked_query(method,
-                         params):
+        def mocked_query(method, params):
             raise FatalException(expected_error_msg)
 
         self.inner_task._icon_service_engine.query = mocked_query
         response = self.inner_task._query(self.mocked_query_request)
-        assert expected_error_code, response['error']['code']
-        assert expected_error_msg, response['error']['message']
+        assert expected_error_code, response["error"]["code"]
+        assert expected_error_msg, response["error"]["message"]
         assert not self.inner_task._close.called
 
         self.inner_task._close.reset_mock()
@@ -199,12 +228,11 @@ class TestIconInnerService(unittest.TestCase):
         for exception in self.exception_list:
             expected_error_msg = exception.args[0]
 
-            def mocked_query(method,
-                             params):
+            def mocked_query(method, params):
                 raise exception
 
             self.inner_task._icon_service_engine.invoke = mocked_query
             response = self.inner_task._query(self.mocked_query_request)
-            assert expected_error_msg, response['error']['message']
+            assert expected_error_msg, response["error"]["message"]
             assert not self.inner_task._close.called
             self.inner_task._close.reset_mock()

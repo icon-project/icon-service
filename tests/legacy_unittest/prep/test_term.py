@@ -22,8 +22,13 @@ from unittest.mock import Mock
 from iconservice import utils
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.icon_constant import (
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, TERM_PERIOD,
-    IconScoreContextType, PenaltyReason, PRepStatus, TermFlag
+    PREP_MAIN_PREPS,
+    PREP_MAIN_AND_SUB_PREPS,
+    TERM_PERIOD,
+    IconScoreContextType,
+    PenaltyReason,
+    PRepStatus,
+    TermFlag,
 )
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxStorage
@@ -32,12 +37,21 @@ from iconservice.prep.data import PRep, Term
 from iconservice.utils import ContextStorage
 
 context = IconScoreContext(IconScoreContextType.DIRECT)
-context.storage = ContextStorage(deploy=None, fee=None, icx=Mock(spec=IcxStorage), iiss=None,
-                                 issue=None, rc=None, prep=Mock(spec=PRepStorage), meta=None, inv=None)
+context.storage = ContextStorage(
+    deploy=None,
+    fee=None,
+    icx=Mock(spec=IcxStorage),
+    iiss=None,
+    issue=None,
+    rc=None,
+    prep=Mock(spec=PRepStorage),
+    meta=None,
+    inv=None,
+)
 context.storage.prep.put_term = Mock()
 
 
-def _check_prep_snapshots_in_term(term: 'Term'):
+def _check_prep_snapshots_in_term(term: "Term"):
     assert len(term) == len(term.main_preps) + len(term.sub_preps)
 
     for snapshot in term.preps:
@@ -59,13 +73,20 @@ class TestTerm(unittest.TestCase):
             period=self.period,
             irep=self.irep,
             total_supply=self.total_supply,
-            total_delegated=self.total_delegated
+            total_delegated=self.total_delegated,
         )
         assert not self.term.is_frozen()
         assert not self.term.is_dirty()
         _check_prep_snapshots_in_term(self.term)
 
-        keys = "sequence", "start_block_height", "period", "irep", "total_supply", "total_delegated"
+        keys = (
+            "sequence",
+            "start_block_height",
+            "period",
+            "irep",
+            "total_supply",
+            "total_delegated",
+        )
 
         for key in keys:
             assert getattr(self.term, key) == getattr(self, key)
@@ -75,10 +96,12 @@ class TestTerm(unittest.TestCase):
         for i in range(PREP_MAIN_AND_SUB_PREPS + 10):
             delegated = 100 * 10 ** 18 - i
 
-            self.preps.append(PRep(
-                Address.from_prefix_and_int(AddressPrefix.EOA, i),
-                delegated=delegated
-            ))
+            self.preps.append(
+                PRep(
+                    Address.from_prefix_and_int(AddressPrefix.EOA, i),
+                    delegated=delegated,
+                )
+            )
 
             if i < PREP_MAIN_AND_SUB_PREPS:
                 self.total_elected_prep_delegated += delegated
@@ -91,7 +114,9 @@ class TestTerm(unittest.TestCase):
         _check_prep_snapshots_in_term(self.term)
 
         assert not self.term.is_frozen()
-        assert self.term.total_elected_prep_delegated == self.total_elected_prep_delegated
+        assert (
+            self.term.total_elected_prep_delegated == self.total_elected_prep_delegated
+        )
         assert len(self.term.main_preps) == PREP_MAIN_PREPS
         assert len(self.term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS
 
@@ -99,7 +124,9 @@ class TestTerm(unittest.TestCase):
             assert prep.address == prep_snapshot.address
             assert prep.delegated == prep_snapshot.delegated
 
-        for prep, prep_snapshot in zip(self.preps[PREP_MAIN_PREPS:], self.term.sub_preps):
+        for prep, prep_snapshot in zip(
+            self.preps[PREP_MAIN_PREPS:], self.term.sub_preps
+        ):
             assert prep.address == prep_snapshot.address
             assert prep.delegated == prep_snapshot.delegated
 
@@ -112,7 +139,7 @@ class TestTerm(unittest.TestCase):
         # Remove an invalid Main P-Rep which gets a penalty
         penalties = [
             PenaltyReason.LOW_PRODUCTIVITY,
-            PenaltyReason.PREP_DISQUALIFICATION
+            PenaltyReason.PREP_DISQUALIFICATION,
         ]
 
         for penalty in penalties:
@@ -125,18 +152,25 @@ class TestTerm(unittest.TestCase):
             _check_prep_snapshots_in_term(term)
             invalid_main_prep = copy.deepcopy(self.preps[0])
             invalid_main_prep.penalty = penalty
-            invalid_elected_preps: List['PRep'] = [invalid_main_prep]
+            invalid_elected_preps: List["PRep"] = [invalid_main_prep]
 
             term.update_invalid_elected_preps(invalid_elected_preps)
 
             _check_prep_snapshots_in_term(term)
             assert len(term.main_preps) == PREP_MAIN_PREPS
-            assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
+            assert len(
+                term.sub_preps
+            ) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
             assert isinstance(term.root_hash, bytes)
             assert term.root_hash != self.term.root_hash
-            assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+            assert (
+                term.total_elected_prep_delegated
+                == self.total_elected_prep_delegated - invalid_main_prep.delegated
+            )
             assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
-            assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+            assert utils.is_all_flag_on(
+                term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
+            )
             assert term.is_dirty()
 
     def test_update_preps_with_block_validation_penalty(self):
@@ -151,17 +185,24 @@ class TestTerm(unittest.TestCase):
         _check_prep_snapshots_in_term(term)
         invalid_main_prep = copy.deepcopy(self.preps[0])
         invalid_main_prep.penalty = PenaltyReason.BLOCK_VALIDATION
-        invalid_elected_preps: List['PRep'] = [invalid_main_prep]
+        invalid_elected_preps: List["PRep"] = [invalid_main_prep]
 
         term.update_invalid_elected_preps(invalid_elected_preps)
         _check_prep_snapshots_in_term(term)
         assert len(term.main_preps) == PREP_MAIN_PREPS
-        assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
+        assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(
+            invalid_elected_preps
+        )
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
-        assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+        assert (
+            term.total_elected_prep_delegated
+            == self.total_elected_prep_delegated - invalid_main_prep.delegated
+        )
         assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
-        assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+        assert utils.is_all_flag_on(
+            term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
+        )
         assert term.is_dirty()
 
     def test_update_preps_with_unregistered_prep(self):
@@ -176,17 +217,24 @@ class TestTerm(unittest.TestCase):
         _check_prep_snapshots_in_term(term)
         invalid_main_prep = copy.deepcopy(self.preps[0])
         invalid_main_prep.status = PRepStatus.UNREGISTERED
-        invalid_elected_preps: List['PRep'] = [invalid_main_prep]
+        invalid_elected_preps: List["PRep"] = [invalid_main_prep]
 
         term.update_invalid_elected_preps(invalid_elected_preps)
         _check_prep_snapshots_in_term(term)
         assert len(term.main_preps) == PREP_MAIN_PREPS
-        assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(invalid_elected_preps)
+        assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS - len(
+            invalid_elected_preps
+        )
         assert isinstance(term.root_hash, bytes)
         assert term.root_hash != self.term.root_hash
-        assert term.total_elected_prep_delegated == self.total_elected_prep_delegated - invalid_main_prep.delegated
+        assert (
+            term.total_elected_prep_delegated
+            == self.total_elected_prep_delegated - invalid_main_prep.delegated
+        )
         assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
-        assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+        assert utils.is_all_flag_on(
+            term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
+        )
         assert term.is_dirty()
 
     def test_update_preps_with_sub_preps_only(self):
@@ -196,7 +244,7 @@ class TestTerm(unittest.TestCase):
         _check_prep_snapshots_in_term(self.term)
 
         term = self.term.copy()
-        invalid_elected_preps: List['PRep'] = []
+        invalid_elected_preps: List["PRep"] = []
         for i in range(PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS):
             prep = self.preps[i]
             prep.penalty = PenaltyReason.LOW_PRODUCTIVITY
@@ -219,7 +267,9 @@ class TestTerm(unittest.TestCase):
         revision: int = 0
         _check_prep_snapshots_in_term(term)
 
-        invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[:PREP_MAIN_PREPS]]
+        invalid_elected_preps: List["PRep"] = [
+            prep for prep in self.preps[:PREP_MAIN_PREPS]
+        ]
         term.update_invalid_elected_preps(invalid_elected_preps)
         assert len(term.main_preps) == PREP_MAIN_PREPS
         assert len(term.sub_preps) == PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS * 2
@@ -230,7 +280,9 @@ class TestTerm(unittest.TestCase):
         term = self.term.copy()
         _check_prep_snapshots_in_term(term)
 
-        invalid_elected_preps: List['PRep'] = [prep for prep in self.preps[1:PREP_MAIN_AND_SUB_PREPS]]
+        invalid_elected_preps: List["PRep"] = [
+            prep for prep in self.preps[1:PREP_MAIN_AND_SUB_PREPS]
+        ]
         term.update_invalid_elected_preps(invalid_elected_preps)
         assert len(term.main_preps) == 1
         assert len(term.sub_preps) == 0
@@ -238,7 +290,9 @@ class TestTerm(unittest.TestCase):
         assert term.root_hash != self.term.root_hash
         assert term.flags == term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
         assert not term.flags & TermFlag.MAIN_PREP_P2P_ENDPOINT
-        assert utils.is_all_flag_on(term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS)
+        assert utils.is_all_flag_on(
+            term.flags, TermFlag.MAIN_PREPS | TermFlag.SUB_PREPS
+        )
         assert term.is_dirty()
 
     def test_to_list_and_from_list(self):
@@ -247,7 +301,9 @@ class TestTerm(unittest.TestCase):
         assert self.term.flags == TermFlag.NONE
         _check_prep_snapshots_in_term(self.term)
 
-        new_term = Term.from_list(self.term.to_list(), 0, self.term.total_elected_prep_delegated_snapshot)
+        new_term = Term.from_list(
+            self.term.to_list(), 0, self.term.total_elected_prep_delegated_snapshot
+        )
         _check_prep_snapshots_in_term(new_term)
 
         assert self.term == new_term

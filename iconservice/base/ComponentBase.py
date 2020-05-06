@@ -33,13 +33,14 @@ class EngineBase(ABC):
     def close(self):
         pass
 
-    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+    def rollback(
+        self, context: "IconScoreContext", block_height: int, block_hash: bytes
+    ):
         pass
 
 
 class StorageBase(ABC):
-
-    def __init__(self, db: 'ContextDatabase'):
+    def __init__(self, db: "ContextDatabase"):
         """Constructor
 
         :param db: (Database) state db wrapper
@@ -49,7 +50,7 @@ class StorageBase(ABC):
     def open(self, *args, **kwargs):
         pass
 
-    def close(self, context: 'IconScoreContext'):
+    def close(self, context: "IconScoreContext"):
         """Close the embedded database.
 
         :param context:
@@ -58,5 +59,7 @@ class StorageBase(ABC):
             self._db.close(context)
             self._db = None
 
-    def rollback(self, context: 'IconScoreContext', block_height: int, block_hash: bytes):
+    def rollback(
+        self, context: "IconScoreContext", block_height: int, block_hash: bytes
+    ):
         pass

@@ -22,32 +22,29 @@ if TYPE_CHECKING:
     from ..prep.data import Term
 
 
-def get_main_preps(context: 'IconScoreContext', **_kwargs):
-    term: 'Term' = context.engine.prep.term
+def get_main_preps(context: "IconScoreContext", **_kwargs):
+    term: "Term" = context.engine.prep.term
     preps: Optional[dict] = None
     if context.is_decentralized():
-        preps: Optional[dict] = \
-            context.engine.prep.get_main_preps_in_dict(context, term)
+        preps: Optional[dict] = context.engine.prep.get_main_preps_in_dict(
+            context, term
+        )
     if preps is None:
         preps = {}
 
-    block: 'Block' = context.storage.icx.last_block
-    preps['blockHeight'] = hex(0) if block is None else hex(block.height)
+    block: "Block" = context.storage.icx.last_block
+    preps["blockHeight"] = hex(0) if block is None else hex(block.height)
     TypeConverter.convert_type_reverse(preps)
-    result = {
-        "result": preps
-    }
+    result = {"result": preps}
 
     return result
 
 
-inner_call_handler = {
-    "ise_getPRepList": get_main_preps
-}
+inner_call_handler = {"ise_getPRepList": get_main_preps}
 
 
-def inner_call(context: 'IconScoreContext', request: dict):
-    method = request['method']
+def inner_call(context: "IconScoreContext", request: dict):
+    method = request["method"]
     params = request.get("params", {})
     handler = inner_call_handler[method]
     return handler(context, **params)

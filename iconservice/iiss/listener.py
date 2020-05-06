@@ -23,9 +23,11 @@ from ..icx.icx_account import Account
 
 class EngineListener(metaclass=ABCMeta):
     @abstractmethod
-    def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
+    def on_set_stake(self, context: "IconScoreContext", account: "Account"):
         pass
 
     @abstractmethod
-    def on_set_delegation(self, context: 'IconScoreContext', delegated_accounts: List['Account']):
+    def on_set_delegation(
+        self, context: "IconScoreContext", delegated_accounts: List["Account"]
+    ):
         pass

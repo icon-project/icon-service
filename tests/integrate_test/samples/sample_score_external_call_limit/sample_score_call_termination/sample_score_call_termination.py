@@ -2,10 +2,9 @@ from iconservice import *
 
 
 class SampleScoreCallTermination(IconScoreBase):
-
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
+        self._value = VarDB("value", db, value_type=int)
 
     def on_install(self) -> None:
         super().on_install()

@@ -27,19 +27,19 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateMethodParamters(TestIntegrateBase):
-
-    def init_deploy_sample_token(self, init_supply: int, decimal: int) -> 'Address':
-        tx_results: List['TransactionResult'] = self.deploy_score(
+    def init_deploy_sample_token(self, init_supply: int, decimal: int) -> "Address":
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_deploy_scores",
             score_name="install/sample_token",
             from_=self._accounts[0],
-            deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)})
+            deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)},
+        )
         return tx_results[0].score_address
 
     def test_parameters_success_cases(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
@@ -48,10 +48,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0].address)},
+            },
         }
         response = self._query(query_request)
         init_balance: int = init_supply * ICX_IN_LOOP
@@ -59,10 +57,12 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
         # transfer test
         value = 100 * ICX_IN_LOOP
-        self.score_call(from_=self._accounts[0],
-                        to_=score_address,
-                        func_name="transfer",
-                        params={"addr_to": str(self._accounts[1].address), "value": hex(value)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="transfer",
+            params={"addr_to": str(self._accounts[1].address), "value": hex(value)},
+        )
 
         # balance_of test
         query_request = {
@@ -71,10 +71,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0].address)},
+            },
         }
         response = self._query(query_request)
         self.assertEqual(response, init_balance - value)
@@ -85,10 +83,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[1].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[1].address)},
+            },
         }
         response = self._query(query_request)
         self.assertEqual(response, value)
@@ -96,7 +92,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_more_parameters_query(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
@@ -107,26 +103,23 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
                 "method": "balance_of",
                 "params": {
                     "addr_from": str(self._accounts[0].address),
-                    "more_param": hex(1)
-                }
-            }
+                    "more_param": hex(1),
+                },
+            },
         }
         self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_less_parameters_query(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
             "from": self._admin,
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "balance_of",
-                "params": {}
-            }
+            "data": {"method": "balance_of", "params": {}},
         }
 
         self.assertRaises(TypeError, self._query, query_request)
@@ -134,19 +127,14 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_invalid_paramter_value_query(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
             "from": self._admin,
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "balance_of",
-                "params": {
-                    "addr_from": hex(1)
-                }
-            }
+            "data": {"method": "balance_of", "params": {"addr_from": hex(1)}},
         }
 
         self.assertRaises(InvalidParamsException, self._query, query_request)
@@ -154,7 +142,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_invalid_address_query(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # balance_of test
         query_request = {
@@ -163,10 +151,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0])[:20]
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0])[:20]},
+            },
         }
 
         self.assertRaises(InvalidParamsException, self._query, query_request)
@@ -174,18 +160,22 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_more_parameters_invoke(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
         init_balance: int = init_supply * ICX_IN_LOOP
         value = 100 * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_address,
-                                                                func_name="transfer",
-                                                                params={"addr_to": str(self._accounts[1].address),
-                                                                        "value": hex(value),
-                                                                        "additional_param": hex(1)},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="transfer",
+            params={
+                "addr_to": str(self._accounts[1].address),
+                "value": hex(value),
+                "additional_param": hex(1),
+            },
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         query_request = {
@@ -194,10 +184,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0].address)},
+            },
         }
         response = self._query(query_request)
         self.assertEqual(response, init_balance)
@@ -205,18 +193,23 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_less_parameters_invoke(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
         init_balance: int = init_supply * ICX_IN_LOOP
         value = 100 * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_address,
-                                                                func_name="transfer",
-                                                                params={"value": hex(value)},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="transfer",
+            params={"value": hex(value)},
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertTrue(tx_results[0].failure.message.find("missing 1 required positional argument") != -1)
+        self.assertTrue(
+            tx_results[0].failure.message.find("missing 1 required positional argument")
+            != -1
+        )
 
         query_request = {
             "from": self._admin,
@@ -224,10 +217,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0].address)},
+            },
         }
         response = self._query(query_request)
         self.assertEqual(response, init_balance)
@@ -235,18 +226,24 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_invalid_paramters_invoke(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
         init_balance: int = init_supply * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_address,
-                                                                func_name="transfer",
-                                                                params={"addr_to": str(self._accounts[1].address),
-                                                                        "value": str(self._accounts[0].address)},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_address,
+            func_name="transfer",
+            params={
+                "addr_to": str(self._accounts[1].address),
+                "value": str(self._accounts[0].address),
+            },
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertTrue(tx_results[0].failure.message.find("invalid literal for int()") != -1)
+        self.assertTrue(
+            tx_results[0].failure.message.find("invalid literal for int()") != -1
+        )
 
         # check balance
         query_request = {
@@ -255,10 +252,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0].address)},
+            },
         }
         response = self._query(query_request)
         self.assertEqual(response, init_balance)
@@ -266,17 +261,20 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     def test_invalid_address_invoke(self):
         init_supply: int = 1000
         decimal: int = 18
-        score_address: 'Address' = self.init_deploy_sample_token(init_supply, decimal)
+        score_address: "Address" = self.init_deploy_sample_token(init_supply, decimal)
 
         # transfer test
         init_balance: int = init_supply * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.score_call(
+        tx_results: List["TransactionResult"] = self.score_call(
             from_=self._accounts[0],
             to_=score_address,
             func_name="transfer",
-            params={"addr_to": str(self._accounts[1].address)[:20],
-                    "value": str(self._accounts[0].address)},
-            expected_status=False)
+            params={
+                "addr_to": str(self._accounts[1].address)[:20],
+                "value": str(self._accounts[0].address),
+            },
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         # check balance
@@ -286,25 +284,24 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._accounts[0].address)
-                }
-            }
+                "params": {"addr_from": str(self._accounts[0].address)},
+            },
         }
         response = self._query(query_request)
         self.assertEqual(response, init_balance)
 
     def test_default_parameters(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_db_returns_default_value",
             from_=self._accounts[0],
-            deploy_params={})
-        score_address: 'Address' = tx_results[0].score_address
+            deploy_params={},
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         val1 = 3
         val2 = "string"
-        val3 = b'bytestring'
+        val3 = b"bytestring"
         val4 = Address.from_string(f"hx{'0' * 40}")
         val5 = False
         val6 = Address.from_string(f"hx{'abcd1234' * 5}")
@@ -313,51 +310,48 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             "from": self._admin,
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "get_value1",
-                "params": {}
-            }
+            "data": {"method": "get_value1", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(response, val1)
 
-        query_request['data']['method'] = 'get_value2'
+        query_request["data"]["method"] = "get_value2"
         response = self._query(query_request)
         self.assertEqual(response, val2)
 
-        query_request['data']['method'] = 'get_value3'
+        query_request["data"]["method"] = "get_value3"
         response = self._query(query_request)
         self.assertEqual(response, val3)
 
-        query_request['data']['method'] = 'get_value4'
+        query_request["data"]["method"] = "get_value4"
         response = self._query(query_request)
         self.assertEqual(response, val4)
 
-        query_request['data']['method'] = 'get_value5'
+        query_request["data"]["method"] = "get_value5"
         response = self._query(query_request)
         self.assertEqual(response, val5)
 
-        query_request['data']['method'] = 'get_value6'
+        query_request["data"]["method"] = "get_value6"
         response = self._query(query_request)
         self.assertEqual(response, val6)
 
     def test_primitive_type_parameters_methods(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_db_returns",
             from_=self._accounts[0],
-            deploy_params={"value": str(self._accounts[1].address),
-                           "value1": str(self._accounts[1].address)})
-        score_address: 'Address' = tx_results[0].score_address
+            deploy_params={
+                "value": str(self._accounts[1].address),
+                "value1": str(self._accounts[1].address),
+            },
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         query_request = {
             "from": self._admin,
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "get_value1",
-                "params": {}
-            }
+            "data": {"method": "get_value1", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(response, 0)
@@ -367,12 +361,13 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value1",
-            params={"value": hex(value)})
+            params={"value": hex(value)},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
-        query_request['data']['method'] = "get_value2"
+        query_request["data"]["method"] = "get_value2"
         response = self._query(query_request)
         self.assertEqual(response, "")
 
@@ -381,12 +376,13 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value2",
-            params={"value": value})
+            params={"value": value},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
-        query_request['data']['method'] = "get_value3"
+        query_request["data"]["method"] = "get_value3"
         response = self._query(query_request)
         self.assertEqual(response, None)
 
@@ -395,12 +391,13 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value3",
-            params={"value": bytes.hex(value)})
+            params={"value": bytes.hex(value)},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
-        query_request['data']['method'] = "get_value4"
+        query_request["data"]["method"] = "get_value4"
         response = self._query(query_request)
         self.assertEqual(response, self._accounts[1].address)
 
@@ -409,12 +406,13 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value4",
-            params={"value": str(value)})
+            params={"value": str(value)},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
-        query_request['data']['method'] = "get_value5"
+        query_request["data"]["method"] = "get_value5"
         response = self._query(query_request)
         self.assertEqual(response, False)
 
@@ -423,12 +421,13 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value5",
-            params={"value": hex(int(value))})
+            params={"value": hex(int(value))},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, value)
 
-        query_request['data']['method'] = "get_value6"
+        query_request["data"]["method"] = "get_value6"
         response = self._query(query_request)
         self.assertEqual(response, self._accounts[1].address)
 
@@ -437,7 +436,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value6",
-            params={"value": str(value)})
+            params={"value": str(value)},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, value)
@@ -449,25 +449,24 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             to_=score_address,
             func_name="set_value6",
             params={"value": str(value)},
-            expected_status=False)
+            expected_status=False,
+        )
 
     # test for empty parameter invoke method
     def test_empty_parameter_invoke(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_deploy_scores",
             score_name="install/sample_score",
             from_=self._accounts[0],
-            deploy_params={"value": hex(1000)})
-        score_address: 'Address' = tx_results[0].score_address
+            deploy_params={"value": hex(1000)},
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         query_request = {
             "from": self._admin,
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "get_value",
-                "params": {}
-            }
+            "data": {"method": "get_value", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(response, 1000)
@@ -476,7 +475,8 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             from_=self._accounts[0],
             to_=score_address,
             func_name="set_value",
-            params={"value": hex(18)})
+            params={"value": hex(18)},
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, 18)
@@ -484,29 +484,25 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         # token test
         init_supply: int = 1000
         decimal: int = 18
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_deploy_scores",
             score_name="install/sample_token",
             from_=self._accounts[0],
-            deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)})
-        score_address: 'Address' = tx_results[0].score_address
+            deploy_params={"init_supply": hex(init_supply), "decimal": hex(decimal)},
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         query_request = {
             "from": self._admin,
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "total_supply",
-                "params": {}
-            }
+            "data": {"method": "total_supply", "params": {}},
         }
         response = self._query(query_request)
         self.assertEqual(response, init_supply * 10 ** decimal)
         self.score_call(
-            from_=self._accounts[0],
-            to_=score_address,
-            func_name="mint",
-            params={})
+            from_=self._accounts[0], to_=score_address, func_name="mint", params={}
+        )
 
         response = self._query(query_request)
         self.assertEqual(response, init_supply * 10 ** decimal + 1)

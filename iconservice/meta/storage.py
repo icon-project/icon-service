@@ -27,24 +27,21 @@ if TYPE_CHECKING:
 
 
 class Storage(StorageBase):
-    _KEY_LAST_CALC_INFO = b'last_calc_info'
-    _KEY_LAST_TERM_INFO = b'last_term_info'
-    _KEY_LAST_MAIN_PREPS = b'last_main_preps'
+    _KEY_LAST_CALC_INFO = b"last_calc_info"
+    _KEY_LAST_TERM_INFO = b"last_term_info"
+    _KEY_LAST_MAIN_PREPS = b"last_main_preps"
 
-    _KEY_PREV_NODE_ADDRESS_MAPPER = b'prev_node_address_mapper'
+    _KEY_PREV_NODE_ADDRESS_MAPPER = b"prev_node_address_mapper"
 
-    def __init__(self, db: 'ContextDatabase'):
+    def __init__(self, db: "ContextDatabase"):
         super().__init__(MetaContextDatabase(db.key_value_db))
 
-    def put_last_calc_info(self,
-                           context: 'IconScoreContext',
-                           start: int,
-                           end: int):
+    def put_last_calc_info(self, context: "IconScoreContext", start: int, end: int):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, start, end])
         self._db.put(context, self._KEY_LAST_CALC_INFO, value)
 
-    def get_last_calc_info(self, context: 'IconScoreContext') -> Tuple[int, int]:
+    def get_last_calc_info(self, context: "IconScoreContext") -> Tuple[int, int]:
         value: bytes = self._db.get(context, self._KEY_LAST_CALC_INFO)
         if value is None:
             return -1, -1
@@ -52,15 +49,12 @@ class Storage(StorageBase):
         _version = data[0]
         return data[1], data[2]
 
-    def put_last_term_info(self,
-                           context: 'IconScoreContext',
-                           start: int,
-                           end: int):
+    def put_last_term_info(self, context: "IconScoreContext", start: int, end: int):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, start, end])
         self._db.put(context, self._KEY_LAST_TERM_INFO, value)
 
-    def get_last_term_info(self, context: 'IconScoreContext') -> Tuple[int, int]:
+    def get_last_term_info(self, context: "IconScoreContext") -> Tuple[int, int]:
         value: bytes = self._db.get(context, self._KEY_LAST_TERM_INFO)
         if value is None:
             return -1, -1
@@ -68,14 +62,14 @@ class Storage(StorageBase):
         _version = data[0]
         return data[1], data[2]
 
-    def put_last_main_preps(self,
-                            context: 'IconScoreContext',
-                            main_preps: List['Address']):
+    def put_last_main_preps(
+        self, context: "IconScoreContext", main_preps: List["Address"]
+    ):
         version = 0
         value: bytes = MsgPackForDB.dumps([version, main_preps])
         self._db.put(context, self._KEY_LAST_MAIN_PREPS, value)
 
-    def get_last_main_preps(self, context: 'IconScoreContext') -> List['Address']:
+    def get_last_main_preps(self, context: "IconScoreContext") -> List["Address"]:
         value: bytes = self._db.get(context, self._KEY_LAST_MAIN_PREPS)
         if value is None:
             return []
@@ -83,12 +77,16 @@ class Storage(StorageBase):
         _version = data[0]
         return data[1]
 
-    def put_prep_address_converter(self,
-                                   context: 'IconScoreContext',
-                                   prep_address_converter: 'PRepAddressConverter'):
+    def put_prep_address_converter(
+        self,
+        context: "IconScoreContext",
+        prep_address_converter: "PRepAddressConverter",
+    ):
         value: bytes = prep_address_converter.to_bytes()
         self._db.put(context, self._KEY_PREV_NODE_ADDRESS_MAPPER, value)
 
-    def get_prep_address_converter(self, context: 'IconScoreContext') -> 'PRepAddressConverter':
+    def get_prep_address_converter(
+        self, context: "IconScoreContext"
+    ) -> "PRepAddressConverter":
         value: bytes = self._db.get(context, self._KEY_PREV_NODE_ADDRESS_MAPPER)
         return PRepAddressConverter.from_bytes(value)

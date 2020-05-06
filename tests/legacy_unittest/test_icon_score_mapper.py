@@ -42,7 +42,6 @@ class TestIconScoreMapper(unittest.TestCase):
 
 
 class TestScore(IconScoreBase):
-
     def __init__(self):
         pass
 

@@ -17,9 +17,9 @@ class TestMessage(unittest.TestCase):
         assert msg_id == 2
         assert message._next_msg_id == 3
 
-        message._next_msg_id = 0xffffffff
+        message._next_msg_id = 0xFFFFFFFF
         msg_id: int = message._get_next_msg_id()
-        assert msg_id == 0xffffffff
+        assert msg_id == 0xFFFFFFFF
         assert message._next_msg_id == 1
 
         msg_id: int = message._get_next_msg_id()

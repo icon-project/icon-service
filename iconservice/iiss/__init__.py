@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from ..prep.data.prep import PRep
 
 
-def check_decentralization_condition(context: 'IconScoreContext') -> bool:
+def check_decentralization_condition(context: "IconScoreContext") -> bool:
     if context.revision < Revision.DECENTRALIZATION.value or context.is_decentralized():
         # If revision is less than REV_DECENTRALIZATION or
         # network has been already decentralized
@@ -39,15 +39,17 @@ def check_decentralization_condition(context: 'IconScoreContext') -> bool:
     get delegation more than some value( default: total-supply * 0.002icx )"""
     if context.preps.size(active_prep_only=True) >= context.main_prep_count:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
-        bottom_prep: 'PRep' = context.preps.get_by_index(context.main_prep_count - 1)
+        bottom_prep: "PRep" = context.preps.get_by_index(context.main_prep_count - 1)
         return bottom_prep.delegated >= minimum_delegate
     return False
 
 
-def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
+def get_minimum_delegate_for_bottom_prep(context: "IconScoreContext") -> int:
     """Minimum delegate default value = total_supply * 0.002 ICX"""
     assert 1.0 > context.decentralize_trigger >= 0
-    numerator, denominator = _split_float_to_numerator_and_denominator(context.decentralize_trigger)
+    numerator, denominator = _split_float_to_numerator_and_denominator(
+        context.decentralize_trigger
+    )
     if numerator == 0:
         return 0
 
@@ -58,8 +60,8 @@ def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
 
 def _split_float_to_numerator_and_denominator(float_data: float) -> tuple:
     assert 1.0 > float_data >= 0
-    str_float: str = format(decimal.Decimal(str(float_data)), 'f')
-    str_decimal: str = str_float[str_float.find('.') + 1:]
+    str_float: str = format(decimal.Decimal(str(float_data)), "f")
+    str_decimal: str = str_float[str_float.find(".") + 1 :]
     numerator = int(str_decimal)
     denominator = 10 ** len(str_decimal)
     return numerator, denominator

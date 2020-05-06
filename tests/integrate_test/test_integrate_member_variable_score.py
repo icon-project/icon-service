@@ -27,46 +27,41 @@ if TYPE_CHECKING:
 
 
 class TestScoreMemberVariable(TestIntegrateBase):
-
     def test_use_cached_score(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_member_variable_score",
-            from_=self._accounts[0])
-        score_address: 'Address' = tx_results[0].score_address
+            from_=self._accounts[0],
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         request = {
             "version": self._version,
             "from": self._accounts[0],
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "getName",
-                "params": {}
-            }
+            "data": {"method": "getName", "params": {}},
         }
         response = self._query(request)
-        self.assertEqual(response, 'on_install')
+        self.assertEqual(response, "on_install")
 
     def test_use_every_time_created_score(self):
         self.update_governance()
         self.set_revision(3)
 
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_member_variable_score",
-            from_=self._accounts[0])
-        score_address: 'Address' = tx_results[0].score_address
+            from_=self._accounts[0],
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         request = {
             "version": self._version,
             "from": self._accounts[0],
             "to": score_address,
             "dataType": "call",
-            "data": {
-                "method": "getName",
-                "params": {}
-            }
+            "data": {"method": "getName", "params": {}},
         }
         response = self._query(request)
-        self.assertEqual(response, '__init__')
+        self.assertEqual(response, "__init__")

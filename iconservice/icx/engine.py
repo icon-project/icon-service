@@ -32,9 +32,7 @@ class Engine(EngineBase):
     _context property is inherited from ContextGetter
     """
 
-    def get_balance(self,
-                    context: 'IconScoreContext',
-                    address: 'Address') -> int:
+    def get_balance(self, context: "IconScoreContext", address: "Address") -> int:
         """Get the balance of address
 
         :param context:
@@ -44,13 +42,10 @@ class Engine(EngineBase):
 
         # If the address is not present, its balance is 0.
         # Unit: loop (1 icx == 1e18 loop)
-        account: 'Account' = context.storage.icx.get_account(context, address)
+        account: "Account" = context.storage.icx.get_account(context, address)
         return account.balance
 
-    def charge_fee(self,
-                   context: 'IconScoreContext',
-                   from_: 'Address',
-                   fee: int):
+    def charge_fee(self, context: "IconScoreContext", from_: "Address", fee: int):
         """Charge a fee for a tx
         It MUST NOT raise any exceptions
 
@@ -61,21 +56,17 @@ class Engine(EngineBase):
         """
         self._transfer(context, from_, context.storage.icx.fee_treasury, fee)
 
-    def transfer(self,
-                 context: 'IconScoreContext',
-                 from_: 'Address',
-                 to: 'Address',
-                 amount: int) -> bool:
+    def transfer(
+        self, context: "IconScoreContext", from_: "Address", to: "Address", amount: int
+    ) -> bool:
         if amount < 0:
-            raise InvalidParamsException('Amount is less than zero')
+            raise InvalidParamsException("Amount is less than zero")
 
         return self._transfer(context, from_, to, amount)
 
-    def _transfer(self,
-                  context: 'IconScoreContext',
-                  from_: 'Address',
-                  to: 'Address',
-                  amount: int) -> bool:
+    def _transfer(
+        self, context: "IconScoreContext", from_: "Address", to: "Address", amount: int
+    ) -> bool:
         """Transfer the amount of icx to the account indicated by _to address
 
         :param context:

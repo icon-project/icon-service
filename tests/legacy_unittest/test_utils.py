@@ -19,7 +19,12 @@ import json
 import os
 import unittest
 
-from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes, BytesToHexJSONEncoder
+from iconservice.utils import (
+    is_lowercase_hex_string,
+    byte_length_of_int,
+    int_to_bytes,
+    BytesToHexJSONEncoder,
+)
 from iconservice.utils.hashing.hash_generator import RootHashGenerator
 from tests import create_address
 
@@ -27,7 +32,7 @@ from tests import create_address
 class TestUtils(unittest.TestCase):
     def test_is_lowercase_hex_string(self):
         # if prefix is present, return false.
-        a = '0x00678792645ed9f18f1560c4b2e1b0aa028f61e4'
+        a = "0x00678792645ed9f18f1560c4b2e1b0aa028f61e4"
         ret = is_lowercase_hex_string(a)
         self.assertFalse(ret)
 
@@ -35,9 +40,9 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(ret)
 
         # empty string is not hexdecimal.
-        self.assertFalse(is_lowercase_hex_string(''))
+        self.assertFalse(is_lowercase_hex_string(""))
 
-        a = '72917492AF'
+        a = "72917492AF"
         self.assertFalse(is_lowercase_hex_string(a))
 
     def test_byte_length_of_int(self):
@@ -80,22 +85,28 @@ class TestUtils(unittest.TestCase):
     def test_invoke_result_json_encoder(self):
         value: bytes = os.urandom(32)
         results = {"value": value}
-        text: str = json.dumps(results, cls=BytesToHexJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(
+            results, cls=BytesToHexJSONEncoder, separators=(",", ":")
+        )
         assert text == f'{{"value":"0x{value.hex()}"}}'
 
         value: int = 1234
         results = {"value": value}
-        text: str = json.dumps(results, cls=BytesToHexJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(
+            results, cls=BytesToHexJSONEncoder, separators=(",", ":")
+        )
         assert text == f'{{"value":{value}}}'
 
         value: str = "hello world"
         results = {"value": value}
-        text: str = json.dumps(results, cls=BytesToHexJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(
+            results, cls=BytesToHexJSONEncoder, separators=(",", ":")
+        )
         assert text == f'{{"value":"{value}"}}'
 
-        text: str = json.dumps(None, cls=BytesToHexJSONEncoder, separators=(',', ':'))
+        text: str = json.dumps(None, cls=BytesToHexJSONEncoder, separators=(",", ":"))
         assert text == "null"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

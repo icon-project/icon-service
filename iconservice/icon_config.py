@@ -13,15 +13,21 @@
 # limitations under the License.
 
 from .icon_constant import (
-    ConfigKey, ICX_IN_LOOP, TERM_PERIOD, IISS_DAY_BLOCK, PREP_MAIN_PREPS,
-    PREP_MAIN_AND_SUB_PREPS, PENALTY_GRACE_PERIOD, LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
-    BLOCK_VALIDATION_PENALTY_THRESHOLD, BACKUP_FILES, BLOCK_INVOKE_TIMEOUT_S
+    ConfigKey,
+    ICX_IN_LOOP,
+    TERM_PERIOD,
+    IISS_DAY_BLOCK,
+    PREP_MAIN_PREPS,
+    PREP_MAIN_AND_SUB_PREPS,
+    PENALTY_GRACE_PERIOD,
+    LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
+    BLOCK_VALIDATION_PENALTY_THRESHOLD,
+    BACKUP_FILES,
+    BLOCK_INVOKE_TIMEOUT_S,
 )
 
 default_icon_config = {
-    "log": {
-        "logger": "iconservice"
-    },
+    "log": {"logger": "iconservice"},
     ConfigKey.SCORE_ROOT_PATH: ".score",
     ConfigKey.STATE_DB_ROOT_PATH: ".statedb",
     ConfigKey.CHANNEL: "loopchain_default",
@@ -32,14 +38,14 @@ default_icon_config = {
     ConfigKey.SERVICE: {
         ConfigKey.SERVICE_FEE: False,
         ConfigKey.SERVICE_AUDIT: False,
-        ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False
+        ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False,
     },
     ConfigKey.IISS_META_DATA: {
         ConfigKey.REWARD_MIN: 200,
         ConfigKey.REWARD_MAX: 1200,
         ConfigKey.REWARD_POINT: 7000,
         ConfigKey.UN_STAKE_LOCK_MIN: IISS_DAY_BLOCK * 5,
-        ConfigKey.UN_STAKE_LOCK_MAX: IISS_DAY_BLOCK * 20
+        ConfigKey.UN_STAKE_LOCK_MAX: IISS_DAY_BLOCK * 20,
     },
     # The reason why IISS_CALCULATE_PERIOD and TERM_PERIOD value is different
     # is to synchronize with the main net without revisioning.
@@ -62,5 +68,5 @@ default_icon_config = {
     ConfigKey.STEP_TRACE_FLAG: False,
     ConfigKey.PRECOMMIT_DATA_LOG_FLAG: False,
     ConfigKey.BACKUP_FILES: BACKUP_FILES,
-    ConfigKey.BLOCK_INVOKE_TIMEOUT: BLOCK_INVOKE_TIMEOUT_S
+    ConfigKey.BLOCK_INVOKE_TIMEOUT: BLOCK_INVOKE_TIMEOUT_S,
 }

@@ -39,20 +39,20 @@ from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_block_hash, rmtree
 from tests.conftest import generate_inv_container
 
-SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
-ICX_ENGINE_PATH = 'iconservice.icx.engine'
-ICX_STORAGE_PATH = 'iconservice.icx.storage'
-DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
+SERVICE_ENGINE_PATH = "iconservice.icon_service_engine.IconServiceEngine"
+ICX_ENGINE_PATH = "iconservice.icx.engine"
+ICX_STORAGE_PATH = "iconservice.icx.storage"
+DB_FACTORY_PATH = "iconservice.database.factory.ContextDatabaseFactory"
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, value, data_type, data")
 QueryData = namedtuple("QueryData", "from_, to_, data_type, data")
-KEY_VALUE_DB_PATH = 'iconservice.database.db.KeyValueDatabase'
-IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.reward_calc.storage'
-IISS_ENGINE_PATH = 'iconservice.iiss.engine'
-IISS_STORAGE_PATH = 'iconservice.iiss.storage'
-PREP_ENGINE_PATH = 'iconservice.prep.engine'
-PREP_STORAGE_PATH = 'iconservice.prep.storage'
-INV_ENGINE_PATH = 'iconservice.inv.engine'
-INV_STORAGE_PATH = 'iconservice.inv.storage'
+KEY_VALUE_DB_PATH = "iconservice.database.db.KeyValueDatabase"
+IISS_RC_DATA_STORAGE_PATH = "iconservice.iiss.reward_calc.storage"
+IISS_ENGINE_PATH = "iconservice.iiss.engine"
+IISS_STORAGE_PATH = "iconservice.iiss.storage"
+PREP_ENGINE_PATH = "iconservice.prep.engine"
+PREP_STORAGE_PATH = "iconservice.prep.storage"
+INV_ENGINE_PATH = "iconservice.inv.engine"
+INV_STORAGE_PATH = "iconservice.inv.storage"
 
 
 # noinspection PyProtectedMember
@@ -65,25 +65,26 @@ def generate_inner_task(revision=0):
 
 
 # noinspection PyProtectedMember
-@patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
-@patch(f'{ICX_ENGINE_PATH}.Engine.open')
-@patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{KEY_VALUE_DB_PATH}.from_path')
-@patch(f'{IISS_RC_DATA_STORAGE_PATH}.Storage._load_last_transaction_index')
-@patch(f'{IISS_ENGINE_PATH}.Engine.open')
-@patch(f'{IISS_STORAGE_PATH}.Storage.open')
-@patch(f'{PREP_ENGINE_PATH}.Engine.open')
-@patch(f'{PREP_STORAGE_PATH}.Storage.open')
+@patch(f"{SERVICE_ENGINE_PATH}._load_builtin_scores")
+@patch(f"{ICX_ENGINE_PATH}.Engine.open")
+@patch(f"{DB_FACTORY_PATH}.create_by_name")
+@patch(f"{KEY_VALUE_DB_PATH}.from_path")
+@patch(f"{IISS_RC_DATA_STORAGE_PATH}.Storage._load_last_transaction_index")
+@patch(f"{IISS_ENGINE_PATH}.Engine.open")
+@patch(f"{IISS_STORAGE_PATH}.Storage.open")
+@patch(f"{PREP_ENGINE_PATH}.Engine.open")
+@patch(f"{PREP_STORAGE_PATH}.Storage.open")
 def _create_inner_task(
-        prep_storage_open,
-        prep_engine_open,
-        iiss_storage_open,
-        iiss_engine_open,
-        load_last_tx_index,
-        rc_db_from_path,
-        db_factory_create_by_name,
-        icx_engine_open,
-        service_engine_load_builtin_scores):
+    prep_storage_open,
+    prep_engine_open,
+    iiss_storage_open,
+    iiss_engine_open,
+    load_last_tx_index,
+    rc_db_from_path,
+    db_factory_create_by_name,
+    icx_engine_open,
+    service_engine_load_builtin_scores,
+):
     state_db = {}
     rc_db = {}
 
@@ -135,27 +136,28 @@ def generate_service_engine(revision=0):
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
-@patch(f'{INV_ENGINE_PATH}.Engine.load_inv_container')
-@patch(f'{INV_ENGINE_PATH}.Engine.open')
-@patch(f'{INV_STORAGE_PATH}.Storage.open')
-@patch(f'{PREP_ENGINE_PATH}.Engine.open')
-@patch(f'{IISS_STORAGE_PATH}.Storage.open')
-@patch(f'{IISS_ENGINE_PATH}.Engine.open')
-@patch(f'{ICX_STORAGE_PATH}.Storage.open')
-@patch(f'{ICX_ENGINE_PATH}.Engine.open')
-@patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{KEY_VALUE_DB_PATH}.from_path')
+@patch(f"{INV_ENGINE_PATH}.Engine.load_inv_container")
+@patch(f"{INV_ENGINE_PATH}.Engine.open")
+@patch(f"{INV_STORAGE_PATH}.Storage.open")
+@patch(f"{PREP_ENGINE_PATH}.Engine.open")
+@patch(f"{IISS_STORAGE_PATH}.Storage.open")
+@patch(f"{IISS_ENGINE_PATH}.Engine.open")
+@patch(f"{ICX_STORAGE_PATH}.Storage.open")
+@patch(f"{ICX_ENGINE_PATH}.Engine.open")
+@patch(f"{DB_FACTORY_PATH}.create_by_name")
+@patch(f"{KEY_VALUE_DB_PATH}.from_path")
 def _create_service_engine(
-        rc_db_from_path,
-        db_factory_create_by_name,
-        icx_engine_open,
-        icx_storage_open,
-        iiss_engine_open,
-        iiss_storage_open,
-        prep_engine_open,
-        inv_storage_open,
-        inv_engine_open,
-        inv_engine_load_inv_container):
+    rc_db_from_path,
+    db_factory_create_by_name,
+    icx_engine_open,
+    icx_storage_open,
+    iiss_engine_open,
+    iiss_storage_open,
+    prep_engine_open,
+    inv_storage_open,
+    inv_engine_open,
+    inv_engine_load_inv_container,
+):
     service_engine = IconServiceEngine()
     service_engine._load_builtin_scores = Mock()
 
@@ -211,7 +213,7 @@ def _patch_service_engine(icon_service_engine, revision):
         iiss=IISSEngine(),
         prep=PRepEngine(),
         issue=IssueEngine(),
-        inv=INVEngine()
+        inv=INVEngine(),
     )
 
     db = icon_service_engine._icx_context_db
@@ -224,7 +226,7 @@ def _patch_service_engine(icon_service_engine, revision):
         issue=IssueStorage(db),
         meta=MetaDBStorage(db),
         rc=RewardCalcStorage(),
-        inv=INVStorage(db)
+        inv=INVStorage(db),
     )
     IconScoreContext.engine.inv._inv_container = generate_inv_container(False, revision)
 
@@ -234,45 +236,47 @@ def _patch_service_engine(icon_service_engine, revision):
 def create_request(requests: List[ReqData]):
     transactions = []
     for request in requests:
-        transactions.append({
-            'method': 'icx_sendTransaction',
-            'params': {
-                'txHash': request.tx_hash,
-                'version': hex(3),
-                'from': str(request.from_),
-                'to': str(request.to_),
-                'value': hex(request.value),
-                'stepLimit': hex(1234567),
-                'timestamp': hex(123456),
-                'dataType': request.data_type,
-                'data': request.data,
+        transactions.append(
+            {
+                "method": "icx_sendTransaction",
+                "params": {
+                    "txHash": request.tx_hash,
+                    "version": hex(3),
+                    "from": str(request.from_),
+                    "to": str(request.to_),
+                    "value": hex(request.value),
+                    "stepLimit": hex(1234567),
+                    "timestamp": hex(123456),
+                    "dataType": request.data_type,
+                    "data": request.data,
+                },
             }
-        })
+        )
 
     return {
-        'block': {
-            'blockHash': bytes.hex(create_block_hash(b'block')),
-            'blockHeight': hex(100),
-            'timestamp': hex(1234),
-            'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
+        "block": {
+            "blockHash": bytes.hex(create_block_hash(b"block")),
+            "blockHeight": hex(100),
+            "timestamp": hex(1234),
+            "prevBlockHash": bytes.hex(create_block_hash(b"prevBlock")),
         },
-        'transactions': transactions
+        "transactions": transactions,
     }
 
 
 def create_transaction_req(request: ReqData):
     return {
-        'method': 'icx_sendTransaction',
-        'params': {
-            'txHash': request.tx_hash,
-            'version': hex(3),
-            'from': str(request.from_),
-            'to': str(request.to_),
-            'stepLimit': hex(1234567),
-            'timestamp': hex(123456),
-            'dataType': request.data_type,
-            'data': request.data,
-        }
+        "method": "icx_sendTransaction",
+        "params": {
+            "txHash": request.tx_hash,
+            "version": hex(3),
+            "from": str(request.from_),
+            "to": str(request.to_),
+            "stepLimit": hex(1234567),
+            "timestamp": hex(123456),
+            "dataType": request.data_type,
+            "data": request.data,
+        },
     }
 
 
@@ -283,6 +287,6 @@ def create_query_request(request: QueryData):
             "from": str(request.from_),
             "to": str(request.to_),
             "dataType": request.data_type,
-            "data": request.data
-        }
+            "data": request.data,
+        },
     }

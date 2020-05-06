@@ -26,12 +26,23 @@ from iconservice.icon_constant import Revision
 from iconservice.inv import INVEngine, INVContainer
 from iconservice.inv.data.value import *
 from iconservice.iconscore.context.context import ContextContainer
-from iconservice.iconscore.icon_score_base2 import PRepInfo, get_main_prep_info, get_sub_prep_info
+from iconservice.iconscore.icon_score_base2 import (
+    PRepInfo,
+    get_main_prep_info,
+    get_sub_prep_info,
+)
 from iconservice.iconscore.icon_score_base2 import ScoreApiStepRatio
-from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _recover_key
+from iconservice.iconscore.icon_score_base2 import (
+    _create_address_with_key,
+    _recover_key,
+)
 from iconservice.iconscore.icon_score_base2 import create_address_with_key, recover_key
 from iconservice.iconscore.icon_score_base2 import sha3_256, json_dumps, json_loads
-from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType, IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import (
+    IconScoreContext,
+    IconScoreContextType,
+    IconScoreContextFactory,
+)
 from iconservice.iconscore.icon_score_step import StepType
 from iconservice.prep import PRepEngine
 from iconservice.prep.data import PRep, Term, PRepContainer
@@ -43,11 +54,11 @@ def create_msg_hash(tx: dict, excluded_keys: tuple) -> bytes:
     keys = [key for key in tx if key not in excluded_keys]
     keys.sort()
 
-    msg = 'icx_sendTransaction'
+    msg = "icx_sendTransaction"
     for key in keys:
         value: str = tx[key]
-        msg += f'.{key}.{value}'
-    msg_hash: bytes = hashlib.sha3_256(msg.encode('utf-8')).digest()
+        msg += f".{key}.{value}"
+    msg_hash: bytes = hashlib.sha3_256(msg.encode("utf-8")).digest()
     assert msg_hash == bytes.fromhex(tx[excluded_keys[0]])
     return msg_hash
 
@@ -56,29 +67,29 @@ def create_msg_hash(tx: dict, excluded_keys: tuple) -> bytes:
 def settable_inv_container():
     default_service_config: int = 0
     default_step_costs = {
-        'default': 1_000_000,
-        'contractCall': 15_000,
-        'contractCreate': 200_000,
-        'contractUpdate': 80_000,
-        'contractDestruct': -70_000,
-        'contractSet': 30_000,
-        'get': 0,
-        'set': 200,
-        'replace': 50,
-        'delete': -150,
-        'input': 200,
-        'eventLog': 100,
-        'apiCall': 0
+        "default": 1_000_000,
+        "contractCall": 15_000,
+        "contractCreate": 200_000,
+        "contractUpdate": 80_000,
+        "contractDestruct": -70_000,
+        "contractSet": 30_000,
+        "get": 0,
+        "set": 200,
+        "replace": 50,
+        "delete": -150,
+        "input": 200,
+        "eventLog": 100,
+        "apiCall": 0,
     }
     default_step_costs = {StepType(key): val for key, val in default_step_costs.items()}
 
     default_max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
-        IconScoreContextType.QUERY: 50_000_000
+        IconScoreContextType.QUERY: 50_000_000,
     }
     default_step_price: int = 0
     default_score_black_list: list = []
-    default_import_white_list = {"iconservice": ['*']}
+    default_import_white_list = {"iconservice": ["*"]}
     inv_container = INVContainer(is_migrated=False)
     inv_container._icon_network_values = {
         IconNetworkValueType.REVISION_CODE: RevisionCode(0),
@@ -87,7 +98,9 @@ def settable_inv_container():
         IconNetworkValueType.STEP_COSTS: StepCosts(default_step_costs),
         IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits(default_max_step_limits),
         IconNetworkValueType.SERVICE_CONFIG: ServiceConfig(default_service_config),
-        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(default_import_white_list)
+        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(
+            default_import_white_list
+        ),
     }
     return inv_container
 
@@ -99,14 +112,18 @@ def context(settable_inv_container: INVContainer):
     inv_engine = INVEngine()
     settable_inv_container.set_inv(StepPrice(10 ** 10))
     settable_inv_container.set_inv(StepCosts(STEP_COSTS))
-    settable_inv_container.set_inv(MaxStepLimits({IconScoreContextType.INVOKE: 2_500_000_000}))
+    settable_inv_container.set_inv(
+        MaxStepLimits({IconScoreContextType.INVOKE: 2_500_000_000})
+    )
     settable_inv_container.set_inv(RevisionCode(Revision.THREE.value))
     inv_engine._inv_container = settable_inv_container
 
     IconScoreContext.engine = ContextEngine(prep=prep_engine, inv=inv_engine)
     context_factory = IconScoreContextFactory()
 
-    block = Block(block_height=1, block_hash=b"1" * 40, prev_hash=b"0" * 40, timestamp=0)
+    block = Block(
+        block_height=1, block_hash=b"1" * 40, prev_hash=b"0" * 40, timestamp=0
+    )
     context = context_factory.create(IconScoreContextType.INVOKE, block)
 
     step_limit = 1_000_000_000
@@ -118,25 +135,25 @@ def context(settable_inv_container: INVContainer):
 
 
 TX_V2 = {
-    'from': 'hxdbc9f726ad776d9a43d5bad387eff01325178fa3',
-    'to': 'hx0fb148785e4a5d77d16429c7ed2edae715a4453a',
-    'value': '0x324e964b3eca80000',
-    'fee': '0x2386f26fc10000',
-    'timestamp': '1519709385120909',
-    'tx_hash': '1257b9ea76e716b145463f0350f534f973399898a18a50d391e7d2815e72c950',
-    'signature': 'WiRTA/tUNGVByc8fsZ7+U9BSDX4BcBuv2OpAuOLLbzUiCcovLPDuFE+PBaT8ovmz5wg+Bjr7rmKiu7Rl8v0DUQE=',
+    "from": "hxdbc9f726ad776d9a43d5bad387eff01325178fa3",
+    "to": "hx0fb148785e4a5d77d16429c7ed2edae715a4453a",
+    "value": "0x324e964b3eca80000",
+    "fee": "0x2386f26fc10000",
+    "timestamp": "1519709385120909",
+    "tx_hash": "1257b9ea76e716b145463f0350f534f973399898a18a50d391e7d2815e72c950",
+    "signature": "WiRTA/tUNGVByc8fsZ7+U9BSDX4BcBuv2OpAuOLLbzUiCcovLPDuFE+PBaT8ovmz5wg+Bjr7rmKiu7Rl8v0DUQE=",
 }
 # The transaction in block 100000 of MainNet
 TX_V3 = {
-    'version': '0x3',
-    'nid': '0x1',
-    'from': 'hx522bff55a62e0c75a1b51855b0802cfec6a92e84',
-    'to': 'hx11de4e28be4845de3ea392fd8d758655bf766ca7',
-    'value': '0x71afd498d0000',
-    'stepLimit': '0xf4240',
-    'timestamp': '0x57a4e5556cc03',
-    'signature': 'fcEMXqEGlqEivXXr7YtD/F1RXgxSXF+R4gVrGKxT1zxi3HukX4NzkSl9/Es1G+nyZx+kviTAtQFUrA+/T0NrfAA=',
-    'txHash': '6c71ac77b2d130a1f81d234e814974e85cabb0a3ec462c66ff3f820502d0ded2'
+    "version": "0x3",
+    "nid": "0x1",
+    "from": "hx522bff55a62e0c75a1b51855b0802cfec6a92e84",
+    "to": "hx11de4e28be4845de3ea392fd8d758655bf766ca7",
+    "value": "0x71afd498d0000",
+    "stepLimit": "0xf4240",
+    "timestamp": "0x57a4e5556cc03",
+    "signature": "fcEMXqEGlqEivXXr7YtD/F1RXgxSXF+R4gVrGKxT1zxi3HukX4NzkSl9/Es1G+nyZx+kviTAtQFUrA+/T0NrfAA=",
+    "txHash": "6c71ac77b2d130a1f81d234e814974e85cabb0a3ec462c66ff3f820502d0ded2",
 }
 STEP_LIMIT = 1_000_000_000
 STEP_COSTS = {
@@ -152,7 +169,7 @@ STEP_COSTS = {
     StepType.DELETE: -240,
     StepType.INPUT: 200,
     StepType.EVENT_LOG: 100,
-    StepType.API_CALL: 10_000
+    StepType.API_CALL: 10_000,
 }
 
 
@@ -169,21 +186,17 @@ def _base64_decode_signature(str_sig: str):
 
 
 class TestIconScoreApi:
-
-    @pytest.mark.parametrize("tx, tx_hash_key", [
-        (TX_V2, 'tx_hash'),
-        (TX_V3, 'txHash')
-    ])
-    @pytest.mark.parametrize("compressed, expected_pubkey_len, expected_pubkey_prefix", [
-        (True, 33, [0x02, 0x03]),
-        (False, 65, [0x04])
-    ])
-    def test_recover_key_and_create_address_with_key(self,
-                                                     tx, tx_hash_key,
-                                                     compressed, expected_pubkey_len, expected_pubkey_prefix):
+    @pytest.mark.parametrize("tx, tx_hash_key", [(TX_V2, "tx_hash"), (TX_V3, "txHash")])
+    @pytest.mark.parametrize(
+        "compressed, expected_pubkey_len, expected_pubkey_prefix",
+        [(True, 33, [0x02, 0x03]), (False, 65, [0x04])],
+    )
+    def test_recover_key_and_create_address_with_key(
+        self, tx, tx_hash_key, compressed, expected_pubkey_len, expected_pubkey_prefix
+    ):
         # TEST: '_recover_key' method should return proper public key according to the compression flag
-        signature: bytes = _base64_decode_signature(tx['signature'])
-        msg_hash: bytes = create_msg_hash(tx, (tx_hash_key, 'signature'))
+        signature: bytes = _base64_decode_signature(tx["signature"])
+        msg_hash: bytes = create_msg_hash(tx, (tx_hash_key, "signature"))
 
         public_key: bytes = _recover_key(msg_hash, signature, compressed=compressed)
 
@@ -194,18 +207,27 @@ class TestIconScoreApi:
         # TEST: '_create_address_with_key' method should make same address no matter what public key format
         address: Address = _create_address_with_key(public_key)
 
-        assert str(address) == tx['from']
+        assert str(address) == tx["from"]
 
-    @pytest.mark.parametrize("compressed, expected_step_costs", [
-        (True, _calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY)),
-        (False, _calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY))
-    ])
-    def xtest_create_address_with_key_step_with_tx_v3(self,
-                                                     context,
-                                                     compressed, expected_step_costs):
+    @pytest.mark.parametrize(
+        "compressed, expected_step_costs",
+        [
+            (
+                True,
+                _calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY),
+            ),
+            (
+                False,
+                _calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY),
+            ),
+        ],
+    )
+    def xtest_create_address_with_key_step_with_tx_v3(
+        self, context, compressed, expected_step_costs
+    ):
         tx_v3 = TX_V3.copy()
-        signature: bytes = _base64_decode_signature(tx_v3['signature'])
-        msg_hash: bytes = create_msg_hash(tx_v3, ('txHash', 'signature'))
+        signature: bytes = _base64_decode_signature(tx_v3["signature"])
+        msg_hash: bytes = create_msg_hash(tx_v3, ("txHash", "signature"))
         public_key: bytes = recover_key(msg_hash, signature, compressed=compressed)
         context.step_counter.reset(STEP_LIMIT)
 
@@ -222,7 +244,7 @@ class TestIconScoreApi:
             if i % 32 > 0:
                 chunks += 1
 
-            sha3_256(b'\x00' * i)
+            sha3_256(b"\x00" * i)
 
             expected_step: int = step_cost + step_cost * chunks // 10
             step_used: int = context.step_counter.step_used
@@ -235,10 +257,12 @@ class TestIconScoreApi:
         for i in range(1, 100):
             obj = {}
             for j in range(i):
-                obj[f'key{j}'] = f'value{j}'
+                obj[f"key{j}"] = f"value{j}"
             text: str = json_dumps(obj)
 
-            expected_step: int = step_cost + step_cost * len(text.encode('utf-8')) // 100
+            expected_step: int = step_cost + step_cost * len(
+                text.encode("utf-8")
+            ) // 100
             step_used: int = context.step_counter.step_used
             assert step_used == expected_step
 
@@ -253,14 +277,16 @@ class TestIconScoreApi:
         for i in range(1, 100):
             obj = {}
             for j in range(i):
-                obj[f'key{j}'] = f'value{j}'
+                obj[f"key{j}"] = f"value{j}"
             text: str = json_dumps(obj)
             context.set_step_counter(STEP_LIMIT)
 
             obj2: dict = json_loads(text)
             assert obj2 == obj
 
-            expected_step: int = step_cost + step_cost * len(text.encode('utf-8')) // 100
+            expected_step: int = step_cost + step_cost * len(
+                text.encode("utf-8")
+            ) // 100
             step_used: int = context.step_counter.step_used
             assert step_used == expected_step
 
@@ -275,22 +301,30 @@ class TestIconScoreApi:
         assert end_block_height == -1
 
         # term._preps to contexts
-        prep_infos: List['PRepInfo'] = []
-        preps: 'PRepContainer' = PRepContainer()
+        prep_infos: List["PRepInfo"] = []
+        preps: "PRepContainer" = PRepContainer()
         for i in range(PREP_MAIN_AND_SUB_PREPS):
             delegated: int = PREP_MAIN_AND_SUB_PREPS - i
-            prep_info = PRepInfo(address=create_address(), delegated=delegated, name=f"prep{i}")
+            prep_info = PRepInfo(
+                address=create_address(), delegated=delegated, name=f"prep{i}"
+            )
             prep_infos.append(prep_info)
 
-            prep = PRep(address=prep_info.address, delegated=prep_info.delegated, name=prep_info.name)
+            prep = PRep(
+                address=prep_info.address,
+                delegated=prep_info.delegated,
+                name=prep_info.name,
+            )
             preps.add(prep)
 
-        term = Term(sequence=0,
-                    start_block_height=61,
-                    period=40,
-                    irep=50_000,
-                    total_supply=1_000_000_000,
-                    total_delegated=1_000_000_000)
+        term = Term(
+            sequence=0,
+            start_block_height=61,
+            period=40,
+            irep=50_000,
+            total_supply=1_000_000_000,
+            total_delegated=1_000_000_000,
+        )
         term.set_preps(preps, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS)
         term.freeze()
 

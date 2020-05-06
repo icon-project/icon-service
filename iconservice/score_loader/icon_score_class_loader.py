@@ -33,6 +33,7 @@ class IconScoreClassLoader:
     """IconScoreBase subclass Loader
 
     """
+
     @classmethod
     def init(cls, score_root_path: str):
         if score_root_path not in sys.path:
@@ -50,7 +51,7 @@ class IconScoreClassLoader:
         :return:
         """
         pkg_json_path = os.path.join(score_deploy_path, PACKAGE_JSON_FILE)
-        with open(pkg_json_path, 'r') as f:
+        with open(pkg_json_path, "r") as f:
             return json.load(f)
 
     @classmethod
@@ -60,22 +61,24 @@ class IconScoreClassLoader:
         :param package_json: dict returned by _load_package_json()
         :return: tuple containing main_module and main_score
         """
-        main_module: str = package_json.get('main_module')
+        main_module: str = package_json.get("main_module")
         if not isinstance(main_module, str):
             # "main_file" field will be deprecated soon.
             # Use "main_module" instead
-            main_module: str = package_json['main_file']
+            main_module: str = package_json["main_file"]
 
         # Relative package name is not allowed
-        if main_module.startswith('.'):
-            raise IllegalFormatException('Invalid main_module')
+        if main_module.startswith("."):
+            raise IllegalFormatException("Invalid main_module")
 
-        main_score: str = package_json['main_score']
+        main_score: str = package_json["main_score"]
 
         return main_module, main_score
 
     @classmethod
-    def run(cls, score_address: 'Address', tx_hash: bytes, score_root_path: str) -> type:
+    def run(
+        cls, score_address: "Address", tx_hash: bytes, score_root_path: str
+    ) -> type:
         """Load a IconScoreBase subclass and return it
 
         :param score_address:
@@ -83,8 +86,12 @@ class IconScoreClassLoader:
         :param score_root_path:
         :return: subclass derived from IconScoreBase
         """
-        score_deploy_path: str = utils.get_score_deploy_path(score_root_path, score_address, tx_hash)
-        package_name: str = utils.get_package_name_by_address_and_tx_hash(score_address, tx_hash)
+        score_deploy_path: str = utils.get_score_deploy_path(
+            score_root_path, score_address, tx_hash
+        )
+        package_name: str = utils.get_package_name_by_address_and_tx_hash(
+            score_address, tx_hash
+        )
 
         package_json: dict = IconScoreClassLoader._load_package_json(score_deploy_path)
         main_module, main_score = IconScoreClassLoader._get_package_info(package_json)

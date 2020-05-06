@@ -31,44 +31,47 @@ from tests import create_address
 
 class TestAccount(unittest.TestCase):
     def test_account_flag(self):
-        address: 'Address' = create_address()
+        address: "Address" = create_address()
 
-        account: 'Account' = Account(address, 0)
+        account: "Account" = Account(address, 0)
         self.assertIsNone(account.coin_part)
         self.assertIsNone(account.stake_part)
         self.assertIsNone(account.delegation_part)
 
-        coin_part: 'CoinPart' = CoinPart()
-        account: 'Account' = Account(address, 0, coin_part=coin_part)
+        coin_part: "CoinPart" = CoinPart()
+        account: "Account" = Account(address, 0, coin_part=coin_part)
         self.assertIsNotNone(account.coin_part)
         self.assertIsNone(account.stake_part)
         self.assertIsNone(account.delegation_part)
 
-        stake_part: 'StakePart' = StakePart()
-        account: 'Account' = Account(address, 0, stake_part=stake_part)
+        stake_part: "StakePart" = StakePart()
+        account: "Account" = Account(address, 0, stake_part=stake_part)
         self.assertIsNone(account.coin_part)
         self.assertIsNotNone(account.stake_part)
         self.assertIsNone(account.delegation_part)
 
-        delegation_part: 'DelegationPart' = DelegationPart()
-        account: 'Account' = Account(address, 0, delegation_part=delegation_part)
+        delegation_part: "DelegationPart" = DelegationPart()
+        account: "Account" = Account(address, 0, delegation_part=delegation_part)
         self.assertIsNone(account.coin_part)
         self.assertIsNone(account.stake_part)
         self.assertIsNotNone(account.delegation_part)
 
-        account: 'Account' = Account(address, 0,
-                                     coin_part=coin_part,
-                                     stake_part=stake_part,
-                                     delegation_part=delegation_part)
+        account: "Account" = Account(
+            address,
+            0,
+            coin_part=coin_part,
+            stake_part=stake_part,
+            delegation_part=delegation_part,
+        )
         self.assertIsNotNone(account.coin_part)
         self.assertIsNotNone(account.stake_part)
         self.assertIsNotNone(account.delegation_part)
 
     def test_coin_part(self):
-        address: 'Address' = create_address()
+        address: "Address" = create_address()
 
-        coin_part: 'CoinPart' = CoinPart()
-        account: 'Account' = Account(address, 0, coin_part=coin_part)
+        coin_part: "CoinPart" = CoinPart()
+        account: "Account" = Account(address, 0, coin_part=coin_part)
         self.assertEqual(address, account.address)
         self.assertEqual(0, account.balance)
 
@@ -94,10 +97,10 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(old, account.balance)
 
     def test_account_for_stake(self):
-        address: 'Address' = create_address()
+        address: "Address" = create_address()
 
-        coin_part: 'CoinPart' = CoinPart()
-        stake_part: 'StakePart' = StakePart()
+        coin_part: "CoinPart" = CoinPart()
+        stake_part: "StakePart" = StakePart()
         account = Account(address, 0, coin_part=coin_part, stake_part=stake_part)
 
         balance = 1000
@@ -133,15 +136,16 @@ class TestAccount(unittest.TestCase):
     def test_account_for_delegation(self):
         target_accounts = []
 
-        src_delegation_part: 'DelegationPart' = DelegationPart()
+        src_delegation_part: "DelegationPart" = DelegationPart()
         src_account = Account(create_address(), 0, delegation_part=src_delegation_part)
         preps: list = []
 
         for _ in range(0, 10):
-            address: 'Address' = create_address()
-            target_delegation_part: 'DelegationPart' = DelegationPart()
-            target_account: 'Account' = \
-                Account(address, 0, delegation_part=target_delegation_part)
+            address: "Address" = create_address()
+            target_delegation_part: "DelegationPart" = DelegationPart()
+            target_account: "Account" = Account(
+                address, 0, delegation_part=target_delegation_part
+            )
 
             target_accounts.append(target_account)
             target_account.update_delegated_amount(10)
@@ -223,7 +227,7 @@ class TestAccount(unittest.TestCase):
         delegations = [
             (create_address(), 100),
             (create_address(), 200),
-            (create_address(), 300)
+            (create_address(), 300),
         ]
         delegation_part = DelegationPart(delegations=delegations)
         account = Account(create_address(), 0, delegation_part=delegation_part)
@@ -231,5 +235,5 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(600, account.delegations_amount)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -22,12 +22,12 @@ from ..base.exception import InvalidParamsException
 from ..icon_constant import IconNetworkValueType, IconScoreContextType
 from ..iconscore.icon_score_step import StepType
 
-SystemRevision = namedtuple('SystemRevision', ['code', 'name'])
+SystemRevision = namedtuple("SystemRevision", ["code", "name"])
 
 
 class ValueConverter(object):
     @staticmethod
-    def convert_for_icon_service(type_: 'IconNetworkValueType', value: Any) -> 'Value':
+    def convert_for_icon_service(type_: "IconNetworkValueType", value: Any) -> "Value":
         """
         Convert IconNetwork value data type for icon service.
         Some data need to be converted for enhancing efficiency.
@@ -45,11 +45,15 @@ class ValueConverter(object):
                     elif key == "query":
                         converted_value[IconScoreContextType.QUERY] = value
                     else:
-                        raise InvalidParamsException(f"Invalid context type: {type_.name}")
+                        raise InvalidParamsException(
+                            f"Invalid context type: {type_.name}"
+                        )
                 else:
-                    raise ValueError(f"Invalid data type: "
-                                     f"value: {type_.name} "
-                                     f"key type: {type(key)}")
+                    raise ValueError(
+                        f"Invalid data type: "
+                        f"value: {type_.name} "
+                        f"key type: {type(key)}"
+                    )
         elif type_ == IconNetworkValueType.STEP_COSTS:
             converted_value: dict = {}
             for key, value in value.items():
@@ -60,18 +64,20 @@ class ValueConverter(object):
                         # Pass the unknown step type
                         pass
                 else:
-                    raise ValueError(f"Invalid data type: "
-                                     f"value: {type_.name} "
-                                     f"key type: {type(key)}")
+                    raise ValueError(
+                        f"Invalid data type: "
+                        f"value: {type_.name} "
+                        f"key type: {type(key)}"
+                    )
         try:
-            value: 'Value' = VALUE_MAPPER[type_](converted_value)
+            value: "Value" = VALUE_MAPPER[type_](converted_value)
         except KeyError:
             raise InvalidParamsException(f"Invalid INV key: {type_}")
 
         return value
 
     @staticmethod
-    def convert_for_governance(type_: 'IconNetworkValueType', value: Any) -> Any:
+    def convert_for_governance(type_: "IconNetworkValueType", value: Any) -> Any:
         """
         Convert IconNetwork value data type for governance score
         Some data which have been converted for enhancing efficiency need to be converted.
@@ -103,7 +109,10 @@ class Container(object):
         def __setitem__(self, key, value):
             if value is None:
                 return
-            if not isinstance(key, IconNetworkValueType) or key not in IconNetworkValueType:
+            if (
+                not isinstance(key, IconNetworkValueType)
+                or key not in IconNetworkValueType
+            ):
                 raise ValueError(f"Invalid value key: {key}")
             if not isinstance(value, Value):
                 raise ValueError(f"Invalid value type: {type(value)}")
@@ -129,14 +138,14 @@ class Container(object):
             IconNetworkValueType.STEP_COSTS: None,
             IconNetworkValueType.MAX_STEP_LIMITS: None,
             IconNetworkValueType.SERVICE_CONFIG: None,
-            IconNetworkValueType.IMPORT_WHITE_LIST: None
+            IconNetworkValueType.IMPORT_WHITE_LIST: None,
         }
 
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
-    def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
+    def get_by_type(self, type_: "IconNetworkValueType") -> Any:
         return self._tx_batch.get(type_, self._icon_network_values[type_]).value
 
     @property
@@ -148,11 +157,11 @@ class Container(object):
         return self.get_by_type(IconNetworkValueType.STEP_PRICE)
 
     @property
-    def step_costs(self) -> Dict['StepType', int]:
+    def step_costs(self) -> Dict["StepType", int]:
         return self.get_by_type(IconNetworkValueType.STEP_COSTS)
 
     @property
-    def max_step_limits(self) -> Dict['IconScoreContextType', int]:
+    def max_step_limits(self) -> Dict["IconScoreContextType", int]:
         return self.get_by_type(IconNetworkValueType.MAX_STEP_LIMITS)
 
     @property
@@ -164,7 +173,7 @@ class Container(object):
         return self.get_by_type(IconNetworkValueType.REVISION_NAME)
 
     @property
-    def score_black_list(self) -> List['Address']:
+    def score_black_list(self) -> List["Address"]:
         return self.get_by_type(IconNetworkValueType.SCORE_BLACK_LIST)
 
     @property
@@ -178,7 +187,7 @@ class Container(object):
     def clear_batch(self):
         self._tx_batch.clear()
 
-    def migrate(self, data: List['Value']):
+    def migrate(self, data: List["Value"]):
         """
         Migrates governance variable from SCORE DB to State DB.
         It will be called when updating governance score to version "".
@@ -198,10 +207,10 @@ class Container(object):
             self._is_migrated = True
             self.update_batch()
 
-    def _set(self, value: 'Value'):
+    def _set(self, value: "Value"):
         self._icon_network_values[value.TYPE] = value
 
-    def set_inv(self, value: 'Value', is_open: bool = False):
+    def set_inv(self, value: "Value", is_open: bool = False):
         """
         Set value on system value instance from icon service.
         There are two cases of calling this method.
@@ -215,10 +224,12 @@ class Container(object):
         if not self._is_migrated or is_open is True:
             self._set(value)
         else:
-            raise PermissionError(f"Invalid case of setting ICON Network value from icon-service"
-                                  f"migration: {self._is_migrated} is open: {is_open}")
+            raise PermissionError(
+                f"Invalid case of setting ICON Network value from icon-service"
+                f"migration: {self._is_migrated} is open: {is_open}"
+            )
 
-    def set_inv_to_tx_batch(self, value: 'Value'):
+    def set_inv_to_tx_batch(self, value: "Value"):
         """
         Set values on ICON Network value and put these into DB.
         Only Governance SCORE can set values after migration.
@@ -230,7 +241,7 @@ class Container(object):
         # Check If value is valid
         self._tx_batch[value.TYPE] = value
 
-    def copy(self) -> 'Container':
+    def copy(self) -> "Container":
         """Copy container"""
         container = copy.copy(self)
         container._tx_batch = self.BatchDict()

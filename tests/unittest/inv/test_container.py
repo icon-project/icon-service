@@ -31,28 +31,28 @@ def dummy_invs():
     dummy_revision_code = "1.1.1"
     dummy_service_config: int = 0
     dummy_step_costs = {
-        'default': 0,
-        'contractCall': 0,
-        'contractCreate': 0,
-        'contractUpdate': 0,
-        'contractDestruct': 0,
-        'contractSet': 0,
-        'get': 0,
-        'set': 0,
-        'replace': 0,
-        'delete': -150,
-        'input': 0,
-        'eventLog': 0,
-        'apiCall': 0
+        "default": 0,
+        "contractCall": 0,
+        "contractCreate": 0,
+        "contractUpdate": 0,
+        "contractDestruct": 0,
+        "contractSet": 0,
+        "get": 0,
+        "set": 0,
+        "replace": 0,
+        "delete": -150,
+        "input": 0,
+        "eventLog": 0,
+        "apiCall": 0,
     }
     dummy_step_costs = {StepType(key): val for key, val in dummy_step_costs.items()}
     dummy_max_step_limits: dict = {
         IconScoreContextType.INVOKE: 2_500_000_000,
-        IconScoreContextType.QUERY: 50_000_000
+        IconScoreContextType.QUERY: 50_000_000,
     }
     dummy_step_price: int = 0
     dummy_score_black_list: list = []
-    dummy_import_white_list = {"iconservice": ['*']}
+    dummy_import_white_list = {"iconservice": ["*"]}
     dummy_invs = {
         IconNetworkValueType.REVISION_CODE: RevisionCode(dummy_revision_number),
         IconNetworkValueType.REVISION_NAME: RevisionName(dummy_revision_code),
@@ -61,7 +61,9 @@ def dummy_invs():
         IconNetworkValueType.STEP_COSTS: StepCosts(dummy_step_costs),
         IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits(dummy_max_step_limits),
         IconNetworkValueType.SERVICE_CONFIG: ServiceConfig(dummy_service_config),
-        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(dummy_import_white_list)
+        IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(
+            dummy_import_white_list
+        ),
     }
     return dummy_invs
 
@@ -84,11 +86,7 @@ def context():
 
 
 class TestBatchDict:
-    @pytest.mark.parametrize("invalid_key", [
-        "string",
-        5,
-        b'bytes_key'
-    ])
+    @pytest.mark.parametrize("invalid_key", ["string", 5, b"bytes_key"])
     def test_set_invalid_key(self, invalid_key):
         batch_dict = INVContainer.BatchDict()
         temp_value = "value"
@@ -98,11 +96,7 @@ class TestBatchDict:
 
         assert e.value.args[0].startswith("Invalid value key")
 
-    @pytest.mark.parametrize("invalid_value", [
-        "string",
-        5,
-        b'bytes_key'
-    ])
+    @pytest.mark.parametrize("invalid_value", ["string", 5, b"bytes_key"])
     def test_set_invalid_value_type(self, invalid_value):
         batch_dict = INVContainer.BatchDict()
         valid_key_type = IconNetworkValueType.STEP_COSTS
@@ -127,8 +121,9 @@ class TestBatchDict:
 
 
 class TestContainer:
-
-    def test_migration_with_insufficient_data_should_raise_exception(self, context, dummy_invs, inv_container):
+    def test_migration_with_insufficient_data_should_raise_exception(
+        self, context, dummy_invs, inv_container
+    ):
         dummy_inv_list: list = [value for value in dummy_invs.values()]
         data_len: int = len(dummy_inv_list)
 
@@ -162,18 +157,22 @@ class TestContainer:
             IconNetworkValueType.REVISION_NAME: RevisionName("1.1.5"),
             IconNetworkValueType.SCORE_BLACK_LIST: ScoreBlackList([black_score]),
             IconNetworkValueType.STEP_PRICE: StepPrice(10_000),
-            IconNetworkValueType.STEP_COSTS: StepCosts({
-                StepType('default'): 10_000
-            }),
-            IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits({
-                IconScoreContextType.INVOKE: 100_000_000,
-                IconScoreContextType.QUERY: 100_000_000
-            }),
+            IconNetworkValueType.STEP_COSTS: StepCosts({StepType("default"): 10_000}),
+            IconNetworkValueType.MAX_STEP_LIMITS: MaxStepLimits(
+                {
+                    IconScoreContextType.INVOKE: 100_000_000,
+                    IconScoreContextType.QUERY: 100_000_000,
+                }
+            ),
             IconNetworkValueType.SERVICE_CONFIG: ServiceConfig(5),
-            IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList({"iconservice": ['*'], "os": ["path"]})
+            IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(
+                {"iconservice": ["*"], "os": ["path"]}
+            ),
         }
         data: list = [value for value in expected_invs.values()]
-        self._check_each_inv_is_different(inv_container._icon_network_values, expected_invs)
+        self._check_each_inv_is_different(
+            inv_container._icon_network_values, expected_invs
+        )
 
         # Act
         inv_container.migrate(data)
@@ -183,11 +182,9 @@ class TestContainer:
         for type_, value in expected_invs.items():
             assert inv_container._icon_network_values[type_] == value
 
-    @pytest.mark.parametrize("is_migrated, is_open", [
-        (False, False),
-        (False, True),
-        (True, True)
-    ])
+    @pytest.mark.parametrize(
+        "is_migrated, is_open", [(False, False), (False, True), (True, True)]
+    )
     def test_set_inv(self, inv_container, is_migrated, is_open):
         inv_container._is_migrated = is_migrated
         dummy_inv_value = RevisionCode(5)
@@ -204,7 +201,9 @@ class TestContainer:
         with pytest.raises(PermissionError) as e:
             inv_container.set_inv(dummy_inv_value, is_open)
 
-        assert e.value.args[0].startswith("Invalid case of setting ICON Network value from icon-service")
+        assert e.value.args[0].startswith(
+            "Invalid case of setting ICON Network value from icon-service"
+        )
 
     def test_set_tx_batch_before_migration(self, context, inv_container):
         dummy_inv_value = RevisionCode(5)
@@ -230,7 +229,9 @@ class TestContainer:
         assert id(copied_container) != id(inv_container)
         assert id(copied_container._tx_batch) != id(inv_container._tx_batch)
         assert len(copied_container._tx_batch) == 0 != len(inv_container._tx_batch)
-        assert id(copied_container._icon_network_values) != id(inv_container._icon_network_values)
+        assert id(copied_container._icon_network_values) != id(
+            inv_container._icon_network_values
+        )
         for type_, value in inv_container._icon_network_values.items():
             # Do not copy each value (as just set the value when there is change)
             assert id(copied_container._icon_network_values[type_]) == id(value)

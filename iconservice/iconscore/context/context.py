@@ -34,8 +34,10 @@ class ContextContainer(object):
     """
 
     @staticmethod
-    def _get_context() -> Optional['IconScoreContext']:
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
+    def _get_context() -> Optional["IconScoreContext"]:
+        context_stack: List["IconScoreContext"] = getattr(
+            _thread_local_data, "context_stack", None
+        )
 
         if context_stack is not None and len(context_stack) > 0:
             return context_stack[-1]
@@ -43,33 +45,39 @@ class ContextContainer(object):
             return None
 
     @staticmethod
-    def _push_context(context: 'IconScoreContext') -> None:
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
+    def _push_context(context: "IconScoreContext") -> None:
+        context_stack: List["IconScoreContext"] = getattr(
+            _thread_local_data, "context_stack", None
+        )
 
         if context_stack is None:
             context_stack = []
-            setattr(_thread_local_data, 'context_stack', context_stack)
+            setattr(_thread_local_data, "context_stack", context_stack)
 
         context_stack.append(context)
 
     @staticmethod
-    def _pop_context() -> 'IconScoreContext':
+    def _pop_context() -> "IconScoreContext":
         """Delete the last pushed context of the current thread
         """
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
+        context_stack: List["IconScoreContext"] = getattr(
+            _thread_local_data, "context_stack", None
+        )
 
         if context_stack is not None and len(context_stack) > 0:
             return context_stack.pop()
         else:
-            raise FatalException('Failed to pop a context out of context_stack')
+            raise FatalException("Failed to pop a context out of context_stack")
 
     @staticmethod
     def _clear_context() -> None:
-        setattr(_thread_local_data, 'context_stack', None)
+        setattr(_thread_local_data, "context_stack", None)
 
     @staticmethod
     def _get_context_stack_size() -> int:
-        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
+        context_stack: List["IconScoreContext"] = getattr(
+            _thread_local_data, "context_stack", None
+        )
         return 0 if context_stack is None else len(context_stack)
 
 
@@ -78,5 +86,5 @@ class ContextGetter(object):
     """
 
     @property
-    def _context(self) -> 'IconScoreContext':
+    def _context(self) -> "IconScoreContext":
         return ContextContainer._get_context()

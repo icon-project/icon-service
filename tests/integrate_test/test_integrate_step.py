@@ -22,18 +22,20 @@ from unittest import mock
 from iconservice import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, Revision
-from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import (
+    IconScoreContext,
+    IconScoreContextFactory,
+)
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import StepType, get_input_data_size
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateStep(TestIntegrateBase):
-
     def _make_init_config(self) -> dict:
         return {
             ConfigKey.STEP_TRACE_FLAG: True,
-            ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}
+            ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True},
         }
 
     def setUp(self):
@@ -44,29 +46,28 @@ class TestIntegrateStep(TestIntegrateBase):
         super().tearDown()
         IconScoreContextFactory._create_context = self.create_context
 
-    def _deploy_score(self,
-                      to_: Optional['Address'] = ZERO_SCORE_ADDRESS) -> tuple:
+    def _deploy_score(self, to_: Optional["Address"] = ZERO_SCORE_ADDRESS) -> tuple:
 
-        tx = self.create_deploy_score_tx(score_root="",
-                                         score_name="step_test_score",
-                                         from_=self._accounts[0],
-                                         to_=to_,
-                                         pre_validation_enabled=False)
+        tx = self.create_deploy_score_tx(
+            score_root="",
+            score_name="step_test_score",
+            from_=self._accounts[0],
+            to_=to_,
+            pre_validation_enabled=False,
+        )
 
         prev_block, hash_list = self.make_and_req_block([tx])
         return prev_block, self.get_tx_results(hash_list)
 
-    def _send_message_tx(self, from_: Address, to_:Address, message: bytes):
-        tx = self.create_message_tx(from_=from_,
-                                    to_=to_,
-                                    data=message)
+    def _send_message_tx(self, from_: Address, to_: Address, message: bytes):
+        tx = self.create_message_tx(from_=from_, to_=to_, data=message)
         prev_block, hash_list = self.make_and_req_block([tx])
         return prev_block, self.get_tx_results(hash_list)
 
     def _transfer_icx(self, value: int):
-        tx = self.create_transfer_icx_tx(from_=self._admin,
-                                         to_=self._accounts[0],
-                                         value=value)
+        tx = self.create_transfer_icx_tx(
+            from_=self._admin, to_=self._accounts[0], value=value
+        )
         prev_block, hash_list = self.make_and_req_block([tx])
         return prev_block, self.get_tx_results(hash_list)
 
@@ -94,7 +95,7 @@ class TestIntegrateStep(TestIntegrateBase):
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
         # 2. accpt SCORE : tx_hash1
-        tx_results: List['TransactionResult'] = self.accept_score(tx_hash1)
+        tx_results: List["TransactionResult"] = self.accept_score(tx_hash1)
         tx_hash2 = tx_results[0].tx_hash
 
         steps = context.step_counter.step_tracer.steps
@@ -126,8 +127,10 @@ class TestIntegrateStep(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        data: bytes = b'test_length_25_test_lengt'
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], self._accounts[0], data)
+        data: bytes = b"test_length_25_test_lengt"
+        prev_block, tx_results = self._send_message_tx(
+            self._accounts[1], self._accounts[0], data
+        )
         self.assertEqual(True, context.step_trace_flag)
 
         input_step = context.step_counter.get_step_cost(StepType.INPUT)
@@ -157,7 +160,7 @@ class TestIntegrateStep(TestIntegrateBase):
         # 1. deploy (wait audit)
         prev_block, tx_results = self._deploy_score()
         tx_hash1: bytes = tx_results[0].tx_hash
-        score_addr: 'Address' = tx_results[0].score_address
+        score_addr: "Address" = tx_results[0].score_address
         self._write_precommit_state(prev_block)
         self.accept_score(tx_hash1)
 
@@ -165,10 +168,12 @@ class TestIntegrateStep(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="set_value",
-                        params={"value": hex(1)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="set_value",
+            params={"value": hex(1)},
+        )
 
         self.assertEqual(True, context.step_trace_flag)
 
@@ -185,23 +190,27 @@ class TestIntegrateStep(TestIntegrateBase):
         # 1. deploy (wait audit)
         prev_block, tx_results = self._deploy_score()
         tx_hash1: bytes = tx_results[0].tx_hash
-        score_addr: 'Address' = tx_results[0].score_address
+        score_addr: "Address" = tx_results[0].score_address
         self._write_precommit_state(prev_block)
         self.accept_score(tx_hash1)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="set_value",
-                        params={"value": hex(1)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="set_value",
+            params={"value": hex(1)},
+        )
 
         # mock context
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="set_value",
-                        params={"value": hex(1)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="set_value",
+            params={"value": hex(1)},
+        )
 
         self.assertEqual(True, context.step_trace_flag)
 
@@ -218,7 +227,7 @@ class TestIntegrateStep(TestIntegrateBase):
         # 1. deploy (wait audit)
         prev_block, tx_results = self._deploy_score()
         tx_hash1: bytes = tx_results[0].tx_hash
-        score_addr: 'Address' = tx_results[0].score_address
+        score_addr: "Address" = tx_results[0].score_address
         self._write_precommit_state(prev_block)
         self.accept_score(tx_hash1)
 
@@ -227,9 +236,7 @@ class TestIntegrateStep(TestIntegrateBase):
         context._is_step_trace_on = mock.Mock(return_value=True)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        self.query_score(from_=self._accounts[0],
-                         to_=score_addr,
-                         func_name="get_value")
+        self.query_score(from_=self._accounts[0], to_=score_addr, func_name="get_value")
 
         self.assertEqual(True, context.step_trace_flag)
 
@@ -242,22 +249,22 @@ class TestIntegrateStep(TestIntegrateBase):
         # 1. deploy (wait audit)
         prev_block, tx_results = self._deploy_score()
         tx_hash1: bytes = tx_results[0].tx_hash
-        score_addr: 'Address' = tx_results[0].score_address
+        score_addr: "Address" = tx_results[0].score_address
         self._write_precommit_state(prev_block)
         self.accept_score(tx_hash1)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="set_value",
-                        params={"value": hex(1)})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="set_value",
+            params={"value": hex(1)},
+        )
 
         # mock context
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="del_value")
+        self.score_call(from_=self._accounts[0], to_=score_addr, func_name="del_value")
 
         self.assertEqual(True, context.step_trace_flag)
 
@@ -272,7 +279,7 @@ class TestIntegrateStep(TestIntegrateBase):
         # 1. deploy (wait audit)
         prev_block, tx_results = self._deploy_score()
         tx_hash1: bytes = tx_results[0].tx_hash
-        score_addr: 'Address' = tx_results[0].score_address
+        score_addr: "Address" = tx_results[0].score_address
         self._write_precommit_state(prev_block)
         self.accept_score(tx_hash1)
 
@@ -280,10 +287,12 @@ class TestIntegrateStep(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="hash_writable",
-                        params={"data": b'data'.hex()})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="hash_writable",
+            params={"data": b"data".hex()},
+        )
 
         self.assertEqual(True, context.step_trace_flag)
 
@@ -300,7 +309,7 @@ class TestIntegrateStep(TestIntegrateBase):
         # 1. deploy (wait audit)
         prev_block, tx_results = self._deploy_score()
         tx_hash1: bytes = tx_results[0].tx_hash
-        score_addr: 'Address' = tx_results[0].score_address
+        score_addr: "Address" = tx_results[0].score_address
         self._write_precommit_state(prev_block)
         self.accept_score(tx_hash1)
 
@@ -308,10 +317,12 @@ class TestIntegrateStep(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        self.score_call(from_=self._accounts[0],
-                        to_=score_addr,
-                        func_name="hash_writable",
-                        params={"data": b'data'.hex()})
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr,
+            func_name="hash_writable",
+            params={"data": b"data".hex()},
+        )
 
         self.assertEqual(True, context.step_trace_flag)
 
@@ -331,14 +342,16 @@ class TestIntegrateStep(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        data: bytes = b'test_length_25_test_lengt'
+        data: bytes = b"test_length_25_test_lengt"
 
         # TEST: to SCORE
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], ZERO_SCORE_ADDRESS, data)
+        prev_block, tx_results = self._send_message_tx(
+            self._accounts[1], ZERO_SCORE_ADDRESS, data
+        )
         self.assertEqual(True, context.step_trace_flag)
 
         input_step = context.step_counter.get_step_cost(StepType.INPUT)
-        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        input_size = get_input_data_size(context.revision, "0x" + data.hex())
         steps = context.step_counter.step_tracer.steps
         self.assertEqual(3, len(steps))
         self.assertEqual(StepType.DEFAULT, steps[0][0])
@@ -349,11 +362,13 @@ class TestIntegrateStep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # TEST: to EOA
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], self._accounts[0], data)
+        prev_block, tx_results = self._send_message_tx(
+            self._accounts[1], self._accounts[0], data
+        )
         self.assertEqual(True, context.step_trace_flag)
 
         input_step = context.step_counter.get_step_cost(StepType.INPUT)
-        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        input_size = get_input_data_size(context.revision, "0x" + data.hex())
         steps = context.step_counter.step_tracer.steps
         self.assertEqual(2, len(steps))
         self.assertEqual(StepType.DEFAULT, steps[0][0])
@@ -363,14 +378,18 @@ class TestIntegrateStep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # revision >= Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE
-        self.set_revision(Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value)
+        self.set_revision(
+            Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value
+        )
 
         # TEST: to SCORE
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], ZERO_SCORE_ADDRESS, data)
+        prev_block, tx_results = self._send_message_tx(
+            self._accounts[1], ZERO_SCORE_ADDRESS, data
+        )
         self.assertEqual(True, context.step_trace_flag)
 
         input_step = context.step_counter.get_step_cost(StepType.INPUT)
-        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        input_size = get_input_data_size(context.revision, "0x" + data.hex())
         steps = context.step_counter.step_tracer.steps
         self.assertEqual(2, len(steps))
         self.assertEqual(StepType.DEFAULT, steps[0][0])

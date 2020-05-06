@@ -26,24 +26,25 @@ if TYPE_CHECKING:
 
 class BaseTransactionCreator(object):
     @staticmethod
-    def create_base_transaction(context: 'IconScoreContext') -> dict:
+    def create_base_transaction(context: "IconScoreContext") -> dict:
         issue_data: dict = context.engine.issue.create_icx_issue_info(context)
         params = {
             "version": BASE_TRANSACTION_VERSION,
             "timestamp": context.block.timestamp,
             "dataType": "base",
-            "data": issue_data
+            "data": issue_data,
         }
-        params["txHash"]: bytes = BaseTransactionCreator._generate_transaction_hash(params)
+        params["txHash"]: bytes = BaseTransactionCreator._generate_transaction_hash(
+            params
+        )
 
-        transaction = {
-            "method": "icx_sendTransaction",
-            "params": params
-        }
+        transaction = {"method": "icx_sendTransaction", "params": params}
         return transaction
 
     @staticmethod
     def _generate_transaction_hash(transaction_params: dict) -> bytes:
         copied_transaction_params: dict = deepcopy(transaction_params)
-        converted_transaction_params: dict = TypeConverter.convert_type_reverse(copied_transaction_params)
+        converted_transaction_params: dict = TypeConverter.convert_type_reverse(
+            copied_transaction_params
+        )
         return HashGenerator.generate_hash(converted_transaction_params)

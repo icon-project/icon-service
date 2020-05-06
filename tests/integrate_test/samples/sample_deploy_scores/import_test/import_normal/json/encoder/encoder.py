@@ -1,4 +1,3 @@
-
 class JSONEncoder:
     def encode(self, o):
         print("encode")

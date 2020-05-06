@@ -40,7 +40,7 @@ def _create_dummy_data(count: int) -> OrderedDict:
     return data
 
 
-def _create_rc_db(rc_data_path: str) -> 'KeyValueDatabase':
+def _create_rc_db(rc_data_path: str) -> "KeyValueDatabase":
     return RewardCalcStorage.create_current_db(rc_data_path)
 
 
@@ -66,14 +66,13 @@ class TestBackupManager(unittest.TestCase):
         rc_db.write_batch(org_rc_db_data.items())
 
         self.backup_manager = BackupManager(
-            backup_root_path=backup_root_path,
-            rc_data_path=rc_data_path
+            backup_root_path=backup_root_path, rc_data_path=rc_data_path
         )
 
         self.rollback_manager = RollbackManager(
             backup_root_path=backup_root_path,
             rc_data_path=rc_data_path,
-            state_db=icx_db
+            state_db=icx_db,
         )
 
         self.state_db_root_path = state_db_root_path
@@ -109,27 +108,29 @@ class TestBackupManager(unittest.TestCase):
             block_hash=block_hash,
             timestamp=0,
             prev_hash=prev_hash,
-            cumulative_fee=0
+            cumulative_fee=0,
         )
         block_batch = OrderedDict()
-        block_batch[b"key0"] = b"new value0"    # Update
-        block_batch[b"key1"] = None             # Delete
-        block_batch[b"key2"] = b"value2"        # Update with the same value
-        block_batch[b"key3"] = b"value3"        # Add a new entry
+        block_batch[b"key0"] = b"new value0"  # Update
+        block_batch[b"key1"] = None  # Delete
+        block_batch[b"key2"] = b"value2"  # Update with the same value
+        block_batch[b"key3"] = b"value3"  # Add a new entry
 
         is_calc_period_start_block = False
 
         rc_batch = OrderedDict()
         rc_batch[b"key0"] = b"hello"
 
-        backup_manager.run(icx_db=self.state_db,
-                           rc_db=self.rc_db,
-                           revision=revision,
-                           prev_block=last_block,
-                           block_batch=block_batch,
-                           iiss_wal=rc_batch.items(),
-                           is_calc_period_start_block=is_calc_period_start_block,
-                           instant_block_hash=instant_block_hash)
+        backup_manager.run(
+            icx_db=self.state_db,
+            rc_db=self.rc_db,
+            revision=revision,
+            prev_block=last_block,
+            block_batch=block_batch,
+            iiss_wal=rc_batch.items(),
+            is_calc_period_start_block=is_calc_period_start_block,
+            instant_block_hash=instant_block_hash,
+        )
 
         self._commit_state_db(self.state_db, block_batch)
         self._commit_rc_db(self.rc_db, rc_batch)
@@ -148,14 +149,14 @@ class TestBackupManager(unittest.TestCase):
         self._check_if_rollback_is_done(self.state_db, self.org_state_db_data)
 
     @staticmethod
-    def _commit_state_db(db: 'KeyValueDatabase', block_batch: OrderedDict):
+    def _commit_state_db(db: "KeyValueDatabase", block_batch: OrderedDict):
         db.write_batch(block_batch.items())
 
         for key in block_batch:
             assert block_batch[key] == db.get(key)
 
     @staticmethod
-    def _commit_rc_db(db: 'KeyValueDatabase', rc_batch: OrderedDict):
+    def _commit_rc_db(db: "KeyValueDatabase", rc_batch: OrderedDict):
         db.write_batch(rc_batch.items())
 
         count = 0
@@ -165,7 +166,7 @@ class TestBackupManager(unittest.TestCase):
 
         assert len(rc_batch) == count
 
-    def _rollback(self, last_block: 'Block'):
+    def _rollback(self, last_block: "Block"):
         filename: str = get_backup_filename(last_block.height)
         backup_path = os.path.join(self.backup_root_path, filename)
 
@@ -178,7 +179,7 @@ class TestBackupManager(unittest.TestCase):
         reader.close()
 
     @staticmethod
-    def _check_if_rollback_is_done(db: 'KeyValueDatabase', prev_state: OrderedDict):
+    def _check_if_rollback_is_done(db: "KeyValueDatabase", prev_state: OrderedDict):
         i = 0
         for key, value in db.iterator():
             assert value == prev_state[key]
@@ -186,7 +187,7 @@ class TestBackupManager(unittest.TestCase):
 
         assert i == len(prev_state)
 
-    def _rollback_with_rollback_manager(self, last_block: 'Block'):
+    def _rollback_with_rollback_manager(self, last_block: "Block"):
         rollback_manager = self.rollback_manager
         last_block_height = last_block.height + 1
         rollback_block_height = last_block.height
@@ -195,5 +196,6 @@ class TestBackupManager(unittest.TestCase):
         ret = rollback_manager.run(
             last_block_height,
             rollback_block_height,
-            term_start_block_height=rollback_block_height - 1)
+            term_start_block_height=rollback_block_height - 1,
+        )
         assert ret is None

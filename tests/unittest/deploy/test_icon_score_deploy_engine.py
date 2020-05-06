@@ -18,8 +18,12 @@ from unittest.mock import Mock, PropertyMock, call
 
 import pytest
 
-from iconservice.base.address import AddressPrefix, GOVERNANCE_SCORE_ADDRESS, Address, \
-    SYSTEM_SCORE_ADDRESS
+from iconservice.base.address import (
+    AddressPrefix,
+    GOVERNANCE_SCORE_ADDRESS,
+    Address,
+    SYSTEM_SCORE_ADDRESS,
+)
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.message import Message
@@ -27,7 +31,11 @@ from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.deploy import engine as isde
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo, Storage
+from iconservice.deploy.storage import (
+    IconScoreDeployTXParams,
+    IconScoreDeployInfo,
+    Storage,
+)
 from iconservice.icon_constant import DeployType, IconScoreContextType, Revision
 from iconservice.icon_constant import IconServiceFlag
 from iconservice.iconscore.context.context import ContextContainer
@@ -53,7 +61,9 @@ def mock_engine():
 def context():
     ctx = IconScoreContext(IconScoreContextType.DIRECT)
     ctx.tx = Transaction(tx_hash=create_tx_hash(), origin=EOA1)
-    ctx.block = Block(block_height=0, block_hash=create_block_hash(), timestamp=0, prev_hash=None)
+    ctx.block = Block(
+        block_height=0, block_hash=create_block_hash(), timestamp=0, prev_hash=None
+    )
     ctx.msg = Message(sender=EOA1, value=0)
     ctx.icon_score_mapper = IconScoreMapper()
     ctx.new_icon_score_mapper = {}
@@ -61,19 +71,31 @@ def context():
     ctx.event_logs = []
     ctx.traces = []
     ctx.current_address = EOA1
-    IconScoreContext.storage = ContextStorage(deploy=Mock(spec=Storage), fee=None, icx=None, iiss=None, prep=None,
-                                              issue=None, meta=None, rc=None, inv=None)
+    IconScoreContext.storage = ContextStorage(
+        deploy=Mock(spec=Storage),
+        fee=None,
+        icx=None,
+        iiss=None,
+        prep=None,
+        issue=None,
+        meta=None,
+        rc=None,
+        inv=None,
+    )
 
     ContextContainer._push_context(ctx)
     yield ctx
     ContextContainer._pop_context()
 
 
-@pytest.mark.parametrize("data",
-                         [{"contentType": "application/tbears", "content": "path"}, {}])
+@pytest.mark.parametrize(
+    "data", [{"contentType": "application/tbears", "content": "path"}, {}]
+)
 def test_invoke_install(context, mock_engine, mocker, data):
     new_score_address = create_address(1)
-    mocker.patch.object(isde, "generate_score_address_for_tbears", return_value=new_score_address)
+    mocker.patch.object(
+        isde, "generate_score_address_for_tbears", return_value=new_score_address
+    )
     mocker.patch.object(isde, "generate_score_address", return_value=new_score_address)
     mocker.patch.object(IconScoreContextUtil, "get_deploy_info", return_value=None)
     mocker.patch.object(IconScoreStepCounter, "apply_step")
@@ -88,12 +110,18 @@ def test_invoke_install(context, mock_engine, mocker, data):
     if data.get("contentType") == "application/tbears":
         isde.generate_score_address_for_tbears.assert_called_with("path")
     else:
-        isde.generate_score_address.assert_called_with(context.tx.origin, context.tx.timestamp, context.tx.nonce)
+        isde.generate_score_address.assert_called_with(
+            context.tx.origin, context.tx.timestamp, context.tx.nonce
+        )
     IconScoreContextUtil.get_deploy_info.assert_called_with(context, new_score_address)
     apply_step_args_list = IconScoreStepCounter.apply_step.call_args_list
     assert expected_apply_step_args_list == apply_step_args_list
-    mock_engine._invoke.assert_called_with(context=context, to=SYSTEM_SCORE_ADDRESS,
-                                           icon_score_address=new_score_address, data=data)
+    mock_engine._invoke.assert_called_with(
+        context=context,
+        to=SYSTEM_SCORE_ADDRESS,
+        icon_score_address=new_score_address,
+        data=data,
+    )
     assert ret == new_score_address
 
     mocker.stopall()
@@ -111,17 +139,26 @@ def test_invoke_update(context, mock_engine, mocker):
 
     ret = mock_engine.invoke(context, score_address, data)
 
-    assert expected_apply_step_args_list == IconScoreStepCounter.apply_step.call_args_list
-    mock_engine._invoke.assert_called_with(context=context, to=score_address,
-                                           icon_score_address=score_address, data=data)
+    assert (
+        expected_apply_step_args_list == IconScoreStepCounter.apply_step.call_args_list
+    )
+    mock_engine._invoke.assert_called_with(
+        context=context, to=score_address, icon_score_address=score_address, data=data
+    )
     assert ret == score_address
     mocker.stopall()
 
 
-@pytest.mark.parametrize("to,score_address,expect",
-                         [(SYSTEM_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS, pytest.raises(AssertionError)),
-                          (SYSTEM_SCORE_ADDRESS, None, pytest.raises(AssertionError))])
-def test_invoke_invalid_score_addresses(context, mock_engine, mocker, to, score_address, expect):
+@pytest.mark.parametrize(
+    "to,score_address,expect",
+    [
+        (SYSTEM_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS, pytest.raises(AssertionError)),
+        (SYSTEM_SCORE_ADDRESS, None, pytest.raises(AssertionError)),
+    ],
+)
+def test_invoke_invalid_score_addresses(
+    context, mock_engine, mocker, to, score_address, expect
+):
     """case when icon_score_address is in (None, ZERO_ADDRESS)"""
     mocker.patch.object(isde.Engine, "_is_audit_needed", return_value=True)
     mocker.patch.object(isde.Engine, "deploy")
@@ -134,65 +171,95 @@ def test_invoke_invalid_score_addresses(context, mock_engine, mocker, to, score_
     mocker.stopall()
 
 
-@pytest.mark.parametrize("to,score_address,deploy_type",
-                         [(SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, DeployType.INSTALL),
-                          (GOVERNANCE_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, DeployType.UPDATE)])
-def test_invoke_valid_score_addresses(context, mock_engine, mocker, to, score_address, deploy_type):
+@pytest.mark.parametrize(
+    "to,score_address,deploy_type",
+    [
+        (SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, DeployType.INSTALL),
+        (GOVERNANCE_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, DeployType.UPDATE),
+    ],
+)
+def test_invoke_valid_score_addresses(
+    context, mock_engine, mocker, to, score_address, deploy_type
+):
     """case when icon_score_address is not in (None, ZERO_ADDRESS)"""
     mocker.patch.object(isde.Engine, "_is_audit_needed", return_value=False)
     mocker.patch.object(isde.Engine, "deploy")
 
     mock_engine._invoke(context, to, score_address, {})
-    context.storage.deploy.put_deploy_info_and_tx_params.assert_called_with(context, score_address, deploy_type,
-                                                                            context.tx.origin, context.tx.hash, {})
+    context.storage.deploy.put_deploy_info_and_tx_params.assert_called_with(
+        context, score_address, deploy_type, context.tx.origin, context.tx.hash, {}
+    )
     mock_engine._is_audit_needed.assert_called_with(context, score_address)
     mock_engine.deploy.assert_called_with(context, context.tx.hash)
     mocker.stopall()
 
 
-@pytest.mark.parametrize("deploy_data, call_method",
-                         [
-                             ({"contentType": "application/tbears", 'content': '0x1234'},
-                              "_write_score_to_score_deploy_path_on_tbears_mode"),
-                             ({"contentType": "application/zip", 'content': '0x1234'},
-                              "_write_score_to_score_deploy_path"),
-                         ])
-def test_write_score_to_filesystem(mock_engine, context, mocker, deploy_data, call_method):
+@pytest.mark.parametrize(
+    "deploy_data, call_method",
+    [
+        (
+            {"contentType": "application/tbears", "content": "0x1234"},
+            "_write_score_to_score_deploy_path_on_tbears_mode",
+        ),
+        (
+            {"contentType": "application/zip", "content": "0x1234"},
+            "_write_score_to_score_deploy_path",
+        ),
+    ],
+)
+def test_write_score_to_filesystem(
+    mock_engine, context, mocker, deploy_data, call_method
+):
     """tbears mode"""
-    content = '0x1234'
+    content = "0x1234"
     mocker.patch.object(isde.Engine, call_method)
 
-    mock_engine._write_score_to_filesystem(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, deploy_data)
+    mock_engine._write_score_to_filesystem(
+        context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, deploy_data
+    )
     method = getattr(mock_engine, call_method)
-    method.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, content)
+    method.assert_called_with(
+        context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, content
+    )
     mocker.stopall()
 
 
-@pytest.mark.parametrize("get_score_info_return_value", [None, 'dummy'])
+@pytest.mark.parametrize("get_score_info_return_value", [None, "dummy"])
 def test_create_score_info(mock_engine, context, mocker, get_score_info_return_value):
     """case when current_score_info is None"""
-    score_info = None if get_score_info_return_value is None else Mock(score_db=get_score_info_return_value)
+    score_info = (
+        None
+        if get_score_info_return_value is None
+        else Mock(score_db=get_score_info_return_value)
+    )
     mocker.patch.object(IconScoreContextUtil, "create_score_info")
     mocker.patch.object(IconScoreContextUtil, "get_score_info", return_value=score_info)
 
     mock_engine._create_score_info(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
-    IconScoreContextUtil.create_score_info. \
-        assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, get_score_info_return_value)
+    IconScoreContextUtil.create_score_info.assert_called_with(
+        context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, get_score_info_return_value
+    )
     mocker.stopall()
 
 
 def test_write_score_to_score_deploy_path_on_tbears_mode(mock_engine, context, mocker):
-    score_deploy_path = 'score_deploy_path'
-    score_path = 'score_path'
-    mocker.patch("iconservice.deploy.engine.get_score_deploy_path", return_value=score_deploy_path)
+    score_deploy_path = "score_deploy_path"
+    score_path = "score_path"
+    mocker.patch(
+        "iconservice.deploy.engine.get_score_deploy_path",
+        return_value=score_deploy_path,
+    )
     mocker.patch("iconservice.deploy.engine.get_score_path", return_value=score_path)
     mocker.patch.object(os, "symlink")
     mocker.patch.object(os, "makedirs")
 
-    mock_engine._write_score_to_score_deploy_path_on_tbears_mode(context, GOVERNANCE_SCORE_ADDRESS,
-                                                                         context.tx.hash, None)
+    mock_engine._write_score_to_score_deploy_path_on_tbears_mode(
+        context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None
+    )
 
-    isde.get_score_path.assert_called_with(context.score_root_path, GOVERNANCE_SCORE_ADDRESS)
+    isde.get_score_path.assert_called_with(
+        context.score_root_path, GOVERNANCE_SCORE_ADDRESS
+    )
     os.makedirs.assert_called_with(score_path, exist_ok=True)
     os.symlink.assert_called_with(None, score_deploy_path, target_is_directory=True)
     mocker.stopall()
@@ -200,18 +267,22 @@ def test_write_score_to_score_deploy_path_on_tbears_mode(mock_engine, context, m
 
 def test_on_deploy(mock_engine, context, mocker):
     """Case when deploy_info is not None, zip, revision0, score validator flag False, SCORE is not None"""
-    mocker.patch.object(IconScoreContextUtil, 'validate_score_package')
+    mocker.patch.object(IconScoreContextUtil, "validate_score_package")
     mock_score = Mock()
     mock_score.owner = EOA1
     deploy_params = {"a": 1}
     deploy_data = {"params": deploy_params}
     deploy_info = Mock(spec=IconScoreDeployInfo)
-    deploy_type = 'deploy_type'
-    next_tx_hash = b'\00\01' * 16
+    deploy_type = "deploy_type"
+    next_tx_hash = b"\00\01" * 16
     deploy_info.configure_mock(next_tx_hash=next_tx_hash)
     tx_params = Mock(spec=IconScoreDeployTXParams)
-    tx_params.configure_mock(score_address=SCORE_ADDRESS, deploy_data=deploy_data, deploy_type=deploy_type,
-                             params=deploy_params)
+    tx_params.configure_mock(
+        score_address=SCORE_ADDRESS,
+        deploy_data=deploy_data,
+        deploy_type=deploy_type,
+        params=deploy_params,
+    )
 
     backup_msg, backup_tx = context.msg, context.tx
 
@@ -225,12 +296,19 @@ def test_on_deploy(mock_engine, context, mocker):
     mock_engine._on_deploy(context, tx_params)
 
     context.storage.deploy.get_deploy_info.assert_called_with(context, SCORE_ADDRESS)
-    mock_engine._write_score_to_filesystem.assert_called_with(context, SCORE_ADDRESS, next_tx_hash, deploy_data)
-    IconScoreContextUtil.validate_score_package.assert_called_with(context, SCORE_ADDRESS,
-                                                                   next_tx_hash)
-    mock_engine._create_score_info.assert_called_with(context, SCORE_ADDRESS, next_tx_hash)
+    mock_engine._write_score_to_filesystem.assert_called_with(
+        context, SCORE_ADDRESS, next_tx_hash, deploy_data
+    )
+    IconScoreContextUtil.validate_score_package.assert_called_with(
+        context, SCORE_ADDRESS, next_tx_hash
+    )
+    mock_engine._create_score_info.assert_called_with(
+        context, SCORE_ADDRESS, next_tx_hash
+    )
     score_info.get_score.assert_called_with(context.revision)
-    mock_engine._initialize_score.assert_called_with(deploy_type, mock_score, deploy_params)
+    mock_engine._initialize_score.assert_called_with(
+        deploy_type, mock_score, deploy_params
+    )
 
     assert context.msg == backup_msg
     assert context.tx == backup_tx
@@ -239,28 +317,48 @@ def test_on_deploy(mock_engine, context, mocker):
 
 class TestIsAuditNeeded:
     @staticmethod
-    def set_test(mocker, is_service_flag_one_return_value: bool, get_owner_return_value: Address, revision: int):
-        mocker.patch.object(IconScoreContextUtil, "is_service_flag_on", return_value=is_service_flag_one_return_value)
-        mocker.patch.object(IconScoreContextUtil, "get_owner", return_value=get_owner_return_value)
-        mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
+    def set_test(
+        mocker,
+        is_service_flag_one_return_value: bool,
+        get_owner_return_value: Address,
+        revision: int,
+    ):
+        mocker.patch.object(
+            IconScoreContextUtil,
+            "is_service_flag_on",
+            return_value=is_service_flag_one_return_value,
+        )
+        mocker.patch.object(
+            IconScoreContextUtil, "get_owner", return_value=get_owner_return_value
+        )
+        mocker.patch.object(
+            IconScoreContext, "revision", PropertyMock(return_value=revision)
+        )
 
     @pytest.mark.parametrize("audit_flag", [True, False])
-    def test_is_audit_needed_case_revision0(self, mock_engine, context, mocker, audit_flag):
+    def test_is_audit_needed_case_revision0(
+        self, mock_engine, context, mocker, audit_flag
+    ):
         """case when revision0, owner, audit false"""
         self.set_test(mocker, audit_flag, EOA1, 0)
 
         result = mock_engine._is_audit_needed(context, SCORE_ADDRESS)
         IconScoreContextUtil.get_owner.assert_called_with(context, SCORE_ADDRESS)
-        IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
+        IconScoreContextUtil.is_service_flag_on.assert_called_with(
+            context, IconServiceFlag.AUDIT
+        )
         assert result is audit_flag
         mocker.stopall()
 
     @pytest.mark.parametrize("owner", [EOA1, EOA2])
     @pytest.mark.parametrize("score_address", [SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS])
     @pytest.mark.parametrize("audit_flag", [True, False])
-    @pytest.mark.parametrize("revision", [revision.value for revision in Revision if revision.value >= 2])
-    def test_is_audit_needed_case_revision_gt2(self, mock_engine, context, mocker,
-                                               audit_flag, owner, score_address, revision):
+    @pytest.mark.parametrize(
+        "revision", [revision.value for revision in Revision if revision.value >= 2]
+    )
+    def test_is_audit_needed_case_revision_gt2(
+        self, mock_engine, context, mocker, audit_flag, owner, score_address, revision
+    ):
         """
         case when revision >= 2
         tx sender = EOA1
@@ -271,18 +369,25 @@ class TestIsAuditNeeded:
 
         result = mock_engine._is_audit_needed(context, score_address)
         IconScoreContextUtil.get_owner.assert_called_with(context, score_address)
-        IconScoreContextUtil.is_service_flag_on.assert_called_with(context, IconServiceFlag.AUDIT)
+        IconScoreContextUtil.is_service_flag_on.assert_called_with(
+            context, IconServiceFlag.AUDIT
+        )
         assert result is (audit_flag and not (is_system_score and is_owner))
         mocker.stopall()
 
 
 class TestDeploy:
     @staticmethod
-    def set_test(mocker, get_deploy_tx_param_return_value: Optional[IconScoreDeployTXParams]):
+    def set_test(
+        mocker, get_deploy_tx_param_return_value: Optional[IconScoreDeployTXParams]
+    ):
         mocker.patch.object(isde.Engine, "_score_deploy")
         mocker.patch.object(IconScoreContext.storage.deploy, "update_score_info")
-        mocker.patch.object(IconScoreContext.storage.deploy, "get_deploy_tx_params",
-                            return_value=get_deploy_tx_param_return_value)
+        mocker.patch.object(
+            IconScoreContext.storage.deploy,
+            "get_deploy_tx_params",
+            return_value=get_deploy_tx_param_return_value,
+        )
 
     def test_deploy_case_tx_param_none(self, mock_engine, context, mocker):
         """case when tx_param is None"""
@@ -291,7 +396,9 @@ class TestDeploy:
         with pytest.raises(InvalidParamsException) as e:
             mock_engine.deploy(context, context.tx.hash)
 
-        context.storage.deploy.get_deploy_tx_params.assert_called_with(context, context.tx.hash)
+        context.storage.deploy.get_deploy_tx_params.assert_called_with(
+            context, context.tx.hash
+        )
         assert e.value.code == ExceptionCode.INVALID_PARAMETER
         mock_engine._score_deploy.assert_not_called()
         context.storage.deploy.update_score_info.assert_not_called()
@@ -306,8 +413,9 @@ class TestDeploy:
         mock_engine.deploy(context, context.tx.hash)
 
         mock_engine._score_deploy.assert_called_with(context, tx_params)
-        context.storage.deploy. \
-            update_score_info.assert_called_with(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
+        context.storage.deploy.update_score_info.assert_called_with(
+            context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash
+        )
         mocker.stopall()
 
 
@@ -323,9 +431,9 @@ class TestScoreDeploy:
         context.legacy_tbears_mode = tbears_mode
 
         if tbears_mode:
-            deploy_data = {'contentType': 'application/tbears', 'content': self.content}
+            deploy_data = {"contentType": "application/tbears", "content": self.content}
         else:
-            deploy_data = {'contentType': 'application/zip', 'content': self.content}
+            deploy_data = {"contentType": "application/zip", "content": self.content}
 
         tx_params = Mock(spec=IconScoreDeployTXParams)
         tx_params.configure_mock(deploy_data=deploy_data)
@@ -336,15 +444,16 @@ class TestScoreDeploy:
         mock_engine._on_deploy.assert_called_with(context, tx_params)
         mocker.stopall()
 
-    @pytest.mark.parametrize("content_type", [
-        "application/tbears",
-        "wrong/content"
-    ])
-    def test_score_deploy_invalid_content_type(self, mock_engine, context, mocker, content_type):
+    @pytest.mark.parametrize("content_type", ["application/tbears", "wrong/content"])
+    def test_score_deploy_invalid_content_type(
+        self, mock_engine, context, mocker, content_type
+    ):
         context.legacy_tbears_mode = False
 
         tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(deploy_data={'contentType': content_type, 'content': self.content})
+        tx_params.configure_mock(
+            deploy_data={"contentType": content_type, "content": self.content}
+        )
 
         self.set_test(mocker, mock_engine)
 
@@ -365,45 +474,74 @@ class TestWriteScoreToScoreDeployPath:
         mocker.patch.object(IconScoreDeployer, "deploy")
         mocker.patch.object(IconScoreDeployer, "deploy_legacy")
         mocker.patch("iconservice.deploy.engine.remove_path")
-        mocker.patch("iconservice.deploy.engine.get_score_deploy_path", return_value=score_deploy_path)
+        mocker.patch(
+            "iconservice.deploy.engine.get_score_deploy_path",
+            return_value=score_deploy_path,
+        )
         mocker.patch.object(os.path, "join", return_value=score_path)
-        mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
+        mocker.patch.object(
+            IconScoreContext, "revision", PropertyMock(return_value=revision)
+        )
 
-    @pytest.mark.parametrize('revision', [revision.value for revision in Revision if revision.value >= 3])
-    def test_write_score_to_score_deploy_path_revision_ge3(self, mock_engine, context, mocker, revision):
+    @pytest.mark.parametrize(
+        "revision", [revision.value for revision in Revision if revision.value >= 3]
+    )
+    def test_write_score_to_score_deploy_path_revision_ge3(
+        self, mock_engine, context, mocker, revision
+    ):
         self.set_test(mocker, self.score_path, self.score_deploy_path, revision)
 
-        mock_engine._write_score_to_score_deploy_path(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
+        mock_engine._write_score_to_score_deploy_path(
+            context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None
+        )
 
-        isde.get_score_deploy_path.assert_called_with(context.score_root_path, GOVERNANCE_SCORE_ADDRESS,
-                                                      context.tx.hash)
-        os.path.join.assert_called_with(context.score_root_path, GOVERNANCE_SCORE_ADDRESS.to_bytes().hex(),
-                                        f"0x{context.tx.hash.hex()}")
+        isde.get_score_deploy_path.assert_called_with(
+            context.score_root_path, GOVERNANCE_SCORE_ADDRESS, context.tx.hash
+        )
+        os.path.join.assert_called_with(
+            context.score_root_path,
+            GOVERNANCE_SCORE_ADDRESS.to_bytes().hex(),
+            f"0x{context.tx.hash.hex()}",
+        )
         isde.remove_path.assert_called_with(self.score_path)
-        IconScoreDeployer.deploy.assert_called_with(self.score_deploy_path, None, revision)
+        IconScoreDeployer.deploy.assert_called_with(
+            self.score_deploy_path, None, revision
+        )
         mocker.stopall()
 
-    def test_write_score_to_score_deploy_path_revision_2(self, mock_engine, context, mocker):
+    def test_write_score_to_score_deploy_path_revision_2(
+        self, mock_engine, context, mocker
+    ):
         self.set_test(mocker, self.score_path, self.score_deploy_path, 2)
 
-        mock_engine._write_score_to_score_deploy_path(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
+        mock_engine._write_score_to_score_deploy_path(
+            context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None
+        )
 
-        isde.get_score_deploy_path.assert_called_with(context.score_root_path,
-                                                      GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
+        isde.get_score_deploy_path.assert_called_with(
+            context.score_root_path, GOVERNANCE_SCORE_ADDRESS, context.tx.hash
+        )
         os.path.join.assert_not_called()
         isde.remove_path.assert_not_called()
         IconScoreDeployer.deploy.assert_called_with(self.score_deploy_path, None, 2)
         mocker.stopall()
 
-    @pytest.mark.parametrize('revision', [revision.value for revision in Revision if 0 <= revision.value < 2])
-    def test_write_score_to_score_deploy_path_revision_lt2(self, mock_engine, context, mocker, revision):
+    @pytest.mark.parametrize(
+        "revision", [revision.value for revision in Revision if 0 <= revision.value < 2]
+    )
+    def test_write_score_to_score_deploy_path_revision_lt2(
+        self, mock_engine, context, mocker, revision
+    ):
         """case when revision < 2"""
         self.set_test(mocker, self.score_path, self.score_deploy_path, revision)
 
-        mock_engine._write_score_to_score_deploy_path(context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None)
+        mock_engine._write_score_to_score_deploy_path(
+            context, GOVERNANCE_SCORE_ADDRESS, context.tx.hash, None
+        )
 
-        isde.get_score_deploy_path.assert_called_with(context.score_root_path,
-                                                      GOVERNANCE_SCORE_ADDRESS, context.tx.hash)
+        isde.get_score_deploy_path.assert_called_with(
+            context.score_root_path, GOVERNANCE_SCORE_ADDRESS, context.tx.hash
+        )
         os.path.join.assert_not_called()
         isde.remove_path.assert_not_called()
         IconScoreDeployer.deploy.assert_not_called()
@@ -431,7 +569,9 @@ class TestInitializeScore:
         self.set_test(mocker)
 
         mock_engine._initialize_score(deploy_type, self.mock_score, self.params)
-        TypeConverter.adjust_params_to_method.assert_called_with(self.on_install, self.params)
+        TypeConverter.adjust_params_to_method.assert_called_with(
+            self.on_install, self.params
+        )
         self.on_install.assert_called_with(**self.params)
         self.on_update.assert_not_called()
         self.on_invalid.assert_not_called()
@@ -444,7 +584,9 @@ class TestInitializeScore:
         self.set_test(mocker)
 
         mock_engine._initialize_score(deploy_type, self.mock_score, self.params)
-        TypeConverter.adjust_params_to_method.assert_called_with(self.on_update, self.params)
+        TypeConverter.adjust_params_to_method.assert_called_with(
+            self.on_update, self.params
+        )
         self.on_install.assert_not_called()
         self.on_update.assert_called_with(**self.params)
         self.on_invalid.assert_not_called()
@@ -452,7 +594,7 @@ class TestInitializeScore:
 
     def test_initialize_score_invalid(self, mock_engine, mocker):
         """case invalid method name"""
-        deploy_type = 'invalid'
+        deploy_type = "invalid"
 
         self.set_test(mocker)
 
@@ -466,4 +608,3 @@ class TestInitializeScore:
         self.on_update.assert_not_called()
         self.on_invalid.assert_not_called()
         mocker.stopall()
-

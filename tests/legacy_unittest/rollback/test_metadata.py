@@ -36,15 +36,17 @@ class TestMetadata(unittest.TestCase):
             block_hash=block_hash,
             timestamp=timestamp_us,
             prev_hash=prev_block_hash,
-            cumulative_fee=cumulative_fee
+            cumulative_fee=cumulative_fee,
         )
 
         block_height = last_block.height - 10
         block_hash: bytes = os.urandom(32)
         term_start_block_height = block_height = block_height - 20
-        last_block: 'Block' = last_block
+        last_block: "Block" = last_block
 
-        metadata = Metadata(block_height, block_hash, term_start_block_height, last_block)
+        metadata = Metadata(
+            block_height, block_hash, term_start_block_height, last_block
+        )
         assert metadata.block_height == block_height
         assert metadata.block_hash == block_hash
         assert metadata.term_start_block_height == term_start_block_height
@@ -72,7 +74,7 @@ class TestMetadata(unittest.TestCase):
 
     def test_load(self):
         path = "./ROLLBACK_METADATA"
-        metadata: Optional['Metadata'] = Metadata.load(path)
+        metadata: Optional["Metadata"] = Metadata.load(path)
         assert metadata is None
 
         self.metadata.save(path)

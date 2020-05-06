@@ -41,26 +41,106 @@ if TYPE_CHECKING:
 
 
 EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT = [
-    864000, 845618, 827500, 809647, 792059,
-    774735, 757675, 740880, 724349, 708083,
-    692082, 676344, 660872, 645664, 630720,
-    616041, 601626, 587476, 573590, 559969,
-    546612, 533520, 520692, 508129, 495830,
-    483796, 472026, 460521, 449280, 438304,
-    427592, 417144, 406962, 397043, 387389,
-    378000, 368875, 360015, 351419, 343087,
-    335020, 327218, 319680, 312407, 305398,
-    298653, 292173, 285958, 280007, 274320,
-    268898, 263740, 258847, 254219, 249855,
-    245755, 241920, 238349, 235043, 232002,
-    229224, 226712, 224464, 222480, 220761,
-    219306, 218116, 217190, 216529, 216132,
-    216000, 216000, 216000, 216000, 216000,
-    216000, 216000, 216000, 216000, 216000,
-    216000, 216000, 216000, 216000, 216000,
-    216000, 216000, 216000, 216000, 216000,
-    216000, 216000, 216000, 216000, 216000,
-    216000, 216000, 216000, 216000, 216000
+    864000,
+    845618,
+    827500,
+    809647,
+    792059,
+    774735,
+    757675,
+    740880,
+    724349,
+    708083,
+    692082,
+    676344,
+    660872,
+    645664,
+    630720,
+    616041,
+    601626,
+    587476,
+    573590,
+    559969,
+    546612,
+    533520,
+    520692,
+    508129,
+    495830,
+    483796,
+    472026,
+    460521,
+    449280,
+    438304,
+    427592,
+    417144,
+    406962,
+    397043,
+    387389,
+    378000,
+    368875,
+    360015,
+    351419,
+    343087,
+    335020,
+    327218,
+    319680,
+    312407,
+    305398,
+    298653,
+    292173,
+    285958,
+    280007,
+    274320,
+    268898,
+    263740,
+    258847,
+    254219,
+    249855,
+    245755,
+    241920,
+    238349,
+    235043,
+    232002,
+    229224,
+    226712,
+    224464,
+    222480,
+    220761,
+    219306,
+    218116,
+    217190,
+    216529,
+    216132,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
+    216000,
 ]
 
 
@@ -68,23 +148,30 @@ SENDER_ADDRESS = Address.from_prefix_and_int(AddressPrefix.EOA, 0)
 
 
 def create_account(
-        address: 'Address', balance: int,
-        stake: int, unstake: int, unstake_block_height: int,
-        delegated_amount: int, delegations: List[Tuple[Address, int]]) -> 'Account':
+    address: "Address",
+    balance: int,
+    stake: int,
+    unstake: int,
+    unstake_block_height: int,
+    delegated_amount: int,
+    delegations: List[Tuple[Address, int]],
+) -> "Account":
     coin_part = CoinPart(balance=balance)
     stake_part = StakePart(stake, unstake, unstake_block_height)
     delegation_part = DelegationPart(delegated_amount, delegations)
 
     return Account(
-        address, 1024,
+        address,
+        1024,
         coin_part=coin_part,
         stake_part=stake_part,
-        delegation_part=delegation_part)
+        delegation_part=delegation_part,
+    )
 
 
 def create_sender_account(stake: int):
     total_delegating = 0
-    old_delegations: List[Tuple['Address', int], ...] = []
+    old_delegations: List[Tuple["Address", int], ...] = []
 
     for i in range(IISS_MAX_DELEGATIONS):
         value = i + 1
@@ -94,14 +181,19 @@ def create_sender_account(stake: int):
 
     sender_address = SENDER_ADDRESS
     return create_account(
-        address=sender_address, balance=icx_to_loop(10),
-        stake=stake, unstake=0, unstake_block_height=0,
-        delegated_amount=0, delegations=old_delegations)
+        address=sender_address,
+        balance=icx_to_loop(10),
+        stake=stake,
+        unstake=0,
+        unstake_block_height=0,
+        delegated_amount=0,
+        delegations=old_delegations,
+    )
 
 
-def get_account(context: 'IconScoreContext',
-                address: 'Address',
-                intent: 'Intent' = Intent.TRANSFER) -> 'Account':
+def get_account(
+    context: "IconScoreContext", address: "Address", intent: "Intent" = Intent.TRANSFER
+) -> "Account":
 
     """Returns the account indicated by address.
 
@@ -115,14 +207,14 @@ def get_account(context: 'IconScoreContext',
     if address == SENDER_ADDRESS:
         return create_sender_account(stake=10_000)
 
-    coin_part: Optional['CoinPart'] = None
-    stake_part: Optional['StakePart'] = None
-    delegation_part: Optional['DelegationPart'] = None
+    coin_part: Optional["CoinPart"] = None
+    stake_part: Optional["StakePart"] = None
+    delegation_part: Optional["DelegationPart"] = None
 
-    part_flags: 'AccountPartFlag' = AccountPartFlag(intent)
+    part_flags: "AccountPartFlag" = AccountPartFlag(intent)
 
     if AccountPartFlag.COIN in part_flags:
-        coin_part: 'CoinPart' = CoinPart(balance=0)
+        coin_part: "CoinPart" = CoinPart(balance=0)
 
     if AccountPartFlag.STAKE in part_flags:
         stake_part = StakePart(0, 0, 0)
@@ -132,10 +224,13 @@ def get_account(context: 'IconScoreContext',
         delegated_amount = value if 1 <= value <= 10 else 0
         delegation_part = DelegationPart(delegated_amount=delegated_amount)
 
-    return Account(address, context.block.height,
-                   coin_part=coin_part,
-                   stake_part=stake_part,
-                   delegation_part=delegation_part)
+    return Account(
+        address,
+        context.block.height,
+        coin_part=coin_part,
+        stake_part=stake_part,
+        delegation_part=delegation_part,
+    )
 
 
 def create_delegations_param() -> Tuple[int, List]:
@@ -147,10 +242,7 @@ def create_delegations_param() -> Tuple[int, List]:
         address = Address.from_prefix_and_int(AddressPrefix.EOA, _id)
         value = _id
 
-        delegations.append({
-            "address": str(address),
-            "value": hex(value)
-        })
+        delegations.append({"address": str(address), "value": hex(value)})
         total_delegating += value
 
     return total_delegating, delegations
@@ -174,18 +266,18 @@ class TestIissEngine(unittest.TestCase):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = random.randint(1, 10_000)
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": str(address), "value": hex(value)})
             total_delegating += value
 
-        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(delegations)
+        (
+            ret_total_delegating,
+            ret_delegations,
+        ) = IISSEngine._convert_params_of_set_delegation(delegations)
         assert ret_total_delegating == total_delegating
 
         for i in range(len(delegations)):
-            item: Tuple['Address', int] = ret_delegations[i]
-            address: 'Address' = item[0]
+            item: Tuple["Address", int] = ret_delegations[i]
+            address: "Address" = item[0]
             value: int = item[1]
 
             assert str(address) == delegations[i]["address"]
@@ -199,13 +291,13 @@ class TestIissEngine(unittest.TestCase):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = 0 if i < 5 else i + 1
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": str(address), "value": hex(value)})
             total_delegating += value
 
-        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(delegations)
+        (
+            ret_total_delegating,
+            ret_delegations,
+        ) = IISSEngine._convert_params_of_set_delegation(delegations)
         assert ret_total_delegating == total_delegating == (6 + 7 + 8 + 9 + 10)
         assert len(ret_delegations) == 5
 
@@ -226,10 +318,7 @@ class TestIissEngine(unittest.TestCase):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = values[i]
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": str(address), "value": hex(value)})
 
         with pytest.raises(InvalidParamsException):
             IISSEngine._convert_params_of_set_delegation(delegations)
@@ -241,10 +330,7 @@ class TestIissEngine(unittest.TestCase):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, 1)
             value = random.randint(1, 100)
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": str(address), "value": hex(value)})
 
         with pytest.raises(InvalidParamsException):
             IISSEngine._convert_params_of_set_delegation(delegations)
@@ -256,29 +342,29 @@ class TestIissEngine(unittest.TestCase):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = random.randint(1, 10_000)
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": str(address), "value": hex(value)})
 
         with pytest.raises(InvalidParamsException):
             IISSEngine._convert_params_of_set_delegation(delegations)
 
     def test__check_voting_power_is_enough(self):
-        def _get_account(_context: 'IconScoreContext',
-                         _address: 'Address',
-                         _intent: 'Intent' = Intent.TRANSFER) -> 'Account':
+        def _get_account(
+            _context: "IconScoreContext",
+            _address: "Address",
+            _intent: "Intent" = Intent.TRANSFER,
+        ) -> "Account":
             return create_sender_account(stake=155)
 
-        cached_accounts: Dict['Address', Tuple['Account', int]] = {}
+        cached_accounts: Dict["Address", Tuple["Account", int]] = {}
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=_get_account)
         total_delegating = sum(range(11, 21))  # new_delegations
 
         IISSEngine._check_voting_power_is_enough(
-            context, SENDER_ADDRESS, total_delegating, cached_accounts)
+            context, SENDER_ADDRESS, total_delegating, cached_accounts
+        )
 
-        sender_item: Tuple['Account', int] = cached_accounts[SENDER_ADDRESS]
+        sender_item: Tuple["Account", int] = cached_accounts[SENDER_ADDRESS]
 
         assert len(cached_accounts) == 1
         assert sender_item[0] == _get_account(context, SENDER_ADDRESS, Intent.ALL)
@@ -287,34 +373,43 @@ class TestIissEngine(unittest.TestCase):
         assert sender_item[0].stake >= total_delegating
 
     def test__check_voting_power_is_enough_with_not_enough_stake(self):
-        def _get_account(_context: 'IconScoreContext',
-                         _address: 'Address',
-                         _intent: 'Intent' = Intent.TRANSFER) -> 'Account':
+        def _get_account(
+            _context: "IconScoreContext",
+            _address: "Address",
+            _intent: "Intent" = Intent.TRANSFER,
+        ) -> "Account":
             return create_sender_account(stake=100)
 
-        cached_accounts: Dict['Address', Tuple['Account', int]] = {}
+        cached_accounts: Dict["Address", Tuple["Account", int]] = {}
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=_get_account)
         total_delegating = sum(range(11, 21))  # new_delegations
 
         with pytest.raises(InvalidRequestException):
             IISSEngine._check_voting_power_is_enough(
-                context, SENDER_ADDRESS, total_delegating, cached_accounts)
+                context, SENDER_ADDRESS, total_delegating, cached_accounts
+            )
 
     def test__get_old_delegations_from_sender_account(self):
-        cached_accounts: Dict['Address', Tuple['Account', int]] = {}
+        cached_accounts: Dict["Address", Tuple["Account", int]] = {}
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=get_account)
 
-        sender_account = context.storage.icx.get_account(context, SENDER_ADDRESS, Intent.ALL)
+        sender_account = context.storage.icx.get_account(
+            context, SENDER_ADDRESS, Intent.ALL
+        )
         cached_accounts[SENDER_ADDRESS] = sender_account, 0
 
         # Get old delegations from delegating accounts
-        IISSEngine._get_old_delegations_from_sender_account(context, SENDER_ADDRESS, cached_accounts)
-        assert len(cached_accounts) == 11  # sender_account(1) + old delegated_accounts(10)
+        IISSEngine._get_old_delegations_from_sender_account(
+            context, SENDER_ADDRESS, cached_accounts
+        )
+        assert (
+            len(cached_accounts) == 11
+        )  # sender_account(1) + old delegated_accounts(10)
 
         for i, address in enumerate(cached_accounts):
-            item: Tuple['Account', int] = cached_accounts[address]
+            item: Tuple["Account", int] = cached_accounts[address]
             account = item[0]
             delegated_offset = item[1]
 
@@ -323,29 +418,33 @@ class TestIissEngine(unittest.TestCase):
             if i == 0:
                 assert delegated_offset == 0
             else:
-                delegation: Tuple['Account', int] = sender_account.delegations[i - 1]
+                delegation: Tuple["Account", int] = sender_account.delegations[i - 1]
                 assert address == delegation[0]
                 assert delegated_offset == -delegation[1]
 
     def test__calc_delegations(self):
-        cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
+        cached_accounts: Dict["Address", Tuple["Account", int]] = OrderedDict()
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=get_account)
 
-        new_delegations: List[Tuple['Address', int]] = []
+        new_delegations: List[Tuple["Address", int]] = []
         for i in range(10):
             value: int = i + 11
             address = Address.from_prefix_and_int(AddressPrefix.EOA, value)
             new_delegations.append((address, value))
 
-        sender_account = context.storage.icx.get_account(context, SENDER_ADDRESS, Intent.ALL)
+        sender_account = context.storage.icx.get_account(
+            context, SENDER_ADDRESS, Intent.ALL
+        )
         cached_accounts[SENDER_ADDRESS] = sender_account, 0
 
         # Prepare old delegations
         for i in range(10):
             value: int = i + 1
             address = Address.from_prefix_and_int(AddressPrefix.EOA, value)
-            account = context.storage.icx.get_account(context, address, Intent.DELEGATED)
+            account = context.storage.icx.get_account(
+                context, address, Intent.DELEGATED
+            )
             cached_accounts[address] = account, -value
 
         IISSEngine._calc_delegations(context, new_delegations, cached_accounts)
@@ -364,39 +463,48 @@ class TestIissEngine(unittest.TestCase):
                 assert delegated_offset == i
 
     def test__put_delegation_to_state_db(self):
-        cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
+        cached_accounts: Dict["Address", Tuple["Account", int]] = OrderedDict()
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=get_account)
 
         total_delegating = 0
-        new_delegations: List[Tuple['Address', int]] = []
+        new_delegations: List[Tuple["Address", int]] = []
         for i in range(10):
             value: int = i + 11
             address = Address.from_prefix_and_int(AddressPrefix.EOA, value)
             new_delegations.append((address, value))
             total_delegating += value
 
-        sender_account = context.storage.icx.get_account(context, SENDER_ADDRESS, Intent.ALL)
+        sender_account = context.storage.icx.get_account(
+            context, SENDER_ADDRESS, Intent.ALL
+        )
         cached_accounts[SENDER_ADDRESS] = sender_account, 0
 
         # Put old delegations to cached_accounts
         for address, value in sender_account.delegations:
-            account = context.storage.icx.get_account(context, address, Intent.DELEGATED)
+            account = context.storage.icx.get_account(
+                context, address, Intent.DELEGATED
+            )
             cached_accounts[address] = account, -value
 
         # Put new delegations to cached_accounts
         for i in range(10):
             value: int = i + 11
             address = Address.from_prefix_and_int(AddressPrefix.EOA, value)
-            account = context.storage.icx.get_account(context, address, Intent.DELEGATED)
+            account = context.storage.icx.get_account(
+                context, address, Intent.DELEGATED
+            )
             cached_accounts[address] = account, value
 
-        updated_accounts: List['Account'] = IISSEngine._put_delegation_to_state_db(
-            context, SENDER_ADDRESS, new_delegations, cached_accounts)
+        updated_accounts: List["Account"] = IISSEngine._put_delegation_to_state_db(
+            context, SENDER_ADDRESS, new_delegations, cached_accounts
+        )
 
         # sender_account(1) + old_delegated_accounts(10) + new_delegated_accounts(10)
         assert len(updated_accounts) == len(cached_accounts) == 21
-        assert len(context.storage.icx.put_account.call_args_list) == len(cached_accounts)
+        assert len(context.storage.icx.put_account.call_args_list) == len(
+            cached_accounts
+        )
 
         for i, address in enumerate(cached_accounts):
             call_args = context.storage.icx.put_account.call_args_list[i]
@@ -427,10 +535,12 @@ class TestIissEngine(unittest.TestCase):
         total_delegating, delegations = create_delegations_param()
 
         class IISSEngineListenerImpl(IISSEngineListener):
-            def on_set_stake(self, _context: 'IconScoreContext', account: 'Account'):
+            def on_set_stake(self, _context: "IconScoreContext", account: "Account"):
                 assert False
 
-            def on_set_delegation(self, _context: 'IconScoreContext', updated_accounts: List['Account']):
+            def on_set_delegation(
+                self, _context: "IconScoreContext", updated_accounts: List["Account"]
+            ):
                 assert len(updated_accounts) == 21
 
                 for i, account in enumerate(updated_accounts):
@@ -442,14 +552,18 @@ class TestIissEngine(unittest.TestCase):
                         # sender_account
                         assert account.delegated_amount == 0
                         assert len(account.delegations) == 10
-                        assert account.delegation_part.delegations_amount == sum(range(11, 21))
+                        assert account.delegation_part.delegations_amount == sum(
+                            range(11, 21)
+                        )
 
                         for j, item in enumerate(account.delegations):
-                            address: 'Address' = item[0]
+                            address: "Address" = item[0]
                             value: int = item[1]
 
                             _id = j + 11
-                            assert address == Address.from_prefix_and_int(AddressPrefix.EOA, _id)
+                            assert address == Address.from_prefix_and_int(
+                                AddressPrefix.EOA, _id
+                            )
                             assert value == _id
                     else:
                         assert account.delegations_amount == 0
@@ -470,16 +584,20 @@ class TestIissEngine(unittest.TestCase):
         context.storage.icx.get_account = Mock(side_effect=get_account)
 
         params = {}
-        new_delegations = [{
-            "address": str(Address.from_prefix_and_int(AddressPrefix.EOA, 1)),
-            "value": hex(100)
-        }]
+        new_delegations = [
+            {
+                "address": str(Address.from_prefix_and_int(AddressPrefix.EOA, 1)),
+                "value": hex(100),
+            }
+        ]
 
         class IISSEngineListenerImpl(IISSEngineListener):
-            def on_set_stake(self, _context: 'IconScoreContext', account: 'Account'):
+            def on_set_stake(self, _context: "IconScoreContext", account: "Account"):
                 assert False
 
-            def on_set_delegation(self, _context: 'IconScoreContext', updated_accounts: List['Account']):
+            def on_set_delegation(
+                self, _context: "IconScoreContext", updated_accounts: List["Account"]
+            ):
                 # sender_account(1) + updated_delegated_account(10)
                 assert len(updated_accounts) == 11
 
@@ -496,7 +614,9 @@ class TestIissEngine(unittest.TestCase):
                         assert account.delegation_part.delegations_amount == 100
 
                         item = account.delegations[0]
-                        assert item[0] == Address.from_prefix_and_int(AddressPrefix.EOA, 1)
+                        assert item[0] == Address.from_prefix_and_int(
+                            AddressPrefix.EOA, 1
+                        )
                         assert item[1] == 100
                     else:
                         assert account.delegations_amount == 0
@@ -520,43 +640,51 @@ class TestIissEngine(unittest.TestCase):
         """
         total_delegating, delegations = create_delegations_param()
 
-        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(delegations)
+        (
+            ret_total_delegating,
+            ret_delegations,
+        ) = IISSEngine._convert_params_of_set_delegation(delegations)
         assert ret_total_delegating == total_delegating
 
         for i in range(len(delegations)):
-            item: Tuple['Address', int] = ret_delegations[i]
-            address: 'Address' = item[0]
+            item: Tuple["Address", int] = ret_delegations[i]
+            address: "Address" = item[0]
             value: int = item[1]
 
             assert str(address) == delegations[i]["address"]
             assert hex(value) == delegations[i]["value"]
 
         # IISSEngine._check_voting_power_is_enough()
-        cached_accounts: Dict['Address', Tuple['Account', int]] = {}
+        cached_accounts: Dict["Address", Tuple["Account", int]] = {}
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=get_account)
         IISSEngine._check_voting_power_is_enough(
-            context, SENDER_ADDRESS, total_delegating, cached_accounts)
+            context, SENDER_ADDRESS, total_delegating, cached_accounts
+        )
 
         assert len(cached_accounts) == 1
         assert cached_accounts[SENDER_ADDRESS][0] == create_sender_account(stake=10_000)
         assert cached_accounts[SENDER_ADDRESS][1] == 0  # delegated_amount
 
-        sender_account: 'Account' = cached_accounts[SENDER_ADDRESS][0]
+        sender_account: "Account" = cached_accounts[SENDER_ADDRESS][0]
 
         # Get old delegations from delegating accounts
-        IISSEngine._get_old_delegations_from_sender_account(context, SENDER_ADDRESS, cached_accounts)
-        assert len(cached_accounts) == 11  # sender_account(1) + old delegated_accounts(10)
+        IISSEngine._get_old_delegations_from_sender_account(
+            context, SENDER_ADDRESS, cached_accounts
+        )
+        assert (
+            len(cached_accounts) == 11
+        )  # sender_account(1) + old delegated_accounts(10)
 
         for i, address in enumerate(cached_accounts):
-            item: Tuple['Account', int] = cached_accounts[address]
+            item: Tuple["Account", int] = cached_accounts[address]
             account = item[0]
             delegated_offset = item[1]
 
             assert address == account.address
 
             if i > 0:
-                delegation: Tuple['Account', int] = sender_account.delegations[i - 1]
+                delegation: Tuple["Account", int] = sender_account.delegations[i - 1]
                 assert address == delegation[0]
                 assert delegated_offset == -delegation[1]
 
@@ -575,11 +703,14 @@ class TestIissEngine(unittest.TestCase):
             else:  # 11 <= i <= 20
                 assert delegated_offset == i
 
-        updated_accounts: List['Account'] = \
-            IISSEngine._put_delegation_to_state_db(context, SENDER_ADDRESS, ret_delegations, cached_accounts)
+        updated_accounts: List["Account"] = IISSEngine._put_delegation_to_state_db(
+            context, SENDER_ADDRESS, ret_delegations, cached_accounts
+        )
         # sender_account(1) + old_delegated_accounts(10) + new_delegated_accounts(10)
         assert len(updated_accounts) == len(cached_accounts) == 21
-        assert len(context.storage.icx.put_account.call_args_list) == len(cached_accounts)
+        assert len(context.storage.icx.put_account.call_args_list) == len(
+            cached_accounts
+        )
 
         for i, address in enumerate(cached_accounts):
             call_args = context.storage.icx.put_account.call_args_list[i]
@@ -603,5 +734,5 @@ class TestIissEngine(unittest.TestCase):
             engine.invoke(context, "stake", {})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

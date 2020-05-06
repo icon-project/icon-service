@@ -44,23 +44,24 @@ class TransactionResult(object):
             if type(code) != int:
                 code = ExceptionCode.SYSTEM_ERROR.value
             if type(message) != str:
-                message = 'Invalid argument: message is not a string'
+                message = "Invalid argument: message is not a string"
 
             self.code = code
             self.message = message
 
     def __init__(
-            self,
-            tx: 'Transaction',
-            block: 'Block',
-            to: Optional['Address'] = None,
-            score_address: Optional['Address'] = None,
-            step_used: int = 0,
-            step_price: int = 0,
-            cumulative_step_used: int = 0,
-            event_logs: Optional[List['EventLog']] = None,
-            logs_bloom: Optional[BloomFilter] = None,
-            status: int = FAILURE) -> None:
+        self,
+        tx: "Transaction",
+        block: "Block",
+        to: Optional["Address"] = None,
+        score_address: Optional["Address"] = None,
+        step_used: int = 0,
+        step_price: int = 0,
+        cumulative_step_used: int = 0,
+        event_logs: Optional[List["EventLog"]] = None,
+        logs_bloom: Optional[BloomFilter] = None,
+        status: int = FAILURE,
+    ) -> None:
         """Constructor
 
         :param tx: transaction
@@ -98,7 +99,7 @@ class TransactionResult(object):
         self.traces = None
 
     def __str__(self) -> str:
-        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+        return "\n".join([f"{k}: {v}" for k, v in self.__dict__.items()])
 
     def to_dict(self, casing: Optional[callable] = None) -> dict:
         """
@@ -112,25 +113,23 @@ class TransactionResult(object):
                 continue
 
             new_key = casing(key) if casing else key
-            if key == 'event_logs':
-                new_dict[new_key] = [v.to_dict(casing) for v in value if
-                                     isinstance(v, EventLog)]
+            if key == "event_logs":
+                new_dict[new_key] = [
+                    v.to_dict(casing) for v in value if isinstance(v, EventLog)
+                ]
             elif isinstance(value, BloomFilter):
                 new_dict[new_key] = int(value).to_bytes(256, byteorder=DATA_BYTE_ORDER)
-            elif key == 'failure':
+            elif key == "failure":
                 if self.status == self.FAILURE:
-                    new_dict[new_key] = {
-                        'code': value.code,
-                        'message': value.message
-                    }
-            elif key == 'step_used_details':
+                    new_dict[new_key] = {"code": value.code, "message": value.message}
+            elif key == "step_used_details":
                 assert isinstance(value, dict)
                 step_used_details = {}
                 new_dict[new_key] = step_used_details
 
                 for address in value:
                     step_used_details[str(address)] = value[address]
-            elif key == 'traces':
+            elif key == "traces":
                 # traces are excluded from dict property
                 continue
             else:

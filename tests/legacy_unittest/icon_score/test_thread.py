@@ -10,12 +10,14 @@ class TestThread(unittest.TestCase):
     cls_thread_safe_unsafe_get = None
 
     def setUp(self):
-        logging.basicConfig(level=logging.DEBUG,
-                            format='(%(threadName)-10s) %(message)s', )
+        logging.basicConfig(
+            level=logging.DEBUG, format="(%(threadName)-10s) %(message)s",
+        )
 
     def tearDown(self):
-        logging.basicConfig(level=logging.DEBUG,
-                            format=logging.BASIC_FORMAT, )
+        logging.basicConfig(
+            level=logging.DEBUG, format=logging.BASIC_FORMAT,
+        )
 
     class MyClassThreadSafeUsingThreadLocal:
         class Data(threading.local):
@@ -50,19 +52,24 @@ class TestThread(unittest.TestCase):
 
     def test_thread_set(self):
         for i in range(1, 10):
-            t = threading.Thread(target=self.set_value, args=(self.get_global_my_cls_thread_safe, i, ))
+            t = threading.Thread(
+                target=self.set_value, args=(self.get_global_my_cls_thread_safe, i,)
+            )
             t.start()
 
     def test_thread_set_unsafe_get(self):
         for i in range(1, 10):
-            t = threading.Thread(target=self.set_value, args=(self.get_global_my_cls_thread_safe_unsafe_get, i, ))
+            t = threading.Thread(
+                target=self.set_value,
+                args=(self.get_global_my_cls_thread_safe_unsafe_get, i,),
+            )
             t.start()
 
     def test_unsafe_set(self):
         mycls = self.MyClass(0)
 
         for i in range(1, 10):
-            t = threading.Thread(target=self.set_value_for_unsafe, args=(mycls, i, ))
+            t = threading.Thread(target=self.set_value_for_unsafe, args=(mycls, i,))
             t.start()
 
     def set_value(self, func, i):

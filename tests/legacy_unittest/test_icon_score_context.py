@@ -22,7 +22,6 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 
 
 class TestIconScoreContextFactory(unittest.TestCase):
-
     def test_create_and_destroy(self):
 
         for _ in range(3):

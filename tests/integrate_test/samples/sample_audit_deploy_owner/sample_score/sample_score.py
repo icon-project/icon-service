@@ -2,9 +2,9 @@ from iconservice import *
 
 
 class SampleScore(IconScoreBase):
-
     @eventlog(indexed=1)
-    def Hello(self, msg_sender: Address): pass
+    def Hello(self, msg_sender: Address):
+        pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
@@ -18,4 +18,4 @@ class SampleScore(IconScoreBase):
     @external
     def hello(self) -> None:
         self.Hello(self.msg.sender)
-        print('hello')
+        print("hello")

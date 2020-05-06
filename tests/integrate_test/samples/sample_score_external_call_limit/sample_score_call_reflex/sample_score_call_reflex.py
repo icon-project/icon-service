@@ -2,7 +2,6 @@ from iconservice import *
 
 
 class SampleScoreCallReflex(IconScoreBase):
-
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
 
@@ -14,9 +13,9 @@ class SampleScoreCallReflex(IconScoreBase):
 
     @external
     def invoke(self, index: int) -> None:
-        print(f'index:{index}')
-        self.call(self.msg.sender, 'invoke', {'index': index + 1})
+        print(f"index:{index}")
+        self.call(self.msg.sender, "invoke", {"index": index + 1})
 
     @external(readonly=True)
     def query(self, index: int) -> int:
-        return self.call(self.msg.sender, 'query', {'index': index + 1})
+        return self.call(self.msg.sender, "query", {"index": index + 1})

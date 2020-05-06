@@ -2,10 +2,9 @@ from iconservice import *
 
 
 class SampleScore(IconScoreBase):
-
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._table = DictDB('value', db, value_type=int)
+        self._table = DictDB("value", db, value_type=int)
 
     def on_install(self) -> None:
         super().on_install()

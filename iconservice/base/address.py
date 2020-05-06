@@ -22,11 +22,16 @@ from enum import IntEnum
 from typing import Optional
 
 from .exception import InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER, ICON_DEX_DB_NAME, GOVERNANCE_ADDRESS, SYSTEM_ADDRESS
+from ..icon_constant import (
+    DATA_BYTE_ORDER,
+    ICON_DEX_DB_NAME,
+    GOVERNANCE_ADDRESS,
+    SYSTEM_ADDRESS,
+)
 from ..utils import is_lowercase_hex_string, int_to_bytes
 
-ICON_EOA_ADDRESS_PREFIX = 'hx'
-ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
+ICON_EOA_ADDRESS_PREFIX = "hx"
+ICON_CONTRACT_ADDRESS_PREFIX = "cx"
 ICON_EOA_ADDRESS_BYTES_SIZE = 20
 ICON_CONTRACT_ADDRESS_BYTES_SIZE = 21
 ICON_ADDRESS_BYTES_SIZE = 21
@@ -42,8 +47,10 @@ def is_icon_address_valid(address: str) -> bool:
     try:
         if isinstance(address, str) and len(address) == 42:
             prefix, body = split_icon_address(address)
-            if prefix == ICON_EOA_ADDRESS_PREFIX or \
-                    prefix == ICON_CONTRACT_ADDRESS_PREFIX:
+            if (
+                prefix == ICON_EOA_ADDRESS_PREFIX
+                or prefix == ICON_CONTRACT_ADDRESS_PREFIX
+            ):
                 return is_lowercase_hex_string(body)
     finally:
         pass
@@ -93,16 +100,19 @@ class AddressPrefix(IntEnum):
         if prefix == ICON_CONTRACT_ADDRESS_PREFIX:
             return AddressPrefix.CONTRACT
 
-        raise InvalidParamsException('Invalid address prefix')
+        raise InvalidParamsException("Invalid address prefix")
 
 
 class Address(object):
     """Address class
     """
 
-    def __init__(self,
-                 address_prefix: AddressPrefix,
-                 address_body: bytes, ignore_length_validate: bool = False) -> None:
+    def __init__(
+        self,
+        address_prefix: AddressPrefix,
+        address_body: bytes,
+        ignore_length_validate: bool = False,
+    ) -> None:
         """Constructor
 
         :param address_prefix: address prefix enumerator
@@ -110,13 +120,13 @@ class Address(object):
         """
 
         if not isinstance(address_prefix, AddressPrefix):
-            raise InvalidParamsException('Invalid address prefix type')
+            raise InvalidParamsException("Invalid address prefix type")
         if not isinstance(address_body, bytes):
-            raise InvalidParamsException('Invalid address body type')
+            raise InvalidParamsException("Invalid address body type")
 
         if not ignore_length_validate:
             if len(address_body) != ICON_ADDRESS_BODY_SIZE:
-                raise InvalidParamsException('Address length is not 20 in bytes')
+                raise InvalidParamsException("Address length is not 20 in bytes")
 
         self.__prefix = address_prefix
         self.__body = address_body
@@ -142,10 +152,11 @@ class Address(object):
 
         :return: bool
         """
-        return \
-            isinstance(other, Address) \
-            and self.__prefix == other.prefix \
+        return (
+            isinstance(other, Address)
+            and self.__prefix == other.prefix
             and self.__body == other.body
+        )
 
     def __ne__(self, other) -> bool:
         """operator != overriding
@@ -161,7 +172,7 @@ class Address(object):
 
         :return: (str) 42-char address
         """
-        return f'{str(self.prefix)}{self.body.hex()}'
+        return f"{str(self.prefix)}{self.body.hex()}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -191,7 +202,7 @@ class Address(object):
         """
 
         if not is_icon_address_valid(address):
-            raise InvalidParamsException('Invalid address')
+            raise InvalidParamsException("Invalid address")
 
         prefix, body = split_icon_address(address)
 
@@ -201,7 +212,7 @@ class Address(object):
         return Address(address_prefix, address_body)
 
     @staticmethod
-    def from_data(prefix: AddressPrefix, data: bytes) -> Optional['Address']:
+    def from_data(prefix: AddressPrefix, data: bytes) -> Optional["Address"]:
         """
         creates an address object using given body bytes
 
@@ -216,7 +227,7 @@ class Address(object):
             return None
 
     @staticmethod
-    def from_bytes(buf: bytes) -> Optional['Address']:
+    def from_bytes(buf: bytes) -> Optional["Address"]:
         """Create Address object from bytes data
 
         :param buf: :class:`.bytes` bytes data including Address information
@@ -230,7 +241,7 @@ class Address(object):
             return None
 
         if size == ICON_ADDRESS_BYTES_SIZE:
-            prefix: 'AddressPrefix' = AddressPrefix(buf[0])
+            prefix: "AddressPrefix" = AddressPrefix(buf[0])
             return Address(prefix, buf[1:])
         else:
             return Address(AddressPrefix.EOA, buf)
@@ -247,7 +258,7 @@ class Address(object):
             return self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body
 
     @staticmethod
-    def from_bytes_including_prefix(buf: bytes) -> Optional['Address']:
+    def from_bytes_including_prefix(buf: bytes) -> Optional["Address"]:
         try:
             return Address(address_prefix=AddressPrefix(buf[0]), address_body=buf[1:])
         except:
@@ -257,20 +268,19 @@ class Address(object):
         return self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body
 
     @staticmethod
-    def from_prefix_and_int(prefix: 'AddressPrefix', num: int):
+    def from_prefix_and_int(prefix: "AddressPrefix", num: int):
         num_bytes = int_to_bytes(num)
         zero_size = 20 - len(num_bytes)
         if zero_size < 0:
-            raise InvalidParamsException(f'num_bytes is over 20 bytes num: {num}')
-        return Address(prefix, b'\x00' * zero_size + num_bytes)
+            raise InvalidParamsException(f"num_bytes is over 20 bytes num: {num}")
+        return Address(prefix, b"\x00" * zero_size + num_bytes)
 
 
 class MalformedAddress(Address):
     """This class only exists to support an invalid format address which was created by legacy bug
     """
-    def __init__(self,
-                 address_prefix: AddressPrefix,
-                 address_body: bytes) -> None:
+
+    def __init__(self, address_prefix: AddressPrefix, address_body: bytes) -> None:
         """Constructor
 
         :param address_prefix: address prefix enumerator
@@ -287,14 +297,14 @@ class MalformedAddress(Address):
         """
 
         try:
-            if address.startswith('hx'):
+            if address.startswith("hx"):
                 body = address[2:]
             else:
                 body = address
 
             address_body = bytes.fromhex(body)
         except:
-            raise InvalidParamsException('Invalid address')
+            raise InvalidParamsException("Invalid address")
 
         return MalformedAddress(AddressPrefix.EOA, address_body)
 
@@ -304,23 +314,25 @@ SYSTEM_SCORE_ADDRESS = Address.from_string(SYSTEM_ADDRESS)
 ZERO_SCORE_ADDRESS = SYSTEM_SCORE_ADDRESS
 # cx0000000000000000000000000000000000000001
 GOVERNANCE_SCORE_ADDRESS = Address.from_string(GOVERNANCE_ADDRESS)
-ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, ICON_DEX_DB_NAME.encode())
+ICX_ENGINE_ADDRESS = Address.from_data(
+    AddressPrefix.CONTRACT, ICON_DEX_DB_NAME.encode()
+)
 
 
-def generate_score_address_for_tbears(score_path: str) -> 'Address':
+def generate_score_address_for_tbears(score_path: str) -> "Address":
     """
 
     :param score_path:
         The path of a SCORE which is under development with tbears
     :return:
     """
-    project_name = score_path.split('/')[-1]
+    project_name = score_path.split("/")[-1]
     return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
 
 
-def generate_score_address(from_: 'Address',
-                           timestamp: int,
-                           nonce: int = None) -> 'Address':
+def generate_score_address(
+    from_: "Address", timestamp: int, nonce: int = None
+) -> "Address":
     """Generates a SCORE address from the transaction information.
 
     :param from_:

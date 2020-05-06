@@ -32,29 +32,27 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateScores(TestIntegrateBase):
-    def query_db_returns(self,
-                         to_: 'Address',
-                         index: int) -> Any:
+    def query_db_returns(self, to_: "Address", index: int) -> Any:
         query_request = {
             "version": self._version,
             "from": self._admin,
             "to": to_,
             "dataType": "call",
-            "data": {
-                "method": f"get_value{index}",
-                "params": {}
-            }
+            "data": {"method": f"get_value{index}", "params": {}},
         }
         return self._query(query_request)
 
     def test_db_returns(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_scores",
             score_name="sample_db_returns",
             from_=self._accounts[0],
-            deploy_params={"value": str(self._accounts[1].address),
-                           "value1": str(self._accounts[1].address)})
-        score_address: 'Address' = tx_results[0].score_address
+            deploy_params={
+                "value": str(self._accounts[1].address),
+                "value1": str(self._accounts[1].address),
+            },
+        )
+        score_address: "Address" = tx_results[0].score_address
 
         default_ret: list = [
             0,
@@ -62,21 +60,21 @@ class TestIntegrateScores(TestIntegrateBase):
             None,
             self._accounts[1].address,
             False,
-            self._accounts[1].address
+            self._accounts[1].address,
         ]
         inputs: list = [
             hex(1 * ICX_IN_LOOP),
             "a",
-            bytes.hex(b'12345'),
+            bytes.hex(b"12345"),
             str(self._accounts[1].address),
             hex(int(True)),
-            str(self._accounts[1].address)
+            str(self._accounts[1].address),
         ]
 
         ret: list = [
             1 * ICX_IN_LOOP,
             "a",
-            b'12345',
+            b"12345",
             self._accounts[1].address,
             int(True),
             self._accounts[1].address,
@@ -84,11 +82,15 @@ class TestIntegrateScores(TestIntegrateBase):
 
         for i in range(6):
             index: int = i + 1
-            self.assertEqual(default_ret[i], self.query_db_returns(score_address, index))
-            self.score_call(from_=self._accounts[0],
-                            to_=score_address,
-                            func_name=f"set_value{index}",
-                            params={"value": inputs[i]})
+            self.assertEqual(
+                default_ret[i], self.query_db_returns(score_address, index)
+            )
+            self.score_call(
+                from_=self._accounts[0],
+                to_=score_address,
+                func_name=f"set_value{index}",
+                params={"value": inputs[i]},
+            )
             self.assertEqual(ret[i], self.query_db_returns(score_address, index))
 
     def test_default_value_fail_install(self):
@@ -97,7 +99,8 @@ class TestIntegrateScores(TestIntegrateBase):
             score_root="sample_scores",
             score_name="sample_default_value_fail1",
             from_=self._accounts[0],
-            expected_status=False)
+            expected_status=False,
+        )
         raise_exception_end_tag("sample_default_value_fail_install")
 
     def test_default_value_fail_update(self):
@@ -106,7 +109,8 @@ class TestIntegrateScores(TestIntegrateBase):
             score_root="sample_scores",
             score_name="sample_default_value_fail2",
             from_=self._accounts[0],
-            expected_status=False)
+            expected_status=False,
+        )
         raise_exception_end_tag("sample_default_value_fail_update")
 
     def test_default_value_fail_external(self):
@@ -115,7 +119,8 @@ class TestIntegrateScores(TestIntegrateBase):
             score_root="sample_scores",
             score_name="sample_default_value_fail3",
             from_=self._accounts[0],
-            expected_status=False)
+            expected_status=False,
+        )
         raise_exception_end_tag("sample_default_value_fail_external")
 
     def test_service_flag(self):
@@ -126,53 +131,59 @@ class TestIntegrateScores(TestIntegrateBase):
             "from": self._admin,
             "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
-            "data": {
-                "method": "getServiceConfig",
-                "params": {}
-            }
+            "data": {"method": "getServiceConfig", "params": {}},
         }
         response = self._query(query_request)
 
         table = {}
         for flag in IconServiceFlag:
-            if flag.name is 'SCORE_PACKAGE_VALIDATOR':
+            if flag.name is "SCORE_PACKAGE_VALIDATOR":
                 table[flag.name] = True
             else:
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-        tx_results: List['TransactionResult'] = self.deploy_score(
+        tx_results: List["TransactionResult"] = self.deploy_score(
             score_root="sample_deploy_scores",
             score_name="install/sample_score",
-            from_=self._accounts[0])
-        score_address1: 'Address' = tx_results[0].score_address
+            from_=self._accounts[0],
+        )
+        score_address1: "Address" = tx_results[0].score_address
 
-        self.score_call(from_=self._admin,
-                        to_=GOVERNANCE_SCORE_ADDRESS,
-                        func_name="updateServiceConfig",
-                        params={"serviceFlag": hex(IconServiceFlag.AUDIT)})
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="updateServiceConfig",
+            params={"serviceFlag": hex(IconServiceFlag.AUDIT)},
+        )
 
-        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
-                                                                  score_name="install/sample_score",
-                                                                  from_=self._accounts[1])
-        score_address2: 'Address' = tx_results[0].score_address
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_score",
+            from_=self._accounts[1],
+        )
+        score_address2: "Address" = tx_results[0].score_address
 
         target_flag = IconServiceFlag.AUDIT | IconServiceFlag.FEE
 
-        tx1: dict = self.create_score_call_tx(from_=self._admin,
-                                              to_=GOVERNANCE_SCORE_ADDRESS,
-                                              func_name="updateServiceConfig",
-                                              params={"serviceFlag": hex(target_flag)})
+        tx1: dict = self.create_score_call_tx(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="updateServiceConfig",
+            params={"serviceFlag": hex(target_flag)},
+        )
 
-        tx2: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
-                                                score_name="install/sample_score",
-                                                from_=self._accounts[1],
-                                                to_=SYSTEM_SCORE_ADDRESS)
+        tx2: dict = self.create_deploy_score_tx(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_score",
+            from_=self._accounts[1],
+            to_=SYSTEM_SCORE_ADDRESS,
+        )
 
         prev_block, hash_list = self.make_and_req_block([tx1, tx2])
         self._write_precommit_state(prev_block)
 
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
+        tx_results: List["TransactionResult"] = self.get_tx_results(hash_list)
         self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual(int(False), tx_results[1].status)
 
@@ -192,50 +203,62 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(e.exception.args[0], f"SCORE not found: {score_address2}")
 
     def test_revert(self):
-        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_scores",
-                                                                  score_name="sample_wrong_revert",
-                                                                  from_=self._accounts[0])
+        tx_results: List["TransactionResult"] = self.deploy_score(
+            score_root="sample_scores",
+            score_name="sample_wrong_revert",
+            from_=self._accounts[0],
+        )
         score_addr1 = tx_results[0].score_address
 
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr1,
-                                                                func_name="set_value1",
-                                                                params={"value": hex(100)},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr1,
+            func_name="set_value1",
+            params={"value": hex(100)},
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.END)
-        self.assertEqual(tx_results[0].failure.message, 'hello world')
+        self.assertEqual(tx_results[0].failure.message, "hello world")
 
         # Test call_revert_with_invalid_code
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr1,
-                                                                func_name="call_revert_with_invalid_code",
-                                                                params={},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr1,
+            func_name="call_revert_with_invalid_code",
+            params={},
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
         # Test call_revert_with_none_message
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr1,
-                                                                func_name="call_revert_with_none_message",
-                                                                params={},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr1,
+            func_name="call_revert_with_none_message",
+            params={},
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.END)
 
         # Test call_revert_with_none_message_and_none_code()
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr1,
-                                                                func_name="call_revert_with_none_message_and_none_code",
-                                                                params={},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr1,
+            func_name="call_revert_with_none_message_and_none_code",
+            params={},
+            expected_status=False,
+        )
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
         # Test exception handling on call_exception()
-        tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
-                                                                to_=score_addr1,
-                                                                func_name="call_exception",
-                                                                params={},
-                                                                expected_status=False)
+        tx_results: List["TransactionResult"] = self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr1,
+            func_name="call_exception",
+            params={},
+            expected_status=False,
+        )
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
