@@ -961,7 +961,7 @@ class Engine(EngineBase, IISSEngineListener):
         if context.revision <= Revision.DECENTRALIZATION.value:
             # Although the following statement has a bug,
             # preserve it for state compatibility
-            # IISS_MAX_DELEGATIONS * 2 + 1 is correct
+            # max delegations (i.e. 10) * 2 + 1 is correct
             assert 0 <= len(updated_accounts) <= context.engine.iiss.get_max_delegations_by_revision(context) * 2
 
         for account in updated_accounts:

@@ -102,21 +102,6 @@ class TestDelegationPart(unittest.TestCase):
 
         self.assertEqual(delegations, part.delegations)
 
-    def test_delegation_part_set_delegations_overflow(self):
-        count = 10 + 1
-        amount = 10
-        delegations = []
-        for _ in range(count):
-            delegations.append((create_address(), amount))
-
-        part = DelegationPart()
-
-        with self.assertRaises(InvalidParamsException) as e:
-            part.set_delegations(delegations)
-
-        self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.exception.code)
-        self.assertEqual('Delegations overflow', e.exception.message)
-
     def test_delegation_part_equal(self):
         part1 = DelegationPart()
         part2 = DelegationPart()

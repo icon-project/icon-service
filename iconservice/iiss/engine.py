@@ -406,10 +406,12 @@ class Engine(EngineBase):
 
     @classmethod
     def get_max_delegations_by_revision(cls, context: 'IconScoreContext') -> int:
-        if context.revision >= Revision.INCREASE_MAX_DELEGATIONS_FROM_10_TO_100.value:
-            return 100
+        if context.revision >= Revision.CHANGE_MAX_DELEGATIONS_TO_100.value:
+            max_delegations: int = 100
         else:
-            return 10
+            # Initial max delegations
+            max_delegations: int = 10
+        return max_delegations
 
     @classmethod
     def _check_delegation_count(cls,
