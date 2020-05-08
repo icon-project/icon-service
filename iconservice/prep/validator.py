@@ -90,7 +90,7 @@ def validate_prep_data(context: 'IconScoreContext',
     # must prevent to change node address before divide node address revision.
     if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
         if prep_address != node_address:
-            raise InvalidParamsException(f"Node address not supported: revision={context.revision}")
+            raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
     context.prep_address_converter.validate_node_address(node_address)
 
 
