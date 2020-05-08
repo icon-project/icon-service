@@ -241,7 +241,6 @@ class TestIntegrateBase(TestCase):
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
-        self.icon_service_engine._set_revision_to_context(context)
         if context.is_decentralized():
             is_block_editable = True
 
@@ -328,12 +327,6 @@ class TestIntegrateBase(TestCase):
         self._block_height += 1
         assert block.height == self._block_height
         self._prev_block_hash = block.hash
-
-    def _remove_precommit_state(self, block: 'Block') -> None:
-        """Revoke to commit the precommit data to db
-
-        """
-        self.icon_service_engine.remove_precommit_state(block.height, block.hash)
 
     def rollback(self, block_height: int = -1, block_hash: Optional[bytes] = None):
         """Rollback the current state to the old one indicated by a given block
