@@ -376,17 +376,29 @@ class TestIntegratePrep(TestIISSBase):
         self.distribute_icx(accounts=self._accounts[:2],
                             init_balance=balance)
 
-        reg_data = deepcopy(prep_register_data)
-        tx = self.create_register_prep_tx(self._accounts[0], reg_data)
+        # register prep1
+        prep1_data = deepcopy(prep_register_data)
+        tx = self.create_register_prep_tx(self._accounts[0], prep1_data)
         self.process_confirm_block_tx([tx])
 
         # fail to register due to duplicated endpoint
-        tx = self.create_register_prep_tx(self._accounts[1], reg_data)
+        tx = self.create_register_prep_tx(self._accounts[1], prep1_data)
+        self.process_confirm_block_tx([tx], expected_status=False)
+
+        # success to register prep2
+        prep2_data = deepcopy(prep1_data)
+        prep2_data[ConstantKeys.P2P_ENDPOINT] = "node2.endpoint:7100"
+        tx = self.create_register_prep_tx(self._accounts[1], prep2_data)
+        self.process_confirm_block_tx([tx], expected_status=True)
+
+        # fail to setPRep due to duplicated endpoint(used by prep1)
+        prep2_data = deepcopy(prep1_data)
+        tx = self.create_set_prep_tx(self._accounts[1], prep2_data)
         self.process_confirm_block_tx([tx], expected_status=False)
 
         # success to set prep
-        reg_data[ConstantKeys.NAME] = "name2"
-        tx = self.create_set_prep_tx(self._accounts[0], reg_data)
+        prep1_data[ConstantKeys.NAME] = "name2"
+        tx = self.create_set_prep_tx(self._accounts[0], prep1_data)
         self.process_confirm_block_tx([tx], expected_status=True)
 
     @staticmethod
