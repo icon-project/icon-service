@@ -45,6 +45,7 @@ def storage():
     assert db is not None
     storage = FeeStorage(db)
     yield storage
+    db.key_value_db.close()
     rmtree(db_name)
 
 

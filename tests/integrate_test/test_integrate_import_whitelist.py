@@ -86,8 +86,10 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                                                 params={"importStmt": ""},
                                                                 expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        # self.assertEqual(tx_results[0].failure.message,
+        #                  "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
         self.assertEqual(tx_results[0].failure.message,
-                         "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
+                         "Invalid import statement: Unexpected '\x00': line 1 column 1 (char 0)")
 
         tx_results: List['TransactionResult'] = self.score_call(from_=self._admin,
                                                                 to_=GOVERNANCE_SCORE_ADDRESS,
@@ -95,8 +97,10 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                                                 params={"importStmt": ""},
                                                                 expected_status=False)
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        # self.assertEqual(tx_results[0].failure.message,
+        #                  "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
         self.assertEqual(tx_results[0].failure.message,
-                         "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
+                         "Invalid import statement: Unexpected '\x00': line 1 column 1 (char 0)")
 
     def test_score_import_white_list(self):
         # query import whitelist

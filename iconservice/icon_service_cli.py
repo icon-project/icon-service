@@ -155,7 +155,7 @@ def _start_process(conf: 'IconConfig'):
         del conf['foreground']
         run_in_foreground(conf)
     else:
-        subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
+        subprocess.Popen(["pypy3", '-m', python_module_string, *custom_argv], close_fds=True)
     Logger.info('start_process() end')
 
 
