@@ -1352,19 +1352,29 @@ class IconServiceEngine(ContextContainer):
             self._deposit_handler.handle_deposit_request(context, data)
             return None
         else:
-            # charge step
-            if data_type == 'message':
-                # for mainnet backward compatibility
-                if context.revision < Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value:
-                    context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-            else:
-                # do not charge CONTRACT_CALL step to system SCORE call
-                if to != SYSTEM_SCORE_ADDRESS:
-                    context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-
-            # invoke SCORE external method
+            if self._check_contract_call_step(context, to, data_type):
+                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
             return None
+
+    @staticmethod
+    def _check_contract_call_step(context: 'IconScoreContext',
+                                  to: 'Address',
+                                  data_type: str) -> bool:
+        if data_type == 'message':
+            # for mainnet backward compatibility
+            if context.revision < Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value:
+                return True
+
+        # do not charge CONTRACT_CALL step when call system SCORE
+        # exceptions for backward compatibility:
+        #   - dataType is not 'call'
+        if to == SYSTEM_SCORE_ADDRESS:
+            if context.revision < Revision.SYSTEM_SCORE_STEP.value and data_type != 'call':
+                return True
+            return False
+
+        return True
 
     @staticmethod
     def _append_step_results(
