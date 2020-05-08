@@ -85,7 +85,7 @@ class TestRecoverUsingWAL(TestIISSBase):
         unregister_tx = self.create_unregister_prep_tx(self.prep_to_be_unregistered)
         delegation_tx = self.create_set_delegation_tx(self.delegator, [(self.delegated_prep, self.delegate_amount)])
         block, hash_list = self.make_and_req_block([stake_tx, unregister_tx, delegation_tx])
-        precommit_data = self.icon_service_engine._get_updated_precommit_data(block.hash, block.hash)
+        precommit_data = self.icon_service_engine._get_updated_precommit_data(block.hash)
         return precommit_data
 
     def _get_wal_writer(self, precommit_data: 'PrecommitData', is_calc_period_start_block: bool):
