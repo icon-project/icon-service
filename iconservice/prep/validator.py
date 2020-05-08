@@ -69,7 +69,7 @@ def validate_prep_data(context: 'IconScoreContext',
         if isinstance(value, str) and len(value.strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.P2P_ENDPOINT:
-            _validate_p2p_endpoint(value)
+            _validate_p2p_endpoint(context, value)
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
             _validate_uri(value)
         elif key == ConstantKeys.EMAIL:
@@ -94,7 +94,7 @@ def validate_prep_data(context: 'IconScoreContext',
     context.prep_address_converter.validate_node_address(node_address)
 
 
-def _validate_p2p_endpoint(p2p_endpoint: str):
+def _validate_p2p_endpoint(context: "IconScoreContext", p2p_endpoint: str):
     network_locate_info = p2p_endpoint.split(":")
 
     if len(network_locate_info) != 2:
@@ -107,6 +107,11 @@ def _validate_p2p_endpoint(p2p_endpoint: str):
 
     if not ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower()):
         raise InvalidParamsException("Invalid endpoint format")
+
+    if context.revision >= Revision.PREVENT_DUPLICATED_ENDPOINT.value:
+        for active_prep in context.preps:
+            if active_prep.p2p_endpoint == p2p_endpoint and context.tx.origin != active_prep.address:
+                raise InvalidParamsException("duplicated endpoint")
 
 
 def _validate_uri(uri: str):
