@@ -61,13 +61,13 @@ def validate_prep_data(context: 'IconScoreContext',
             if key not in tx_data:
                 raise InvalidParamsException(f'"{key}" not found')
             elif isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
-                raise InvalidParamsException("Can not set empty data")
+                raise InvalidParamsException("Empty data not allowed")
 
     for key, value in tx_data.items():
         if value is None:
             continue
         if isinstance(value, str) and len(value.strip()) < 1:
-            raise InvalidParamsException("Can not set empty data")
+            raise InvalidParamsException("Empty data not allowed")
         if key == ConstantKeys.P2P_ENDPOINT:
             _validate_p2p_endpoint(context, value)
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
@@ -90,7 +90,7 @@ def validate_prep_data(context: 'IconScoreContext',
     # must prevent to change node address before divide node address revision.
     if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
         if prep_address != node_address:
-            raise InvalidParamsException(f"nodeAddress not supported: revision={context.revision}")
+            raise InvalidParamsException(f"Node address not supported: revision={context.revision}")
     context.prep_address_converter.validate_node_address(node_address)
 
 
@@ -111,7 +111,7 @@ def _validate_p2p_endpoint(context: "IconScoreContext", p2p_endpoint: str):
     if context.revision >= Revision.PREVENT_DUPLICATED_ENDPOINT.value:
         for active_prep in context.preps:
             if active_prep.p2p_endpoint == p2p_endpoint and context.tx.origin != active_prep.address:
-                raise InvalidParamsException("duplicated endpoint")
+                raise InvalidParamsException("Duplicated endpoint")
 
 
 def _validate_uri(uri: str):
