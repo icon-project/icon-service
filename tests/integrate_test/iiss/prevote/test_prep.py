@@ -391,15 +391,19 @@ class TestIntegratePrep(TestIISSBase):
         tx = self.create_register_prep_tx(self._accounts[1], prep2_data)
         self.process_confirm_block_tx([tx], expected_status=True)
 
+        # success to set prep
+        prep1_endpoint_ip = "1.2.3.4:7100"
+        prep1_data[ConstantKeys.NAME] = "name2"
+        prep1_data[ConstantKeys.P2P_ENDPOINT] = "1.2.3.4:7100"
+        tx = self.create_set_prep_tx(self._accounts[0], prep1_data)
+        self.process_confirm_block_tx([tx], expected_status=True)
+
         # fail to setPRep due to duplicated endpoint(used by prep1)
         prep2_data = deepcopy(prep1_data)
+        prep2_data[ConstantKeys.P2P_ENDPOINT] = prep1_endpoint_ip
         tx = self.create_set_prep_tx(self._accounts[1], prep2_data)
         self.process_confirm_block_tx([tx], expected_status=False)
 
-        # success to set prep
-        prep1_data[ConstantKeys.NAME] = "name2"
-        tx = self.create_set_prep_tx(self._accounts[0], prep1_data)
-        self.process_confirm_block_tx([tx], expected_status=True)
 
     @staticmethod
     def get_prep_data_with_customized_endpoint(key: str):

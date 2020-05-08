@@ -102,10 +102,7 @@ def _validate_p2p_endpoint(context: "IconScoreContext", p2p_endpoint: str):
 
     _validate_port(network_locate_info[1], ConstantKeys.P2P_ENDPOINT)
 
-    if ENDPOINT_IP_PATTERN.match(p2p_endpoint):
-        return
-
-    if not ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower()):
+    if not (ENDPOINT_IP_PATTERN.match(p2p_endpoint) or ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower())):
         raise InvalidParamsException("Invalid endpoint format")
 
     if context.revision >= Revision.PREVENT_DUPLICATED_ENDPOINT.value:
