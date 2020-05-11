@@ -499,4 +499,6 @@ class TestRollback(TestIISSBase):
     @staticmethod
     def _check_if_rollback_reward_calculator_is_called(block: 'Block'):
         IconScoreContext.engine.iiss.rollback_reward_calculator.assert_called_with(
-            block.height, block.hash)
+            block_height=block.height,
+            block_hash=block.hash
+        )

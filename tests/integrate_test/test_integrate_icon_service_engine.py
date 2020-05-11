@@ -584,8 +584,14 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.icon_service_engine.invoke(block, [dummy_tx])
         instant_block_hash = block.hash
         block_hash = create_block_hash()
-        self.icon_service_engine.change_old_block_hash(block.height, instant_block_hash, block_hash)
-        self.icon_service_engine.commit(block.height, block_hash)
+        self._change_block_hash(block_height=block.height,
+                                old_block_hash=instant_block_hash,
+                                new_block_hash=block_hash)
+        block = Block(block_height=block.height,
+                      block_hash=block_hash,
+                      timestamp=create_timestamp(),
+                      prev_hash=block.prev_hash)
+        self._write_precommit_state(block=block)
 
         self.assertEqual(self.icon_service_engine._get_last_block().hash, block_hash)
         self.assertEqual(IconScoreContext.storage.icx.last_block.hash, block_hash)

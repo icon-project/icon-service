@@ -176,6 +176,9 @@ class TestIntegrateBase(TestCase):
 
         return invoke_response
 
+    def get_last_block(self) -> 'Block':
+        return self.icon_service_engine._precommit_data_manager.last_block
+
     def get_tx_results(self, hash_list: List[bytes]):
         tx_results: List['TransactionResult'] = []
         for tx_hash in hash_list:
