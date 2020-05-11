@@ -111,15 +111,13 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         input_step_cost = 200
         value = icx_to_loop(7)
 
-        icon_service_engine: IconServiceEngine = self.icon_service_engine
-
         self.update_governance()
 
         for revision in range(Revision.THREE.value, Revision.LATEST.value + 1):
             self.set_revision(revision)
 
             # The latest confirmed block
-            root_block = icon_service_engine._precommit_data_manager.last_block
+            root_block = self.get_last_block()
 
             # Check that "from_" address has enough icx to transfer
             balance0: int = self.get_balance(from_)
@@ -210,8 +208,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         step_price = 10 ** 10
         revision = Revision.LATEST.value
 
-        icon_service_engine: IconServiceEngine = self.icon_service_engine
-        precommit_data_manager = icon_service_engine._precommit_data_manager
+        precommit_data_manager = self.icon_service_engine._precommit_data_manager
 
         self.update_governance()
         self.set_revision(Revision.LATEST.value)
@@ -225,7 +222,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         )
 
         # The latest confirmed block
-        root_block = icon_service_engine._precommit_data_manager.last_block
+        root_block = self.get_last_block()
 
         # Check that "from_" address has enough icx to transfer
         from_balance: int = self.get_balance(from_)
@@ -300,7 +297,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
                 assert precommit_data_manager.get(parent_blocks[i].hash) is None
                 assert precommit_data_manager.get(child_blocks[i].hash) is None
 
-        last_block: 'Block' = precommit_data_manager.last_block
+        last_block: 'Block' = self.get_last_block()
         parent_blocks[index].cumulative_fee = step_limit * step_price
         assert len(precommit_data_manager) == 2
         assert last_block == parent_blocks[index]
@@ -320,7 +317,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
             self.set_revision(revision)
 
             # The latest confirmed block
-            root_block = icon_service_engine._precommit_data_manager.last_block
+            root_block = self.get_last_block()
 
             # Check that "from_" address has enough icx to transfer
             balance0: int = self.get_balance(from_)

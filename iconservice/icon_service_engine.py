@@ -128,6 +128,14 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
 
+        """
+        ========== WARNING!! ==========
+        Temporary code for migration of LFT and Siever.
+        We have to plan getting rid of that code after LFT migration.
+        """
+        self._temp_instant_block_hash_mapper: dict = {}
+
+
     def open(self, conf: dict):
         """Get necessary parameters and initialize diverse objects
 
@@ -1497,8 +1505,14 @@ class IconServiceEngine(ContextContainer):
         :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed
         """
-        # Check for block validation before commit
         self._precommit_data_manager.change_block_hash(_block_height, instant_block_hash, block_hash)
+
+        """
+        ========== WARNING!! ==========
+        Temporary code for migration of LFT and Siever.
+        We have to plan getting rid of that code after LFT migration.
+        """
+        self._temp_instant_block_hash_mapper[block_hash] = instant_block_hash
 
     def commit(self, _block_height: int, block_hash: bytes) -> None:
         """Write updated states in a context.block_batch to StateDB
@@ -1528,13 +1542,13 @@ class IconServiceEngine(ContextContainer):
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
         is_calc_period_start_block: bool = context.block.height == start_calc_block_height
 
-        wal_writer, state_wal, iiss_wal = \
-            self._process_wal(context, precommit_data, is_calc_period_start_block)
-        wal_writer.flush()
-
         # ===== WARNING!! ===== #
         # we need to remain instant_block_hash key for Backup DB Migration after change_block_hash and LFT2 logic
         # ===================== #
+
+        wal_writer, state_wal, iiss_wal = \
+            self._process_wal(context, precommit_data, is_calc_period_start_block)
+        wal_writer.flush()
 
         # Backup the previous block state
         self._backup_manager.run(
@@ -1545,7 +1559,9 @@ class IconServiceEngine(ContextContainer):
             block_batch=precommit_data.block_batch,
             iiss_wal=iiss_wal,
             is_calc_period_start_block=is_calc_period_start_block,
-            instant_block_hash=precommit_data.block.hash)
+            instant_block_hash=self._convert_block_hash_to_instant_block_hash(
+                block_hash=precommit_data.block.hash
+            ))
 
         # Clean up the oldest backup file
         self._backup_cleaner.run_on_commit(context.block.height)
@@ -1603,7 +1619,9 @@ class IconServiceEngine(ContextContainer):
             WriteAheadLogWriter(precommit_data.revision,
                                 max_log_count=2,
                                 block=block,
-                                instant_block_hash=block.hash)
+                                instant_block_hash=self._convert_block_hash_to_instant_block_hash(
+                                    block_hash=precommit_data.block.hash
+                                ))
         wal_writer.open(wal_path)
 
         if is_calc_period_start_block:
@@ -1664,16 +1682,22 @@ class IconServiceEngine(ContextContainer):
                                                standby_db_info.path)
         return standby_db_info
 
-    @staticmethod
-    def _process_ipc(context: 'IconScoreContext',
+    def _process_ipc(self,
+                     context: 'IconScoreContext',
                      wal_writer: 'WriteAheadLogWriter',
                      precommit_data: 'PrecommitData',
                      standby_db_info: Optional['RewardCalcDBInfo']):
 
         assert precommit_data.revision >= Revision.IISS.value
 
-        commit_block_hash: bytes = precommit_data.block.hash
-        context.engine.iiss.send_commit(precommit_data.block.height, commit_block_hash)
+        """
+        ========== WARNING!! ==========
+        Temporary code for migration of LFT and Siever.
+        We have to plan getting rid of that code after LFT migration.
+        """
+        context.engine.iiss.send_commit(
+            block_height=precommit_data.block.height,
+            block_hash=self._convert_block_hash_to_instant_block_hash(precommit_data.block.hash))
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
         wal_writer.flush()
 
@@ -1681,6 +1705,9 @@ class IconServiceEngine(ContextContainer):
             iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
             wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
+
+    def _convert_block_hash_to_instant_block_hash(self, block_hash: bytes) -> bytes:
+        return self._temp_instant_block_hash_mapper.get(block_hash, block_hash)
 
     def rollback(self, block_height: int, block_hash: bytes) -> dict:
         """Rollback the current confirmed state to the old one indicated by block_height
@@ -1767,7 +1794,15 @@ class IconServiceEngine(ContextContainer):
             term_start_block_height=term_start_block_height)
 
         # Rollback the state of reward_calculator prior to iconservice
-        IconScoreContext.engine.iiss.rollback_reward_calculator(rollback_block_height, rollback_block_hash)
+
+        """
+        ========== WARNING!! ==========
+        Temporary code for migration of LFT and Siever.
+        We have to plan getting rid of that code after LFT migration.
+        """
+        IconScoreContext.engine.iiss.rollback_reward_calculator(
+            block_height=rollback_block_height,
+            block_hash=self._convert_block_hash_to_instant_block_hash(rollback_block_hash))
 
         # Clear all iconscores and reload builtin scores only
         builtin_score_owner: 'Address' = Address.from_string(self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
