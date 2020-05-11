@@ -18,6 +18,7 @@ import pytest
 
 from iconservice.base.exception import InvalidParamsException
 from iconservice.icon_constant import Revision
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.prep.validator import _validate_p2p_endpoint
 from iconservice.prep.validator import _validate_uri, _validate_email, _validate_country
 
@@ -62,6 +63,7 @@ def test_validate_uri():
 
 
 def test_validate_endpoint():
+    context = IconScoreContext()
     invalid_endpoint_list = ["http://", "http://.", "http://..", "http://../", "http://?", "http://??", "http://??/",
                              "http://#", "http://##", "http://##/", "http://foo.bar?q=Spaces should be encoded",
                              "//", "//a", "///a", "///", "http:///a", "foo.com", "rdar://1234", "h://test",
@@ -81,11 +83,11 @@ def test_validate_endpoint():
     valid_endpoint_list = ["foo.com:1", "192.10.6.2:8000", "localhost:1234"]
     for endpoint in invalid_endpoint_list:
         with pytest.raises(InvalidParamsException) as e:
-            _validate_p2p_endpoint(endpoint)
+            _validate_p2p_endpoint(context, endpoint)
 
     for endpoint in valid_endpoint_list:
         try:
-            _validate_p2p_endpoint(endpoint)
+            _validate_p2p_endpoint(context, endpoint)
         except BaseException:
             pytest.fail("validating endpoint test Failed")
 
