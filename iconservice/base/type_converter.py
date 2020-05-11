@@ -265,6 +265,7 @@ class TypeConverter:
     @staticmethod
     def adjust_params_to_method(func: callable, kw_params: dict, remove_invalid_param: bool = False):
         hints = TypeConverter.make_annotations_from_method(func)
+        default_args = TypeConverter.get_default_args(func)
 
         # check user input argument name is valid
         invalid_keys = []
@@ -278,15 +279,30 @@ class TypeConverter:
             if remove_invalid_param:
                 for key in invalid_keys:
                     del kw_params[key]
+                if len(kw_params) == 0:
+                    # input invalid params only
+                    raise InvalidParamsException(f"There is no valid parameters")
             else:
-                raise InvalidParamsException(f"Invalid parameter name '{invalid_keys}'")
+                raise InvalidParamsException(f"Invalid parameters '{invalid_keys}'")
 
         # check required argument is exist in user input
         for param_name, param_type in hints.items():
             if param_name == "self" or param_name == "cls":
                 continue
 
-            param = kw_params.get(param_name, None)
+            try:
+                param = kw_params[param_name]
+            except KeyError:
+                # has no input for this parameter
+                try:
+                    default_args[param_name]
+                except KeyError:
+                    # has no default value
+                    raise InvalidParamsException(f"There is no '{param_name}' parameter")
+                # has default value. pass type converting
+                continue
+
+            # all type can have None value
             if param is None:
                 continue
 

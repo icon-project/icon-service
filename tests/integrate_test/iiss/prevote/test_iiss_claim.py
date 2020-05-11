@@ -143,7 +143,7 @@ class TestIISSClaim(TestIISSBase):
         }
 
         # query iscore without an address
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidParamsException):
             self.icon_service_engine.query("icx_call", params)
 
         # query iscore with an empty string as an address

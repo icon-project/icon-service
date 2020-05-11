@@ -218,18 +218,14 @@ class TestIconScoreEngine(unittest.TestCase):
                           IconScoreEngine._convert_score_params_by_annotations,
                           context, score_object, 'test_method', not_matching_type_params)
 
-        # success case: even though not enough number of params inputted, doesn't raise an error
-        # parameter check is processed when executing method.
+        # not enough number of params inputted,
         validate_external_method = getattr(score_object, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
         validate_external_method.reset_mock()
         insufficient_params = {"address": str(create_address(AddressPrefix.EOA))}
-        converted_params = \
-            IconScoreEngine._convert_score_params_by_annotations(context, score_object, 'test_method', insufficient_params)
 
-        validate_external_method = getattr(score_object, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
-        validate_external_method.assert_called()
-        self.assertEqual(type(insufficient_params["address"]), str)
-        self.assertEqual(type(converted_params["address"]), Address)
+        self.assertRaises(InvalidParamsException,
+                          IconScoreEngine._convert_score_params_by_annotations,
+                          context, score_object, 'test_method', insufficient_params)
 
     def test_fallback(self):
         pass
