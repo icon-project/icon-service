@@ -25,7 +25,7 @@ import pytest
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidParamsException, InvalidRequestException
 from iconservice.base.message import Message
-from iconservice.icon_constant import IISS_DAY_BLOCK, IISS_MAX_DELEGATIONS, Revision
+from iconservice.icon_constant import IISS_DAY_BLOCK, Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.delegation_part import DelegationPart
@@ -38,6 +38,15 @@ from iconservice.utils import icx_to_loop
 
 if TYPE_CHECKING:
     pass
+
+
+@pytest.fixture(scope="function", params=[Revision.IISS.value,
+                                          Revision.DECENTRALIZATION.value,
+                                          Revision.CHANGE_MAX_DELEGATIONS_TO_100.value])
+def context(request):
+    context = Mock(spec=IconScoreContext)
+    context.revision = request.param
+    return context
 
 
 EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT = [
@@ -63,7 +72,6 @@ EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT = [
     216000, 216000, 216000, 216000, 216000
 ]
 
-
 SENDER_ADDRESS = Address.from_prefix_and_int(AddressPrefix.EOA, 0)
 
 
@@ -83,10 +91,11 @@ def create_account(
 
 
 def create_sender_account(stake: int):
+    max_delegations: int = 10
     total_delegating = 0
     old_delegations: List[Tuple['Address', int], ...] = []
 
-    for i in range(IISS_MAX_DELEGATIONS):
+    for i in range(max_delegations):
         value = i + 1
         address = Address.from_prefix_and_int(AddressPrefix.EOA, value)
         old_delegations.append((address, value))
@@ -102,7 +111,6 @@ def create_sender_account(stake: int):
 def get_account(context: 'IconScoreContext',
                 address: 'Address',
                 intent: 'Intent' = Intent.TRANSFER) -> 'Account':
-
     """Returns the account indicated by address.
 
     :param context:
@@ -139,10 +147,11 @@ def get_account(context: 'IconScoreContext',
 
 
 def create_delegations_param() -> Tuple[int, List]:
+    max_delegations: int = 10
     delegations = []
     total_delegating = 0
 
-    for i in range(IISS_MAX_DELEGATIONS):
+    for i in range(max_delegations):
         _id = i + 11
         address = Address.from_prefix_and_int(AddressPrefix.EOA, _id)
         value = _id
@@ -156,7 +165,11 @@ def create_delegations_param() -> Tuple[int, List]:
     return total_delegating, delegations
 
 
-class TestIissEngine(unittest.TestCase):
+class TestIissEngine:
+    @staticmethod
+    def _get_expected_max_delegations(context: 'IconScoreContext') -> int:
+        return 10 if context.revision < Revision.CHANGE_MAX_DELEGATIONS_TO_100.value else 100
+
     def test_calculate_unstake_lock_period(self):
         lmin = IISS_DAY_BLOCK * 5
         lmax = IISS_DAY_BLOCK * 20
@@ -166,11 +179,12 @@ class TestIissEngine(unittest.TestCase):
             diff = abs(ret - EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT[x])
             assert diff <= 1
 
-    def test__convert_params_of_set_delegation_ok(self):
+    def test_convert_params_of_set_delegation_ok(self, context):
+        max_delegations: int = self._get_expected_max_delegations(context)
         delegations = []
         total_delegating = 0
 
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = random.randint(1, 10_000)
 
@@ -180,7 +194,7 @@ class TestIissEngine(unittest.TestCase):
             })
             total_delegating += value
 
-        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(delegations)
+        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(context, delegations)
         assert ret_total_delegating == total_delegating
 
         for i in range(len(delegations)):
@@ -191,13 +205,15 @@ class TestIissEngine(unittest.TestCase):
             assert str(address) == delegations[i]["address"]
             assert hex(value) == delegations[i]["value"]
 
-    def test__convert_params_of_set_delegation_with_value_0(self):
+    def test_convert_params_of_set_delegation_with_value_0(self, context):
+        max_delegations: int = self._get_expected_max_delegations(context)
         delegations = []
         total_delegating = 0
+        zero_value_cnt: int = 5
 
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
-            value = 0 if i < 5 else i + 1
+            value = 0 if i < zero_value_cnt else i + 1
 
             delegations.append({
                 "address": str(address),
@@ -205,11 +221,11 @@ class TestIissEngine(unittest.TestCase):
             })
             total_delegating += value
 
-        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(delegations)
-        assert ret_total_delegating == total_delegating == (6 + 7 + 8 + 9 + 10)
-        assert len(ret_delegations) == 5
+        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(context, delegations)
+        assert ret_total_delegating == total_delegating == sum([i + 1 for i in range(5, max_delegations)])
+        assert len(ret_delegations) == max_delegations - zero_value_cnt
 
-        i = 5
+        i = zero_value_cnt
         # 5 delegations including 0 value were dropped.
         for address, value in ret_delegations:
             delegation: Dict[str, Optional[str, int]] = delegations[i]
@@ -217,7 +233,7 @@ class TestIissEngine(unittest.TestCase):
             assert hex(value) == delegation["value"]
             i += 1
 
-    def test__convert_params_of_set_delegation_with_value_less_than_0(self):
+    def test_convert_params_of_set_delegation_with_value_less_than_0(self, context):
         delegations = []
 
         values = [1, 2, 3, 4, -100]
@@ -232,9 +248,9 @@ class TestIissEngine(unittest.TestCase):
             })
 
         with pytest.raises(InvalidParamsException):
-            IISSEngine._convert_params_of_set_delegation(delegations)
+            IISSEngine._convert_params_of_set_delegation(context, delegations)
 
-    def test__convert_params_of_set_delegation_with_duplicate_address(self):
+    def test_convert_params_of_set_delegation_with_duplicate_address(self, context):
         delegations = []
 
         for i in range(2):
@@ -247,12 +263,13 @@ class TestIissEngine(unittest.TestCase):
             })
 
         with pytest.raises(InvalidParamsException):
-            IISSEngine._convert_params_of_set_delegation(delegations)
+            IISSEngine._convert_params_of_set_delegation(context, delegations)
 
-    def test__convert_params_of_set_delegation_with_too_many_delegations(self):
+    def test_convert_params_of_set_delegation_with_too_many_delegations(self, context):
+        max_delegations: int = self._get_expected_max_delegations(context)
         delegations = []
 
-        for i in range(IISS_MAX_DELEGATIONS + 1):
+        for i in range(max_delegations + 1):
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = random.randint(1, 10_000)
 
@@ -262,9 +279,9 @@ class TestIissEngine(unittest.TestCase):
             })
 
         with pytest.raises(InvalidParamsException):
-            IISSEngine._convert_params_of_set_delegation(delegations)
+            IISSEngine._convert_params_of_set_delegation(context, delegations)
 
-    def test__check_voting_power_is_enough(self):
+    def test_check_voting_power_is_enough(self):
         def _get_account(_context: 'IconScoreContext',
                          _address: 'Address',
                          _intent: 'Intent' = Intent.TRANSFER) -> 'Account':
@@ -286,7 +303,7 @@ class TestIissEngine(unittest.TestCase):
         assert sender_item[0].delegations_amount == sum(range(1, 11))  # old delegations
         assert sender_item[0].stake >= total_delegating
 
-    def test__check_voting_power_is_enough_with_not_enough_stake(self):
+    def test_check_voting_power_is_enough_with_not_enough_stake(self):
         def _get_account(_context: 'IconScoreContext',
                          _address: 'Address',
                          _intent: 'Intent' = Intent.TRANSFER) -> 'Account':
@@ -301,7 +318,7 @@ class TestIissEngine(unittest.TestCase):
             IISSEngine._check_voting_power_is_enough(
                 context, SENDER_ADDRESS, total_delegating, cached_accounts)
 
-    def test__get_old_delegations_from_sender_account(self):
+    def test_get_old_delegations_from_sender_account(self):
         cached_accounts: Dict['Address', Tuple['Account', int]] = {}
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=get_account)
@@ -327,7 +344,7 @@ class TestIissEngine(unittest.TestCase):
                 assert address == delegation[0]
                 assert delegated_offset == -delegation[1]
 
-    def test__calc_delegations(self):
+    def test_calc_delegations(self):
         cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
         context = Mock()
         context.storage.icx.get_account = Mock(side_effect=get_account)
@@ -363,9 +380,10 @@ class TestIissEngine(unittest.TestCase):
             else:  # 11 <= i <= 20
                 assert delegated_offset == i
 
-    def test__put_delegation_to_state_db(self):
+    def test_put_delegation_to_state_db(self):
         cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
         context = Mock()
+        context.revision = Revision.DECENTRALIZATION.value
         context.storage.icx.get_account = Mock(side_effect=get_account)
 
         total_delegating = 0
@@ -421,6 +439,7 @@ class TestIissEngine(unittest.TestCase):
 
     def test_handle_set_delegation_with_21_accounts(self):
         context = Mock()
+        context.revision = Revision.DECENTRALIZATION.value
         context.tx.origin = SENDER_ADDRESS
         context.msg = Message(SENDER_ADDRESS, 0)
         context.storage.icx.get_account = Mock(side_effect=get_account)
@@ -465,6 +484,7 @@ class TestIissEngine(unittest.TestCase):
 
     def test_handle_set_delegation_with_1_account(self):
         context = Mock()
+        context.revision = Revision.DECENTRALIZATION.value
         context.tx.origin = SENDER_ADDRESS
         context.msg = Message(SENDER_ADDRESS, 0)
         context.storage.icx.get_account = Mock(side_effect=get_account)
@@ -518,9 +538,13 @@ class TestIissEngine(unittest.TestCase):
 
         :return:
         """
+        context = Mock()
+        context.revision = Revision.DECENTRALIZATION.value
+        context.storage.icx.get_account = Mock(side_effect=get_account)
+
         total_delegating, delegations = create_delegations_param()
 
-        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(delegations)
+        ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(context, delegations)
         assert ret_total_delegating == total_delegating
 
         for i in range(len(delegations)):
@@ -533,8 +557,6 @@ class TestIissEngine(unittest.TestCase):
 
         # IISSEngine._check_voting_power_is_enough()
         cached_accounts: Dict['Address', Tuple['Account', int]] = {}
-        context = Mock()
-        context.storage.icx.get_account = Mock(side_effect=get_account)
         IISSEngine._check_voting_power_is_enough(
             context, SENDER_ADDRESS, total_delegating, cached_accounts)
 
