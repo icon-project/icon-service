@@ -23,7 +23,7 @@ from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus, PenaltyReason
-from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ConfigKey, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
@@ -187,6 +187,7 @@ class TestIntegratePrep(TestIISSBase):
         self.assertEqual(prep_count, len(actual_preps))
 
     def test_preps_and_delegated(self):
+        max_delegations: int = 10
         self.maxDiff = None
         self.update_governance()
 
@@ -220,7 +221,7 @@ class TestIntegratePrep(TestIISSBase):
         # delegation 1 icx user0 ~ 9
         delegations: list = []
         delegation_amount: int = 1 * ICX_IN_LOOP
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegations.append((self._accounts[i], delegation_amount))
         self.set_delegation(from_=self._accounts[0],
                             origin_delegations=delegations)
@@ -233,9 +234,9 @@ class TestIntegratePrep(TestIISSBase):
         actual_list: list = response["preps"]
         self.assertEqual(0, len(actual_list))
 
-        response: dict = self.get_prep_list(end_ranking=IISS_MAX_DELEGATIONS)
+        response: dict = self.get_prep_list(end_ranking=max_delegations)
         preps: list = []
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             address: 'Address' = self._accounts[i].address
             expected_params: dict = self.create_register_prep_params(self._accounts[i])
             preps.append(

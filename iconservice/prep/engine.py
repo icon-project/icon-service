@@ -16,6 +16,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+
 from .data import Term
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
@@ -27,9 +28,9 @@ from ..base.exception import (
     AccessDeniedException, InvalidParamsException, MethodNotFoundException, ServiceNotReadyException
 )
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
-    PenaltyReason, TermFlag
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus, ROLLBACK_LOG_TAG
+from ..icon_constant import Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
+    PenaltyReason, TermFlag
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..iconscore.icon_score_step import StepType
@@ -960,8 +961,8 @@ class Engine(EngineBase, IISSEngineListener):
         if context.revision <= Revision.DECENTRALIZATION.value:
             # Although the following statement has a bug,
             # preserve it for state compatibility
-            # IISS_MAX_DELEGATIONS * 2 + 1 is correct
-            assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
+            # max delegations (i.e. 10) * 2 + 1 is correct
+            assert 0 <= len(updated_accounts) <= context.engine.iiss.get_max_delegations_by_revision(context) * 2
 
         for account in updated_accounts:
             assert isinstance(account, Account)
