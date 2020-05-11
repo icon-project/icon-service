@@ -40,7 +40,9 @@ if TYPE_CHECKING:
     pass
 
 
-@pytest.fixture(scope="function", params=[revision.value for revision in Revision])
+@pytest.fixture(scope="function", params=[Revision.IISS.value,
+                                          Revision.DECENTRALIZATION.value,
+                                          Revision.CHANGE_MAX_DELEGATIONS_TO_100.value])
 def context(request):
     context = Mock(spec=IconScoreContext)
     context.revision = request.param
@@ -220,7 +222,7 @@ class TestIissEngine:
             total_delegating += value
 
         ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(context, delegations)
-        assert ret_total_delegating == total_delegating == sum([i + 1for i in range(5, max_delegations)])
+        assert ret_total_delegating == total_delegating == sum([i + 1 for i in range(5, max_delegations)])
         assert len(ret_delegations) == max_delegations - zero_value_cnt
 
         i = zero_value_cnt
