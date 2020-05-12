@@ -1268,7 +1268,7 @@ class IconServiceEngine(ContextContainer):
     def _transfer_coin(cls,
                        context: 'IconScoreContext',
                        params: dict) -> None:
-        """Transfer coin between EOA and EOA based on protocol v2
+        """Transfer ICX coin from EOA to account.
         JSON-RPC syntax validation has already been complete
 
         :param context:
@@ -1361,16 +1361,11 @@ class IconServiceEngine(ContextContainer):
     def _check_contract_call_step(context: 'IconScoreContext',
                                   to: 'Address',
                                   data_type: str) -> bool:
-        if data_type == 'message':
-            # for mainnet backward compatibility
-            if context.revision < Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value:
-                return True
-
         # do not charge CONTRACT_CALL step when call system SCORE
-        # exceptions for backward compatibility:
+        # exceptions for mainnet backward compatibility:
         #   - dataType is not 'call'
         if to == SYSTEM_SCORE_ADDRESS:
-            if context.revision < Revision.SYSTEM_SCORE_STEP.value and data_type != 'call':
+            if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and data_type != 'call':
                 return True
             return False
 
