@@ -1360,7 +1360,7 @@ class IconServiceEngine(ContextContainer):
     @staticmethod
     def _check_contract_call_step(context: 'IconScoreContext',
                                   to: 'Address',
-                                  data_type: str) -> bool:
+                                  data_type: Optional[str]) -> bool:
         # do not charge CONTRACT_CALL step when call system SCORE
         # exceptions for mainnet backward compatibility:
         #   - dataType is not 'call'
