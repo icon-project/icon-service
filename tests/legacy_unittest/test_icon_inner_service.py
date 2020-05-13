@@ -150,7 +150,7 @@ class TestIconInnerService(unittest.TestCase):
             raise FatalException(expected_error_msg)
 
         self.inner_task._icon_service_engine.query = mocked_query
-        response = self.inner_task._query(self.mocked_query_request)
+        response = self.inner_task.query(self.mocked_query_request)
         assert expected_error_code, response['error']['code']
         assert expected_error_msg, response['error']['message']
         assert not self.inner_task._close.called
@@ -166,7 +166,7 @@ class TestIconInnerService(unittest.TestCase):
                 raise exception
 
             self.inner_task._icon_service_engine.invoke = mocked_query
-            response = self.inner_task._query(self.mocked_query_request)
+            response = self.inner_task.query(self.mocked_query_request)
             assert expected_error_msg, response['error']['message']
             assert not self.inner_task._close.called
             self.inner_task._close.reset_mock()
