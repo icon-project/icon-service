@@ -40,7 +40,7 @@ class ParamType(IntEnum):
     ISE_GET_STATUS = 305
 
     WRITE_PRECOMMIT = 400
-    REMOVE_PRECOMMIT = 500
+    # REMOVE_PRECOMMIT = 500
     ROLLBACK = 501
 
     VALIDATE_TRANSACTION = 600
@@ -324,8 +324,6 @@ type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     ConstantKeys.OLD_BLOCK_HASH: ValueType.BYTES,
     ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES
 }
-
-type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
 type_convert_templates[ParamType.ROLLBACK] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,

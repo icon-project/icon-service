@@ -398,7 +398,7 @@ class IconServiceEngine(ContextContainer):
                 precommit_data.block_result, \
                 precommit_data.state_root_hash, \
                 precommit_data.added_transactions, \
-                precommit_data.main_prep_as_dict
+                precommit_data.next_preps
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -481,7 +481,7 @@ class IconServiceEngine(ContextContainer):
                 # change the reward calculation period from 43200 to 43120 which is the same as term_period
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
-        main_prep_as_dict, term, rc_state_hash = self._after_transaction_process(context,
+        next_preps, term, rc_state_hash = self._after_transaction_process(context,
                                                                                  rc_db_revision,
                                                                                  prev_block_generator,
                                                                                  prev_block_votes)
@@ -501,7 +501,7 @@ class IconServiceEngine(ContextContainer):
                                        context.new_icon_score_mapper,
                                        rc_state_hash,
                                        added_transactions,
-                                       main_prep_as_dict,
+                                       next_preps,
                                        context.prep_address_converter)
         if context.precommitdata_log_flag:
             Logger.info(tag=_TAG,
@@ -512,7 +512,7 @@ class IconServiceEngine(ContextContainer):
             block_result, \
             precommit_data.state_root_hash, \
             precommit_data.added_transactions, \
-            precommit_data.main_prep_as_dict
+            precommit_data.next_preps
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
@@ -696,10 +696,10 @@ class IconServiceEngine(ContextContainer):
         :param rc_db_revision
         :param prev_block_generator:
         :param prev_block_votes:
-        :return: (main_preps_as_dict, term, rc_state_hash)
+        :return: (next_preps, term, rc_state_hash)
         """
 
-        main_prep_as_dict, term = context.engine.prep.on_block_invoked(
+        next_preps, term = context.engine.prep.on_block_invoked(
             context, bool(context.revision_changed_flag & RevisionChangedFlag.DECENTRALIZATION))
 
         rc_state_hash: Optional[bytes] = None
@@ -712,10 +712,10 @@ class IconServiceEngine(ContextContainer):
         context.update_batch()
         context.storage.meta.put_prep_address_converter(context, context.prep_address_converter)
 
-        if main_prep_as_dict is not None:
-            Logger.info(tag="TERM", msg=f"{main_prep_as_dict}")
+        if next_preps is not None:
+            Logger.info(tag="TERM", msg=f"{next_preps}")
 
-        return main_prep_as_dict, term, rc_state_hash
+        return next_preps, term, rc_state_hash
 
     @classmethod
     def _update_productivity(cls,
@@ -1245,9 +1245,11 @@ class IconServiceEngine(ContextContainer):
         """
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
+            tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+            tmp_context.block = self._get_last_block()
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context,
+                context if context.revision >= Revision.THREE.value else tmp_context,
                 params,
                 step_price=context.step_counter.step_price)
 
@@ -1494,7 +1496,7 @@ class IconServiceEngine(ContextContainer):
             'prevBlockHash': prev_block_hash
         }
 
-    def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
+    def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: bytes) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
         :param _block_height: height of block being committed
@@ -1602,13 +1604,17 @@ class IconServiceEngine(ContextContainer):
 
         return wal_writer, state_wal, iiss_wal
 
-    def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: Optional[bytes]) -> 'PrecommitData':
-        precommit_data: 'PrecommitData' = \
-            self._precommit_data_manager.get(instant_block_hash)
-        if block_hash:
-            precommit_data.block_batch.update_block_hash(block_hash)
-
+    def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: bytes) -> 'PrecommitData':
+        precommit_data: 'PrecommitData' = self._precommit_data_manager.get(instant_block_hash)
+        precommit_data.block_batch.update_block_hash(block_hash)
         precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
+
+        if instant_block_hash != block_hash:
+            self._precommit_data_manager.change_block_hash(
+                block_height=precommit_data.block.height,
+                src=instant_block_hash,
+                dst=block_hash
+            )
         return precommit_data
 
     def _process_state_commit(self,
@@ -1677,19 +1683,6 @@ class IconServiceEngine(ContextContainer):
             iiss_db_path: str = context.storage.rc.rename_standby_db_to_iiss_db(standby_db_info.path)
             context.engine.iiss.send_calculate(iiss_db_path, standby_db_info.block_height)
             wal_writer.write_state(WALState.SEND_CALCULATE.value, add=True)
-
-    def remove_precommit_state(self, block_height: int, instant_block_hash: bytes) -> None:
-        """Throw away a precommit state
-        in context.block_batch and IconScoreEngine
-        :param block_height: height of block which is needed to be removed from the pre-commit data manager
-        :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
-        """
-        Logger.warning(tag=_TAG, msg=f"remove_precommit_state() start: height={block_height}")
-
-        self._precommit_data_manager.validate_block_to_commit(instant_block_hash)
-        # self._precommit_data_manager.remove_precommit_state(instant_block_hash)
-
-        Logger.warning(tag=_TAG, msg="remove_precommit_state() end")
 
     def rollback(self, block_height: int, block_hash: bytes) -> dict:
         """Rollback the current confirmed state to the old one indicated by block_height

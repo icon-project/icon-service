@@ -170,11 +170,14 @@ class TestIntegrateBase(TestCase):
             block,
             [tx]
         )
-        self.icon_service_engine.commit(block.height, block.hash, None)
+        self.icon_service_engine.commit(block.height, block.hash, block.hash)
         self._block_height += 1
         self._prev_block_hash = block_hash
 
         return invoke_response
+
+    def get_last_block(self) -> 'Block':
+        return self.icon_service_engine._precommit_data_manager.last_block
 
     def get_tx_results(self, hash_list: List[bytes]):
         tx_results: List['TransactionResult'] = []
@@ -215,7 +218,7 @@ class TestIntegrateBase(TestCase):
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
+        tx_results, state_root_hash, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -226,12 +229,13 @@ class TestIntegrateBase(TestCase):
         self.add_tx_result(tx_results)
         return block, self.get_hash_list_from_tx_list(tx_list)
 
-    def make_and_req_block_for_2_depth_invocation(self,
-                           tx_list: list,
-                           prev_block: 'Block',
-                           prev_block_generator: Optional['Address'] = None,
-                           prev_block_validators: Optional[List['Address']] = None,
-                           prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
+    def make_and_req_block_for_2_depth_invocation(
+            self,
+            tx_list: list,
+            prev_block: 'Block',
+            prev_block_generator: Optional['Address'] = None,
+            prev_block_validators: Optional[List['Address']] = None,
+            prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
     ) -> Tuple['Block', List[bytes]]:
         block_height: int = prev_block.height + 1
         block_hash = create_block_hash()
@@ -241,11 +245,10 @@ class TestIntegrateBase(TestCase):
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
-        self.icon_service_engine._set_revision_to_context(context)
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
+        tx_results, state_root_hash, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -279,7 +282,7 @@ class TestIntegrateBase(TestCase):
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
+        tx_results, state_root_hash, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -287,7 +290,7 @@ class TestIntegrateBase(TestCase):
                                             prev_block_votes=prev_block_votes,
                                             is_block_editable=is_block_editable)
 
-        return block, tx_results, state_root_hash, added_transactions, main_prep_as_dict
+        return block, tx_results, state_root_hash, added_transactions, next_preps
 
     def _make_and_req_block_for_issue_test(self,
                                            tx_list: list,
@@ -304,7 +307,7 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, cumulative_fee)
 
-        tx_results, _, added_transactions, main_prep_as_dict = \
+        tx_results, _, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -317,16 +320,10 @@ class TestIntegrateBase(TestCase):
         return block, self.get_hash_list_from_tx_list(tx_list)
 
     def _write_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.commit(block.height, block.hash, None)
+        self.icon_service_engine.commit(block.height, block.hash, block.hash)
         self._block_height += 1
         assert block.height == self._block_height
         self._prev_block_hash = block.hash
-
-    def _remove_precommit_state(self, block: 'Block') -> None:
-        """Revoke to commit the precommit data to db
-
-        """
-        self.icon_service_engine.remove_precommit_state(block.height, block.hash)
 
     def rollback(self, block_height: int = -1, block_hash: Optional[bytes] = None):
         """Rollback the current state to the old one indicated by a given block
@@ -956,7 +953,7 @@ class EOAAccount:
 
     @property
     def public_key(self) -> bytes:
-        return self._wallet.bytes_public_key
+        return self._wallet.public_key
 
     @property
     def address(self) -> 'Address':

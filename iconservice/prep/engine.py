@@ -268,18 +268,18 @@ class Engine(EngineBase, IISSEngineListener):
 
         if is_decentralization_started or self._is_term_ended(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, new_term = self._on_term_ended(context)
+            next_preps, new_term = self._on_term_ended(context)
         elif context.is_decentralized():
             # In-term P-Rep replacement
-            main_prep_as_dict, new_term = self._on_term_updated(context)
+            next_preps, new_term = self._on_term_updated(context)
         else:
-            main_prep_as_dict, new_term = None, None
+            next_preps, new_term = None, None
 
         if new_term:
             self._update_prep_grades(context, context.preps, self.term, new_term)
             context.storage.prep.put_term(context, new_term)
 
-        return main_prep_as_dict, new_term
+        return next_preps, new_term
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
@@ -309,12 +309,15 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Create a term with context.preps whose grades are up-to-date
         new_term: 'Term' = self._create_next_term(context, self.term)
-        main_preps_as_dict: dict = \
-            self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
+        next_preps: dict = self._get_updated_main_preps(
+            context=context,
+            term=new_term,
+            state=PRepResultState.NORMAL
+        )
 
         Logger.debug(tag=_TAG, msg=f"{new_term}")
 
-        return main_preps_as_dict, new_term
+        return next_preps, new_term
 
     @classmethod
     def _put_last_term_info(cls, context: 'IconScoreContext', term: 'Term'):
@@ -363,12 +366,15 @@ class Engine(EngineBase, IISSEngineListener):
         if bool(new_term.flags & (TermFlag.MAIN_PREPS |
                                   TermFlag.MAIN_PREP_P2P_ENDPOINT |
                                   TermFlag.MAIN_PREP_NODE_ADDRESS)):
-            main_preps_as_dict = \
-                self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
+            next_preps = self._get_updated_main_preps(
+                context=context,
+                term=new_term,
+                state=PRepResultState.IN_TERM_UPDATED
+            )
         else:
-            main_preps_as_dict = None
+            next_preps = None
 
-        return main_preps_as_dict, new_term
+        return next_preps, new_term
 
     @classmethod
     def _update_prep_grades(cls,
@@ -530,14 +536,14 @@ class Engine(EngineBase, IISSEngineListener):
 
         :return:
         """
-        prep_as_dict: Optional[dict] = \
+        updated_main_preps: Optional[dict] = \
             cls.get_main_preps_in_dict(context, term)
 
-        if prep_as_dict:
-            prep_as_dict['irep'] = term.irep
-            prep_as_dict['state'] = state.value
+        if updated_main_preps:
+            updated_main_preps['irep'] = term.irep
+            updated_main_preps['state'] = state.value
 
-        return prep_as_dict
+        return updated_main_preps
 
     @classmethod
     def get_main_preps_in_dict(cls,

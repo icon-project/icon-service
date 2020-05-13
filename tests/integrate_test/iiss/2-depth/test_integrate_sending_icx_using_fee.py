@@ -20,8 +20,6 @@
 import json
 from typing import TYPE_CHECKING, Optional
 
-import pytest
-
 from iconservice.base.address import Address
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_constant import Revision
@@ -30,7 +28,7 @@ from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
-    from iconservice.icon_service_engine import IconServiceEngine
+    from iconservice.base.block import Block
 
 
 class TestIntegrateSendingIcx(TestIntegrateBase):
@@ -111,15 +109,13 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         input_step_cost = 200
         value = icx_to_loop(7)
 
-        icon_service_engine: IconServiceEngine = self.icon_service_engine
-
         self.update_governance()
 
         for revision in range(Revision.THREE.value, Revision.LATEST.value + 1):
             self.set_revision(revision)
 
             # The latest confirmed block
-            root_block = icon_service_engine._precommit_data_manager.last_block
+            root_block = self.get_last_block()
 
             # Check that "from_" address has enough icx to transfer
             balance0: int = self.get_balance(from_)
@@ -210,9 +206,6 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         step_price = 10 ** 10
         revision = Revision.LATEST.value
 
-        icon_service_engine: IconServiceEngine = self.icon_service_engine
-        precommit_data_manager = icon_service_engine._precommit_data_manager
-
         self.update_governance()
         self.set_revision(Revision.LATEST.value)
 
@@ -225,7 +218,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         )
 
         # The latest confirmed block
-        root_block = icon_service_engine._precommit_data_manager.last_block
+        root_block = self.get_last_block()
 
         # Check that "from_" address has enough icx to transfer
         from_balance: int = self.get_balance(from_)
@@ -288,6 +281,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         block = parent_blocks[index]
         self._write_precommit_state(block)
 
+        precommit_data_manager = self.icon_service_engine._precommit_data_manager
         for i in range(count):
             balance = self.get_balance(parent_addresses[i])
             assert balance == (icx_to_loop(1) if i == index else 0)

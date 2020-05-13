@@ -91,7 +91,7 @@ class PrecommitData(object):
                  score_mapper: Optional['IconScoreMapper'],
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
-                 main_prep_as_dict: Optional[dict],
+                 next_preps: Optional[dict],
                  prep_address_converter: 'PRepAddressConverter'):
         """
 
@@ -120,7 +120,7 @@ class PrecommitData(object):
         self.state_root_hash: bytes = self._make_state_root_hash()
 
         self.added_transactions: dict = added_transactions
-        self.main_prep_as_dict: Optional[dict] = main_prep_as_dict
+        self.next_preps: Optional[dict] = next_preps
 
         self.prep_address_converter: 'PRepAddressConverter' = prep_address_converter
 
@@ -143,7 +143,7 @@ class PrecommitData(object):
             f"prev_block_generator: {self.prev_block_generator}",
             "",
             f"added_transactions: {self.added_transactions}",
-            f"main_prep_as_dict: {self.main_prep_as_dict}",
+            f"next_preps: {self.next_preps}",
             "",
             "block_batch",
         ]
@@ -223,6 +223,11 @@ class PrecommitDataManager(object):
 
         def is_leaf(self) -> bool:
             return len(self._children) == 0
+
+        def update_block_hash(self, src: bytes, dest: bytes):
+            self.precommit_data.block_batch.update_block_hash(dest)
+            self._block = self.precommit_data.block_batch.block
+            self.precommit_data.block_batch.set_block_to_batch(self.precommit_data.revision)
 
     def __init__(self):
         self._root: Optional['PrecommitDataManager.Node'] = None
@@ -377,3 +382,17 @@ class PrecommitDataManager(object):
             yield node.precommit_data.block_batch
             # parent means previous block node
             node = node.parent
+
+    def change_block_hash(self, block_height: int, src: bytes, dst: bytes):
+        node: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(src)
+        if node is None:
+            raise InvalidParamsException(
+                f'No precommit data: block_hash={bytes_to_hex(src)}')
+
+        if not node.is_leaf() or node.block.height != block_height:
+            raise InvalidParamsException(
+                f"Invalid node data (not leaf): src={src}, dest={dst}")
+
+        node.update_block_hash(src=src, dest=dst)
+        del self._precommit_data_mapper[src]
+        self._precommit_data_mapper[dst] = node
