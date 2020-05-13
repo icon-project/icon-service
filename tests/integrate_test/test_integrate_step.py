@@ -20,7 +20,7 @@ from typing import Optional, List
 from unittest import mock
 
 from iconservice import Address
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS, SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextFactory
 from iconservice.iconscore.icon_score_result import TransactionResult
@@ -67,6 +67,16 @@ class TestIntegrateStep(TestIntegrateBase):
         tx = self.create_transfer_icx_tx(from_=self._admin,
                                          to_=self._accounts[0],
                                          value=value)
+        prev_block, hash_list = self.make_and_req_block([tx])
+        return prev_block, self.get_tx_results(hash_list)
+
+    def _call_system_score(self, func_name: str, remove_data_type: bool = False):
+        tx = self.create_score_call_tx(from_=self._admin,
+                                       to_=SYSTEM_SCORE_ADDRESS,
+                                       func_name=func_name)
+
+        if remove_data_type:
+            del tx['params']['dataType']
         prev_block, hash_list = self.make_and_req_block([tx])
         return prev_block, self.get_tx_results(hash_list)
 
@@ -322,7 +332,7 @@ class TestIntegrateStep(TestIntegrateBase):
         self.assertEqual(StepType.CONTRACT_CALL, steps[2][0])
         self.assertEqual(StepType.API_CALL, steps[3][0])
 
-    def test_send_message_revision(self):
+    def test_system_score(self):
         self.update_governance_for_audit("0_0_4")
 
         self.set_revision(Revision.THREE.value)
@@ -331,50 +341,31 @@ class TestIntegrateStep(TestIntegrateBase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         IconScoreContextFactory._create_context = mock.Mock(return_value=context)
 
-        data: bytes = b'test_length_25_test_lengt'
-
-        # TEST: to SCORE
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], ZERO_SCORE_ADDRESS, data)
+        # TEST: do not charge CONTRACT_CALL
+        prev_block, _ = self._call_system_score(func_name="func_name")
         self.assertEqual(True, context.step_trace_flag)
 
-        input_step = context.step_counter.get_step_cost(StepType.INPUT)
-        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        expected_steps = [StepType.DEFAULT, StepType.INPUT]
         steps = context.step_counter.step_tracer.steps
-        self.assertEqual(3, len(steps))
-        self.assertEqual(StepType.DEFAULT, steps[0][0])
-        self.assertEqual(StepType.INPUT, steps[1][0])
-        self.assertEqual(input_step * input_size, steps[1][1])
-        self.assertEqual(StepType.CONTRACT_CALL, steps[2][0])
+        self.assertEqual(len(expected_steps), len(steps))
+
+        # TEST: charge CONTRACT_CALL to None dataType
+        prev_block, _ = self._call_system_score(func_name="func_name",
+                                                remove_data_type=True)
+        self.assertEqual(True, context.step_trace_flag)
+
+        expected_steps = [StepType.DEFAULT, StepType.INPUT, StepType.CONTRACT_CALL]
+        steps = context.step_counter.step_tracer.steps
+        self.assertEqual(len(expected_steps), len(steps))
 
         self._write_precommit_state(prev_block)
 
-        # TEST: to EOA
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], self._accounts[0], data)
-        self.assertEqual(True, context.step_trace_flag)
-
-        input_step = context.step_counter.get_step_cost(StepType.INPUT)
-        input_size = get_input_data_size(context.revision, '0x' + data.hex())
+        # TEST: do not charge CONTRACT_CALL to None dataType after Revision.SYSTEM_SCORE_ENABLED
+        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value)
+        prev_block, _ = self._call_system_score(func_name="func_name",
+                                                remove_data_type=True)
+        expected_steps = [StepType.DEFAULT, StepType.INPUT]
         steps = context.step_counter.step_tracer.steps
-        self.assertEqual(2, len(steps))
-        self.assertEqual(StepType.DEFAULT, steps[0][0])
-        self.assertEqual(StepType.INPUT, steps[1][0])
-        self.assertEqual(input_step * input_size, steps[1][1])
-
-        self._write_precommit_state(prev_block)
-
-        # revision >= Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE
-        self.set_revision(Revision.DO_NOT_CHARGE_CONTRACT_CALL_STEP_TO_MESSAGE_DATATYPE.value)
-
-        # TEST: to SCORE
-        prev_block, tx_results = self._send_message_tx(self._accounts[1], ZERO_SCORE_ADDRESS, data)
-        self.assertEqual(True, context.step_trace_flag)
-
-        input_step = context.step_counter.get_step_cost(StepType.INPUT)
-        input_size = get_input_data_size(context.revision, '0x' + data.hex())
-        steps = context.step_counter.step_tracer.steps
-        self.assertEqual(2, len(steps))
-        self.assertEqual(StepType.DEFAULT, steps[0][0])
-        self.assertEqual(StepType.INPUT, steps[1][0])
-        self.assertEqual(input_step * input_size, steps[1][1], steps)
+        self.assertEqual(len(expected_steps), len(steps))
 
         self._write_precommit_state(prev_block)
