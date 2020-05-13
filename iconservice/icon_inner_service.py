@@ -234,10 +234,10 @@ class IconScoreInnerTask(object):
         method_name: str = request['method']
         if method_name == RPCMethod.DEBUG_ESTIMATE_STEP:
             method: callable = self._estimate
-            args = request
+            args = [request]
         else:
             method: callable = self._query
-            args = (request, method_name)
+            args = [request, method_name]
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             return await asyncio.get_event_loop(). \
