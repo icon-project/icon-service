@@ -47,13 +47,6 @@ class InternalCall(object):
         if func_name is None:
             func_name = STR_FALLBACK
 
-        # System SCORE inter-call enabled after Revision.SYSTEM_SCORE_ENABLED
-        # Exception
-        #   - Governance SCORE can call system SCORE inter-call
-        if addr_to == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SYSTEM_SCORE_ENABLED.value :
-            if addr_from != GOVERNANCE_SCORE_ADDRESS:
-                raise ScoreNotFoundException(f"{SYSTEM_SCORE_ADDRESS} is not found")
-
         return InternalCall._call(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
     @staticmethod
@@ -78,6 +71,13 @@ class InternalCall(object):
                 InternalCall.emit_event_log_for_icx_transfer(context, addr_from, addr_to, amount)
 
             if addr_to.is_contract:
+                # System SCORE inter-call enabled after Revision.SYSTEM_SCORE_ENABLED
+                # Exception
+                #   - Governance SCORE can call system SCORE inter-call
+                if addr_to == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SYSTEM_SCORE_ENABLED.value :
+                    if addr_from != GOVERNANCE_SCORE_ADDRESS:
+                        raise ScoreNotFoundException(f"{SYSTEM_SCORE_ADDRESS} is not found")
+
                 return InternalCall._other_score_call(
                     context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
