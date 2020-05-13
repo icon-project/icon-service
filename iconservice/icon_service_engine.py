@@ -47,7 +47,7 @@ from .icon_constant import (
     Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, IISS_INITIAL_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
-    BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag
+    BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag, RPCMethod
 )
 from .iconscore.context.context import ContextContainer
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -118,13 +118,13 @@ class IconServiceEngine(ContextContainer):
 
         # JSON-RPC handlers
         self._handlers = {
-            'icx_getBalance': self._handle_icx_get_balance,
-            'icx_getTotalSupply': self._handle_icx_get_total_supply,
-            'icx_call': self._handle_icx_call,
-            'icx_sendTransaction': self._handle_icx_send_transaction,
-            'debug_estimateStep': self._handle_estimate_step,
-            'icx_getScoreApi': self._handle_icx_get_score_api,
-            'ise_getStatus': self._handle_ise_get_status
+            RPCMethod.ICX_GET_BALANCE: self._handle_icx_get_balance,
+            RPCMethod.ICX_GET_TOTAL_SUPPLY: self._handle_icx_get_total_supply,
+            RPCMethod.ICX_GET_SCORE_API: self._handle_icx_get_score_api,
+            RPCMethod.ISE_GET_STATUS: self._handle_ise_get_status,
+            RPCMethod.ICX_CALL: self._handle_icx_call,
+            RPCMethod.DEBUG_ESTIMATE_STEP: self._handle_estimate_step,
+            RPCMethod.ICX_SEND_TRANSACTION: self._handle_icx_send_transaction
         }
 
         self._precommit_data_manager = PrecommitDataManager()

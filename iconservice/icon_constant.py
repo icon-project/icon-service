@@ -414,3 +414,13 @@ class RevisionChangedFlag(Flag):
     GENESIS_IISS_CALC = 0x100
     IISS_CALC = 0x200
     DECENTRALIZATION = 0x400
+
+
+class RPCMethod:
+    ICX_GET_BALANCE = 'icx_getBalance'
+    ICX_GET_TOTAL_SUPPLY = 'icx_getTotalSupply'
+    ICX_GET_SCORE_API = 'icx_getScoreApi'
+    ISE_GET_STATUS = 'ise_getStatus'
+    ICX_CALL = 'icx_call'
+    ICX_SEND_TRANSACTION = 'icx_sendTransaction'
+    DEBUG_ESTIMATE_STEP = "debug_estimateStep"
