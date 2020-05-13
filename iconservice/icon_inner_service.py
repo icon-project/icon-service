@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
+THREAD_ESTIMATE = 'estimate'
 THREAD_VALIDATE = 'validate'
 THREAD_STATUS = 'status'
 
@@ -53,6 +54,7 @@ class IconScoreInnerTask(object):
             THREAD_INVOKE: ThreadPoolExecutor(1),
             THREAD_STATUS: ThreadPoolExecutor(1),
             THREAD_QUERY: ThreadPoolExecutor(1),
+            THREAD_ESTIMATE: ThreadPoolExecutor(1),
             THREAD_VALIDATE: ThreadPoolExecutor(1)
         }
 
@@ -200,28 +202,25 @@ class IconScoreInnerTask(object):
         self._check_icon_service_ready()
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
-            loop = asyncio.get_event_loop()
-            method = request['method']
-            if method == "ise_getStatus":
-                return await loop.run_in_executor(self._thread_pool[THREAD_STATUS],
-                                                  self._query, request)
-            else:
-                return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
-                                                  self._query, request)
+            return await self._execute_query_by_method(request)
         else:
             return self._query(request)
 
-    def _query(self, request: dict):
+    async def _execute_query_by_method(self, request: dict):
+        response = None
+        loop = asyncio.get_event_loop()
+
+        method = request['method']
         try:
-            method = request['method']
-
-            if method == 'debug_estimateStep':
-                converted_request = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
-                value = self._icon_service_engine.estimate_step(converted_request)
+            if method == "ise_getStatus":
+                value = await loop.run_in_executor(self._thread_pool[THREAD_STATUS],
+                                                   self._query, request, method)
+            elif method == 'debug_estimateStep':
+                value = await loop.run_in_executor(self._thread_pool[THREAD_ESTIMATE],
+                                                   self._estimate, request)
             else:
-                converted_request = TypeConverter.convert(request, ParamType.QUERY)
-                value = self._icon_service_engine.query(method, converted_request['params'])
-
+                value = await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                                   self._query, request, method)
             if isinstance(value, Address):
                 value = str(value)
             response = MakeResponse.make_response(value)
@@ -237,6 +236,16 @@ class IconScoreInnerTask(object):
 
         self._icon_service_engine.clear_context_stack()
         return response
+
+    def _estimate(self, request: dict):
+        converted_request = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
+        return self._icon_service_engine.estimate_step(converted_request)
+
+    def _query(self, request: dict, method: Optional[str] = None):
+        method = request['method'] if method is None else method
+
+        converted_request = TypeConverter.convert(request, ParamType.QUERY)
+        return self._icon_service_engine.query(method, converted_request['params'])
 
     @message_queue_task
     async def call(self, request: dict):
