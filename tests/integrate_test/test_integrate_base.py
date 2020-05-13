@@ -349,15 +349,21 @@ class TestIntegrateBase(TestCase):
                                  prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
                                  block_height: int = None) -> List['TransactionResult']:
 
+        org_tx_list = copy.deepcopy(tx_list)
+
         prev_block, hash_list = self.make_and_req_block(tx_list,
                                                         block_height,
                                                         prev_block_generator,
                                                         prev_block_validators,
                                                         prev_block_votes)
         self._write_precommit_state(prev_block)
+
+        # do not check status of added TX
+        check_tx_results = self.get_tx_results(self.get_hash_list_from_tx_list(org_tx_list))
+        for tx_result in check_tx_results:
+            self.assertEqual(int(expected_status), tx_result.status, tx_result)
+
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(expected_status), tx_result.status)
         return tx_results
 
     def process_confirm_block(self,

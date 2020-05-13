@@ -272,6 +272,9 @@ class Engine(EngineBase):
         handler(context, **params)
 
     def query(self, context: 'IconScoreContext', method: str, params: dict) -> Any:
+        if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and \
+                context.type == IconScoreContextType.INVOKE:
+            raise InvalidRequestException(f"Do not call readonly method '{method}' with 'icx_sendTransaction'")
         handler: callable = self._query_handler[method]
         ret = handler(context, **params)
         return ret
