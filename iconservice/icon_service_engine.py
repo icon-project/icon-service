@@ -19,6 +19,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
+
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
@@ -1496,17 +1497,25 @@ class IconServiceEngine(ContextContainer):
             'prevBlockHash': prev_block_hash
         }
 
-    def commit(self, _block_height: int, instant_block_hash: bytes, block_hash: bytes) -> None:
+    def commit(self, block_height: int, instant_block_hash: bytes, block_hash: bytes) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
-        :param _block_height: height of block being committed
+        :param block_height: height of block being committed
         :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed
         """
-        # Check for block validation before commit
-        self._precommit_data_manager.validate_block_to_commit(instant_block_hash)
+        if instant_block_hash != block_hash:
+            # Only a leader node replaces the instant_block_hash with an official block_hash
+            self._precommit_data_manager.change_block_hash(
+                block_height, instant_block_hash, block_hash)
 
-        precommit_data: 'PrecommitData' = self._get_updated_precommit_data(instant_block_hash, block_hash)
+        # Check for block validation before commit
+        self._precommit_data_manager.validate_block_to_commit(block_hash)
+
+        precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block_hash)
+        # Add last_block info to block_batch in order to record the data to stateDB
+        precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
+
         context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
 
         if precommit_data.revision < Revision.IISS.value:
@@ -1603,19 +1612,6 @@ class IconServiceEngine(ContextContainer):
         wal_writer.write_walogable(state_wal)
 
         return wal_writer, state_wal, iiss_wal
-
-    def _get_updated_precommit_data(self, instant_block_hash: bytes, block_hash: bytes) -> 'PrecommitData':
-        precommit_data: 'PrecommitData' = self._precommit_data_manager.get(instant_block_hash)
-        precommit_data.block_batch.update_block_hash(block_hash)
-        precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
-
-        if instant_block_hash != block_hash:
-            self._precommit_data_manager.change_block_hash(
-                block_height=precommit_data.block.height,
-                src=instant_block_hash,
-                dst=block_hash
-            )
-        return precommit_data
 
     def _process_state_commit(self,
                               context: 'IconScoreContext',
