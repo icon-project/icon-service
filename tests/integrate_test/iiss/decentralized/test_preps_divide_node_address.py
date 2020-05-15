@@ -54,7 +54,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx: dict = self.create_register_prep_tx(from_=account,
                                                 reg_data=reg_data)
 
-        _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        _, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_results[1].failure.message,
                          f"nodeAddress not supported: revision={Revision.DECENTRALIZATION.value}")
@@ -70,7 +70,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx: dict = self.create_set_prep_tx(from_=account,
                                            set_data={"nodeAddress": str(dummy_node)})
 
-        _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        _, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_results[1].failure.message,
                          f"nodeAddress not supported: revision={Revision.DECENTRALIZATION.value}")
@@ -90,7 +90,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx: dict = self.create_register_prep_tx(from_=account,
                                                 reg_data=reg_data)
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].status, True)
 
         self._write_precommit_state(block)
@@ -111,9 +111,9 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx: dict = self.create_set_prep_tx(from_=account,
                                            set_data={"nodeAddress": str(dummy_node)})
 
-        _, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx])
+        _, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(tx_results[1].status, True)
-        self.assertEqual(main_prep_as_dict["preps"][0]["id"], dummy_node)
+        self.assertEqual(next_preps["preps"][0]["id"], dummy_node)
 
     def test_prep_set_node_address_check_generator(self):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
@@ -135,23 +135,23 @@ class TestPRepNodeAddressDivision(TestIISSBase):
             tx_list.append(self.create_set_prep_tx(from_=account,
                                                    set_data={"nodeAddress": str(dummy_addrs[i])}))
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         for i in range(dummy_cnt):
             self.assertEqual(tx_results[i + 1].status, True)
 
-        self.assertEqual(main_prep_as_dict["preps"][0]["id"], last_dummy_addr)
+        self.assertEqual(next_preps["preps"][0]["id"], last_dummy_addr)
         self._write_precommit_state(block)
 
         # 1 before change node_address
         prev_block_generator = self._accounts[0].address
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[],
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[],
                                                                                    prev_block_generator=prev_block_generator,
                                                                                    prev_block_validators=None,
                                                                                    prev_block_votes=prev_block_votes,
                                                                                    block=None)
         self.assertEqual(tx_results[0].status, True)
-        self.assertEqual(main_prep_as_dict, None)
+        self.assertEqual(next_preps, None)
 
         self._write_precommit_state(block)
 
@@ -164,13 +164,13 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                                            set_data={"nodeAddress": str(dummy_node2)})
 
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx],
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx],
                                                                                    prev_block_generator=prev_block_generator,
                                                                                    prev_block_validators=None,
                                                                                    prev_block_votes=prev_block_votes,
                                                                                    block=None)
         self.assertEqual(tx_results[0].status, True)
-        self.assertEqual(main_prep_as_dict["preps"][0]["id"], dummy_node2)
+        self.assertEqual(next_preps["preps"][0]["id"], dummy_node2)
         self._write_precommit_state(block)
 
     def test_prep_set_node_address_check_votes(self):
@@ -193,22 +193,22 @@ class TestPRepNodeAddressDivision(TestIISSBase):
             tx_list.append(self.create_set_prep_tx(from_=account,
                                                    set_data={"nodeAddress": str(dummy_addrs[i])}))
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         for i in range(dummy_cnt):
             self.assertEqual(tx_results[i + 1].status, True)
-        self.assertEqual(main_prep_as_dict["preps"][1]["id"], last_dummy_addr)
+        self.assertEqual(next_preps["preps"][1]["id"], last_dummy_addr)
         self._write_precommit_state(block)
 
         # 1 before change node_address
         prev_block_generator = self._accounts[0].address
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[],
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[],
                                                                                    prev_block_generator=prev_block_generator,
                                                                                    prev_block_validators=None,
                                                                                    prev_block_votes=prev_block_votes,
                                                                                    block=None)
         self.assertEqual(tx_results[0].status, True)
-        self.assertEqual(main_prep_as_dict, None)
+        self.assertEqual(next_preps, None)
 
         self._write_precommit_state(block)
 
@@ -221,13 +221,13 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                                            set_data={"nodeAddress": str(dummy_node2)})
 
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=[tx],
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx],
                                                                                    prev_block_generator=prev_block_generator,
                                                                                    prev_block_validators=None,
                                                                                    prev_block_votes=prev_block_votes,
                                                                                    block=None)
         self.assertEqual(tx_results[0].status, True)
-        self.assertEqual(main_prep_as_dict["preps"][1]["id"], dummy_node2)
+        self.assertEqual(next_preps["preps"][1]["id"], dummy_node2)
         self._write_precommit_state(block)
 
     def test_scenario1(self):
@@ -250,7 +250,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx_list: list = [self.create_set_prep_tx(from_=prep_b,
                                                  set_data={"nodeAddress": str(prep_a)})]
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, False)
         self.assertEqual(tx_results[1].failure.message, f"nodeAddress already in use: {str(prep_a)}")
 
@@ -275,13 +275,13 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         tx_list: list = [self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(new_addr)})]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
         self._write_precommit_state(block)
 
         tx_list: list = [self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(old_addr)})]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
 
     def test_scenario3(self):
@@ -309,7 +309,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         tx_list: list = [self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(prep_a_new_addr1)})]
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
         self._write_precommit_state(block)
 
@@ -318,7 +318,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                          self.create_set_prep_tx(from_=prep_b,
                                                  set_data={"nodeAddress": str(prep_a_new_addr1)})]
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
         self.assertEqual(tx_results[2].status, True)
 
@@ -345,7 +345,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                          self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(prep_b.address)})]
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
         self.assertEqual(tx_results[2].status, True)
 
@@ -393,7 +393,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx_list: list = [self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(prep_b.address)})]
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, True)
 
         # Before calling write_precommit_state()
@@ -458,7 +458,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx_list: list = [self.create_set_prep_tx(from_=prep_a,
                                                  set_data={"nodeAddress": str(prep_b.address)})]
 
-        block, tx_results, _, _, main_prep_as_dict = self.debug_make_and_req_block(tx_list=tx_list)
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=tx_list)
         self.assertEqual(tx_results[1].status, False)
 
         # Before calling write_precommit_state()

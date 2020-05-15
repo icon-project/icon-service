@@ -15,7 +15,7 @@
 import asyncio
 import json
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Any, TYPE_CHECKING, Optional, Tuple
+from typing import Any, TYPE_CHECKING
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
@@ -149,7 +149,7 @@ class IconScoreInnerTask(object):
             converted_prev_block_validators = params.get('prevBlockValidators')
             converted_prev_votes = params.get('prevBlockVotes')
 
-            tx_results, state_root_hash, added_transactions, main_prep_as_dict = self._icon_service_engine.invoke(
+            tx_results, state_root_hash, added_transactions, next_preps = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
                 prev_block_generator=converted_prev_block_generator,
@@ -169,8 +169,8 @@ class IconScoreInnerTask(object):
                 'addedTransactions': added_transactions
             }
 
-            if main_prep_as_dict:
-                results["prep"] = main_prep_as_dict
+            if next_preps:
+                results["prep"] = next_preps
 
             response = MakeResponse.make_response(results)
         except FatalException as e:
@@ -278,25 +278,15 @@ class IconScoreInnerTask(object):
 
         return ret
 
-    @staticmethod
-    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, bytes, Optional[bytes]]:
-        block_height: int = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
-        block_hash: Optional[bytes] = None
-        if ConstantKeys.BLOCK_HASH in converted_block_params:
-            instant_block_hash: bytes = converted_block_params[ConstantKeys.BLOCK_HASH]
-        else:
-            instant_block_hash: bytes = converted_block_params[ConstantKeys.OLD_BLOCK_HASH]
-            block_hash = converted_block_params[ConstantKeys.NEW_BLOCK_HASH]
-
-        return block_height, instant_block_hash, block_hash
-
     def _write_precommit_state(self, request: dict) -> dict:
         Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE Request: {request}')
 
         try:
-            converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            block_height, instant_block_hash, block_hash = \
-                self._get_block_info_for_precommit_state(converted_block_params)
+            converted_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
+            block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
+            instant_block_hash: bytes = converted_params[ConstantKeys.OLD_BLOCK_HASH]
+            block_hash = converted_params[ConstantKeys.NEW_BLOCK_HASH]
+
             Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE: '
                                       f'BH={block_height} '
                                       f'instant_block_hash={bytes_to_hex(instant_block_hash)} '
@@ -324,41 +314,10 @@ class IconScoreInnerTask(object):
 
         self._check_icon_service_ready()
 
-        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
-            loop = asyncio.get_event_loop()
-            ret = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
-                                             self._remove_precommit_state, request)
-        else:
-            ret = self._remove_precommit_state(request)
-
-        Logger.info(tag=_TAG, msg=f'remove_precommit_state() end')
-        return ret
-
-    def _remove_precommit_state(self, request: dict):
-        Logger.info(tag=_TAG, msg=f'REMOVE_PRECOMMIT_STATE Request: {request}')
-
-        try:
-            converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            block_height, instant_block_hash, _ = \
-                self._get_block_info_for_precommit_state(converted_block_params)
-            Logger.info(tag=_TAG, msg=f'REMOVE_PRECOMMIT_STATE: BH={block_height} '
-                                      f'instant_block_hash={bytes_to_hex(instant_block_hash)}')
-
-            self._icon_service_engine.remove_precommit_state(block_height, instant_block_hash)
-            response = MakeResponse.make_response(ExceptionCode.OK)
-        except FatalException as e:
-            self._log_exception(e, _TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-            self._close()
-        except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, _TAG)
-            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
-        except Exception as e:
-            self._log_exception(e, _TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-
-        Logger.info(tag=_TAG, msg=f'REMOVE_PRECOMMIT_STATE Response: {response}')
-        return response
+        """
+        Unused API
+        """
+        return {}
 
     @message_queue_task
     async def rollback(self, request: dict):

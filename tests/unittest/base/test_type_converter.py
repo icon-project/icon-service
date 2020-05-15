@@ -829,22 +829,6 @@ def test_write_precommit_convert_new_format():
     assert old_block_hash == ret_params[ConstantKeys.OLD_BLOCK_HASH]
     assert new_block_hash == ret_params[ConstantKeys.NEW_BLOCK_HASH]
 
-
-def test_remove_precommit_convert():
-    block_height = 1001
-    block_hash = create_block_hash()
-
-    request = {
-        ConstantKeys.BLOCK_HEIGHT: hex(block_height),
-        ConstantKeys.BLOCK_HASH: bytes.hex(block_hash)
-    }
-
-    ret_params = TypeConverter.convert(request, ParamType.REMOVE_PRECOMMIT)
-
-    assert block_height == ret_params[ConstantKeys.BLOCK_HEIGHT]
-    assert block_hash == ret_params[ConstantKeys.BLOCK_HASH]
-
-
 def test_validate_tx_convert():
     method = "icx_sendTransaction"
     from_addr = create_address()

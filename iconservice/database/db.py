@@ -216,24 +216,19 @@ class ContextDatabase(object):
 
         Search order
         1. TransactionBatch
-        2. BlockBatch
-        3. StateDB
+        2. Current BlockBatch
+        3. Prev BlockBatch
+        4. StateDB
 
         :param context:
         :param key:
 
         :return: a value for a given key
         """
-        block_batch = context.block_batch
-        tx_batch = context.tx_batch
-
-        # get value from tx_batch
-        if key in tx_batch:
-            return tx_batch[key].value
-
-        # get value from block_batch
-        if key in block_batch:
-            return block_batch[key].value
+        # Find the value from tx_batch, block_batch and prev_block_batches with a given key
+        for batch in context.get_batches():
+            if key in batch:
+                return batch[key].value
 
         # get value from state_db
         return self.key_value_db.get(key)
