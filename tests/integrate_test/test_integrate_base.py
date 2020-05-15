@@ -325,7 +325,7 @@ class TestIntegrateBase(TestCase):
         assert block.height == self._block_height
         self._prev_block_hash = block.hash
 
-    def _write_precommit_state_leader(self, block_height: int, old_block_hash: bytes, new_block_hash: bytes):
+    def _write_precommit_state_in_leader(self, block_height: int, old_block_hash: bytes, new_block_hash: bytes):
         self.icon_service_engine.commit(block_height, old_block_hash, new_block_hash)
         self._block_height += 1
         assert block_height == self._block_height
