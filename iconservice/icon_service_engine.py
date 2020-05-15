@@ -393,7 +393,7 @@ class IconServiceEngine(ContextContainer):
             else:
                 Logger.info(tag=_TAG,
                             msg=f"Block result already exists: \n"
-                            f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
+                                f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
 
             return \
                 precommit_data.block_result, \
@@ -483,9 +483,9 @@ class IconServiceEngine(ContextContainer):
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
         next_preps, term, rc_state_hash = self._after_transaction_process(context,
-                                                                                 rc_db_revision,
-                                                                                 prev_block_generator,
-                                                                                 prev_block_votes)
+                                                                          rc_db_revision,
+                                                                          prev_block_generator,
+                                                                          prev_block_votes)
 
         # Save precommit data
         # It will be written to levelDB on commit
