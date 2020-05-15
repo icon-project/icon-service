@@ -126,7 +126,7 @@ class TestChangeBlockHash(TestIISSBase):
 
         new_hash: bytes = create_block_hash()
 
-        self._write_precommit_state_leader(
+        self._write_precommit_state_in_leader(
             block_height=block.height,
             old_block_hash=block.hash,
             new_block_hash=new_hash
