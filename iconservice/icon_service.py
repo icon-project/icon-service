@@ -111,14 +111,16 @@ class IconService(object):
 
     @staticmethod
     def cancel_tasks(loop):
-        Logger.info(f"cancel pending tasks in event loop.")
-        pending = asyncio.all_tasks(loop)
+        pending = asyncio.Task.all_tasks(loop)
+        Logger.info(f"cancel pending {len(pending)} tasks in event loop.")
         for task in pending:
+            if task.done():
+                continue
             task.cancel()
             try:
                 loop.run_until_complete(task)
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as e:
+                Logger.info(f"cancel pending task: {task}, error: {e}")
 
     @staticmethod
     def signal_handler(signum: int):
