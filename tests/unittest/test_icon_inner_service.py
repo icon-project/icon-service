@@ -61,7 +61,8 @@ def dummy_invoke_request(dummy_block):
 def dummy_write_precommit_request():
     return {
         ConstantKeys.BLOCK_HEIGHT: hex(0),
-        ConstantKeys.BLOCK_HASH: create_block_hash().hex()
+        ConstantKeys.OLD_BLOCK_HASH: create_block_hash().hex(),
+        ConstantKeys.NEW_BLOCK_HASH: create_block_hash().hex()
     }
 
 
@@ -84,48 +85,6 @@ EXCEPTIONS = [
 
 
 class TestIconInnerService:
-
-    def test_get_block_info_for_precommit_state(self):
-        block_height = 10
-        instant_block_hash = create_block_hash()
-        block_hash = create_block_hash()
-
-        # TEST: When input prev write pre-commit data format, block_hash should be None
-        prev_precommit_data_format = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.BLOCK_HASH: instant_block_hash
-        }
-
-        actual_block_height, actual_instant_block_hash, actual_block_hash = \
-            IconScoreInnerTask._get_block_info_for_precommit_state(prev_precommit_data_format)
-
-        assert actual_block_height == block_height
-        assert actual_instant_block_hash == instant_block_hash
-        assert actual_block_hash is None
-
-        # TEST: When input new write-pre-commit data format, block_hash should be hash
-        new_precommit_data_format = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
-            ConstantKeys.NEW_BLOCK_HASH: block_hash
-        }
-
-        actual_block_height, actual_instant_block_hash, actual_block_hash = \
-            IconScoreInnerTask._get_block_info_for_precommit_state(new_precommit_data_format)
-
-        assert actual_block_height == block_height
-        assert actual_instant_block_hash == instant_block_hash
-        assert actual_block_hash == block_hash
-
-        # TEST: When input invalid data format, should raise key error
-        invalid_precommit_data_format = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
-        }
-
-        with pytest.raises(KeyError) as e:
-            IconScoreInnerTask._get_block_info_for_precommit_state(invalid_precommit_data_format)
-
     @pytest.mark.parametrize("exception, expected_msg, expected_code", [
         (exception, exception.args[0], 32001) for exception in EXCEPTIONS
     ])
@@ -272,4 +231,3 @@ class TestIconInnerService:
         assert status_requests[0] != call_thread_id
         assert status_requests[0] != estimate_thread_id
         assert call_thread_id != estimate_thread_id
-
