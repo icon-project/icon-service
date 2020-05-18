@@ -811,7 +811,7 @@ def test_write_precommit_convert():
     assert block_hash == ret_params[ConstantKeys.BLOCK_HASH]
 
 
-def test_write_precommit_convert_new_format():
+def test_change_block_hash():
     # newly defined interface (jira issue LC-306)
     block_height = 1001
     old_block_hash = create_block_hash()
@@ -823,11 +823,12 @@ def test_write_precommit_convert_new_format():
         ConstantKeys.NEW_BLOCK_HASH: bytes.hex(new_block_hash)
     }
 
-    ret_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
+    ret_params = TypeConverter.convert(request, ParamType.CHANGE_BLOCK_HASH)
 
     assert block_height == ret_params[ConstantKeys.BLOCK_HEIGHT]
     assert old_block_hash == ret_params[ConstantKeys.OLD_BLOCK_HASH]
     assert new_block_hash == ret_params[ConstantKeys.NEW_BLOCK_HASH]
+
 
 def test_validate_tx_convert():
     method = "icx_sendTransaction"

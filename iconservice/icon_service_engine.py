@@ -129,6 +129,13 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
 
+        """
+        ========== WARNING!! ==========
+        Temporary code for migration of LFT and Siever.
+        We have to plan getting rid of that code after LFT migration.
+        """
+        self._temp_instant_block_hash_mapper: dict = {}
+
     def open(self, conf: dict):
         """Get necessary parameters and initialize diverse objects
 
@@ -1497,17 +1504,12 @@ class IconServiceEngine(ContextContainer):
             'prevBlockHash': prev_block_hash
         }
 
-    def commit(self, block_height: int, instant_block_hash: bytes, block_hash: bytes) -> None:
+    def commit(self, block_height: int, block_hash: bytes):
         """Write updated states in a context.block_batch to StateDB
         when the precommit block has been confirmed
         :param block_height: height of block being committed
-        :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed
         """
-        if instant_block_hash != block_hash:
-            # Only a leader node replaces the instant_block_hash with an official block_hash
-            self._precommit_data_manager.change_block_hash(
-                block_height, instant_block_hash, block_hash)
 
         # Check for block validation before commit
         self._precommit_data_manager.validate_block_to_commit(block_hash)
@@ -1521,7 +1523,7 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.revision < Revision.IISS.value:
             self._commit_before_iiss(context, precommit_data)
         else:
-            self._commit_after_iiss(context, precommit_data, instant_block_hash)
+            self._commit_after_iiss(context, precommit_data)
 
     def _commit_before_iiss(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         state_wal: 'StateWAL' = StateWAL(precommit_data.block_batch)
@@ -1529,14 +1531,17 @@ class IconServiceEngine(ContextContainer):
 
     def _commit_after_iiss(self,
                            context: 'IconScoreContext',
-                           precommit_data: 'PrecommitData',
-                           instant_block_hash: bytes):
-        # Check if this block is the start block of a calculation period
+                           precommit_data: 'PrecommitData'):
+
+        # ===== WARNING!! ===== #
+        # we need to remain instant_block_hash key for Backup DB Migration after change_block_hash and LFT2 logic
+        # ===================== #
+
         start_calc_block_height: int = context.engine.iiss.get_start_block_of_calc(context)
         is_calc_period_start_block: bool = context.block.height == start_calc_block_height
 
         wal_writer, state_wal, iiss_wal = \
-            self._process_wal(context, precommit_data, is_calc_period_start_block, instant_block_hash)
+            self._process_wal(context, precommit_data, is_calc_period_start_block)
         wal_writer.flush()
 
         # Backup the previous block state
@@ -1548,7 +1553,9 @@ class IconServiceEngine(ContextContainer):
             block_batch=precommit_data.block_batch,
             iiss_wal=iiss_wal,
             is_calc_period_start_block=is_calc_period_start_block,
-            instant_block_hash=instant_block_hash)
+            instant_block_hash=self._convert_block_hash_to_instant_block_hash(
+                block_hash=precommit_data.block.hash
+            ))
 
         # Clean up the oldest backup file
         self._backup_cleaner.run_on_commit(context.block.height)
@@ -1565,7 +1572,7 @@ class IconServiceEngine(ContextContainer):
         wal_writer.flush()
 
         # send IPC
-        self._process_ipc(context, wal_writer, precommit_data, standby_db_info, instant_block_hash)
+        self._process_ipc(context, wal_writer, precommit_data, standby_db_info)
         wal_writer.close()
 
         try:
@@ -1575,8 +1582,7 @@ class IconServiceEngine(ContextContainer):
 
     def _process_wal(self, context: 'IconScoreContext',
                      precommit_data: 'PrecommitData',
-                     is_calc_period_start_block: bool,
-                     instant_block_hash: bytes) \
+                     is_calc_period_start_block: bool) \
             -> Tuple['WriteAheadLogWriter', 'StateWAL', Optional['IissWAL']]:
         """Assume that this method is called after Revision.IISS is on
 
@@ -1602,7 +1608,9 @@ class IconServiceEngine(ContextContainer):
             WriteAheadLogWriter(precommit_data.revision,
                                 max_log_count=2,
                                 block=block,
-                                instant_block_hash=instant_block_hash)
+                                instant_block_hash=self._convert_block_hash_to_instant_block_hash(
+                                    block_hash=precommit_data.block.hash
+                                ))
         wal_writer.open(wal_path)
 
         if is_calc_period_start_block:
@@ -1657,21 +1665,22 @@ class IconServiceEngine(ContextContainer):
                                                standby_db_info.path)
         return standby_db_info
 
-    @staticmethod
-    def _process_ipc(context: 'IconScoreContext',
+    def _process_ipc(self,
+                     context: 'IconScoreContext',
                      wal_writer: 'WriteAheadLogWriter',
                      precommit_data: 'PrecommitData',
-                     standby_db_info: Optional['RewardCalcDBInfo'],
-                     instant_block_hash: bytes):
+                     standby_db_info: Optional['RewardCalcDBInfo']):
+        """
+       ========== WARNING!! ==========
+       Temporary code for migration of LFT and Siever.
+       We have to plan getting rid of that code after LFT migration.
+       """
+
         assert precommit_data.revision >= Revision.IISS.value
 
-        commit_block_hash: bytes = precommit_data.block.hash
-        if commit_block_hash != instant_block_hash:
-            # Leader node must use instant_block_hash which is used in invoke()
-            commit_block_hash: bytes = instant_block_hash
-
         context.engine.iiss.send_commit(
-            precommit_data.block.height, commit_block_hash)
+            block_height=precommit_data.block.height,
+            block_hash=self._convert_block_hash_to_instant_block_hash(precommit_data.block.hash))
         wal_writer.write_state(WALState.SEND_COMMIT_BLOCK.value, add=True)
         wal_writer.flush()
 
@@ -2089,3 +2098,22 @@ class IconServiceEngine(ContextContainer):
                 return False
 
         return True
+
+    def change_block_hash(self, _block_height: int, instant_block_hash: bytes, block_hash: bytes):
+        """Change Old Block Hash
+        :param _block_height: height of block being committed
+        :param instant_block_hash: instant hash of block being committed
+        :param block_hash: hash of block being committed
+        """
+        # Check for block validation before commit
+        self._precommit_data_manager.change_block_hash(_block_height, instant_block_hash, block_hash)
+
+        """
+        ========== WARNING!! ==========
+        Temporary code for migration of LFT and Siever.
+        We have to plan getting rid of that code after LFT migration.
+        """
+        self._temp_instant_block_hash_mapper[block_hash] = instant_block_hash
+
+    def _convert_block_hash_to_instant_block_hash(self, block_hash: bytes) -> bytes:
+        return self._temp_instant_block_hash_mapper.get(block_hash, block_hash)

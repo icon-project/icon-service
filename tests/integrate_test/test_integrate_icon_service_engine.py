@@ -75,7 +75,7 @@ class TestIconServiceEngine(TestIntegrateBase):
             self.genesis_block,
             [tx]
         )
-        self.icon_service_engine.commit(self.genesis_block.height, self.genesis_block.hash, self.genesis_block.hash)
+        self.icon_service_engine.commit(self.genesis_block.height, self.genesis_block.hash)
         self._block_height += 1
         self._prev_block_hash = block_hash
 
@@ -139,7 +139,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertNotEqual(tx_result.step_used, 0)
         self.assertEqual(tx_result.step_price, 0)
 
-        self.icon_service_engine.commit(block.height, block_hash, block_hash)
+        self.icon_service_engine.commit(block.height, block_hash)
 
         # Check whether fee charging works well
         from_balance: int = self.get_balance(self._admin.address)
@@ -187,7 +187,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.step_price, 0)
 
         # Write updated states to levelDB
-        self.icon_service_engine.commit(block.height, block.hash, block.hash)
+        self.icon_service_engine.commit(block.height, block.hash)
 
         # Check whether fee charging works well
         from_balance: int = self.get_balance(self._admin.address)
@@ -237,7 +237,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.step_price, 0)
 
         # Write updated states to levelDB
-        self.icon_service_engine.commit(block.height, block.hash, block.hash)
+        self.icon_service_engine.commit(block.height, block.hash)
 
         # Check whether fee charging works well
         from_balance: int = self.get_balance(self._admin.address)
@@ -293,7 +293,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.step_used, 10**6)
         self.assertEqual(tx_result.step_price, 0)
 
-        self.icon_service_engine.commit(block.height, block.hash, block.hash)
+        self.icon_service_engine.commit(block.height, block.hash)
 
         # Check whether fee charging works well
         from_balance: int = self.get_balance(self._admin.address)
@@ -364,7 +364,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         #     self.assertEqual(step_price, 0)
         # self.assertEqual(tx_result.step_price, step_price)
 
-        self.icon_service_engine.commit(block.height, block.hash, block.hash)
+        self.icon_service_engine.commit(block.height, block.hash)
 
         # Check whether fee charging works well
         after_from_balance: int = self.get_balance(self._admin.address)
@@ -438,7 +438,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         #     self.assertEqual(step_price, 0)
         # self.assertEqual(tx_result.step_price, step_price)
 
-        self.icon_service_engine.commit(block.height, block.hash, block.hash)
+        self.icon_service_engine.commit(block.height, block.hash)
 
         # Check whether fee charging works well
         after_from_balance: int = self.get_balance(self._admin.address)
@@ -550,7 +550,7 @@ class TestIconServiceEngine(TestIntegrateBase):
             cumulative_fee=0)
 
         with self.assertRaises(InvalidParamsException) as cm:
-            self.icon_service_engine.commit(block.height, block.hash, block.hash)
+            self.icon_service_engine.commit(block.height, block.hash)
         e = cm.exception
         self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.code)
         self.assertTrue(e.message.startswith('No precommit data'))
@@ -584,7 +584,12 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.icon_service_engine.invoke(block, [dummy_tx])
         instant_block_hash = block.hash
         block_hash = create_block_hash()
-        self.icon_service_engine.commit(block.height, instant_block_hash, block_hash)
+        self.icon_service_engine.change_block_hash(
+            _block_height=block.height,
+            instant_block_hash=instant_block_hash,
+            block_hash=block_hash
+        )
+        self.icon_service_engine.commit(block.height, block_hash)
 
         self.assertEqual(self.icon_service_engine._get_last_block().hash, block_hash)
         self.assertEqual(IconScoreContext.storage.icx.last_block.hash, block_hash)
@@ -656,7 +661,7 @@ class TestIconServiceEngine(TestIntegrateBase):
         self.assertEqual(tx_result.step_price, 0)
 
         # Write updated states to levelDB
-        self.icon_service_engine.commit(block.height, block.hash, block.hash)
+        self.icon_service_engine.commit(block.height, block.hash)
 
         # Check whether fee charging works well
         from_balance: int = self.get_balance(self._admin.address)

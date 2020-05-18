@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import unittest
+from typing import Optional, List, Tuple
 from unittest.mock import Mock, patch
 
 from iconcommons import IconConfig
@@ -47,8 +48,7 @@ class TestIconInnerService(unittest.TestCase):
         self.mocked_invoke_request = {"block": block, "transactions": []}
         self.mocked_write_precommit_request = {
             ConstantKeys.BLOCK_HEIGHT: hex(0),
-            ConstantKeys.OLD_BLOCK_HASH: create_block_hash().hex(),
-            ConstantKeys.NEW_BLOCK_HASH: create_block_hash().hex()
+            ConstantKeys.BLOCK_HASH: create_block_hash().hex(),
         }
         self.mocked_query_request = {
             ConstantKeys.METHOD: "icx_call",
@@ -113,7 +113,7 @@ class TestIconInnerService(unittest.TestCase):
         expected_error_msg = "fatal exception on write_precommit_state"
         expected_error_code = 32001
 
-        def mocked_write_precommit(block_height, instant_block_hash, block_hash):
+        def mocked_write_precommit(block_height, block_hash):
             raise FatalException(expected_error_msg)
 
         self.inner_task._icon_service_engine.commit = mocked_write_precommit
@@ -128,11 +128,16 @@ class TestIconInnerService(unittest.TestCase):
         for exception in self.exception_list:
             expected_error_msg = exception.args[0]
 
-            def mocked_write_precommit(block_height, instant_block_hash, block_hash):
+            def mocked_invoke(block: 'Block',
+                              tx_requests: list,
+                              prev_block_generator: Optional['Address'] = None,
+                              prev_block_validators: Optional[List['Address']] = None,
+                              prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
+                              is_block_editable: bool = False):
                 raise exception
 
-            self.inner_task._icon_service_engine.invoke = mocked_write_precommit
-            response = self.inner_task._invoke(self.mocked_write_precommit_request)
+            self.inner_task._icon_service_engine.invoke = mocked_invoke
+            response = self.inner_task._invoke(self.mocked_invoke_request)
             assert expected_error_msg, response['error']['message']
             assert not self.inner_task._close.called
             self.inner_task._close.reset_mock()
