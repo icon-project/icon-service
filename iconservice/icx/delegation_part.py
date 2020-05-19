@@ -19,7 +19,6 @@ from typing import List, Tuple
 from .base_part import BasePart
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
-from ..icon_constant import IISS_MAX_DELEGATIONS
 from ..utils.msgpack_for_db import MsgPackForDB
 
 
@@ -84,9 +83,6 @@ class DelegationPart(BasePart):
         self.set_dirty(True)
 
     def set_delegations(self, new_delegations: List[Tuple['Address', int]]):
-        if len(new_delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException('Delegations overflow')
-
         self._delegations: list = new_delegations
         self._delegations_amount: int = self._update_delegations_amount(new_delegations)
 

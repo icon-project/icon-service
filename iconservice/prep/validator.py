@@ -61,15 +61,15 @@ def validate_prep_data(context: 'IconScoreContext',
             if key not in tx_data:
                 raise InvalidParamsException(f'"{key}" not found')
             elif isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
-                raise InvalidParamsException("Can not set empty data")
+                raise InvalidParamsException("Empty data not allowed")
 
     for key, value in tx_data.items():
         if value is None:
             continue
         if isinstance(value, str) and len(value.strip()) < 1:
-            raise InvalidParamsException("Can not set empty data")
+            raise InvalidParamsException("Empty data not allowed")
         if key == ConstantKeys.P2P_ENDPOINT:
-            _validate_p2p_endpoint(value)
+            _validate_p2p_endpoint(context, value)
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
             _validate_uri(value)
         elif key == ConstantKeys.EMAIL:
@@ -94,7 +94,7 @@ def validate_prep_data(context: 'IconScoreContext',
     context.prep_address_converter.validate_node_address(node_address)
 
 
-def _validate_p2p_endpoint(p2p_endpoint: str):
+def _validate_p2p_endpoint(context: "IconScoreContext", p2p_endpoint: str):
     network_locate_info = p2p_endpoint.split(":")
 
     if len(network_locate_info) != 2:
@@ -102,11 +102,13 @@ def _validate_p2p_endpoint(p2p_endpoint: str):
 
     _validate_port(network_locate_info[1], ConstantKeys.P2P_ENDPOINT)
 
-    if ENDPOINT_IP_PATTERN.match(p2p_endpoint):
-        return
-
-    if not ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower()):
+    if not (ENDPOINT_IP_PATTERN.match(p2p_endpoint) or ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower())):
         raise InvalidParamsException("Invalid endpoint format")
+
+    if context.revision >= Revision.PREVENT_DUPLICATED_ENDPOINT.value:
+        for active_prep in context.preps:
+            if active_prep.p2p_endpoint == p2p_endpoint and context.tx.origin != active_prep.address:
+                raise InvalidParamsException("Duplicated endpoint")
 
 
 def _validate_uri(uri: str):

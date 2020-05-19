@@ -22,7 +22,7 @@ from unittest.mock import Mock
 
 from iconservice.base.address import Address, SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException, ServiceNotReadyException
-from iconservice.icon_constant import ICX_IN_LOOP, Revision, IISS_MAX_DELEGATIONS
+from iconservice.icon_constant import ICX_IN_LOOP, Revision
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -84,8 +84,9 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
         self.assertTrue("unstakeLockPeriod" in response)
 
     def test_system_score_intercall_delegation(self):
+        max_delegations: int = 10
         value = 1 * ICX_IN_LOOP
-        stake = value * IISS_MAX_DELEGATIONS
+        stake = value * max_delegations
         self.transfer_icx(from_=self._admin,
                           to_=self._accounts[0],
                           value=stake)
@@ -102,7 +103,7 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
         total_delegating: int = 0
         delegations: list = []
         start_index: int = 0
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegation_info: dict = \
                 {
                     "address": str(self._accounts[start_index + i].address),

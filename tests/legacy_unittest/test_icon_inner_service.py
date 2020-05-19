@@ -47,7 +47,8 @@ class TestIconInnerService(unittest.TestCase):
         self.mocked_invoke_request = {"block": block, "transactions": []}
         self.mocked_write_precommit_request = {
             ConstantKeys.BLOCK_HEIGHT: hex(0),
-            ConstantKeys.BLOCK_HASH: create_block_hash().hex()
+            ConstantKeys.OLD_BLOCK_HASH: create_block_hash().hex(),
+            ConstantKeys.NEW_BLOCK_HASH: create_block_hash().hex()
         }
         self.mocked_query_request = {
             ConstantKeys.METHOD: "icx_call",
@@ -63,45 +64,6 @@ class TestIconInnerService(unittest.TestCase):
     def tearDown(self):
         self.icon_inner_task_open_patcher.stop()
         self.icon_inner_task_close_patcher.stop()
-
-    def test_get_block_info_for_precommit_state(self):
-        block_height = 10
-        instant_block_hash = create_block_hash()
-        block_hash = create_block_hash()
-
-        # success case: when input prev write pre-commit data format, block_hash should be None
-        prev_precommit_data_format = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.BLOCK_HASH: instant_block_hash
-        }
-        actual_block_height, actual_instant_block_hash, actual_block_hash = \
-            IconScoreInnerTask._get_block_info_for_precommit_state(prev_precommit_data_format)
-
-        self.assertEqual(block_height, actual_block_height)
-        self.assertEqual(instant_block_hash, actual_instant_block_hash)
-        self.assertIsNone(actual_block_hash)
-
-        # success case: when input new write-pre-commit data format, block_hash should be hash
-        new_precommit_data_format = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
-            ConstantKeys.NEW_BLOCK_HASH: block_hash
-        }
-        actual_block_height, actual_instant_block_hash, actual_block_hash = \
-            IconScoreInnerTask._get_block_info_for_precommit_state(new_precommit_data_format)
-
-        self.assertEqual(block_height, actual_block_height)
-        self.assertEqual(instant_block_hash, actual_instant_block_hash)
-        self.assertEqual(block_hash, actual_block_hash)
-
-        # failure case: when input invalid data format, should raise key error
-        invalid_precommit_data_format = {
-            ConstantKeys.BLOCK_HEIGHT: block_height,
-            ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
-        }
-        self.assertRaises(KeyError,
-                          IconScoreInnerTask._get_block_info_for_precommit_state,
-                          invalid_precommit_data_format)
 
     def test_fatal_exception_catch_on_invoke(self):
         # invoke thread: invoke, write_precommit_state, remove_precommit_state

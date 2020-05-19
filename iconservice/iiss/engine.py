@@ -19,6 +19,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
+
 from iconservice.iiss.listener import EngineListener as IISSEngineListener
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
@@ -32,7 +33,7 @@ from ..base.exception import (
 )
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
-from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
+from ..icon_constant import ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
     IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
     RevisionChangedFlag
 from ..iconscore.icon_score_context import IconScoreContext
@@ -382,7 +383,7 @@ class Engine(EngineBase):
 
         # Convert setDelegation params
         total_delegating, new_delegations = \
-            self._convert_params_of_set_delegation(delegations)
+            self._convert_params_of_set_delegation(context, delegations)
 
         # Check whether voting power is enough to delegate
         self._check_voting_power_is_enough(context, sender, total_delegating, cached_accounts)
@@ -404,8 +405,27 @@ class Engine(EngineBase):
             listener.on_set_delegation(context, updated_accounts)
 
     @classmethod
+    def get_max_delegations_by_revision(cls, context: 'IconScoreContext') -> int:
+        if context.revision >= Revision.CHANGE_MAX_DELEGATIONS_TO_100.value:
+            max_delegations: int = 100
+        else:
+            # Initial max delegations
+            max_delegations: int = 10
+        return max_delegations
+
+    @classmethod
+    def _check_delegation_count(cls,
+                                context: 'IconScoreContext',
+                                delegations: List):
+        assert isinstance(delegations, list)
+
+        if len(delegations) > cls.get_max_delegations_by_revision(context):
+            raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
+
+    @classmethod
     def _convert_params_of_set_delegation(cls,
-                                          delegations: list) -> Tuple[int, List[Tuple['Address', int]]]:
+                                          context: 'IconScoreContext',
+                                          delegations: Optional[List]) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
@@ -414,14 +434,12 @@ class Engine(EngineBase):
         :param delegations: delegations of setDelegation JSON-RPC API request
         :return: total_delegating, (address, delegated)
         """
-
         assert delegations is None or isinstance(delegations, list)
 
         if delegations is None or len(delegations) == 0:
             return 0, []
 
-        if len(delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
+        cls._check_delegation_count(context, delegations)
 
         temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
@@ -538,6 +556,8 @@ class Engine(EngineBase):
         :param cached_accounts:
         :return: updated account list
         """
+        cls._check_delegation_count(context, delegations)
+
         icx_storage: 'IcxStorage' = context.storage.icx
 
         sender_account: 'Account' = cached_accounts[sender][0]

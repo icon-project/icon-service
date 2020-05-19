@@ -23,7 +23,7 @@ import pytest
 
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 class TestIISSClaim(TestIISSBase):
     def test_iiss_claim(self):
+        max_delegations: int = 10
         self.update_governance()
 
         # set Revision REV_IISS
@@ -53,7 +54,7 @@ class TestIISSClaim(TestIISSBase):
         total_delegating: int = 0
         delegations: list = []
         start_index: int = 0
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegation_info: tuple = \
                 (
                     self._accounts[start_index + i],
@@ -143,7 +144,7 @@ class TestIISSClaim(TestIISSBase):
         }
 
         # query iscore without an address
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidParamsException):
             self.icon_service_engine.query("icx_call", params)
 
         # query iscore with an empty string as an address

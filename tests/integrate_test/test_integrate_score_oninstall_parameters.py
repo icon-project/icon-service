@@ -86,16 +86,9 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
                                           deploy_params={})
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2, tx3], expected_status=False)
 
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_results[2].failure.code, ExceptionCode.SYSTEM_ERROR)
-
-        self.assertTrue(
-            tx_results[0].failure.message.find("on_install() missing 1 required positional argument:") != -1)
-        self.assertTrue(
-            tx_results[1].failure.message.find("on_install() missing 1 required positional argument:") != -1)
-        self.assertTrue(
-            tx_results[2].failure.message.find("on_install() missing 2 required positional arguments:") != -1)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[0].failure.code)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[1].failure.code)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, tx_results[2].failure.code)
 
     def test_invalid_parameter_value_oninstall(self):
         tx1 = self.create_deploy_score_tx(score_root="sample_deploy_scores",
