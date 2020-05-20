@@ -33,7 +33,6 @@ setup_options = {
     'author_email': 'foo@icon.foundation',
     'packages': find_packages(exclude=['tests*', 'docs']),
     'package_data': {'iconservice': [
-        'icon_service.json',
         'builtin_scores/*/package.json'
     ]},
     'license': "Apache License 2.0",
