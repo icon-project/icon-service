@@ -307,15 +307,13 @@ class IconScoreInnerTask(object):
         try:
             converted_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
             block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
-            instant_block_hash: bytes = converted_params[ConstantKeys.OLD_BLOCK_HASH]
-            block_hash = converted_params[ConstantKeys.NEW_BLOCK_HASH]
+            block_hash = converted_params[ConstantKeys.BLOCK_HASH]
 
             Logger.info(tag=_TAG, msg=f'WRITE_PRECOMMIT_STATE: '
                                       f'BH={block_height} '
-                                      f'instant_block_hash={bytes_to_hex(instant_block_hash)} '
                                       f'block_hash={bytes_to_hex(block_hash)}')
 
-            self._icon_service_engine.commit(block_height, instant_block_hash, block_hash)
+            self._icon_service_engine.commit(block_height, block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
             self._log_exception(e, _TAG)
@@ -419,9 +417,45 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def change_block_hash(self, _params):
+    async def change_block_hash(self, request: dict):
         self._check_icon_service_ready()
-        return ExceptionCode.OK
+
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
+            loop = asyncio.get_event_loop()
+            ret = await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
+                                             self._change_block_hash, request)
+        else:
+            ret = self._change_block_hash(request)
+        return ret
+
+    def _change_block_hash(self, request: dict):
+        Logger.info(tag=_TAG, msg=f'CHANGE_BLOCK_HASH Request: {request}')
+
+        try:
+            converted_params = TypeConverter.convert(request, ParamType.CHANGE_BLOCK_HASH)
+            block_height: int = converted_params[ConstantKeys.BLOCK_HEIGHT]
+            instant_block_hash: bytes = converted_params[ConstantKeys.OLD_BLOCK_HASH]
+            block_hash: bytes = converted_params[ConstantKeys.NEW_BLOCK_HASH]
+            Logger.info(tag=_TAG, msg=f'CHANGE_BLOCK_HASH: '
+                                      f'BH={block_height} '
+                                      f'instant_block_hash={bytes_to_hex(instant_block_hash)} '
+                                      f'block_hash={bytes_to_hex(block_hash)}')
+
+            self._icon_service_engine.change_block_hash(block_height, instant_block_hash, block_hash)
+            response = MakeResponse.make_response(ExceptionCode.OK)
+        except FatalException as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+            self._close()
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, _TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+
+        Logger.info(tag=_TAG, msg=f'CHANGE_BLOCK_HASH Response: {response}')
+        return response
 
 
 class MakeResponse:

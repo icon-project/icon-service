@@ -17,6 +17,7 @@ import asyncio
 import threading
 from unittest.mock import Mock
 
+from typing import Optional, List, Tuple
 import pytest
 from iconcommons import IconConfig
 
@@ -61,8 +62,7 @@ def dummy_invoke_request(dummy_block):
 def dummy_write_precommit_request():
     return {
         ConstantKeys.BLOCK_HEIGHT: hex(0),
-        ConstantKeys.OLD_BLOCK_HASH: create_block_hash().hex(),
-        ConstantKeys.NEW_BLOCK_HASH: create_block_hash().hex()
+        ConstantKeys.BLOCK_HASH: create_block_hash().hex(),
     }
 
 
@@ -134,7 +134,7 @@ class TestIconInnerService:
     ])
     def test_exception_catch_on_write_precommit_state(self, exception, expected_msg, expected_code,
                                                       inner_task, dummy_write_precommit_request):
-        def mocked_write_precommit(block_height, instant_block_hash, block_hash):
+        def mocked_write_precommit(block_height, block_hash):
             raise exception
 
         inner_task._icon_service_engine.commit = mocked_write_precommit
@@ -155,7 +155,7 @@ class TestIconInnerService:
     def test_base_exception_catch_on_write_precommit_state(self, exception, expected_msg, expected_code,
                                                            inner_task, dummy_write_precommit_request):
         # When other exception having been raised, error response should be returned
-        def mocked_write_precommit(block_height, instant_block_hash, block_hash):
+        def mocked_write_precommit(block_height, block_hash):
             raise exception
 
         inner_task._icon_service_engine.commit = mocked_write_precommit
