@@ -100,7 +100,7 @@ class TestFeeSharing(unittest.TestCase):
         ])
 
         result = self._inner_task_invoke(request)
-        tx_result = result['txResults'][tx_hash_hex]
+        tx_result = result['txResults'][0]
 
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
@@ -141,7 +141,7 @@ class TestFeeSharing(unittest.TestCase):
         ])
 
         result = self._inner_task_invoke(request)
-        tx_result = result['txResults'][tx_hash_hex]
+        tx_result = result['txResults'][0]
 
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
@@ -183,7 +183,7 @@ class TestFeeSharing(unittest.TestCase):
                 str(self.score): hex(9000)
         }
 
-        tx_result = result['txResults'][tx_hash]
+        tx_result = result['txResults'][0]
 
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
@@ -218,7 +218,7 @@ class TestFeeSharing(unittest.TestCase):
             ]
         }]
 
-        tx_result = result['txResults'][tx_hash]
+        tx_result = result['txResults'][0]
 
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
@@ -254,7 +254,7 @@ class TestFeeSharing(unittest.TestCase):
             ]
         }]
 
-        tx_result = result['txResults'][tx_hash]
+        tx_result = result['txResults'][0]
 
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])

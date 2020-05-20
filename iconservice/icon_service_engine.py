@@ -14,12 +14,10 @@
 # limitations under the License.
 
 import os
-from copy import deepcopy
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
 from iconcommons.logger import Logger
-
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
@@ -70,7 +68,6 @@ from .iiss.reward_calc import RewardCalcStorage
 from .iiss.reward_calc.storage import IissDBNameRefactor
 from .iiss.reward_calc.storage import RewardCalcDBInfo
 from .iiss.storage import Storage as IISSStorage
-from .inner_call import inner_call
 from .inv import INVEngine, INVStorage
 from .meta import MetaDBStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager
@@ -376,8 +373,13 @@ class IconServiceEngine(ContextContainer):
                tx_requests: list,
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
-               prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
-               is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
+               prev_block_votes: Optional[List[Tuple['Address', int]]] = None) -> \
+            Tuple[
+                List['TransactionResult'],
+                bytes,
+                Optional[dict],
+                Optional[bytes]
+            ]:
 
         """Process transactions in a block sent by loopchain
 
@@ -386,7 +388,6 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_generator: previous block generator
         :param prev_block_validators: previous block validators (legacy)
         :param prev_block_votes: previous block vote info
-        :param is_block_editable: boolean which imply whether creating base transaction or not
         :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
         # If the block has already been processed,
@@ -405,8 +406,8 @@ class IconServiceEngine(ContextContainer):
             return \
                 precommit_data.block_result, \
                 precommit_data.state_root_hash, \
-                precommit_data.added_transactions, \
-                precommit_data.next_preps
+                precommit_data.next_preps, \
+                precommit_data.curr_preps_hash
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -414,7 +415,7 @@ class IconServiceEngine(ContextContainer):
         context: 'IconScoreContext' = self._context_factory.create(
             IconScoreContextType.INVOKE,
             block=block,
-            prev_block_batches=self._precommit_data_manager.get_block_batches(block.prev_hash))
+            node=self._precommit_data_manager.get_node(block_hash=block.prev_hash))
 
         # TODO: prev_block_votes must be support to low version about prev_block_validators by using meta storage.
         prev_block_votes: Optional[List[Tuple['Address', int]]] = \
@@ -429,12 +430,8 @@ class IconServiceEngine(ContextContainer):
         rc_db_revision: int = self._get_rc_db_revision_before_process_transactions(context)
 
         block_result = []
-        added_transactions = {}
 
         self._before_transaction_process(context,
-                                         is_block_editable,
-                                         tx_requests,
-                                         added_transactions,
                                          prev_block_generator,
                                          prev_block_votes)
 
@@ -449,19 +446,11 @@ class IconServiceEngine(ContextContainer):
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
-                # Adjust the number of transactions in a block to make sure that
-                # a leader can broadcast a block candidate to validators in a specific period.
-                if is_block_editable and not self._continue_to_invoke(tx_request, tx_timer):
-                    Logger.info(
-                        tag=_TAG,
-                        msg=f"Stop to invoke remaining transactions: {index} / {len(tx_requests)}")
-                    break
-
                 if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
                         raise InvalidBaseTransactionException(
                             "Invalid block: first transaction must be an base transaction")
-                    tx_result = self._invoke_base_request(context, tx_request, is_block_editable)
+                    tx_result = self._invoke_base_request(context, tx_request)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -489,10 +478,12 @@ class IconServiceEngine(ContextContainer):
                 # change the reward calculation period from 43200 to 43120 which is the same as term_period
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
-        next_preps, term, rc_state_hash = self._after_transaction_process(context,
-                                                                          rc_db_revision,
-                                                                          prev_block_generator,
-                                                                          prev_block_votes)
+        next_preps, term, rc_state_hash, current_reps_hash = self._after_transaction_process(
+            context,
+            rc_db_revision,
+            prev_block_generator,
+            prev_block_votes
+        )
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -508,8 +499,8 @@ class IconServiceEngine(ContextContainer):
                                        prev_block_validators,
                                        context.new_icon_score_mapper,
                                        rc_state_hash,
-                                       added_transactions,
                                        next_preps,
+                                       current_reps_hash,
                                        context.prep_address_converter)
         if context.precommitdata_log_flag:
             Logger.info(tag=_TAG,
@@ -519,8 +510,8 @@ class IconServiceEngine(ContextContainer):
         return \
             block_result, \
             precommit_data.state_root_hash, \
-            precommit_data.added_transactions, \
-            precommit_data.next_preps
+            precommit_data.next_preps, \
+            precommit_data.curr_preps_hash
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
@@ -624,9 +615,6 @@ class IconServiceEngine(ContextContainer):
 
     def _before_transaction_process(self,
                                     context: 'IconScoreContext',
-                                    is_block_editable: bool,
-                                    tx_requests: list,
-                                    added_transactions: dict,
                                     prev_block_generator: Optional['Address'],
                                     prev_block_votes: Optional[List[Tuple['Address', int]]]):
 
@@ -637,8 +625,6 @@ class IconServiceEngine(ContextContainer):
 
         if not context.is_decentralized():
             return
-
-        self._make_base_transaction(context, is_block_editable, tx_requests, added_transactions)
 
         # Skip the first block after decentralization
         if context.is_the_first_block_on_decentralization():
@@ -671,29 +657,13 @@ class IconServiceEngine(ContextContainer):
                                                                          latest_calculate_bh)
 
     @classmethod
-    def _make_base_transaction(cls,
-                               context: 'IconScoreContext',
-                               is_block_editable: bool,
-                               tx_requests: list,
-                               added_transactions: dict):
-
-        if is_block_editable:
-            base_transaction: dict = BaseTransactionCreator.create_base_transaction(context)
-            # todo: if the txHash field is add to addedTransaction, should remove this logic
-            tx_params_to_added = deepcopy(base_transaction["params"])
-            del tx_params_to_added["txHash"]
-            tx_hash: bytes = base_transaction["params"]["txHash"]
-            added_transactions[tx_hash.hex()] = tx_params_to_added
-            tx_requests.insert(0, base_transaction)
-
-    @classmethod
     def _after_transaction_process(
             cls,
             context: 'IconScoreContext',
             rc_db_revision: int,
             prev_block_generator: Optional['Address'] = None,
             prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
-            -> Tuple[Optional[dict], Optional['Term'], bytes]:
+            -> Tuple[Optional[dict], Optional['Term'], Optional[bytes], Optional[bytes]]:
         """If the current term is ended, prepare the next term,
         - Prepare the list of main P-Reps for the next term which is passed to loopchain
         - Calculate the weighted average of ireps
@@ -707,13 +677,13 @@ class IconServiceEngine(ContextContainer):
         :return: (next_preps, term, rc_state_hash)
         """
 
-        next_preps, term = context.engine.prep.on_block_invoked(
+        next_preps, new_term, curr_preps_hash = context.engine.prep.on_block_invoked(
             context, bool(context.revision_changed_flag & RevisionChangedFlag.DECENTRALIZATION))
 
         rc_state_hash: Optional[bytes] = None
         if context.revision >= Revision.IISS.value:
             rc_state_hash: Optional[bytes] = context.engine.iiss.update_db(context,
-                                                                           term,
+                                                                           new_term,
                                                                            prev_block_generator,
                                                                            prev_block_votes,
                                                                            rc_db_revision)
@@ -723,7 +693,7 @@ class IconServiceEngine(ContextContainer):
         if next_preps is not None:
             Logger.info(tag="TERM", msg=f"{next_preps}")
 
-        return next_preps, term, rc_state_hash
+        return next_preps, new_term, rc_state_hash, curr_preps_hash
 
     @classmethod
     def _update_productivity(cls,
@@ -862,19 +832,17 @@ class IconServiceEngine(ContextContainer):
 
     def _invoke_base_request(self,
                              context: 'IconScoreContext',
-                             request: dict,
-                             is_block_editable: bool) -> 'TransactionResult':
+                             request: dict) -> 'TransactionResult':
         assert 'params' in request
         assert 'data' in request['params']
 
         issue_data_in_tx: dict = request['params'].get('data')
-        if not is_block_editable:
-            issue_data_in_db: dict = context.engine.issue.create_icx_issue_info(context)
-            if issue_data_in_tx != issue_data_in_db:
-                raise InvalidBaseTransactionException("Have difference between "
-                                                      "base transaction and actual db data. "
-                                                      f"base tx: {issue_data_in_tx} "
-                                                      f"db: {issue_data_in_db} ")
+        issue_data_in_db: dict = context.engine.issue.create_icx_issue_info(context)
+        if issue_data_in_tx != issue_data_in_db:
+            raise InvalidBaseTransactionException("Have difference between "
+                                                  "base transaction and actual db data. "
+                                                  f"base tx: {issue_data_in_tx} "
+                                                  f"db: {issue_data_in_db} ")
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=BASE_TRANSACTION_INDEX,
@@ -1008,7 +976,11 @@ class IconServiceEngine(ContextContainer):
 
         :return: The amount of step
         """
-        context = self._context_factory.create(IconScoreContextType.ESTIMATION, block=self._get_last_block())
+        context = self._context_factory.create(
+            context_type=IconScoreContextType.ESTIMATION,
+            block=self._get_last_block(),
+            node=None
+        )
         context.set_step_counter()
 
         params: dict = request['params']
@@ -1036,8 +1008,9 @@ class IconServiceEngine(ContextContainer):
         :return: the result of query
         """
         context: 'IconScoreContext' = self._context_factory.create(
-            IconScoreContextType.QUERY,
-            block=self._get_last_block()
+            context_type=IconScoreContextType.QUERY,
+            block=self._get_last_block(),
+            node=None
         )
 
         if params:
@@ -1075,7 +1048,11 @@ class IconServiceEngine(ContextContainer):
         params: dict = request['params']
         to: 'Address' = params.get('to')
 
-        context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
+        context = self._context_factory.create(
+            context_type=IconScoreContextType.QUERY,
+            block=self._get_last_block(),
+            node=None
+        )
         context.set_step_counter()
 
         try:
@@ -1518,7 +1495,11 @@ class IconServiceEngine(ContextContainer):
         # Add last_block info to block_batch in order to record the data to stateDB
         precommit_data.block_batch.set_block_to_batch(precommit_data.revision)
 
-        context = self._context_factory.create(IconScoreContextType.DIRECT, block=precommit_data.block)
+        context = self._context_factory.create(
+            context_type=IconScoreContextType.DIRECT,
+            block=precommit_data.block,
+            node=None
+        )
 
         if precommit_data.revision < Revision.IISS.value:
             self._commit_before_iiss(context, precommit_data)
@@ -1716,7 +1697,11 @@ class IconServiceEngine(ContextContainer):
                 metadata.save(path)
 
                 # Do rollback
-                context = self._context_factory.create(IconScoreContextType.DIRECT, block=last_block)
+                context = self._context_factory.create(
+                    context_type=IconScoreContextType.DIRECT,
+                    block=last_block,
+                    node=None
+                )
                 self._rollback(context, block_height, block_hash, term_start_block_height)
 
                 self._remove_rollback_metadata()
@@ -1822,13 +1807,6 @@ class IconServiceEngine(ContextContainer):
 
     def _get_last_block(self) -> Optional['Block']:
         return self._precommit_data_manager.last_block
-
-    def inner_call(self, request: dict):
-        context: 'IconScoreContext' = self._context_factory.create(
-            IconScoreContextType.QUERY, block=self._get_last_block()
-        )
-
-        return inner_call(context, request)
 
     def _recover_dbs(self, rc_data_path: str):
         """
@@ -2117,3 +2095,38 @@ class IconServiceEngine(ContextContainer):
 
     def _convert_block_hash_to_instant_block_hash(self, block_hash: bytes) -> bytes:
         return self._temp_instant_block_hash_mapper.get(block_hash, block_hash)
+
+    def pre_invoke(
+            self,
+            _block_height: int,
+            block_hash: bytes
+    ) -> Tuple[Optional[dict], Optional[bytes]]:
+
+        precommit_data: Optional['PrecommitData'] = self._precommit_data_manager.get(block_hash=block_hash)
+        if precommit_data is None:
+            context: 'IconScoreContext' = self._context_factory.create(
+                IconScoreContextType.QUERY,
+                block=self._get_last_block(),
+                node=None)
+
+            is_decentralized = context.is_decentralized()
+            curr_preps_hash: bytes = context.term.root_hash
+        else:
+            context: 'IconScoreContext' = self._context_factory.create(
+                IconScoreContextType.QUERY_BATCH,
+                block=precommit_data.block,
+                node=self._precommit_data_manager.get_node(block_hash=block_hash))
+
+            is_decentralized = context.is_decentralized()
+            curr_preps_hash: bytes = precommit_data.term.root_hash
+
+        if not is_decentralized:
+            return None, None
+
+        added_transactions = {}
+        base_transaction: dict = BaseTransactionCreator.create_base_transaction(context)
+        tx_hash: bytes = base_transaction["params"]["txHash"]
+        tx_params_to_added = base_transaction["params"]
+        del tx_params_to_added["txHash"]
+        added_transactions[tx_hash.hex()] = tx_params_to_added
+        return added_transactions, curr_preps_hash

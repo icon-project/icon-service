@@ -54,7 +54,7 @@ class TestChangeBlockHash(TestIISSBase):
                           to_=self._accounts[0],
                           value=icx_to_loop(1))
 
-        tx_list = [self._create_base_transaction()]
+        tx_list = []
         tx = self.create_transfer_icx_tx(
             from_=self._admin.address,
             to_=self._accounts[0],

@@ -44,34 +44,24 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         return dummy_base_transacion
 
     def test_base_transaction_under_rev_iiss(self):
-        # success case: when isBlockEditable is false, block which does not have base tx should be invoked successfully.
-        tx_list = [
-            self._create_dummy_tx()
-        ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
-        self._write_precommit_state(prev_block)
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-        expected_tx_status = 1
-        self.assertEqual(expected_tx_status, tx_results[0].status)
-
-        # success case: when isBlockEditable is true, block which does not have base tx should be invoked successfully.
+        # success case: block which does not have base tx should be invoked successfully.
         tx_list = [
             self._create_dummy_tx(),
         ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list)
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 
-        # failure case: when isBlockEditable is false, block which has base tx should be failed to invoke.
+        # failure case: block which has base tx should be failed to invoke.
         tx_list_with_base_transaction = [
             self._create_dummy_base_transaction(),
             self._create_dummy_tx()
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list_with_base_transaction, None, None, None, None, True, 0)
+                          tx_list_with_base_transaction, None, None, None, None, 0)
 
     def test_base_transaction_between_rev_iiss_and_rev_decentralization(self):
         self.update_governance()
@@ -79,21 +69,11 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         # set Revision REV_IISS
         self.set_revision(Revision.IISS.value)
 
-        # success case: when isBlockEditable is false, block which does not have base tx should be invoked successfully.
-        tx_list = [
-            self._create_dummy_tx()
-        ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
-        self._write_precommit_state(prev_block)
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-        expected_tx_status = 1
-        self.assertEqual(expected_tx_status, tx_results[0].status)
-
-        # success case: when isBlockEditable is true, block which does not have base tx should be invoked successfully.
+        # success case: block which does not have base tx should be invoked successfully.
         tx_list = [
             self._create_dummy_tx(),
         ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list)
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
@@ -106,5 +86,5 @@ class TestIISSBaseTransactionRevision(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list_with_base_transaction, None, None, None, None, True, 0)
+                          tx_list_with_base_transaction, None, None, None, None, 0)
 

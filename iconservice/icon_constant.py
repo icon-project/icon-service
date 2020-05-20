@@ -241,6 +241,8 @@ class IconScoreContextType(IntEnum):
     # Not possible to write data to db
     QUERY = 3
 
+    QUERY_BATCH = 4
+
 
 @unique
 class IconScoreFuncType(IntEnum):

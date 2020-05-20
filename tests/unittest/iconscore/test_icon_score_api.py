@@ -107,7 +107,11 @@ def context(settable_inv_container: INVContainer):
     context_factory = IconScoreContextFactory()
 
     block = Block(block_height=1, block_hash=b"1" * 40, prev_hash=b"0" * 40, timestamp=0)
-    context = context_factory.create(IconScoreContextType.INVOKE, block)
+    context = context_factory.create(
+        context_type=IconScoreContextType.INVOKE,
+        block=block,
+        node=None
+    )
 
     step_limit = 1_000_000_000
     context.set_step_counter(step_limit)

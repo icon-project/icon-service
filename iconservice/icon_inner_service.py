@@ -123,6 +123,57 @@ class IconScoreInnerTask(object):
         Logger.info(tag=_TAG, msg="close() end")
 
     @message_queue_task
+    async def pre_invoke(self, request: dict) -> dict:
+        self._check_icon_service_ready()
+
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                              self._pre_invoke, request)
+        else:
+            return self._pre_invoke(request)
+
+    def _pre_invoke(self, request: dict):
+        try:
+            converted_request = TypeConverter.convert(request, ParamType.PRE_INVOKE)
+            block_height: int = converted_request[ConstantKeys.BLOCK_HEIGHT]
+            block_hash: bytes = converted_request[ConstantKeys.BLOCK_HASH]
+            Logger.info(tag=_TAG, msg=f'PRE_INVOKE: '
+                                      f'BH={block_height} '
+                                      f'block_hash={bytes_to_hex(block_hash)}')
+
+            added_transaction, curr_preps_hash = self._icon_service_engine.pre_invoke(
+                _block_height=block_height,
+                block_hash=block_hash
+            )
+
+            results = {
+                'addedTransactions': added_transaction,
+                'currentRepsHash': bytes.hex(curr_preps_hash),
+            }
+
+            response = MakeResponse.make_response(results)
+        except FatalException as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+            self._close()
+        except InvalidBaseTransactionException as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, _TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        finally:
+            if self._icon_service_engine:
+                self._icon_service_engine.clear_context_stack()
+
+        Logger.info(tag=_TAG, msg=f'PRE_INVOKE Response: {json.dumps(response, cls=BytesToHexJSONEncoder)}')
+        return response
+
+    @message_queue_task
     async def invoke(self, request: dict) -> dict:
         Logger.debug(tag=_TAG, msg=f'invoke() start')
 
@@ -154,36 +205,34 @@ class IconScoreInnerTask(object):
             Logger.info(tag=_TAG, msg=f'INVOKE: BH={block.height}')
 
             converted_tx_requests = params['transactions']
-
-            convert_tx_result_to_dict: bool = 'isBlockEditable' in params
-
-            converted_is_block_editable = params.get('isBlockEditable', False)
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
             converted_prev_votes = params.get('prevBlockVotes')
 
-            tx_results, state_root_hash, added_transactions, next_preps = self._icon_service_engine.invoke(
+            (
+                tx_results,
+                state_root_hash,
+                next_preps,
+                curr_preps_hash
+            ) = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
                 prev_block_generator=converted_prev_block_generator,
                 prev_block_validators=converted_prev_block_validators,
-                prev_block_votes=converted_prev_votes,
-                is_block_editable=converted_is_block_editable)
+                prev_block_votes=converted_prev_votes)
 
-            if convert_tx_result_to_dict:
-                convert_tx_results = [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
-            else:
-                # old version
-                convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case)
-                                      for tx_result in tx_results}
+            convert_tx_results = [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
+
             results = {
                 'txResults': convert_tx_results,
                 'stateRootHash': bytes.hex(state_root_hash),
-                'addedTransactions': added_transactions
             }
 
             if next_preps:
                 results["prep"] = next_preps
+
+            if curr_preps_hash:
+                results["currentRepsHash"] = bytes.hex(curr_preps_hash)
 
             response = MakeResponse.make_response(results)
         except FatalException as e:
@@ -253,40 +302,6 @@ class IconScoreInnerTask(object):
     def _query(self, request: dict, method: str):
         converted_request = TypeConverter.convert(request, ParamType.QUERY)
         return self._icon_service_engine.query(method, converted_request['params'])
-
-    @message_queue_task
-    async def call(self, request: dict):
-        Logger.info(tag=_TAG, msg=f'call() start: {request}')
-
-        self._check_icon_service_ready()
-
-        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
-            loop = asyncio.get_event_loop()
-            ret = await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
-                                             self._call, request)
-        else:
-            ret = self._call(request)
-
-        Logger.info(tag=_TAG, msg=f'call() end: {ret}')
-        return ret
-
-    def _call(self, request: dict):
-        try:
-            response = self._icon_service_engine.inner_call(request)
-
-            if isinstance(response, Address):
-                response = str(response)
-        except FatalException as e:
-            self._log_exception(e, _TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-        except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, _TAG)
-            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
-        except Exception as e:
-            self._log_exception(e, _TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-
-        return response
 
     @message_queue_task
     async def write_precommit_state(self, request: dict):

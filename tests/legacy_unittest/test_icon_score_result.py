@@ -238,8 +238,8 @@ class TestScoreResult(unittest.TestCase):
 
         step_total = 0
 
-        for tx_hash in response['txResults'].keys():
-            result = response['txResults'][tx_hash]
+        for index, tx_hash in enumerate(response['txResults']):
+            result = response['txResults'][index]
             step_total += int(result['stepUsed'], 16)
             self.assertIn('status', result)
             self.assertIn('txHash', result)

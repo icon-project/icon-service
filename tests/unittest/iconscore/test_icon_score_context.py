@@ -128,7 +128,11 @@ class TestIconScoreContext:
         old_term: 'Term' = prep_engine.term
 
         block = utils.create_dummy_block()
-        context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+        context: 'IconScoreContext' = context_factory.create(
+            context_type=IconScoreContextType.INVOKE,
+            block=block,
+            node=None
+        )
         self._check_initial_context(context)
 
         # Case 1: the p2p_endpoint of a main P-Rep is changed
@@ -169,7 +173,11 @@ class TestIconScoreContext:
         old_term: 'Term' = prep_engine.term
 
         block = utils.create_dummy_block()
-        context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+        context: 'IconScoreContext' = context_factory.create(
+            context_type=IconScoreContextType.INVOKE,
+            block=block,
+            node=None
+        )
         self._check_initial_context(context)
 
         # the p2p_endpoint of a sub P-Rep is changed
@@ -207,7 +215,11 @@ class TestIconScoreContext:
 
     def test_update_dirty_prep_batch_with_penalized_main_prep(self, prep_engine, context_factory):
         block = utils.create_dummy_block()
-        context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+        context: 'IconScoreContext' = context_factory.create(
+            context_type=IconScoreContextType.INVOKE,
+            block=block,
+            node=None
+        )
         self._check_initial_context(context)
 
         penalties = [
@@ -269,7 +281,11 @@ class TestIconScoreContext:
 
         for index, grade in items:
             block = utils.create_dummy_block()
-            context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+            context: 'IconScoreContext' = context_factory.create(
+                context_type=IconScoreContextType.INVOKE,
+                block=block,
+                node=None
+            )
             self._check_initial_context(context)
 
             prep: 'PRep' = context.preps.get_by_index(index)
@@ -309,7 +325,11 @@ class TestIconScoreContext:
             grade = PRepGrade.CANDIDATE
 
             block = utils.create_dummy_block()
-            context: 'IconScoreContext' = context_factory.create(IconScoreContextType.INVOKE, block)
+            context: 'IconScoreContext' = context_factory.create(
+                context_type=IconScoreContextType.INVOKE,
+                block=block,
+                node=None
+            )
             self._check_initial_context(context)
 
             old_active_prep_count: int = context.preps.size(active_prep_only=True)

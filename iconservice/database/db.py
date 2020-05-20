@@ -227,7 +227,7 @@ class ContextDatabase(object):
         """
         # Find the value from tx_batch, block_batch and prev_block_batches with a given key
         for batch in context.get_batches():
-            if key in batch:
+            if batch and key in batch:
                 return batch[key].value
 
         # get value from state_db

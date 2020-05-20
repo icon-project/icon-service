@@ -36,18 +36,6 @@ if TYPE_CHECKING:
 
 class TestChangeBlockHash(TestIISSBase):
 
-    def _create_base_transaction(self):
-        context = IconScoreContext(IconScoreContextType.DIRECT)
-        context._preps = context.engine.prep.preps.copy(mutable=True)
-        context._term = context.engine.prep.term.copy()
-        block_height: int = self._block_height
-        block_hash = create_block_hash()
-        timestamp_us = create_timestamp()
-        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
-        context.block = block
-        transaction = BaseTransactionCreator.create_base_transaction(context)
-        return transaction
-
     def test_change_block_hash_before_iiss1(self):
         tx_list = []
         tx = self.create_transfer_icx_tx(

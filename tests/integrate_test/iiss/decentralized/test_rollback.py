@@ -163,7 +163,7 @@ class TestRollback(TestIISSBase):
         assert init_balance == balance
 
         # Save the previous block
-        prev_block: 'Block' = self.icon_service_engine._get_last_block()
+        prev_block: 'Block' = self.get_last_block()
 
         # Deploy a SCORE
         tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
@@ -187,6 +187,7 @@ class TestRollback(TestIISSBase):
         balance: int = self.get_balance(sender_address)
         assert init_balance == balance + tx_result.step_price * tx_result.step_used
 
+        block: 'Block' = self.get_last_block()
         # Rollback: Go back to the block where a score has not been deployed yet
         self._rollback(prev_block)
 
@@ -493,7 +494,7 @@ class TestRollback(TestIISSBase):
         :param prev_block:
         :return:
         """
-        last_block: 'Block' = self.icon_service_engine._get_last_block()
+        last_block: 'Block' = self.get_last_block()
         assert last_block == prev_block
 
     @staticmethod

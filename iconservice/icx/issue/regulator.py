@@ -58,7 +58,7 @@ class Regulator:
         # Update current calculated period total issued icx
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
-        if end_block_height_of_calc == context.block.height:
+        if end_block_height_of_calc == context.block.height - 1:
             prev_calc_period_issued_iscore, _, _ = context.storage.rc.get_calc_response_from_rc()
 
             assert prev_calc_period_issued_iscore >= 0

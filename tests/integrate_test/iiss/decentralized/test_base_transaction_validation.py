@@ -289,7 +289,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
-                          tx_list, None, None, None, None, True, 0)
+                          tx_list, None, None, None, None, 0)
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         # case of isBlockEditable is True
@@ -297,7 +297,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx(),
             self._create_dummy_tx()
         ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list)
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
@@ -351,7 +351,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx(),
             self._create_dummy_tx()
         ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list)
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
         expected_tx_status = 1
@@ -519,7 +519,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx()
         ]
 
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self.make_and_req_block(tx_list=tx_list)
         self._write_precommit_state(prev_block)
         base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
 
@@ -532,7 +532,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
             self._create_dummy_tx()
         ]
 
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        prev_block, hash_list = self.make_and_req_block(tx_list=tx_list)
         self._write_precommit_state(prev_block)
         base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
 

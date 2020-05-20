@@ -29,10 +29,11 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
-    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
+    IconScoreContextType,
+    IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     TermFlag, PRepStatus,
     Revision, PRepFlag, RevisionChangedFlag)
-from ..icx.issue.regulator import Regulator
+
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -44,7 +45,8 @@ if TYPE_CHECKING:
     from ..prep.prep_address_converter import PRepAddressConverter
     from ..inv.container import Container as INVContainer
     from ..database.batch import Batch
-
+    from ..precommit_data_manager import Node as PrecommitDataNode
+    from ..icx.issue.regulator import Regulator
 
 
 class IconScoreContext(ABC):
@@ -132,7 +134,8 @@ class IconScoreContext(ABC):
 
     @property
     def readonly(self):
-        return self.type == IconScoreContextType.QUERY or self.func_type == IconScoreFuncType.READONLY
+        return self.type in (IconScoreContextType.QUERY, IconScoreContextType.QUERY_BATCH) or \
+               self.func_type == IconScoreFuncType.READONLY
 
     @property
     def total_supply(self):
@@ -370,17 +373,17 @@ class IconScoreContextFactory(object):
     def create(self,
                context_type: 'IconScoreContextType',
                block: 'Block',
-               prev_block_batches: Iterable['Batch'] = None):
+               node: Optional['PrecommitDataNode']):
         context: 'IconScoreContext' = self._create_context(context_type)
         context.block = block
 
         if context_type == IconScoreContextType.DIRECT:
             return context
 
-        # For 2-depth block invocation
-        if prev_block_batches:
-            context._prev_block_batches = [batch for batch in prev_block_batches]
-        self._set_context_attributes_for_processing_tx(context)
+        self._set_context_attributes_for_processing_tx(
+            context=context,
+            node=node
+        )
         return context
 
     @classmethod
@@ -388,19 +391,35 @@ class IconScoreContextFactory(object):
         return IconScoreContext(context_type)
 
     @classmethod
-    def _set_context_attributes_for_processing_tx(cls, context: 'IconScoreContext'):
-        if context.type in (IconScoreContextType.INVOKE, IconScoreContextType.ESTIMATION):
+    def _set_context_attributes_for_processing_tx(
+            cls,
+            context: 'IconScoreContext',
+            node: Optional['PrecommitDataNode']
+    ):
+        # For 2-depth block invocation
+        if node:
+            context._prev_block_batches = [batch for batch in cls._get_block_batch(node=node)]
+
+        if context.type in (IconScoreContextType.INVOKE,
+                            IconScoreContextType.ESTIMATION,
+                            IconScoreContextType.QUERY_BATCH):
+
             context.block_batch = BlockBatch(Block.from_block(context.block))
             context.tx_batch = TransactionBatch()
 
-            context.new_icon_score_mapper = IconScoreMapper()
-
             # For PRep management
-            context._preps = context.engine.prep.preps.copy(mutable=True)
+            if node and node.precommit_data:
+                context.new_icon_score_mapper = node.precommit_data.score_mapper
+                context._preps = node.precommit_data.preps.copy(mutable=True)
+                context._inv_container = node.precommit_data.inv_container.copy()
+                context._prep_address_converter = node.precommit_data.prep_address_converter.copy()
+            else:
+                context.new_icon_score_mapper = IconScoreMapper()
+                context._preps = context.engine.prep.preps.copy(mutable=True)
+                context._inv_container = context.engine.inv.inv_container.copy()
+                context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
+
             context._tx_dirty_preps = OrderedDict()
-            container: 'INVContainer' = context.engine.inv.inv_container.copy()
-            context._inv_container = container
-            context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
         else:
             # Readonly
             context._preps = context.engine.prep.preps
@@ -408,3 +427,14 @@ class IconScoreContextFactory(object):
             context._prep_address_converter = context.engine.prep.prep_address_converter
 
         context._term = context.engine.prep.term
+
+    @classmethod
+    def _get_block_batch(
+            cls,
+            node: 'PrecommitDataNode'
+    ) -> Iterable['BlockBatch']:
+
+        while not node.is_root():
+            yield node.precommit_data.block_batch
+            # parent means previous block node
+            node = node.parent

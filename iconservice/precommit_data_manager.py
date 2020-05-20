@@ -90,8 +90,8 @@ class PrecommitData(object):
                  prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'],
                  rc_state_root_hash: Optional[bytes],
-                 added_transactions: dict,
                  next_preps: Optional[dict],
+                 curr_preps_hash: Optional[bytes],
                  prep_address_converter: 'PRepAddressConverter'):
         """
 
@@ -119,8 +119,8 @@ class PrecommitData(object):
 
         self.state_root_hash: bytes = self._make_state_root_hash()
 
-        self.added_transactions: dict = added_transactions
         self.next_preps: Optional[dict] = next_preps
+        self.curr_preps_hash: Optional[bytes] = curr_preps_hash
 
         self.prep_address_converter: 'PRepAddressConverter' = prep_address_converter
 
@@ -142,8 +142,8 @@ class PrecommitData(object):
             f"state_root_hash: {bytes_to_hex(self.state_root_hash)}",
             f"prev_block_generator: {self.prev_block_generator}",
             "",
-            f"added_transactions: {self.added_transactions}",
             f"next_preps: {self.next_preps}",
+            f"curr_preps_hash: {self.curr_preps_hash}"
             "",
             "block_batch",
         ]
@@ -169,7 +169,58 @@ class PrecommitData(object):
         return sha3_256(value)
 
 
-class PrecommitDataManager(object):
+class Node(object):
+    """Inner class used to manage PrecommitData in LinkedList
+
+    """
+
+    def __init__(
+            self, block: 'Block',
+            data: 'PrecommitData' = None,
+            parent: Optional['Node'] = None):
+        self._block = block
+        self._data = data
+        self._parent = parent
+        self._children: Dict[bytes, 'Node'] = {}
+
+    @property
+    def precommit_data(self) -> 'PrecommitData':
+        return self._data
+
+    @property
+    def parent(self) -> Optional['Node']:
+        return self._parent
+
+    @parent.setter
+    def parent(self, node: Optional['Node']):
+        self._parent = node
+
+    @property
+    def block(self) -> 'Block':
+        return self._block
+
+    def add_child(self, node: 'Node'):
+        self._children[node.block.hash] = node
+
+    def get_child(self, block_hash: bytes) -> Optional['Node']:
+        return self._children.get(block_hash)
+
+    def children(self) -> Iterable['Node']:
+        for child in self._children.values():
+            yield child
+
+    def is_root(self) -> bool:
+        return self._parent is None
+
+    def is_leaf(self) -> bool:
+        return len(self._children) == 0
+
+    def update_block_hash(self, block_hash: bytes):
+        self.precommit_data.block_batch.update_block_hash(block_hash)
+        self._block = self.precommit_data.block_batch.block
+
+
+class PrecommitDataManager:
     """Manages multiple precommit block data
 
     Assume that it manages only 2-depth block precommit
@@ -178,60 +229,10 @@ class PrecommitDataManager(object):
     - parent.children: 2-depth
     """
 
-    class Node(object):
-        """Inner class used to manage PrecommitData in LinkedList
-
-        """
-
-        def __init__(
-                self, block: 'Block',
-                data: 'PrecommitData' = None,
-                parent: Optional['PrecommitDataManager.Node'] = None):
-            self._block = block
-            self._data = data
-            self._parent = parent
-            self._children: Dict[bytes, 'PrecommitDataManager.Node'] = {}
-
-        @property
-        def precommit_data(self) -> 'PrecommitData':
-            return self._data
-
-        @property
-        def parent(self) -> Optional['PrecommitDataManager.Node']:
-            return self._parent
-
-        @parent.setter
-        def parent(self, node: Optional['PrecommitDataManager.Node']):
-            self._parent = node
-
-        @property
-        def block(self) -> 'Block':
-            return self._block
-
-        def add_child(self, node: 'PrecommitDataManager.Node'):
-            self._children[node.block.hash] = node
-
-        def get_child(self, block_hash: bytes) -> Optional['PrecommitDataManager.Node']:
-            return self._children.get(block_hash)
-
-        def children(self) -> Iterable['PrecommitDataManager.Node']:
-            for child in self._children.values():
-                yield child
-
-        def is_root(self) -> bool:
-            return self._parent is None
-
-        def is_leaf(self) -> bool:
-            return len(self._children) == 0
-
-        def update_block_hash(self, block_hash: bytes):
-            self.precommit_data.block_batch.update_block_hash(block_hash)
-            self._block = self.precommit_data.block_batch.block
-
     def __init__(self):
-        self._root: Optional['PrecommitDataManager.Node'] = None
+        self._root: Optional['Node'] = None
         # block_hash : PrecommitDataManager.Node instance
-        self._precommit_data_mapper: Dict[bytes, 'PrecommitDataManager.Node'] = {}
+        self._precommit_data_mapper: Dict[bytes, 'Node'] = {}
 
     def __len__(self):
         return len(self._precommit_data_mapper)
@@ -247,7 +248,7 @@ class PrecommitDataManager(object):
 
         self._precommit_data_mapper.clear()
 
-        root = PrecommitDataManager.Node(block)
+        root = Node(block)
         self._precommit_data_mapper[root.block.hash] = root
         self._set_root(root)
 
@@ -257,7 +258,7 @@ class PrecommitDataManager(object):
 
     def push(self, precommit_data: 'PrecommitData'):
         block: 'Block' = precommit_data.block_batch.block
-        parent: Optional['PrecommitDataManager.Node'] = self._precommit_data_mapper.get(block.prev_hash)
+        parent: Optional['Node'] = self._precommit_data_mapper.get(block.prev_hash)
 
         if parent is None:
             # Genesis block has no prev(=parent) block
@@ -266,17 +267,20 @@ class PrecommitDataManager(object):
             raise InternalServiceErrorException(
                 f"Parent precommitData not found: {bytes_to_hex(block.prev_hash)}")
 
-        node = PrecommitDataManager.Node(block, precommit_data, parent)
+        node = Node(block, precommit_data, parent)
 
         parent.add_child(node)
         self._precommit_data_mapper[block.hash] = node
 
     def get(self, block_hash: bytes) -> Optional['PrecommitData']:
+        node = self.get_node(block_hash=block_hash)
+        return node.precommit_data if node else None
+
+    def get_node(self, block_hash: bytes) -> Optional['Node']:
         if not isinstance(block_hash, bytes):
             return None
 
-        node = self._precommit_data_mapper.get(block_hash)
-        return node.precommit_data if node else None
+        return self._precommit_data_mapper.get(block_hash)
 
     def commit(self, block: 'Block'):
         node = self._precommit_data_mapper.get(block.hash)
@@ -299,7 +303,7 @@ class PrecommitDataManager(object):
         :param block_to_commit:
         :return:
         """
-        def pick_up_blocks_to_remove() -> Iterable['PrecommitDataManager.Node']:
+        def pick_up_blocks_to_remove() -> Iterable['Node']:
             for parent in self._root.children():
                 if block_to_commit.hash == parent.block.hash:
                     # DO NOT remove the confirmed block and its children
@@ -334,7 +338,7 @@ class PrecommitDataManager(object):
             # Exception handling for genesis block
             return
 
-        parent: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(block.prev_hash)
+        parent: 'Node' = self._precommit_data_mapper.get(block.prev_hash)
         if parent:
             if block.prev_hash == parent.block.hash and block.height == parent.block.height + 1:
                 return
@@ -353,7 +357,7 @@ class PrecommitDataManager(object):
         """
         assert isinstance(block_hash, bytes)
 
-        node: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(block_hash)
+        node: 'Node' = self._precommit_data_mapper.get(block_hash)
         if node is None:
             raise InvalidParamsException(
                 f'No precommit data: block_hash={bytes_to_hex(block_hash)}')
@@ -368,22 +372,12 @@ class PrecommitDataManager(object):
         raise InvalidParamsException(
             f'Invalid precommit block: prev_block({prev_block}) block({block})')
 
-    def _set_root(self, node: 'PrecommitDataManager.Node'):
+    def _set_root(self, node: 'Node'):
         node.parent = None
         self._root = node
 
-    def get_block_batches(self, block_hash: bytes) -> Iterable['BlockBatch']:
-        node = self._precommit_data_mapper.get(block_hash)
-        if not node:
-            return
-
-        while not node.is_root():
-            yield node.precommit_data.block_batch
-            # parent means previous block node
-            node = node.parent
-
     def change_block_hash(self, block_height: int, src: bytes, dst: bytes):
-        node: 'PrecommitDataManager.Node' = self._precommit_data_mapper.get(src)
+        node: 'Node' = self._precommit_data_mapper.get(src)
         if node is None:
             raise InvalidParamsException(
                 f'No precommit data: block_hash={bytes_to_hex(src)}')

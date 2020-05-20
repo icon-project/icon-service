@@ -41,7 +41,11 @@ def _create_context() -> 'IconScoreContext':
                   prev_hash=os.urandom(32),
                   cumulative_fee=0)
 
-    return context_factory.create(IconScoreContextType.INVOKE, block)
+    return context_factory.create(
+        context_type=IconScoreContextType.INVOKE,
+        block=block,
+        node=None
+    )
 
 
 def _create_term(total_supply: int, total_delegated: int):

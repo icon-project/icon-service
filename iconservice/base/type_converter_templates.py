@@ -43,6 +43,7 @@ class ParamType(IntEnum):
     CHANGE_BLOCK_HASH = 401
     # REMOVE_PRECOMMIT = 500
     ROLLBACK = 501
+    PRE_INVOKE = 502
 
     VALIDATE_TRANSACTION = 600
 
@@ -274,7 +275,6 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
     ],
-    ConstantKeys.IS_BLOCK_EDITABLE: ValueType.BOOL,
     ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
     ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS],
     ConstantKeys.PREV_BLOCK_VOTES: [
@@ -330,10 +330,8 @@ type_convert_templates[ParamType.CHANGE_BLOCK_HASH] = {
     ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES,
 }
 
-type_convert_templates[ParamType.ROLLBACK] = {
-    ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
-    ConstantKeys.BLOCK_HASH: ValueType.BYTES
-}
+type_convert_templates[ParamType.ROLLBACK] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
+type_convert_templates[ParamType.PRE_INVOKE] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
 type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.METHOD: ValueType.STRING,

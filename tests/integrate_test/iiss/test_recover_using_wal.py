@@ -120,7 +120,11 @@ class TestRecoverUsingWAL(TestIISSBase):
         return self.icon_service_engine._get_last_block().height
 
     def _get_commit_context(self, block: 'Block'):
-        return self.icon_service_engine._context_factory.create(IconScoreContextType.DIRECT, block)
+        return self.icon_service_engine._context_factory.create(
+            context_type=IconScoreContextType.DIRECT,
+            block=block,
+            node=None
+        )
 
     def _close_and_reopen_iconservice(self):
         self.icon_service_engine.close()

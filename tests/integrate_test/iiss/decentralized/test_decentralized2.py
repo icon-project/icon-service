@@ -192,7 +192,7 @@ class TestIISSDecentralized2(TestIISSBase):
         tx: dict = self.create_set_prep_tx(from_=address,
                                            set_data={"p2pEndpoint": new_p2p_endpoint})
 
-        _, _, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
+        _, _, _, next_preps, _ = self.debug_make_and_req_block(tx_list=[tx])
         self.assertIsNone(next_preps)
 
         self.set_revision(Revision.FIX_TOTAL_ELECTED_PREP_DELEGATED.value)
@@ -203,7 +203,7 @@ class TestIISSDecentralized2(TestIISSBase):
         tx: dict = self.create_set_prep_tx(from_=address,
                                            set_data={"p2pEndpoint": new_p2p_endpoint})
 
-        _, _, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
+        _, _, _, next_preps, _ = self.debug_make_and_req_block(tx_list=[tx])
         self.assertEqual(new_p2p_endpoint, next_preps["preps"][0]["p2pEndpoint"])
 
         # set prep with the same p2pEndpoint as the old one
@@ -211,7 +211,7 @@ class TestIISSDecentralized2(TestIISSBase):
                                            set_data={"p2pEndpoint": old_p2p_endpoint})
 
         # next_preps should not be modified
-        _, _, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
+        _, _, _, next_preps, _ = self.debug_make_and_req_block(tx_list=[tx])
         assert next_preps is None
 
     def test_check_update_endpoint2(self):
@@ -250,7 +250,7 @@ class TestIISSDecentralized2(TestIISSBase):
             tx_list.append(tx)
 
         # To change the p2pEndpoints of sub P-Reps cannot affect next_preps
-        _, _, _, _, next_preps = self.debug_make_and_req_block(tx_list)
+        _, _, _, next_preps, _ = self.debug_make_and_req_block(tx_list)
         assert next_preps is None
 
         self.process_confirm_block_tx(tx_list)
@@ -265,6 +265,6 @@ class TestIISSDecentralized2(TestIISSBase):
 
         # Unregistered main P-Rep is replaced by the first sub P-Rep in descending order by delegated
         tx: dict = self.create_unregister_prep_tx(self._accounts[0])
-        _, _, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
+        _, _, _, next_preps, _ = self.debug_make_and_req_block(tx_list=[tx])
 
         assert f"192.168.0.{start}:7100" == next_preps["preps"][0]["p2pEndpoint"]

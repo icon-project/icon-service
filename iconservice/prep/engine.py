@@ -117,7 +117,7 @@ class Engine(EngineBase, IISSEngineListener):
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
 
-        self.prep_address_converter: 'PRepAddressConverter' = None
+        self.prep_address_converter: Optional['PRepAddressConverter'] = None
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
@@ -134,7 +134,9 @@ class Engine(EngineBase, IISSEngineListener):
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
 
-        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(
+            context=context
+        )
 
         self.preps = self._load_preps(context)
         self.term = self._load_term(context)
@@ -254,7 +256,7 @@ class Engine(EngineBase, IISSEngineListener):
     def on_block_invoked(
             self,
             context: 'IconScoreContext',
-            is_decentralization_started: bool) -> Tuple[Optional[dict], Optional['Term']]:
+            is_decentralization_started: bool) -> Tuple[Optional[dict], Optional['Term'], Optional[bytes]]:
         """Called on IconServiceEngine._after_transaction_process()
 
         1. Adjust the grade for invalid P-Reps
@@ -268,18 +270,18 @@ class Engine(EngineBase, IISSEngineListener):
 
         if is_decentralization_started or self._is_term_ended(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
-            next_preps, new_term = self._on_term_ended(context)
+            next_preps, new_term, curr_preps_hash = self._on_term_ended(context)
         elif context.is_decentralized():
             # In-term P-Rep replacement
-            next_preps, new_term = self._on_term_updated(context)
+            next_preps, new_term, curr_preps_hash = self._on_term_updated(context)
         else:
-            next_preps, new_term = None, None
+            next_preps, new_term, curr_preps_hash = None, None, None
 
         if new_term:
             self._update_prep_grades(context, context.preps, self.term, new_term)
             context.storage.prep.put_term(context, new_term)
 
-        return next_preps, new_term
+        return next_preps, new_term, curr_preps_hash
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
@@ -287,7 +289,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         return context.block.height == self.term.end_block_height
 
-    def _on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
+    def _on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term', bytes]:
         """Called in IconServiceEngine.invoke() every time when a term is ended
 
         Update P-Rep grades according to PRep.delegated
@@ -317,7 +319,12 @@ class Engine(EngineBase, IISSEngineListener):
 
         Logger.debug(tag=_TAG, msg=f"{new_term}")
 
-        return next_preps, new_term
+        if self.term:
+            curr_preps_hash: bytes = self.term.root_hash
+        else:
+            curr_preps_hash: bytes = new_term.root_hash
+
+        return next_preps, new_term, curr_preps_hash
 
     @classmethod
     def _put_last_term_info(cls, context: 'IconScoreContext', term: 'Term'):
@@ -333,7 +340,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         context.storage.meta.put_last_term_info(context, start, end)
 
-    def _on_term_updated(self, context: 'IconScoreContext') -> Tuple[Optional[dict], Optional['Term']]:
+    def _on_term_updated(self, context: 'IconScoreContext') -> Tuple[Optional[dict], Optional['Term'], bytes]:
         """Update term with invalid elected P-Rep list during this term
         (In-term P-Rep replacement)
 
@@ -361,7 +368,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         new_term = context.term
         if not new_term.is_dirty():
-            return None, None
+            return None, new_term, context.term.root_hash
 
         if bool(new_term.flags & (TermFlag.MAIN_PREPS |
                                   TermFlag.MAIN_PREP_P2P_ENDPOINT |
@@ -374,7 +381,7 @@ class Engine(EngineBase, IISSEngineListener):
         else:
             next_preps = None
 
-        return next_preps, new_term
+        return next_preps, new_term, context.term.root_hash
 
     @classmethod
     def _update_prep_grades(cls,
