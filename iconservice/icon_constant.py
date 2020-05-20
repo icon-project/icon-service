@@ -174,7 +174,9 @@ class ConfigKey:
 
     # log
     LOG = 'log'
+    LOGGER = "logger"
     LOG_FILE_PATH = 'filePath'
+    LOG_LEVEL = "level"
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
@@ -299,6 +301,7 @@ HASH_TYPE_TABLE = [
 
 PREP_MAIN_PREPS = 22
 PREP_MAIN_AND_SUB_PREPS = 100
+PREP_REGISTRATION_FEE = 2_000 * ICX_IN_LOOP
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000 * ICX_IN_LOOP

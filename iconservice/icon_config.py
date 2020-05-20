@@ -13,14 +13,16 @@
 # limitations under the License.
 
 from .icon_constant import (
-    ConfigKey, ICX_IN_LOOP, TERM_PERIOD, IISS_DAY_BLOCK, PREP_MAIN_PREPS,
+    ConfigKey, TERM_PERIOD, IISS_DAY_BLOCK, PREP_MAIN_PREPS,
     PREP_MAIN_AND_SUB_PREPS, PENALTY_GRACE_PERIOD, LOW_PRODUCTIVITY_PENALTY_THRESHOLD,
-    BLOCK_VALIDATION_PENALTY_THRESHOLD, BACKUP_FILES, BLOCK_INVOKE_TIMEOUT_S
-)
+    BLOCK_VALIDATION_PENALTY_THRESHOLD, BACKUP_FILES, BLOCK_INVOKE_TIMEOUT_S,
+    IISS_INITIAL_IREP, PREP_REGISTRATION_FEE)
 
 default_icon_config = {
-    "log": {
-        "logger": "iconservice"
+    ConfigKey.LOG: {
+        ConfigKey.LOGGER: "iconservice",
+        ConfigKey.LOG_FILE_PATH: "./",
+        ConfigKey.LOG_LEVEL: "debug"
     },
     ConfigKey.SCORE_ROOT_PATH: ".score",
     ConfigKey.STATE_DB_ROOT_PATH: ".statedb",
@@ -51,8 +53,8 @@ default_icon_config = {
     ConfigKey.ICON_RC_MONITOR: True,
     ConfigKey.IISS_CALCULATE_PERIOD: IISS_DAY_BLOCK,
     ConfigKey.TERM_PERIOD: TERM_PERIOD,
-    ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP,
-    ConfigKey.PREP_REGISTRATION_FEE: 2_000 * ICX_IN_LOOP,
+    ConfigKey.INITIAL_IREP: IISS_INITIAL_IREP,
+    ConfigKey.PREP_REGISTRATION_FEE: PREP_REGISTRATION_FEE,
     ConfigKey.PREP_MAIN_PREPS: PREP_MAIN_PREPS,
     ConfigKey.PREP_MAIN_AND_SUB_PREPS: PREP_MAIN_AND_SUB_PREPS,
     ConfigKey.DECENTRALIZE_TRIGGER: 0.002,
@@ -62,5 +64,6 @@ default_icon_config = {
     ConfigKey.STEP_TRACE_FLAG: False,
     ConfigKey.PRECOMMIT_DATA_LOG_FLAG: False,
     ConfigKey.BACKUP_FILES: BACKUP_FILES,
-    ConfigKey.BLOCK_INVOKE_TIMEOUT: BLOCK_INVOKE_TIMEOUT_S
+    ConfigKey.BLOCK_INVOKE_TIMEOUT: BLOCK_INVOKE_TIMEOUT_S,
+    ConfigKey.TBEARS_MODE: False,
 }
