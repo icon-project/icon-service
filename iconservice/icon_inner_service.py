@@ -26,7 +26,7 @@ from iconservice.base.exception import ExceptionCode, IconServiceBaseException, 
     FatalException, ServiceNotReadyException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import EnableThreadFlag, ENABLE_THREAD_FLAG
+from iconservice.icon_constant import EnableThreadFlag, ENABLE_THREAD_FLAG, RPCMethod
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case, BytesToHexJSONEncoder, bytes_to_hex
 
@@ -35,7 +35,18 @@ if TYPE_CHECKING:
 
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
+THREAD_ESTIMATE = 'estimate'
 THREAD_VALIDATE = 'validate'
+THREAD_STATUS = 'status'
+
+QUERY_THREAD_MAPPER = {
+    RPCMethod.ICX_GET_BALANCE: THREAD_STATUS,
+    RPCMethod.ICX_GET_TOTAL_SUPPLY: THREAD_STATUS,
+    RPCMethod.ICX_GET_SCORE_API: THREAD_STATUS,
+    RPCMethod.ISE_GET_STATUS: THREAD_STATUS,
+    RPCMethod.ICX_CALL: THREAD_QUERY,
+    RPCMethod.DEBUG_ESTIMATE_STEP: THREAD_ESTIMATE
+}
 
 _TAG = "MQ"
 
@@ -50,7 +61,9 @@ class IconScoreInnerTask(object):
 
         self._thread_pool = {
             THREAD_INVOKE: ThreadPoolExecutor(1),
+            THREAD_STATUS: ThreadPoolExecutor(1),
             THREAD_QUERY: ThreadPoolExecutor(1),
+            THREAD_ESTIMATE: ThreadPoolExecutor(1),
             THREAD_VALIDATE: ThreadPoolExecutor(1)
         }
 
@@ -194,27 +207,13 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def query(self, request: dict):
+    async def query(self, request: dict) -> dict:
         self._check_icon_service_ready()
+        return await self._get_query_response(request)
 
-        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
-                                              self._query, request)
-        else:
-            return self._query(request)
-
-    def _query(self, request: dict):
+    async def _get_query_response(self, request: dict) -> dict:
         try:
-            method = request['method']
-
-            if method == 'debug_estimateStep':
-                converted_request = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
-                value = self._icon_service_engine.estimate_step(converted_request)
-            else:
-                converted_request = TypeConverter.convert(request, ParamType.QUERY)
-                value = self._icon_service_engine.query(method, converted_request['params'])
-
+            value = await self._execute_query(request)
             if isinstance(value, Address):
                 value = str(value)
             response = MakeResponse.make_response(value)
@@ -230,6 +229,30 @@ class IconScoreInnerTask(object):
 
         self._icon_service_engine.clear_context_stack()
         return response
+
+    async def _execute_query(self, request: dict):
+        method_name: str = request['method']
+        if method_name == RPCMethod.DEBUG_ESTIMATE_STEP:
+            method: callable = self._estimate
+            args = [request]
+        else:
+            method: callable = self._query
+            args = [request, method_name]
+
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+            return await asyncio.get_event_loop(). \
+                run_in_executor(self._thread_pool[QUERY_THREAD_MAPPER[method_name]],
+                                method, *args)
+        else:
+            return method(*args)
+
+    def _estimate(self, request: dict):
+        converted_request = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
+        return self._icon_service_engine.estimate_step(converted_request)
+
+    def _query(self, request: dict, method: str):
+        converted_request = TypeConverter.convert(request, ParamType.QUERY)
+        return self._icon_service_engine.query(method, converted_request['params'])
 
     @message_queue_task
     async def call(self, request: dict):
