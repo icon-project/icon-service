@@ -45,8 +45,7 @@ from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
     Revision, BASE_TRANSACTION_INDEX,
-    IISS_DB, IISS_INITIAL_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    STEP_LOG_TAG, TERM_PERIOD, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
+    IISS_DB, STEP_LOG_TAG, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
     BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag, RPCMethod
 )
 from .iconscore.context.context import ContextContainer
@@ -142,7 +141,7 @@ class IconServiceEngine(ContextContainer):
         state_db_root_path: str = os.path.abspath(state_db_root_path)
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
-        log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
+        log_dir: str = os.path.dirname(conf[ConfigKey.LOG][ConfigKey.LOG_FILE_PATH])
         backup_root_path: str = os.path.join(state_db_root_path, "backup")
 
         os.makedirs(score_root_path, exist_ok=True)
@@ -168,14 +167,14 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.score_root_path = score_root_path
         IconScoreContext.icon_score_mapper = IconScoreMapper(is_threadsafe=True)
         IconScoreContext.icon_service_flag = service_config_flag
-        IconScoreContext.legacy_tbears_mode = conf.get(ConfigKey.TBEARS_MODE, False)
-        IconScoreContext.iiss_initial_irep = conf.get(ConfigKey.INITIAL_IREP, IISS_INITIAL_IREP)
-        IconScoreContext.main_prep_count = conf.get(ConfigKey.PREP_MAIN_PREPS, PREP_MAIN_PREPS)
-        IconScoreContext.main_and_sub_prep_count = conf.get(ConfigKey.PREP_MAIN_AND_SUB_PREPS, PREP_MAIN_AND_SUB_PREPS)
-        IconScoreContext.term_period = conf.get(ConfigKey.TERM_PERIOD, TERM_PERIOD)
-        IconScoreContext.set_decentralize_trigger(conf.get(ConfigKey.DECENTRALIZE_TRIGGER))
-        IconScoreContext.step_trace_flag = conf.get(ConfigKey.STEP_TRACE_FLAG, False)
-        IconScoreContext.log_level = conf[ConfigKey.LOG].get("level", "debug")
+        IconScoreContext.legacy_tbears_mode = conf[ConfigKey.TBEARS_MODE]
+        IconScoreContext.iiss_initial_irep = conf[ConfigKey.INITIAL_IREP]
+        IconScoreContext.main_prep_count = conf[ConfigKey.PREP_MAIN_PREPS]
+        IconScoreContext.main_and_sub_prep_count = conf[ConfigKey.PREP_MAIN_AND_SUB_PREPS]
+        IconScoreContext.term_period = conf[ConfigKey.TERM_PERIOD]
+        IconScoreContext.set_decentralize_trigger(conf[ConfigKey.DECENTRALIZE_TRIGGER])
+        IconScoreContext.step_trace_flag = conf[ConfigKey.STEP_TRACE_FLAG]
+        IconScoreContext.log_level = conf[ConfigKey.LOG][ConfigKey.LOG_LEVEL]
         IconScoreContext.precommitdata_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
         self._init_component_context()
 
