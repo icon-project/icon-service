@@ -2,7 +2,7 @@ import argparse
 from collections import OrderedDict
 from typing import List
 
-from tools.precommit_converter.converter import Converter
+from tools.precommit_converter.convert_engine import ConvertEngine
 
 
 def extract_key_value_from_line(line: str):
@@ -32,10 +32,10 @@ def main():
     # file_name: str = args.precommit_file
 
     # Open the file
-    converter = Converter()
+    convert_engine = ConvertEngine()
 
     batches: dict = OrderedDict()
-    # Todo: Just Test
+    # Todo: temporal logic for Test
     with open("../precommit.txt", "rt") as f:
         # Collect the key, values
         lines: List[str] = f.readlines()
@@ -44,7 +44,7 @@ def main():
             if key is not None:
                 batches[key] = value
                 # Iter key, value and convert hex string -> bytes -> object
-                converted_key, converted_value = converter.convert(key, value)
+                converted_key, converted_value = convert_engine.convert(key, value)
                 print(f"----------{i}-----------\n"
                       f"Key  : {converted_key} \n"
                       f"Value: {converted_value}")

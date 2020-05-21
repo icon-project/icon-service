@@ -25,7 +25,7 @@ class NotMatchException(Exception):
     pass
 
 
-class Method(metaclass=abc.ABCMeta):
+class Converter(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
     def get_static_key_convert_methods(cls) -> List[Tuple[bytes, callable]]:
@@ -37,7 +37,7 @@ class Method(metaclass=abc.ABCMeta):
         pass
 
 
-class DeployMethod(Method):
+class DeployConverter(Converter):
     @classmethod
     def get_static_key_convert_methods(cls) -> list:
         return [
@@ -47,7 +47,7 @@ class DeployMethod(Method):
     @classmethod
     def get_flexible_key_convert_methods(cls) -> list:
         return [
-            (cls._is_deploy_info, cls._get_deploy_info)
+            (cls._is_deploy_info, cls._convert_deploy_info)
         ]
 
     @classmethod
@@ -58,7 +58,7 @@ class DeployMethod(Method):
         return False
 
     @classmethod
-    def _get_deploy_tx_params(cls, key: bytes, value: bytes):
+    def _convert_deploy_tx_params(cls, key: bytes, value: bytes):
         bytes_tx_hash: bytes = key[len(DeployStorage._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX):]
         converted_key: str = f"Deploy TX Params TX hash: {bytes_tx_hash.hex()}"
         converted_value: 'IconScoreDeployTXParams' = IconScoreDeployTXParams.from_bytes(value)
@@ -72,7 +72,7 @@ class DeployMethod(Method):
         return False
 
     @classmethod
-    def _get_deploy_info(cls, key: bytes, value: bytes):
+    def _convert_deploy_info(cls, key: bytes, value: bytes):
         bytes_address: bytes = key[len(DeployStorage._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX):]
         converted_key: str = f"Deploy {Address.from_bytes(bytes_address)}"
         converted_value: 'IconScoreDeployInfo' = IconScoreDeployInfo.from_bytes(value)
@@ -82,7 +82,7 @@ class DeployMethod(Method):
         return converted_key, converted_value
 
 
-class ScoreMethod(Method):
+class ScoreConverter(Converter):
     DECODER_STRING_MAPPER = {
         ARRAY_DB_ID: "List ",
         DICT_DB_ID: "Dict ",
@@ -98,7 +98,7 @@ class ScoreMethod(Method):
     @classmethod
     def get_flexible_key_convert_methods(cls) -> list:
         return [
-            (cls._is_score_data, cls._get_score_data)
+            (cls._is_score_data, cls._convert_score_data)
         ]
 
     @classmethod
@@ -112,7 +112,7 @@ class ScoreMethod(Method):
         return False
 
     @classmethod
-    def _get_score_data(cls, key, value):
+    def _convert_score_data(cls, key, value):
         mapper = {
             ARRAY_DB_ID: cls._array_db_decoder,
             DICT_DB_ID: cls._dict_db_decoder,
@@ -154,7 +154,7 @@ class ScoreMethod(Method):
         return string_var
 
 
-class AccountMethod(Method):
+class AccountMethod(Converter):
     @classmethod
     def get_static_key_convert_methods(cls) -> list:
         return [
@@ -164,9 +164,9 @@ class AccountMethod(Method):
     @classmethod
     def get_flexible_key_convert_methods(cls) -> list:
         return [
-            (cls._is_stake_parts, cls._get_stake_parts),
-            (cls._is_delegation_parts, cls._get_delegation_parts),
-            (cls._is_coin_parts, cls._get_coin_parts)
+            (cls._is_stake_parts, cls._convert_stake_parts),
+            (cls._is_delegation_parts, cls._convert_delegation_parts),
+            (cls._is_coin_parts, cls._convert_coin_parts)
         ]
 
     @classmethod
@@ -175,7 +175,7 @@ class AccountMethod(Method):
             return True
 
     @classmethod
-    def _get_coin_parts(cls, key: bytes, value: bytes):
+    def _convert_coin_parts(cls, key: bytes, value: bytes):
 
         return Address.from_bytes(key), CoinPart.from_bytes(value)
 
@@ -186,7 +186,7 @@ class AccountMethod(Method):
         return False
 
     @classmethod
-    def _get_stake_parts(cls, key: bytes, value: bytes):
+    def _convert_stake_parts(cls, key: bytes, value: bytes):
         ret = StakePart.from_bytes(value)
         return Address.from_bytes(key[len(StakePart.PREFIX):]), ret
 
@@ -197,17 +197,17 @@ class AccountMethod(Method):
         return False
 
     @classmethod
-    def _get_delegation_parts(cls, key: bytes, value: bytes):
+    def _convert_delegation_parts(cls, key: bytes, value: bytes):
         ret = DelegationPart.from_bytes(value)
         return key, ret
 
 
-class MetaMethod(Method):
+class MetaConverter(Converter):
     @classmethod
     def get_static_key_convert_methods(cls) -> list:
         return [
-            (MetaDBStorage._KEY_LAST_CALC_INFO, cls._get_last_calc_info),
-            (MetaDBStorage._KEY_LAST_MAIN_PREPS, cls._get_last_main_preps)
+            (MetaDBStorage._KEY_LAST_CALC_INFO, cls._convert_last_calc_info),
+            (MetaDBStorage._KEY_LAST_MAIN_PREPS, cls._convert_last_main_preps)
         ]
 
     @classmethod
@@ -219,41 +219,41 @@ class MetaMethod(Method):
     """ Static """
 
     @classmethod
-    def _get_last_calc_info(cls, key, value):
+    def _convert_last_calc_info(cls, key, value):
         data: list = MsgPackForDB.loads(value)
         _version = data[0]
         return key, data
 
     @classmethod
-    def _get_last_main_preps(cls, key, value):
+    def _convert_last_main_preps(cls, key, value):
         data: list = MsgPackForDB.loads(value)
         _version = data[0]
         return key, data
 
 
-class PrepMethod(Method):
+class PrepConverter(Converter):
     @classmethod
     def get_static_key_convert_methods(cls) -> list:
         return [
-            (PRepStorage.PREP_REGISTRATION_FEE_KEY, cls._get_prep_registration_fee),
-            (PRepStorage.TERM_KEY, cls._get_term)
+            (PRepStorage.PREP_REGISTRATION_FEE_KEY, cls._convert_prep_registration_fee),
+            (PRepStorage.TERM_KEY, cls._convert_term)
         ]
 
     @classmethod
     def get_flexible_key_convert_methods(cls) -> list:
         return [
-            (cls._is_prep_data, cls._get_prep)
+            (cls._is_prep_data, cls._convert_prep)
         ]
 
     """ Static """
 
     @classmethod
-    def _get_term(cls, key, value):
+    def _convert_term(cls, key, value):
         data = MsgPackForDB.loads(value)
         return f"Term (bytes: {key})", data
 
     @classmethod
-    def _get_prep_registration_fee(cls, key, value):
+    def _convert_prep_registration_fee(cls, key, value):
         data = MsgPackForDB.loads(value)
         version: int = data[0]
         assert version == 0
@@ -269,17 +269,17 @@ class PrepMethod(Method):
         return False
 
     @classmethod
-    def _get_prep(cls, key, value):
+    def _convert_prep(cls, key, value):
         prep_address = Address.from_bytes(key[len(PRep.PREFIX):])
         return f"Prep: {prep_address}", PRep.from_bytes(value)
 
 
-class IISSMethod(Method):
+class IISSConverter(Converter):
     @classmethod
     def get_static_key_convert_methods(cls) -> list:
         return [
-            (IISSStorage.IISS_META_DATA_KEY, cls.get_meta_data),
-            (IISSStorage.REWARD_RATE_KEY, cls.get_reward_rate),
+            (IISSStorage.IISS_META_DATA_KEY, cls._convert_meta_data),
+            (IISSStorage.REWARD_RATE_KEY, cls._convert_reward_rate),
             # IISSStorage.TOTAL_STAKE_KEY,
             # IISSStorage.CALC_END_BLOCK_HEIGHT_KEY,
             # IISSStorage.CALC_PERIOD_KEY
@@ -290,62 +290,17 @@ class IISSMethod(Method):
         return []
 
     @classmethod
-    def get_meta_data(cls, key, value):
+    def _convert_total_stake(cls, key, value):
+        pass
+
+    @classmethod
+    def _convert_calc_end_block_height(cls, key, value):
+        pass
+
+    @classmethod
+    def _convert_meta_data(cls, key, value):
         return key, IISSMetaData.from_bytes(value)
 
     @classmethod
-    def get_reward_rate(cls, key, value):
+    def _convert_reward_rate(cls, key, value):
         return key, RewardRate.from_bytes(value)
-
-
-class StaticKeyConverter:
-    def __init__(self):
-        self._mapper = {}
-
-    def register(self, key: bytes, value_converter: callable):
-        self._mapper[key] = value_converter
-
-    def convert(self, key: bytes, value: bytes):
-        try:
-            return self._mapper[key](key, value)
-        except KeyError:
-            raise NotMatchException()
-
-
-class FlexibleKeyConverter:
-    def __init__(self):
-        self._detector_converter_pairs = []
-
-    def register(self, key_detector: callable, value_converter: callable):
-        self._detector_converter_pairs.append((key_detector, value_converter))
-
-    def convert(self, key: bytes, value: bytes) -> Any:
-        for detector, converter in self._detector_converter_pairs:
-            if detector(key) is True:
-                return converter(key, value)
-        else:
-            raise NotMatchException()
-
-
-class Converter:
-    def __init__(self):
-        self._static_key_converter = StaticKeyConverter()
-        self._flexible_key_converter = FlexibleKeyConverter()
-        for method_ in Method.__subclasses__():
-            for key, converter in method_.get_static_key_convert_methods():
-                self._static_key_converter.register(key, converter)
-
-            for key_detector, converter in method_.get_flexible_key_convert_methods():
-                self._flexible_key_converter.register(key_detector, converter)
-
-    def convert(self, key: bytes, value: bytes):
-        # Todo: check the minimum requirements
-        try:
-            converted_key, converted_value = self._static_key_converter.convert(key, value)
-        except NotMatchException:
-            try:
-                converted_key, converted_value = self._flexible_key_converter.convert(key, value)
-            except NotMatchException:
-                # print("Converter not found")
-                converted_key, converted_value = key, value
-        return converted_key, converted_value
