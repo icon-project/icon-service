@@ -67,3 +67,16 @@ default_icon_config = {
     ConfigKey.BLOCK_INVOKE_TIMEOUT: BLOCK_INVOKE_TIMEOUT_S,
     ConfigKey.TBEARS_MODE: False,
 }
+
+
+def remove_invalid_conf_fields(src_conf: dict, conf: dict):
+    invalid_fields = []
+    for key in src_conf:
+        if key not in conf:
+            invalid_fields.append(key)
+        elif isinstance(conf[key], dict):
+            src_config = src_conf.get(key, {})
+            remove_invalid_conf_fields(src_config, conf[key])
+
+    for field in invalid_fields:
+        src_conf.pop(field)

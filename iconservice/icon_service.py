@@ -169,7 +169,6 @@ def main():
     conf.load()
     conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
-    Logger.print_config(conf, ICON_SERVICE_CLI)
 
     _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
