@@ -18,7 +18,7 @@ from typing import Optional, Tuple, TYPE_CHECKING
 from iconcommons import Logger
 
 from ...base.exception import FatalException
-from ...icon_constant import ISCORE_EXCHANGE_RATE, IISS_LOG_TAG
+from ...icon_constant import ISCORE_EXCHANGE_RATE, IISS_LOG_TAG, IconScoreContextType
 
 if TYPE_CHECKING:
     from .storage import RegulatorVariable
@@ -58,7 +58,13 @@ class Regulator:
         # Update current calculated period total issued icx
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
-        if end_block_height_of_calc == context.block.height - 1:
+
+        if context.type == IconScoreContextType.INVOKE:
+            current_block_height: int = context.block.height
+        else:
+            current_block_height: int = context.block.height + 1
+
+        if end_block_height_of_calc == current_block_height:
             prev_calc_period_issued_iscore, _, _ = context.storage.rc.get_calc_response_from_rc()
 
             assert prev_calc_period_issued_iscore >= 0
@@ -86,7 +92,7 @@ class Regulator:
         self._covered_icx_by_fee = covered_icx_by_fee
         self._covered_icx_by_remain = covered_icx_by_remain
         self._corrected_icx_issue_amount = corrected_icx_issue_amount
-        Logger.info(f"Regulate BH: {context.block.height} "
+        Logger.info(f"Regulate BH: {current_block_height} "
                     f"Covered by fee: {self._covered_icx_by_fee} "
                     f"Covered by remain: {self._covered_icx_by_remain} "
                     f"Corrected issue amount {self._corrected_icx_issue_amount}"
