@@ -272,7 +272,8 @@ class IconPreValidator:
         if 'action' not in data:
             raise InvalidRequestException('Action not found')
 
-    def _validate_new_score_address_on_deploy_transaction(self, context: 'IconScoreContext', params: dict):
+    @classmethod
+    def _validate_new_score_address_on_deploy_transaction(cls, context: 'IconScoreContext', params: dict):
         """Check if a newly generated score address is available
         Assume that data_type is 'deploy'
 
@@ -308,7 +309,8 @@ class IconPreValidator:
         except BaseException as e:
             raise e
 
-    def _check_balance(self, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
+    @classmethod
+    def _check_balance(cls, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
         balance = context.engine.icx.get_balance(context, from_)
 
         if balance < value + fee:
@@ -322,7 +324,8 @@ class IconPreValidator:
         _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
         return _is_inactive_score
 
-    def _is_score_active(self, context: 'IconScoreContext', address: 'Address') -> bool:
+    @classmethod
+    def _is_score_active(cls, context: 'IconScoreContext', address: 'Address') -> bool:
         deploy_info: 'IconScoreDeployInfo' = context.storage.deploy.get_deploy_info(context, address)
 
         if deploy_info is None:

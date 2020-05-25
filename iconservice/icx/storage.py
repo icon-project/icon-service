@@ -19,6 +19,7 @@ from enum import IntEnum, IntFlag
 from typing import TYPE_CHECKING, Optional, Union
 
 from iconcommons import Logger
+
 from .coin_part import CoinPart, CoinPartFlag, CoinPartType
 from .delegation_part import DelegationPart
 from .icx_account import Account
@@ -295,6 +296,9 @@ class Storage(StorageBase):
                   address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
         key: bytes = part_class.make_key(address)
         value: bytes = self._db.get(context, key)
+
+        if value is None and part_class is CoinPart:
+            Logger.info(tag=ICX_LOG_TAG, msg=f"No CoinPart: {str(address)}")
 
         return part_class.from_bytes(value) if value else part_class()
 
