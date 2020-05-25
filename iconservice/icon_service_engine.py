@@ -42,7 +42,6 @@ from .database.wal import WriteAheadLogReader, WALDBType
 from .database.wal import WriteAheadLogWriter, IissWAL, StateWAL, WALState
 from .deploy import DeployEngine, DeployStorage
 from .fee import FeeEngine, FeeStorage, DepositHandler
-from .icon_config import remove_invalid_conf_fields, default_icon_config
 from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
     Revision, BASE_TRANSACTION_INDEX,
@@ -134,8 +133,6 @@ class IconServiceEngine(ContextContainer):
 
         :param conf:
         """
-        remove_invalid_conf_fields(conf, default_icon_config)
-        Logger.print_config(conf, _TAG)
 
         service_config_flag = self._make_service_flag(conf[ConfigKey.SERVICE])
         score_root_path: str = conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')

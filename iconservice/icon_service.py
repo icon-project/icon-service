@@ -27,7 +27,7 @@ from earlgrey import MessageQueueService, aio_pika
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
 from iconservice.base.exception import FatalException
-from iconservice.icon_config import default_icon_config
+from iconservice.icon_config import default_icon_config, normalize_input_config_fields
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_service_cli import ICON_SERVICE_CLI, ExitCode
@@ -168,6 +168,12 @@ def main():
     conf = IconConfig(conf_path, default_icon_config)
     conf.load()
     conf.update_conf(dict(vars(args)))
+    ret = normalize_input_config_fields(conf, default_icon_config)
+    if ret is False:
+        Logger.error(f"invalid configuration passed", _TAG)
+        sys.exit(ExitCode.INVALID_CONFIG.value)
+
+    Logger.print_config(conf, _TAG)
     Logger.load_config(conf)
 
     _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
