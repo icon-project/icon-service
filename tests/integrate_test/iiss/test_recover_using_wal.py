@@ -117,7 +117,7 @@ class TestRecoverUsingWAL(TestIISSBase):
         wal_writer.flush()
 
     def _get_last_block_from_icon_service(self) -> int:
-        return self.icon_service_engine._get_last_block().height
+        return self.get_last_block().height
 
     def _get_commit_context(self, block: 'Block'):
         return self.icon_service_engine._context_factory.create(

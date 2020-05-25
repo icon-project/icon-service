@@ -479,10 +479,10 @@ class IconServiceEngine(ContextContainer):
                 context.storage.iiss.put_calc_period(context, context.term_period)
 
         next_preps, term, rc_state_hash, current_reps_hash = self._after_transaction_process(
-            context,
-            rc_db_revision,
-            prev_block_generator,
-            prev_block_votes
+            context=context,
+            rc_db_revision=rc_db_revision,
+            prev_block_generator=prev_block_generator,
+            prev_block_votes=prev_block_votes
         )
 
         # Save precommit data
@@ -494,7 +494,7 @@ class IconServiceEngine(ContextContainer):
                                        block_result,
                                        context.rc_block_batch,
                                        context.preps,
-                                       term,
+                                       term if term else context.term,
                                        prev_block_generator,
                                        prev_block_validators,
                                        context.new_icon_score_mapper,
@@ -677,23 +677,25 @@ class IconServiceEngine(ContextContainer):
         :return: (next_preps, term, rc_state_hash)
         """
 
-        next_preps, new_term, curr_preps_hash = context.engine.prep.on_block_invoked(
-            context, bool(context.revision_changed_flag & RevisionChangedFlag.DECENTRALIZATION))
+        updated_preps, updated_term, curr_preps_hash = context.engine.prep.on_block_invoked(
+            context=context,
+            is_first_term=bool(context.revision_changed_flag & RevisionChangedFlag.DECENTRALIZATION)
+        )
 
         rc_state_hash: Optional[bytes] = None
         if context.revision >= Revision.IISS.value:
             rc_state_hash: Optional[bytes] = context.engine.iiss.update_db(context,
-                                                                           new_term,
+                                                                           updated_term,
                                                                            prev_block_generator,
                                                                            prev_block_votes,
                                                                            rc_db_revision)
         context.update_batch()
         context.storage.meta.put_prep_address_converter(context, context.prep_address_converter)
 
-        if next_preps is not None:
-            Logger.info(tag="TERM", msg=f"{next_preps}")
+        if updated_preps is not None:
+            Logger.info(tag="TERM", msg=f"{updated_preps}")
 
-        return next_preps, new_term, rc_state_hash, curr_preps_hash
+        return updated_preps, updated_term, rc_state_hash, curr_preps_hash
 
     @classmethod
     def _update_productivity(cls,

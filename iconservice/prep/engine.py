@@ -256,32 +256,37 @@ class Engine(EngineBase, IISSEngineListener):
     def on_block_invoked(
             self,
             context: 'IconScoreContext',
-            is_decentralization_started: bool) -> Tuple[Optional[dict], Optional['Term'], Optional[bytes]]:
+            is_first_term: bool) -> Tuple[Optional[dict], Optional['Term'], Optional[bytes]]:
         """Called on IconServiceEngine._after_transaction_process()
 
         1. Adjust the grade for invalid P-Reps
         2. Update elected P-Reps in this term
 
         :param context:
-        :param is_decentralization_started:
+        :param is_first_term:
             True: Decentralization will begin at the next block
         :return:
         """
 
-        if is_decentralization_started or self._is_term_ended(context):
+        if is_first_term or self._is_term_ended(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
-            next_preps, new_term, curr_preps_hash = self._on_term_ended(context)
+            updated_preps, updated_term = self._on_term_ended(context, is_first_term)
         elif context.is_decentralized():
             # In-term P-Rep replacement
-            next_preps, new_term, curr_preps_hash = self._on_term_updated(context)
+            updated_preps, updated_term = self._on_term_updated(context)
         else:
-            next_preps, new_term, curr_preps_hash = None, None, None
+            return None, None, None
 
-        if new_term:
-            self._update_prep_grades(context, context.preps, self.term, new_term)
-            context.storage.prep.put_term(context, new_term)
+        if updated_term:
+            self._update_prep_grades(context, context.preps, self.term, updated_term)
+            context.storage.prep.put_term(context, updated_term)
 
-        return next_preps, new_term, curr_preps_hash
+        if is_first_term:
+            curr_preps_hash: bytes = updated_term.root_hash
+        else:
+            curr_preps_hash: bytes = self.term.root_hash
+
+        return updated_preps, updated_term, curr_preps_hash
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
@@ -289,20 +294,20 @@ class Engine(EngineBase, IISSEngineListener):
 
         return context.block.height == self.term.end_block_height
 
-    def _on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term', bytes]:
+    def _on_term_ended(self, context: 'IconScoreContext', is_first_term: bool) -> Tuple[dict, 'Term']:
         """Called in IconServiceEngine.invoke() every time when a term is ended
 
         Update P-Rep grades according to PRep.delegated
         """
+
         self._put_last_term_info(context, self.term)
 
-        if self.term:
-            main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
-        else:
+        if is_first_term:
             # first term
-            new_preps: List['PRep'] = context.preps.get_preps(start_index=0,
-                                                              size=context.main_prep_count)
+            new_preps: List['PRep'] = context.preps.get_preps(start_index=0, size=context.main_prep_count)
             main_preps: List['Address'] = [prep.address for prep in new_preps]
+        else:
+            main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
 
         context.storage.meta.put_last_main_preps(context, main_preps)
 
@@ -318,13 +323,7 @@ class Engine(EngineBase, IISSEngineListener):
         )
 
         Logger.debug(tag=_TAG, msg=f"{new_term}")
-
-        if self.term:
-            curr_preps_hash: bytes = self.term.root_hash
-        else:
-            curr_preps_hash: bytes = new_term.root_hash
-
-        return next_preps, new_term, curr_preps_hash
+        return next_preps, new_term
 
     @classmethod
     def _put_last_term_info(cls, context: 'IconScoreContext', term: 'Term'):
@@ -340,7 +339,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         context.storage.meta.put_last_term_info(context, start, end)
 
-    def _on_term_updated(self, context: 'IconScoreContext') -> Tuple[Optional[dict], Optional['Term'], bytes]:
+    def _on_term_updated(self, context: 'IconScoreContext') -> Tuple[Optional[dict], Optional[Term]]:
         """Update term with invalid elected P-Rep list during this term
         (In-term P-Rep replacement)
 
@@ -366,22 +365,22 @@ class Engine(EngineBase, IISSEngineListener):
         main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         context.storage.meta.put_last_main_preps(context, main_preps)
 
-        new_term = context.term
-        if not new_term.is_dirty():
-            return None, new_term, context.term.root_hash
+        updated_term = context.term
+        if not updated_term.is_dirty():
+            return None, None
 
-        if bool(new_term.flags & (TermFlag.MAIN_PREPS |
-                                  TermFlag.MAIN_PREP_P2P_ENDPOINT |
-                                  TermFlag.MAIN_PREP_NODE_ADDRESS)):
+        if bool(updated_term.flags & (TermFlag.MAIN_PREPS |
+                                      TermFlag.MAIN_PREP_P2P_ENDPOINT |
+                                      TermFlag.MAIN_PREP_NODE_ADDRESS)):
             next_preps = self._get_updated_main_preps(
                 context=context,
-                term=new_term,
+                term=updated_term,
                 state=PRepResultState.IN_TERM_UPDATED
             )
         else:
             next_preps = None
 
-        return next_preps, new_term, context.term.root_hash
+        return next_preps, updated_term
 
     @classmethod
     def _update_prep_grades(cls,
