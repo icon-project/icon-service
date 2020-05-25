@@ -69,14 +69,24 @@ default_icon_config = {
 }
 
 
-def remove_invalid_conf_fields(src_conf: dict, conf: dict):
+def normalize_input_config_fields(src_conf: dict, conf: dict) -> bool:
+    """normalize icon configuration input.
+    Returns True if succeeded to normalize and returns False if failed.
+    Remove nonexistent keys in default config.
+    """
     invalid_fields = []
     for key in src_conf:
         if key not in conf:
             invalid_fields.append(key)
+        elif isinstance(src_conf[key], type(conf[key])) is False:
+            return False
         elif isinstance(conf[key], dict):
             src_config = src_conf.get(key, {})
-            remove_invalid_conf_fields(src_config, conf[key])
+            ret = normalize_input_config_fields(src_config, conf[key])
+            if ret is False:
+                return ret
 
     for field in invalid_fields:
         src_conf.pop(field)
+
+    return True

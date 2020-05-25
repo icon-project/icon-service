@@ -36,6 +36,7 @@ ICON_SERVICE_CLI = 'IconServiceCli'
 class ExitCode(IntEnum):
     SUCCEEDED = 0
     COMMAND_IS_WRONG = 1
+    INVALID_CONFIG = 2
 
 
 def main():
