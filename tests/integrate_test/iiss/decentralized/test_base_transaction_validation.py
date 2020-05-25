@@ -333,6 +333,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         #   - total beta2 (per period) = 38,580,246,913,580,200,000
         #   - total beta3 (per period) = 14,647,923,888,888,900,000
         prev_cumulative_fee = 1000000000000000
+        expected_issue_amount = 3085791256172839450
 
         # This mocked method is used for testing the first term after the decentralization
         def mock_calculated(_self, _path, _block_height):
@@ -356,7 +357,6 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         iscore_diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
 
-        expected_issue_amount = 3085791256172839450
         response_iscore = \
             expected_issue_amount * self.CALC_PERIOD * ISCORE_EXCHANGE_RATE - iscore_diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * self.CALC_PERIOD) - \
