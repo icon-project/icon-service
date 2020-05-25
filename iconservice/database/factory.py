@@ -16,7 +16,9 @@
 
 
 import os
+import threading
 from enum import IntEnum
+from typing import Optional
 
 from .db import KeyValueDatabase, ContextDatabase
 from ..base.address import Address
@@ -31,7 +33,7 @@ class ContextDatabaseFactory(object):
 
     _state_db_root_path: str = None
     _mode: 'Mode' = Mode.SINGLE_DB
-    _shared_context_db: 'ContextDatabase' = None
+    _shared_context_db: Optional['ContextDatabase'] = None
 
     @classmethod
     def open(cls, state_db_root_path: str, mode: 'Mode'):
@@ -44,7 +46,8 @@ class ContextDatabaseFactory(object):
     def get_shared_db(cls) -> ContextDatabase:
         if cls._shared_context_db is None:
             path = os.path.join(cls._state_db_root_path, ICON_DEX_DB_NAME)
-            key_value_db = KeyValueDatabase.from_path(path)
+            # Apply mutex to KeyValueDatabase
+            key_value_db = KeyValueDatabase.from_path(path, lock=threading.Lock())
             cls._shared_context_db = ContextDatabase(
                 key_value_db, is_shared=True)
 

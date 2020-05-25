@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import threading
 # Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,24 +41,50 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
         return not context.readonly
 
 
+class _Lock(object):
+    """Lock wrapper to make KeyValueDatabase thread-safe
+    """
+    def __init__(self, lock: Optional[threading.Lock]):
+        self._lock = threading.Lock() if lock else None
+
+    @property
+    def enabled(self) -> bool:
+        return self._lock is not None
+
+    @property
+    def threading_lock(self) -> Optional[threading.Lock]:
+        return self._lock
+
+    def __enter__(self):
+        if self.enabled:
+            self._lock.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.enabled:
+            self._lock.release()
+
+
 class KeyValueDatabase(object):
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool = True) -> 'KeyValueDatabase':
+                  create_if_missing: bool = True,
+                  lock: Optional[threading.Lock] = None) -> 'KeyValueDatabase':
         """
 
         :param path: db path
         :param create_if_missing:
+        :param lock:
         :return: KeyValueDatabase instance
         """
         db = plyvel.DB(path, create_if_missing=create_if_missing)
-        return KeyValueDatabase(db)
+        return KeyValueDatabase(db, lock=lock)
 
-    def __init__(self, db: plyvel.DB) -> None:
+    def __init__(self, db: plyvel.DB, lock: Optional[threading.Lock] = None) -> None:
         """Constructor
 
         :param db: plyvel db instance
         """
+        self._lock = _Lock(lock)
         self._db = db
 
     def get(self, key: bytes) -> bytes:
@@ -66,7 +93,8 @@ class KeyValueDatabase(object):
         :param key: (bytes): key to retrieve
         :return: value for the specified key, or None if not found
         """
-        return self._db.get(key)
+        with self._lock:
+            return self._db.get(key)
 
     def put(self, key: bytes, value: bytes) -> None:
         """Set a value for the specified key.
@@ -74,20 +102,23 @@ class KeyValueDatabase(object):
         :param key: (bytes): key to set
         :param value: (bytes): data to be stored
         """
-        self._db.put(key, value)
+        with self._lock:
+            self._db.put(key, value)
 
     def delete(self, key: bytes) -> None:
         """Delete the key/value pair for the specified key.
 
         :param key: key to delete
         """
-        self._db.delete(key)
+        with self._lock:
+            self._db.delete(key)
 
     def close(self) -> None:
         """Close the database.
         """
         if self._db:
-            self._db.close()
+            with self._lock:
+                self._db.close()
             self._db = None
 
     def get_sub_db(self, prefix: bytes) -> 'KeyValueDatabase':
@@ -95,10 +126,15 @@ class KeyValueDatabase(object):
 
         :param prefix: (bytes): prefix to use
         """
-        return KeyValueDatabase(self._db.prefixed_db(prefix))
+        with self._lock:
+            prefixed_db = self._db.prefixed_db(prefix)
+
+        return KeyValueDatabase(db=prefixed_db, lock=self._lock.threading_lock)
 
     def iterator(self) -> iter:
-        return self._db.iterator()
+        # TODO: How can we ensure iterator() is thread-safe?
+        with self._lock:
+            return self._db.iterator()
 
     def write_batch(self, it: Iterable[Tuple[bytes, Optional[bytes]]]) -> int:
         """Write a batch to the database for the specified states dict.
@@ -113,14 +149,18 @@ class KeyValueDatabase(object):
         if it is None:
             return size
 
-        with self._db.write_batch() as wb:
-            for key, value in it:
-                if value:
-                    wb.put(key, value)
-                else:
-                    wb.delete(key)
+        wb = self._db.write_batch()
+        for key, value in it:
+            if value:
+                wb.put(key, value)
+            else:
+                wb.delete(key)
 
-                size += 1
+            size += 1
+
+        with self._lock:
+            wb.write()
+        wb.clear()
 
         return size
 
@@ -323,8 +363,9 @@ class ContextDatabase(object):
 
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool = True) -> 'ContextDatabase':
-        db = KeyValueDatabase.from_path(path, create_if_missing)
+                  create_if_missing: bool = True,
+                  lock: Optional[threading.Lock] = None) -> 'ContextDatabase':
+        db = KeyValueDatabase.from_path(path, create_if_missing, lock)
         return ContextDatabase(db)
 
 
@@ -353,8 +394,9 @@ class MetaContextDatabase(ContextDatabase):
 
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool = True) -> 'MetaContextDatabase':
-        db = KeyValueDatabase.from_path(path, create_if_missing)
+                  create_if_missing: bool = True,
+                  lock: Optional[threading.Lock] = None) -> 'MetaContextDatabase':
+        db = KeyValueDatabase.from_path(path, create_if_missing, lock)
         return MetaContextDatabase(db)
 
 
