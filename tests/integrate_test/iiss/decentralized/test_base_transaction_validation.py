@@ -174,7 +174,6 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
     def test_validate_base_transaction_position(self):
         self._init_decentralized()
-        # isBlockEditable is false in this method
         issue_data, total_issue_amount = self._make_issue_info()
 
         # failure case: when first transaction is not a issue transaction, should raise error
@@ -267,72 +266,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                 self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
                 data[key] = temp
 
-    def test_validate_base_transaction_value_editable_block(self):
-        self._init_decentralized()
-        issue_data, total_issue_amount = self._make_issue_info()
-
-        expected_step_price = 0
-        expected_step_used = 0
-        expected_prev_fee = 1000000000000000
-
-        # failure case: when issue transaction invoked even though isBlockEditable is true, should raise error
-        # case of isBlockEditable is True
-        before_total_supply = self._query({}, "icx_getTotalSupply")
-        before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
-
-        base_transaction = self._create_base_transaction()
-
-        tx_list = [
-            base_transaction,
-            self._create_dummy_tx(),
-            self._create_dummy_tx()
-        ]
-        self.assertRaises(KeyError,
-                          self._make_and_req_block_for_issue_test,
-                          tx_list, None, None, None, None, 0)
-
-        # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
-        # case of isBlockEditable is True
-        tx_list = [
-            self._create_dummy_tx(),
-            self._create_dummy_tx()
-        ]
-        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list)
-        self._write_precommit_state(prev_block)
-        tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-        expected_tx_status = 1
-        expected_failure = None
-        expected_trace = []
-        self.assertEqual(expected_tx_status, tx_results[0].status)
-        self.assertEqual(expected_failure, tx_results[0].failure)
-        self.assertEqual(expected_step_price, tx_results[0].step_price)
-        self.assertEqual(expected_step_used, tx_results[0].step_used)
-        self.assertEqual(expected_trace, tx_results[0].traces)
-
-        for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
-            if group_key not in issue_data:
-                continue
-            expected_score_address = SYSTEM_SCORE_ADDRESS
-            expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
-            expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
-            self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
-            self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
-            self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
-
-        # event log about correction
-        self.assertEqual(expected_prev_fee, tx_results[0].event_logs[1].data[0])
-        self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-        self.assertEqual(total_issue_amount - expected_prev_fee, tx_results[0].event_logs[1].data[2])
-        self.assertEqual(0, tx_results[0].event_logs[1].data[3])
-
-        after_total_supply = self._query({}, "icx_getTotalSupply")
-        after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
-
-        self.assertEqual(before_total_supply + total_issue_amount - expected_prev_fee, after_total_supply)
-        self.assertEqual(before_treasury_icx_amount + total_issue_amount - expected_prev_fee,
-                         after_treasury_icx_amount - tx_results[-1].cumulative_step_used * tx_results[-1].step_price)
-
-    def test_validate_base_transaction_value_not_editable_block(self):
+    def test_validate_base_transaction_value(self):
         self._init_decentralized()
         issue_data, total_issue_amount = self._make_issue_info()
 
@@ -341,7 +275,6 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         expected_prev_fee = 1000000000000000
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
-        # case of isBlockEditable is False
         before_total_supply = self._query({}, "icx_getTotalSupply")
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
         base_transaction = self._create_base_transaction()
@@ -387,12 +320,23 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                          after_treasury_icx_amount - tx_results[-1].cumulative_step_used * tx_results[-1].step_price)
 
     def test_validate_base_transaction_value_corrected_issue_amount(self):
-        # arbitrary iscore date
-        calculate_response_iscore_of_last_calc_period = 5000000000000000000000000000
+        # Total supply = 800,460,000,000,000,000,000,000,000
+        # Calc period = 20
+        # Main prep count 22
+        # Irep = 50,000,000,000,000,000,000,000 (50,000 * ICX in loop)
+        # Total delegation amount on all preps = 35,220,240,000,000,000,000,000,000
 
+        # Under these conditions
+        # - Irep should be 1078
+        # - Issue amount per block should be 3,085,791,256,172,839,450
+        #   - total beta1 (per period) = 8,487,654,320,987,650,000
+        #   - total beta2 (per period) = 38,580,246,913,580,200,000
+        #   - total beta3 (per period) = 14,647,923,888,888,900,000
         prev_cumulative_fee = 1000000000000000
 
+        # This mocked method is used for testing the first term after the decentralization
         def mock_calculated(_self, _path, _block_height):
+            calculate_response_iscore_of_last_calc_period = 5000000000000000000000000000
             context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
             end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
             calc_period: int = context.storage.iiss.get_calc_period(context)
@@ -461,8 +405,8 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
                     self.assertEqual(expected_start_block, actual_start_block)
                     self.assertEqual(expected_end_block, actual_end_block)
 
-                # Test about first term end (should not regulate issue amount)
                 if term == 0 and bh_in_term == next_calc + self.CALC_PERIOD - 1:
+                    # Test: should not regulate issue amount about the first term
                     self.assertEqual(prev_cumulative_fee, actual_covered_by_fee)
                     self.assertEqual(0, actual_covered_by_remain)
                     self.assertEqual(prev_cumulative_fee + actual_issue_amount, issue_amount)
