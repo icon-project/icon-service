@@ -108,7 +108,10 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def close(self):
         Logger.info(tag=_TAG, msg="close() stop event loop")
+        self._close()
 
+    @staticmethod
+    def _close():
         asyncio.get_event_loop().stop()
 
     @message_queue_task
@@ -178,7 +181,7 @@ class IconScoreInnerTask(object):
         except FatalException as e:
             self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-            self.close()
+            self._close()
         except InvalidBaseTransactionException as e:
             self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
@@ -299,7 +302,7 @@ class IconScoreInnerTask(object):
         except FatalException as e:
             self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-            self.close()
+            self._close()
         except IconServiceBaseException as icon_e:
             self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
@@ -358,7 +361,7 @@ class IconScoreInnerTask(object):
         except FatalException as e:
             self._log_exception(e, _TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-            self.close()
+            self._close()
         except IconServiceBaseException as icon_e:
             self._log_exception(icon_e, _TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)

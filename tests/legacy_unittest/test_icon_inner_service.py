@@ -29,7 +29,7 @@ from tests import create_block_hash
 class TestIconInnerService(unittest.TestCase):
     def setUp(self):
         self.icon_inner_task_open_patcher = patch('iconservice.icon_inner_service.IconScoreInnerTask._open')
-        self.icon_inner_task_close_patcher = patch('iconservice.icon_inner_service.IconScoreInnerTask.close')
+        self.icon_inner_task_close_patcher = patch('iconservice.icon_inner_service.IconScoreInnerTask._close')
         _ = self.icon_inner_task_open_patcher.start()
         _ = self.icon_inner_task_close_patcher.start()
 
@@ -85,9 +85,9 @@ class TestIconInnerService(unittest.TestCase):
         response = self.inner_task._invoke(self.mocked_invoke_request)
         assert expected_error_code, response['error']['code']
         assert expected_error_msg, response['error']['message']
-        assert self.inner_task.close.called
+        assert self.inner_task._close.called
 
-        self.inner_task.close.reset_mock()
+        self.inner_task._close.reset_mock()
 
         # success case: when other exception having been raised, error response should be returned
         for exception in self.exception_list:
@@ -104,8 +104,8 @@ class TestIconInnerService(unittest.TestCase):
             self.inner_task._icon_service_engine.invoke = mocked_invoke
             response = self.inner_task._invoke(self.mocked_invoke_request)
             assert expected_error_msg, response['error']['message']
-            assert not self.inner_task.close.called
-            self.inner_task.close.reset_mock()
+            assert not self.inner_task._close.called
+            self.inner_task._close.reset_mock()
 
     def test_fatal_exception_catch_on_write_precommit_state(self):
         # success case: when FatalException having been raised on write_precommit_state,
@@ -120,9 +120,9 @@ class TestIconInnerService(unittest.TestCase):
         response = self.inner_task._write_precommit_state(self.mocked_write_precommit_request)
         assert expected_error_code, response['error']['code']
         assert expected_error_msg, response['error']['message']
-        assert self.inner_task.close.called
+        assert self.inner_task._close.called
 
-        self.inner_task.close.reset_mock()
+        self.inner_task._close.reset_mock()
 
         # success case: when other exception having been raised, error response should be returned
         for exception in self.exception_list:
@@ -134,8 +134,8 @@ class TestIconInnerService(unittest.TestCase):
             self.inner_task._icon_service_engine.invoke = mocked_write_precommit
             response = self.inner_task._invoke(self.mocked_write_precommit_request)
             assert expected_error_msg, response['error']['message']
-            assert not self.inner_task.close.called
-            self.inner_task.close.reset_mock()
+            assert not self.inner_task._close.called
+            self.inner_task._close.reset_mock()
 
     def test_fatal_exception_catch_on_query_thread(self):
         # query thread: query
@@ -153,9 +153,9 @@ class TestIconInnerService(unittest.TestCase):
         response = self.inner_task._query(self.mocked_query_request)
         assert expected_error_code, response['error']['code']
         assert expected_error_msg, response['error']['message']
-        assert not self.inner_task.close.called
+        assert not self.inner_task._close.called
 
-        self.inner_task.close.reset_mock()
+        self.inner_task._close.reset_mock()
 
         # success case: when other exception having been raised, error response should be returned
         for exception in self.exception_list:
@@ -168,5 +168,5 @@ class TestIconInnerService(unittest.TestCase):
             self.inner_task._icon_service_engine.invoke = mocked_query
             response = self.inner_task._query(self.mocked_query_request)
             assert expected_error_msg, response['error']['message']
-            assert not self.inner_task.close.called
-            self.inner_task.close.reset_mock()
+            assert not self.inner_task._close.called
+            self.inner_task._close.reset_mock()
