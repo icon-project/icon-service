@@ -69,24 +69,53 @@ default_icon_config = {
 }
 
 
-def normalize_input_config_fields(src_conf: dict, conf: dict) -> bool:
+def normalize_input_config_fields(src_conf: dict, default_conf: dict) -> (bool, dict):
     """normalize icon configuration input.
-    Returns True if succeeded to normalize and returns False if failed.
+    Returns (True, dict) if succeeded to normalize and returns (False, dict) if failed.
     Remove nonexistent keys in default config.
     """
-    invalid_fields = []
+    invalid_key_info, invalid_input_info = [], []
+    update_invalid_key_info(src_conf, default_conf, invalid_key_info)
+    update_invalid_input_info(src_conf, default_conf, invalid_input_info)
+    is_success = True if invalid_input_info == [] else False
+    invalid_fields_info = {
+        "invalidKeys": invalid_key_info,
+        "invalidInputs": invalid_input_info
+    }
+    remove_invalid_keys(src_conf, invalid_key_info)
+    return is_success, invalid_fields_info
+
+
+def update_invalid_key_info(src_conf: dict, default_conf: dict, invalid_key_info: list):
     for key in src_conf:
-        if key not in conf:
-            invalid_fields.append(key)
-        elif isinstance(src_conf[key], type(conf[key])) is False:
-            return False
-        elif isinstance(conf[key], dict):
+        if key not in default_conf:
+            invalid_key_info.append(key)
+        elif isinstance(default_conf.get(key), dict):
             src_config = src_conf.get(key, {})
-            ret = normalize_input_config_fields(src_config, conf[key])
-            if ret is False:
-                return ret
+            nested_invalid_info = {key: []}
+            update_invalid_key_info(src_config, default_conf[key], nested_invalid_info[key])
+            if nested_invalid_info[key]:
+                invalid_key_info.append(nested_invalid_info)
 
-    for field in invalid_fields:
-        src_conf.pop(field)
 
-    return True
+def update_invalid_input_info(src_conf: dict, default_conf: dict, invalid_input_info: list):
+    for key in src_conf:
+        default_conf_value = default_conf.get(key)
+        if isinstance(default_conf_value, dict):
+            src_config = src_conf.get(key, {})
+            nested_invalid_info = {key: []}
+            update_invalid_input_info(src_config, default_conf_value, nested_invalid_info[key])
+            if nested_invalid_info[key]:
+                invalid_input_info.append(nested_invalid_info)
+        elif default_conf_value is not None and not isinstance(src_conf[key], type(default_conf_value)):
+            invalid_input_info.append(key)
+
+
+def remove_invalid_keys(icon_config: dict, invalid_key_info: list):
+    for element in invalid_key_info:
+        if isinstance(element, dict):
+            for dict_key in element:
+                remove_invalid_keys(icon_config.get(dict_key, {}), element[dict_key])
+        else:
+            if icon_config.get(element) is not None:
+                icon_config.pop(element)

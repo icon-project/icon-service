@@ -17,6 +17,8 @@
 import argparse
 import asyncio
 import os
+from copy import deepcopy
+
 import setproctitle
 import signal
 import sys
@@ -165,16 +167,16 @@ def main():
     if conf_path is None:
         conf_path = str()
 
-    conf = IconConfig(conf_path, default_icon_config)
+    conf = IconConfig(conf_path, deepcopy(default_icon_config))
     conf.load()
     conf.update_conf(dict(vars(args)))
-    ret = normalize_input_config_fields(conf, default_icon_config)
+    Logger.load_config(conf)
+    ret, invalid_config_fields = normalize_input_config_fields(conf, default_icon_config)
     if ret is False:
-        Logger.error(f"invalid configuration passed", _TAG)
+        Logger.error(f"invalid configuration given : {invalid_config_fields}", _TAG)
         sys.exit(ExitCode.INVALID_CONFIG.value)
 
     Logger.print_config(conf, _TAG)
-    Logger.load_config(conf)
 
     _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
