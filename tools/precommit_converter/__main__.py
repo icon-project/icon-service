@@ -1,11 +1,11 @@
 import argparse
 from collections import OrderedDict
-from typing import List
+from typing import List, Tuple, Optional
 
 from tools.precommit_converter.convert_engine import ConvertEngine
 
 
-def extract_key_value_from_line(line: str):
+def extract_key_value_from_line(line: str) -> Tuple[Optional[bytes], Optional[bytes]]:
     """
     Extract key, value from the precommit text file
     If the format change, should fix this method
@@ -19,7 +19,10 @@ def extract_key_value_from_line(line: str):
             value = sliced_str[i + 1]
             if value[-1] == ",":
                 value = value[:len(value) - 1]
-            return bytes.fromhex(key), bytes.fromhex(value)
+            try:
+                return bytes.fromhex(key), bytes.fromhex(value)
+            except:
+                return None, None
     else:
         return None, None
 
@@ -34,15 +37,13 @@ def main():
     # Open the file
     convert_engine = ConvertEngine()
 
-    batches: dict = OrderedDict()
     # Todo: temporal logic for Test
-    with open("../precommit.txt", "rt") as f:
+    with open("../../precommit.txt", "rt") as f:
         # Collect the key, values
         lines: List[str] = f.readlines()
         for i, line in enumerate(lines):
             key, value = extract_key_value_from_line(line)
             if key is not None:
-                batches[key] = value
                 # Iter key, value and convert hex string -> bytes -> object
                 converted_key, converted_value = convert_engine.convert(key, value)
                 print(f"----------{i}-----------\n"

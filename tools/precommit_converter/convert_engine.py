@@ -1,60 +1,21 @@
-from typing import Any
+from typing import Any, List, Tuple, Union
 
-from tools.precommit_converter.converter import Converter
-
-
-class NotMatchException(Exception):
-    pass
-
-
-class StaticConverterController:
-    def __init__(self):
-        self._mapper = {}
-
-    def register(self, key: bytes, value_converter: callable):
-        self._mapper[key] = value_converter
-
-    def convert(self, key: bytes, value: bytes):
-        try:
-            return self._mapper[key](key, value)
-        except KeyError:
-            raise NotMatchException()
-
-
-class FlexibleConverterController:
-    def __init__(self):
-        self._detector_converter_pairs = []
-
-    def register(self, key_detector: callable, value_converter: callable):
-        self._detector_converter_pairs.append((key_detector, value_converter))
-
-    def convert(self, key: bytes, value: bytes) -> Any:
-        for detector, converter in self._detector_converter_pairs:
-            if detector(key) is True:
-                return converter(key, value)
-        else:
-            raise NotMatchException()
+from tools.precommit_converter.converter import Converter, NotMatchException
 
 
 class ConvertEngine:
     def __init__(self):
-        self._static_key_converter = StaticConverterController()
-        self._flexible_key_converter = FlexibleConverterController()
-        for method_ in Converter.__subclasses__():
-            for key, converter in method_.get_static_key_convert_methods():
-                self._static_key_converter.register(key, converter)
+        self._converters: List[Converter] = []
+        for converter in Converter.__subclasses__():
+            self._converters.append(converter())
 
-            for key_detector, converter in method_.get_flexible_key_convert_methods():
-                self._flexible_key_converter.register(key_detector, converter)
-
-    def convert(self, key: bytes, value: bytes):
-        # Todo: check the minimum requirements
-        try:
-            converted_key, converted_value = self._static_key_converter.convert(key, value)
-        except NotMatchException:
+    def convert(self, key: bytes, value: bytes) -> Tuple[Union[bytes, str], Union[bytes, str]]:
+        for converter in self._converters:
             try:
-                converted_key, converted_value = self._flexible_key_converter.convert(key, value)
+                converted_key, converted_value = converter.convert(key, value)
+                break
             except NotMatchException:
-                # print("Converter not found")
-                converted_key, converted_value = key, value
+                continue
+        else:
+            converted_key, converted_value = f"Hex: {key.hex()} Bytes: {key}", f"Hex: {value.hex()} Bytes: {value}"
         return converted_key, converted_value
