@@ -104,23 +104,28 @@ class IconScoreInnerTask(object):
     def _hello(self):
         return self._icon_service_engine.hello()
 
-    def _close(self):
-        Logger.info(tag=_TAG, msg="_close() start")
+    def cleanup(self):
+        Logger.info(tag=_TAG, msg="cleanup() start")
 
+        # shutdown thread pool executors
+        for executor in self._thread_pool.values():
+            executor.shutdown()
+
+        # close ICON Service
         if self._icon_service_engine:
             self._icon_service_engine.close()
             self._icon_service_engine = None
-        MessageQueueService.loop.stop()
 
-        Logger.info(tag=_TAG, msg="_close() end")
+        Logger.info(tag=_TAG, msg="cleanup() end")
 
     @message_queue_task
     async def close(self):
-        Logger.info(tag=_TAG, msg="close() start")
-
+        Logger.info(tag=_TAG, msg="close() stop event loop")
         self._close()
 
-        Logger.info(tag=_TAG, msg="close() end")
+    @staticmethod
+    def _close():
+        asyncio.get_event_loop().stop()
 
     @message_queue_task
     async def invoke(self, request: dict) -> dict:
@@ -337,6 +342,7 @@ class IconScoreInnerTask(object):
 
         self._check_icon_service_ready()
 
+
         """
         Unused API
         """
@@ -449,9 +455,8 @@ class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
         Logger.error("MQ Connection reconnect. [Service]")
 
     def clean_close(self):
-        Logger.debug(tag=_TAG, msg="icon service will be closed while open the icon service engine. "
-                                   "check if the config is valid")
-        self._task._close()
+        Logger.debug(tag=_TAG, msg="icon service will be closed")
+        self._task.cleanup()
 
 
 class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
@@ -459,7 +464,6 @@ class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
 
     def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
         Logger.error("MQ Connection lost. [Stub]")
-        # self._task._close()
 
     def _callback_connection_reconnect_callback(self, connection: 'RobustConnection'):
         Logger.error("MQ Connection reconnect. [Service]")

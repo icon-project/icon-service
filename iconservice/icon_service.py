@@ -85,26 +85,47 @@ class IconService(object):
             self._inner_service.clean_close()
 
         loop.create_task(_serve())
-        loop.add_signal_handler(signal.SIGINT, self.close)
-        loop.add_signal_handler(signal.SIGTERM, self.close)
+        loop.add_signal_handler(signal.SIGINT, self.signal_handler, signal.SIGINT)
+        loop.add_signal_handler(signal.SIGTERM, self.signal_handler, signal.SIGTERM)
 
         try:
             loop.run_forever()
         except FatalException as e:
             Logger.exception(e, _TAG)
             Logger.error(e, _TAG)
-            self._inner_service.clean_close()
         finally:
             """
             If the function is called when the operation is not an endless loop 
             in an asynchronous function, the await is terminated immediately.
             """
-            Logger.debug("loop has been stopped and will be closed")
+            Logger.info(f"loop has been stopped and will be closed.")
+
             loop.run_until_complete(loop.shutdown_asyncgens())
+
+            self.cancel_tasks(loop)
+
+            # close icon service components
+            self._inner_service.clean_close()
+
             loop.close()
 
-    def close(self):
-        self._inner_service.clean_close()
+    @staticmethod
+    def cancel_tasks(loop):
+        pending = asyncio.Task.all_tasks(loop)
+        Logger.info(f"cancel pending {len(pending)} tasks in event loop.")
+        for task in pending:
+            if task.done():
+                continue
+            task.cancel()
+            try:
+                loop.run_until_complete(task)
+            except asyncio.CancelledError as e:
+                Logger.info(f"cancel pending task: {task}, error: {e}")
+
+    @staticmethod
+    def signal_handler(signum: int):
+        Logger.debug(f"Get signal {signum}")
+        asyncio.get_event_loop().stop()
 
     def _set_icon_score_stub_params(self, channel: str, amqp_key: str, amqp_target: str):
         self._icon_score_queue_name = \
