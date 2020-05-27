@@ -782,6 +782,7 @@ class Governance(IconSystemScoreBase):
 
         self.set_icon_network_value(IconNetworkValueType.REVISION_CODE, code)
         self.set_icon_network_value(IconNetworkValueType.REVISION_NAME, name)
+        self.apply_revision_change(code)
         self.RevisionChanged(code, name)
 
     @external

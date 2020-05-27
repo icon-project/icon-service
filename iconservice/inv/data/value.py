@@ -356,4 +356,32 @@ class ServiceConfig(Value):
         return cls(value)
 
 
+class IRep(Value):
+    TYPE: 'IconNetworkValueType' = IconNetworkValueType.IREP
+
+    def __init__(self, value: int):
+        super().__init__()
+
+        if not isinstance(value, int):
+            raise TypeError(f"Invalid I-Rep type. must be integer: {type(value)}")
+        if value < 0:
+            raise InvalidParamsException(f"Invalid I-Rep. should not be negative value {value}")
+
+        self._value: int = value
+
+    def to_bytes(self) -> bytes:
+        version: int = 0
+        items: List[version, int] = [version, self._value]
+        return MsgPackForDB.dumps(items)
+
+    @classmethod
+    def from_bytes(cls, bytes_: bytes) -> 'IRep':
+        items: list = MsgPackForDB.loads(bytes_)
+        version: int = items[0]
+        value: int = items[1]
+
+        assert version == 0
+        return cls(value)
+
+
 VALUE_MAPPER = {val.TYPE: val for val in Value.__subclasses__()}

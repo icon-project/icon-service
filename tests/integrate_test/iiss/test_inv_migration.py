@@ -306,7 +306,7 @@ class TestINVMigration(TestIISSBase):
 
     def _inv_is_stored_on_state_db(self) -> bool:
         context: 'IconScoreContext' = IconScoreContext()
-        for type_ in IconNetworkValueType:
+        for type_ in IconNetworkValueType.gs_migration_type_list():
             inv_value: Optional['Value'] = IconScoreContext.storage.inv._get_value(context, type_)
             if inv_value is None:
                 return False

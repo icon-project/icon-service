@@ -587,7 +587,10 @@ class Engine(EngineBase, IISSEngineListener):
             assert start_block_height == prev_term.end_block_height + 1
 
         # The current P-Rep term is over. Prepare the next P-Rep term
-        irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+        if context.revision < Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value:
+            irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+        else:
+            irep: int = context.inv_container.irep
 
         term = Term(
             sequence,
@@ -680,6 +683,10 @@ class Engine(EngineBase, IISSEngineListener):
 
         # This API is available after IISS decentralization is enabled.
         if context.revision < Revision.DECENTRALIZATION.value or self.term.sequence < 0:
+            raise MethodNotFoundException("setGovernanceVariables is disabled")
+
+        # This API is disabled after SET_IREP_VIA_NETWORK_PROPOSAL
+        if context.revision >= Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value:
             raise MethodNotFoundException("setGovernanceVariables is disabled")
 
         address: 'Address' = context.tx.origin

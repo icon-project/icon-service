@@ -97,5 +97,7 @@ class TestINVStorage:
 
         assert isinstance(ret_container_after_migration, INVContainer)
         assert ret_container_after_migration.is_migrated is True
-        for type_, value in ret_container_after_migration._icon_network_values.items():
+        # for type_, value in ret_container_after_migration._icon_network_values.items():
+        for type_ in IconNetworkValueType.gs_migration_type_list():
+            value = ret_container_after_migration._icon_network_values[type_]
             assert value.value == dummy_invs[type_].value

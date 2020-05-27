@@ -137,7 +137,7 @@ class TestContainer:
             with pytest.raises(InvalidParamsException) as e:
                 inv_container.migrate(insufficient_inv_list)
 
-            assert e.value.message == "Icon Network Values are insufficient"
+            assert e.value.message == "Migration data for Icon Network Values are insufficient"
             assert len(inv_container._tx_batch) == 0
             assert inv_container._tx_batch.is_migration_triggered() is False
             context.storage.inv.put_migration_flag.assert_not_called()

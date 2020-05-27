@@ -38,7 +38,7 @@ class Engine(EngineBase, ContextContainer):
         super().__init__()
         self._inv_container: Optional['Container'] = None
 
-        # Warning: This mapper must be used only before migration
+        # Warning: This mapper must be used only before migration. Do not modify.
         # 'gs' means governance SCORE
         self._get_gs_data_mapper: dict = {
             IconNetworkValueType.SERVICE_CONFIG: self._get_service_flag,
@@ -58,6 +58,7 @@ class Engine(EngineBase, ContextContainer):
     def load_inv_container(self, context: 'IconScoreContext'):
         container: Optional['Container'] = context.storage.inv.get_container(context)
         if container is None:
+            # before GS data migration. load data from GS
             container: 'Container' = Container(is_migrated=False)
             self._sync_inv_container_with_governance(context, container)
         self._inv_container = container
@@ -68,7 +69,7 @@ class Engine(EngineBase, ContextContainer):
         if tx_result.status == TransactionResult.SUCCESS:
             if context.inv_container.is_migrated:
                 context.inv_container.update_batch()
-            elif tx_result.to == GOVERNANCE_SCORE_ADDRESS:
+            elif tx_result.to == GOVERNANCE_SCORE_ADDRESS:  # only for GS update TX
                 context.inv_container.update_migration_if_succeed()
                 self._sync_inv_container_with_governance(context, context.inv_container)
         context.inv_container.clear_batch()
@@ -88,8 +89,10 @@ class Engine(EngineBase, ContextContainer):
         try:
             self._push_context(context)
             governance = self._get_governance(context)
-            for type_ in IconNetworkValueType:
-                value: Any = self._get_gs_data_mapper[type_](context, governance)
+            # for type_ in IconNetworkValueType:
+            #     value: Any = self._get_gs_data_mapper[type_](context, governance)
+            for type_, func in self._get_gs_data_mapper.items():
+                value: Any = func(context, governance)
                 container.set_inv(ValueConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass

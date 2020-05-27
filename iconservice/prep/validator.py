@@ -159,6 +159,16 @@ def validate_irep(context: 'IconScoreContext', irep: int, prep: 'PRep'):
                    main_prep_count=context.main_prep_count)
 
 
+def validate_np_irep(context: 'IconScoreContext', irep: int):
+    term: 'Term' = context.engine.prep.term
+    _validate_irep(irep=irep,
+                   prev_irep=term.irep,
+                   prev_irep_block_height=0,
+                   term_start_block_height=1,
+                   term_total_supply=term.total_supply,
+                   main_prep_count=context.main_prep_count)
+
+
 def _validate_irep(irep: int,
                    prev_irep: int,
                    prev_irep_block_height: int,
@@ -167,14 +177,16 @@ def _validate_irep(irep: int,
                    main_prep_count: int):
 
     """
-    (irep * IISS_MONTH) * (1 / IISS_ANNUAL_BLOCK) * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2) * IISS_ANNUAL_BLOCK <=
-    total_supply * IISS_MAX_IREP_PERCENTAGE / 100
+    beta1 + beta2 <= total_supply * IISS_MAX_IREP_PERCENTAGE / 100
+    = (1/2 * irep * MAIN_PREP_COUNT + 1/2 * irep * PERCENTAGE_FOR_BETA_2) * IISS_MONTH
+    = irep * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2) * IISS_MONTH / 2
+    <= total_supply * IISS_MAX_IREP_PERCENTAGE / 100
 
-    irep <= total_supply * IISS_MAX_IREP_PERCENTAGE / (600 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2)
+    irep <= total_supply * IISS_MAX_IREP_PERCENTAGE / (IISS_MONTH / 2 * 100 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2)
     """
 
     if prev_irep_block_height >= term_start_block_height:
-        raise InvalidRequestException("Irep can be changed only once during a term")
+        raise InvalidRequestException("I-Rep can be changed only once during a term")
 
     min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)  # 80% of previous irep
 
@@ -185,4 +197,4 @@ def _validate_irep(irep: int,
     max_irep: int = min(prev_irep * 12 // 10, maximum_calculated_irep)  # 120% of previous irep
 
     if not min_irep <= irep <= max_irep:
-        raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
+        raise InvalidParamsException(f"I-Rep({irep}) out of range: {min_irep:,} ~ {max_irep:,}")
