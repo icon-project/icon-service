@@ -36,6 +36,11 @@ class DelegationPart(BasePart):
         self._delegated_amount: int = delegated_amount
         self._delegations_amount: int = self._update_delegations_amount(delegations)
 
+    def __str__(self):
+        return f"delegations={self._delegations}, " \
+               f"delegated_amount={self._delegated_amount}," \
+               f"delegation_amount={self._delegations_amount}"
+
     @staticmethod
     def make_key(address: 'Address'):
         return DelegationPart.PREFIX + address.to_bytes_including_prefix()

@@ -77,6 +77,11 @@ class CoinPart(BasePart):
         self._flags: 'CoinPartFlag' = flags
         self._balance: int = balance
 
+    def __str__(self):
+        return f"type={self._type.name}, " \
+               f"flag={self._flags.name}, " \
+               f"balance={self._balance}"
+
     @staticmethod
     def make_key(address: 'Address') -> bytes:
         if address.prefix == AddressPrefix.EOA:
@@ -193,7 +198,7 @@ class CoinPart(BasePart):
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
         balance: int = int.from_bytes(amount, DATA_BYTE_ORDER)
 
-        return CoinPart(coin_type, CoinPartFlag(flags), balance)
+        return CoinPart(CoinPartType(coin_type), CoinPartFlag(flags), balance)
 
     @staticmethod
     def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
@@ -205,7 +210,7 @@ class CoinPart(BasePart):
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
-        return CoinPart(coin_part_type=data[1],
+        return CoinPart(coin_part_type=CoinPartType(data[1]),
                         flags=CoinPartFlag(data[2]),
                         balance=data[3])
 

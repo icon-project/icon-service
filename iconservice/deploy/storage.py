@@ -147,6 +147,13 @@ class IconScoreDeployInfo(object):
         self.current_tx_hash = current_tx_hash
         self.next_tx_hash = next_tx_hash
 
+    def __str__(self):
+        return f"score_address={self.score_address}, " \
+               f"owner={self.owner}, " \
+               f"state={self.deploy_state}, " \
+               f"current_tx_hash={self.current_tx_hash}, " \
+               f"next_tx_hash={self.next_tx_hash}"
+
     @property
     def score_address(self):
         return self._score_address
