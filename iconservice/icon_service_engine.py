@@ -73,7 +73,7 @@ from .iiss.storage import Storage as IISSStorage
 from .inner_call import inner_call
 from .inv import INVEngine, INVStorage
 from .meta import MetaDBStorage
-from .precommit_data_manager import PrecommitData, PrecommitDataManager
+from .precommit_data_manager import PrecommitData, PrecommitDataManager, write_precommit_data_to_file
 from .prep import PRepEngine, PRepStorage
 from .prep.data import PRep
 from .rollback.metadata import Metadata as RollbackMetadata
@@ -129,6 +129,10 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
 
+    @classmethod
+    def _get_log_dir_from_conf(cls, conf: dict):
+        return os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
+
     def open(self, conf: dict):
         """Get necessary parameters and initialize diverse objects
 
@@ -142,8 +146,8 @@ class IconServiceEngine(ContextContainer):
         state_db_root_path: str = os.path.abspath(state_db_root_path)
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
-        log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
         backup_root_path: str = os.path.join(state_db_root_path, "backup")
+        log_dir: str = self._get_log_dir_from_conf(conf)
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
@@ -389,6 +393,7 @@ class IconServiceEngine(ContextContainer):
             if not precommit_data.already_exists:
                 Logger.info(tag=_TAG,
                             msg=f"Block result already exists: \n{precommit_data}")
+                write_precommit_data_to_file(precommit_data, self._get_log_dir_from_conf(self._conf))
                 precommit_data.already_exists = True
             else:
                 Logger.info(tag=_TAG,
@@ -508,7 +513,6 @@ class IconServiceEngine(ContextContainer):
             Logger.info(tag=_TAG,
                         msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
-
         return \
             block_result, \
             precommit_data.state_root_hash, \
