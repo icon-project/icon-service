@@ -115,14 +115,14 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(b'value0', value)
 
         batch = self.context.tx_batch
-        self.assertEqual((b'value0', True), batch[b'key0'])
+        self.assertEqual(TransactionBatchValue(b'value0', True), batch[b'key0'])
 
         self.context_db._put(context, b'key0', b'value1', True)
         self.context_db._put(context, b'key1', b'value1', True)
 
         self.assertEqual(len(batch), 2)
-        self.assertEqual(batch[b'key0'], (b'value1', True))
-        self.assertEqual(batch[b'key1'], (b'value1', True))
+        self.assertEqual(batch[b'key0'], TransactionBatchValue(b'value1', True))
+        self.assertEqual(batch[b'key1'], TransactionBatchValue(b'value1', True))
 
         self.context_db._put(context, b'key2', b'value2', False)
         self.context_db._put(context, b'key3', b'value3', False)
@@ -133,8 +133,8 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(b'value3', value3)
 
         self.assertEqual(len(batch), 4)
-        self.assertEqual(batch[b'key2'], (b'value2', False))
-        self.assertEqual(batch[b'key3'], (b'value3', False))
+        self.assertEqual(batch[b'key2'], TransactionBatchValue(b'value2', False))
+        self.assertEqual(batch[b'key3'], TransactionBatchValue(b'value3', False))
 
         # overwrite
         self.assertRaises(DatabaseException, self.context_db._put, context, b'key3', b'value3', True)
@@ -217,7 +217,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         db._put(context, b'key0', b'value0', True)
         db._put(context, b'key1', b'value1', True)
         self.assertEqual(b'value0', db.get(context, b'key0'))
-        self.assertEqual((b'value0', True), tx_batch[b'key0'])
+        self.assertEqual(TransactionBatchValue(b'value0', True), tx_batch[b'key0'])
 
         db.write_batch(context, state_wal)
         tx_batch.clear()
@@ -228,8 +228,8 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         db._delete(context, b'key1', False)
         self.assertEqual(None, db.get(context, b'key0'))
         self.assertEqual(None, db.get(context, b'key1'))
-        self.assertEqual((None, True), tx_batch[b'key0'])
-        self.assertEqual((None, False), tx_batch[b'key1'])
+        self.assertEqual(TransactionBatchValue(None, True), tx_batch[b'key0'])
+        self.assertEqual(TransactionBatchValue(None, False), tx_batch[b'key1'])
         db.write_batch(context, state_wal)
         tx_batch.clear()
         self.assertEqual(0, len(tx_batch))
@@ -243,7 +243,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         db._put(context, b'key0', b'value0', True)
         self.assertEqual(b'value0', db.get(context, b'key0'))
-        self.assertEqual((b'value0', True), tx_batch[b'key0'])
+        self.assertEqual(TransactionBatchValue(b'value0', True), tx_batch[b'key0'])
 
         context.func_type = IconScoreFuncType.READONLY
         with self.assertRaises(DatabaseException):
@@ -252,7 +252,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         context.func_type = IconScoreFuncType.WRITABLE
         db._delete(context, b'key0', True)
         self.assertIsNone(db.get(context, b'key0'))
-        self.assertEqual((None, True), tx_batch[b'key0'])
+        self.assertEqual(TransactionBatchValue(None, True), tx_batch[b'key0'])
 
     def test_put_and_delete_of_meta_context_db(self):
         context = self.context
@@ -261,13 +261,13 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         context_db.put(context, b'c_key', b'value0')
         meta_context_db.put(context, b'm_key', b'value0')
-        self.assertEqual((b'value0', True), context.tx_batch[b'c_key'])
-        self.assertEqual((b'value0', False), context.tx_batch[b'm_key'])
+        self.assertEqual(TransactionBatchValue(b'value0', True), context.tx_batch[b'c_key'])
+        self.assertEqual(TransactionBatchValue(b'value0', False), context.tx_batch[b'm_key'])
 
         context_db.delete(context, b'c_key')
         meta_context_db.delete(context, b'm_key')
-        self.assertEqual((None, True), context.tx_batch[b'c_key'])
-        self.assertEqual((None, False), context.tx_batch[b'm_key'])
+        self.assertEqual(TransactionBatchValue(None, True), context.tx_batch[b'c_key'])
+        self.assertEqual(TransactionBatchValue(None, False), context.tx_batch[b'm_key'])
 
 
 class TestIconScoreDatabase(unittest.TestCase):

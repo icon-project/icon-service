@@ -13,10 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 from typing import TYPE_CHECKING, Optional, List, Dict, Iterable
 
 from iconcommons import Logger
+
 from .base.block import Block, NULL_BLOCK
 from .base.exception import InvalidParamsException, InternalServiceErrorException
 from .database.batch import BlockBatch
@@ -32,48 +33,68 @@ if TYPE_CHECKING:
     from .base.address import Address
     from .prep.data import PRepContainer, Term
 
-
 _TAG = "PRECOMMIT"
 
 
-def _print_block_batch(block_batch: 'BlockBatch') -> List[str]:
+def write_precommit_data_to_file(precommit_data: 'PrecommitData', path: str):
+    """
+    Write the precommit data for debugging
+    :param precommit_data:
+    :param path: path to record
+    :return:
+    """
+    dir_path: str = os.path.join(path, "precommit")
+    filename: str = f"{precommit_data.block.height}-precommit-data.txt"
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    with open(os.path.join(dir_path, filename), 'wt') as f:
+        try:
+            f.write(f"{precommit_data}")
+            f.write(f"\n--------------precommit-data----------------\n")
+            f.write(_convert_block_batch_to_string(precommit_data.block_batch))
+            f.write(f"\n------------rc-precommit-data---------------\n")
+            f.write(_convert_rc_block_batch_to_string(precommit_data.rc_block_batch))
+        except Exception as e:
+            Logger.warning(
+                tag=_TAG,
+                msg=f"Exception raised during writing the precommit-data: {e}"
+            )
+            pass
+
+
+def _convert_block_batch_to_string(block_batch: 'BlockBatch') -> str:
     """Print the latest updated states stored in IconServiceEngine
     :return:
     """
     lines = []
+    lines.append(f" * 'TX: -1' It means deploying score or the data being been recorded outside of the transaction\n")
+    for i, key in enumerate(block_batch):
+        value = block_batch[key]
 
-    try:
-        for i, key in enumerate(block_batch):
-            value = block_batch[key]
-
-            if isinstance(value, TransactionBatchValue):
-                lines.append(f"{i}: {key.hex()} - {bytes_to_hex(value.value)} - {value.include_state_root_hash}")
-            else:
-                lines.append(f"{i}: {key.hex()} - {bytes_to_hex(value)}")
-    except:
-        pass
-
-    return lines
+        if isinstance(value, TransactionBatchValue):
+            lines.append(
+                "TX: {:<3} | {:<3}: {} - {} - {}".format(
+                    value.tx_index, i, key.hex(),
+                    bytes_to_hex(value.value),
+                    value.include_state_root_hash)
+            )
+    return "\n".join(lines)
 
 
-def _print_rc_block_batch(rc_block_batch: list) -> List[str]:
+def _convert_rc_block_batch_to_string(rc_block_batch: list):
     lines = []
+    tx_index = 0
+    for i, data in enumerate(rc_block_batch):
+        if isinstance(data, TxData):
+            key: bytes = data.make_key(tx_index)
+            tx_index += 1
+        else:
+            key: bytes = data.make_key()
 
-    try:
-        tx_index = 0
-        for i, data in enumerate(rc_block_batch):
-            if isinstance(data, TxData):
-                key: bytes = data.make_key(tx_index)
-                tx_index += 1
-            else:
-                key: bytes = data.make_key()
-
-            value: bytes = data.make_value()
-            lines.append(f"{i}: {key.hex()} - {value.hex()}")
-    except:
-        pass
-
-    return lines
+        value: bytes = data.make_value()
+        lines.append("{:<3}: {} - {}".format(i, key.hex(), value.hex()))
+    return "\n".join(lines)
 
 
 class PrecommitData(object):
@@ -113,7 +134,7 @@ class PrecommitData(object):
         self.prev_block_generator = prev_block_generator
         self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
-        
+
         self.is_state_root_hash: bytes = self.block_batch.digest()
         self.rc_state_root_hash: Optional[bytes] = rc_state_root_hash
 
@@ -141,18 +162,9 @@ class PrecommitData(object):
             f"rc_state_root_hash: {bytes_to_hex(self.rc_state_root_hash)}",
             f"state_root_hash: {bytes_to_hex(self.state_root_hash)}",
             f"prev_block_generator: {self.prev_block_generator}",
-            "",
             f"added_transactions: {self.added_transactions}",
-            f"next_preps: {self.next_preps}",
-            "",
-            "block_batch",
+            f"next_preps: {self.next_preps}"
         ]
-
-        lines.extend(_print_block_batch(self.block_batch))
-
-        lines.append("")
-        lines.append("rc_block_batch")
-        lines.extend(_print_rc_block_batch(self.rc_block_batch))
 
         return "\n".join(lines)
 
@@ -299,6 +311,7 @@ class PrecommitDataManager(object):
         :param block_to_commit:
         :return:
         """
+
         def pick_up_blocks_to_remove() -> Iterable['PrecommitDataManager.Node']:
             for parent in self._root.children():
                 if block_to_commit.hash == parent.block.hash:

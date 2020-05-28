@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from collections.abc import MutableMapping
 from typing import Optional
 
@@ -24,7 +24,17 @@ from ..base.exception import DatabaseException, AccessDeniedException
 from ..icx import IcxStorage
 from ..utils import sha3_256
 
-TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
+
+class TransactionBatchValue:
+    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_index: int = -1):
+        self.value: bytes = value
+        self.include_state_root_hash: bool = include_state_root_hash
+        self.tx_index: int = tx_index
+
+    def __eq__(self, other: 'TransactionBatchValue'):
+        return self.value == other.value and \
+               self.include_state_root_hash == other.include_state_root_hash and \
+               self.tx_index == other.tx_index
 
 
 def digest(ordered_dict: OrderedDict):
@@ -71,7 +81,8 @@ class TransactionBatch(MutableMapping):
     key: Score Address
     value: IconScoreBatch
     """
-    def __init__(self, tx_hash: Optional[bytes]=None) -> None:
+
+    def __init__(self, tx_hash: Optional[bytes] = None) -> None:
         """Constructor
 
         :param tx_hash: tx_hash
@@ -148,6 +159,7 @@ class BlockBatch(Batch):
     key: Address
     value: IconScoreBatch
     """
+
     def __init__(self, block: Optional['Block'] = None):
         """Constructor
 
@@ -173,7 +185,7 @@ class BlockBatch(Batch):
     def set_block_to_batch(self, revision: int):
         # Logger.debug(tag="DB", msg=f"set_block_to_batch() block={self.block}")
         block_key: bytes = IcxStorage.LAST_BLOCK_KEY
-        block_value: tuple = TransactionBatchValue(self.block.to_bytes(revision), False)
+        block_value: 'TransactionBatchValue' = TransactionBatchValue(self.block.to_bytes(revision), False)
 
         super().__setitem__(block_key, block_value)
 
