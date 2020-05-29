@@ -1,8 +1,5 @@
-from typing import List, Tuple
-
-from tools.precommit_converter.utils import extract_key_values_from_file
-from tools.precommit_converter.convert_engine import ConvertEngine, ConvertedKeyValues
-from tools.precommit_converter.printer import Printer
+from tools.precommit_converter.converter.convert_engine import ConvertEngine
+from tools.precommit_converter.printer.printer import Printer
 
 
 class Diff(object):

@@ -1,8 +1,8 @@
-from typing import List, Tuple
+from typing import List
 
-from tools.precommit_converter.utils import extract_key_values_from_file
-from tools.precommit_converter.convert_engine import ConvertEngine, ConvertedKeyValues
-from tools.precommit_converter.printer import Printer
+from tools.precommit_converter.converter.convert_engine import ConvertEngine, ConvertedKeyValue
+from tools.precommit_converter.printer.printer import Printer
+from tools.precommit_converter.utils import extract_key_values_from_file, BytesKeyValue
 
 
 class Convert:
@@ -29,6 +29,6 @@ class Convert:
         convert_engine = ConvertEngine()
         printer = Printer()
 
-        key_values: List[Tuple[bytes, bytes]] = extract_key_values_from_file(file_path)
-        converted_key_values: List['ConvertedKeyValues'] = convert_engine.convert(key_values)
+        key_values: List['BytesKeyValue'] = extract_key_values_from_file(file_path)
+        converted_key_values: List['ConvertedKeyValue'] = convert_engine.convert(key_values)
         printer.print(converted_key_values)
