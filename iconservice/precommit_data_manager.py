@@ -38,7 +38,7 @@ _TAG = "PRECOMMIT"
 
 def write_precommit_data_to_file(precommit_data: 'PrecommitData', path: str):
     """
-    Write the precommit data for debugging
+    Write the human readable precommit data to the file for debugging
     :param precommit_data:
     :param path: path to record
     :return:
@@ -56,6 +56,7 @@ def write_precommit_data_to_file(precommit_data: 'PrecommitData', path: str):
             f.write(f"\n------------rc-precommit-data---------------\n")
             f.write(_convert_rc_block_batch_to_string(precommit_data.rc_block_batch))
         except Exception as e:
+            f.write(f"Exception raised during writing the precommit-data: {e}")
             Logger.warning(
                 tag=_TAG,
                 msg=f"Exception raised during writing the precommit-data: {e}"
@@ -64,21 +65,16 @@ def write_precommit_data_to_file(precommit_data: 'PrecommitData', path: str):
 
 
 def _convert_block_batch_to_string(block_batch: 'BlockBatch') -> str:
-    """Print the latest updated states stored in IconServiceEngine
-    :return:
-    """
-    lines = []
-    lines.append(f" * 'TX: -1' It means deploying score or the data being been recorded outside of the transaction\n")
-    for i, key in enumerate(block_batch):
-        value = block_batch[key]
+    lines = [f" * 'TX: -1' means deploying score or the data being been recorded outside of the transaction\n"]
 
-        if isinstance(value, TransactionBatchValue):
-            lines.append(
-                "TX: {:<3} | {:<3}: {} - {} - {}".format(
-                    value.tx_index, i, key.hex(),
-                    bytes_to_hex(value.value),
-                    value.include_state_root_hash)
-            )
+    for i, key in enumerate(block_batch):
+        value: 'TransactionBatchValue' = block_batch[key]
+        lines.append(
+            "TX: {:<3} | {:<3}: {} - {} - {}".format(
+                value.tx_index, i, key.hex(),
+                bytes_to_hex(value.value),
+                value.include_state_root_hash)
+        )
     return "\n".join(lines)
 
 
