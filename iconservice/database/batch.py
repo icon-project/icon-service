@@ -41,6 +41,12 @@ class TransactionBatchValue:
 
     @property
     def tx_index(self):
+        """
+        Transaction index information for debugging
+        index -1 means deploying score or the data being been recorded outside of the transaction
+        :return:
+        """
+        # Fixme: Correct tx index should be set on deploying score (not -1)
         return self._tx_index
 
     @value.setter
