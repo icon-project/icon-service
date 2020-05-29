@@ -27,9 +27,36 @@ from ..utils import sha3_256
 
 class TransactionBatchValue:
     def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_index: int = -1):
-        self.value: bytes = value
-        self.include_state_root_hash: bool = include_state_root_hash
-        self.tx_index: int = tx_index
+        self._value: bytes = value
+        self._include_state_root_hash: bool = include_state_root_hash
+        self._tx_index: int = tx_index
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def include_state_root_hash(self):
+        return self._include_state_root_hash
+
+    @property
+    def tx_index(self):
+        return self._tx_index
+
+    @value.setter
+    def value(self, _):
+        raise AccessDeniedException(f"Cannot set the value")
+
+    @include_state_root_hash.setter
+    def include_state_root_hash(self, _):
+        raise AccessDeniedException(f"Cannot set the include_state_root_hash")
+
+    @tx_index.setter
+    def tx_index(self, _):
+        raise AccessDeniedException(f"Cannot set the tx_index")
+
+    def __repr__(self):
+        return 'TransactionBatchValue(%s, %d, %d)' % (self.value.hex(), self.include_state_root_hash, self.tx_index)
 
     def __eq__(self, other: 'TransactionBatchValue'):
         return self.value == other.value and \
