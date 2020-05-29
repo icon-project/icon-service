@@ -19,7 +19,6 @@ def extract_key_values_from_file(path: str) -> List['BytesKeyValue']:
             if line == "------------rc-precommit-data---------------\n":
                 break
             sliced_str: list = line.split(" ")
-            print(sliced_str)
             if sliced_str[0] == "TX:":
                 tx_index = sliced_str[1]
             else:
@@ -33,13 +32,9 @@ def extract_key_values_from_file(path: str) -> List['BytesKeyValue']:
                         value = value[:len(value) - 1]
                     if value[:2] == "0x":
                         value = value[2:]
-                    try:
-                        if tx_index is not None:
-                            tx_index = int(tx_index)
-                        key_values.append(BytesKeyValue(tx_index, bytes.fromhex(key), bytes.fromhex(value)))
-                    except Exception as e:
-                        print(f"except!!!{e}")
-                        break
+                    if tx_index is not None:
+                        tx_index = int(tx_index)
+                    key_values.append(BytesKeyValue(tx_index, bytes.fromhex(key), bytes.fromhex(value)))
     return key_values
 
 

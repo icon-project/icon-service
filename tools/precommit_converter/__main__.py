@@ -15,7 +15,6 @@ def main():
         return COMMAND_LINE_SYNTAX_ERROR
 
     try:
-        print(args)
         args.func(args)
     except Exception as e:
         return e
