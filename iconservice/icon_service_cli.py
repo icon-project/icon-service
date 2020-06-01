@@ -35,7 +35,7 @@ ICON_SERVICE_CLI = 'IconServiceCli'
 
 class ExitCode(IntEnum):
     SUCCEEDED = 0
-    COMMAND_IS_WRONG = 1
+    INVALID_COMMAND = 1
     INVALID_CONFIG = 2
 
 
@@ -84,14 +84,14 @@ def main():
 
     if len(args.command) < 1:
         parser.print_help()
-        sys.exit(ExitCode.COMMAND_IS_WRONG.value)
+        sys.exit(ExitCode.INVALID_COMMAND.value)
 
     conf_path = args.config
 
     if conf_path is not None:
         if not IconConfig.valid_conf_path(conf_path):
             print(f'invalid config file : {conf_path}')
-            sys.exit(ExitCode.COMMAND_IS_WRONG.value)
+            sys.exit(ExitCode.INVALID_COMMAND.value)
     if conf_path is None:
         conf_path = str()
 
@@ -107,7 +107,7 @@ def main():
         result = _stop(conf)
     else:
         parser.print_help()
-        result = ExitCode.COMMAND_IS_WRONG.value
+        result = ExitCode.INVALID_COMMAND.value
     sys.exit(result)
 
 
