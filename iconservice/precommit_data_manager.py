@@ -56,7 +56,10 @@ def write_precommit_data_to_file(precommit_data: 'PrecommitData', path: str):
             f.write(f"\n------------rc-precommit-data---------------\n")
             f.write(_convert_rc_block_batch_to_string(precommit_data.rc_block_batch))
         except Exception as e:
-            f.write(f"Exception raised during writing the precommit-data: {e}")
+            Logger.warning(
+                tag=_TAG,
+                msg=f"Exception raised during writing the precommit-data: {e}"
+            )
 
 
 def _convert_block_batch_to_string(block_batch: 'BlockBatch') -> str:
