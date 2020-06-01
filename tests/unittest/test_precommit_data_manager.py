@@ -49,7 +49,7 @@ def test_write_precommit_data(precommit_data):
     assert os.path.exists(os.path.join(PRECOMMIT_LOG_PATH, expected_file_name))
 
 
-def test_write_precommit_data_when_raising_exception_should_print_exception(precommit_data):
+def test_write_precommit_data_when_raising_exception_should_catch_it(precommit_data):
     expected_file_name: str = f"{precommit_data.block.height}-precommit-data.txt"
     # Set the invalid data to rc block batch (it is going to be a reason of the exception)
     precommit_data.rc_block_batch.append("invalid data")
