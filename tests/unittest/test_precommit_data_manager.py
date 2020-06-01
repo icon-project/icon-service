@@ -59,5 +59,3 @@ def test_write_precommit_data_when_raising_exception_should_print_exception(prec
 
     assert os.path.exists(PRECOMMIT_LOG_PATH)
     assert os.path.exists(os.path.join(PRECOMMIT_LOG_PATH, expected_file_name))
-    with open(os.path.join(PRECOMMIT_LOG_PATH, expected_file_name), "rt") as f:
-        assert "Exception raised during writing the precommit-data" in f.read()
