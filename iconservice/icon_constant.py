@@ -174,6 +174,14 @@ class ConfigKey:
     LOGGER = "logger"
     LOG_FILE_PATH = 'filePath'
     LOG_LEVEL = "level"
+    LOG_OUTPUT_TYPE = "outputType"
+    LOG_ROTATE = "rotate"
+    LOG_ROTATE_TYPE = "type"
+    LOG_ROTATE_PERIOD = "period"
+    LOG_ROTATE_INTERVAL = "interval"
+    LOG_ROTATE_AT_TIME = "atTime"
+    LOG_ROTATE_MAX_BYTES = "maxBytes"
+    LOG_ROTATE_BACKUP_COUNT = "backupCount"
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
