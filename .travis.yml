@@ -13,7 +13,6 @@ install:
   - go get github.com/icon-project/rewardcalculator/cmd/icon_rc
   - virtualenv venv
   - source venv/bin/activate
-  - pip install -r requirements.txt
   - pip install -e .[test]
 
 script:

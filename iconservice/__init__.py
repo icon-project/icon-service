@@ -28,5 +28,4 @@ from .iconscore.icon_score_base2 import (InterfaceScore, revert, sha3_256, sha_2
                                          create_address_with_key, create_interface_score)
 from .iconscore.icon_system_score_base import IconSystemScoreBase
 from .iconscore.system_score import InterfaceSystemScore
-
-__version__ = '1.6.1'
+from .__version__ import __version__

@@ -1,9 +1,8 @@
 #!/usr/bin/env python
+import os
 import sys
 
 from setuptools import setup, find_packages
-
-from iconservice import __version__
 
 CURRENT_PYTHON = sys.version_info[:3]
 REQUIRED_PYTHON = (3, 6, 5)
@@ -18,6 +17,11 @@ if CURRENT_PYTHON < REQUIRED_PYTHON:
 with open('requirements.txt') as requirements:
     requires = list(requirements)
 
+about = {}
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'iconservice/__version__.py'), 'r',
+          encoding='utf-8') as f:
+    exec(f.read(), about)
+
 extra_requires = {
     "test": [
         "hypothesis>=4.0.0",
@@ -30,7 +34,7 @@ extra_requires = {
 
 setup_options = {
     'name': 'iconservice',
-    'version': __version__,
+    'version': about['__version__'],
     'description': 'ICON Service for Python',
     'long_description_content_type': 'text/markdown',
     'long_description': open('README.md').read(),
