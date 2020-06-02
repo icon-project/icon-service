@@ -16,23 +16,22 @@
 
 import argparse
 import asyncio
+import copy
 import os
-from copy import deepcopy
-
-import setproctitle
 import signal
 import sys
 
 import pkg_resources
+import setproctitle
 from earlgrey import MessageQueueService, aio_pika
-
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
+
 from iconservice.base.exception import FatalException
-from iconservice.icon_config import default_icon_config, normalize_input_config_fields
+from iconservice.icon_config import default_icon_config, check_config, args_to_dict
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerService
-from iconservice.icon_service_cli import ICON_SERVICE_CLI, ExitCode
+from iconservice.icon_service_cli import ExitCode
 
 _TAG = 'CLI'
 
@@ -82,8 +81,8 @@ class IconService(object):
         try:
             self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
         except FatalException as e:
-            Logger.exception(e, _TAG)
-            Logger.error(e, _TAG)
+            Logger.exception(f"{e}", _TAG)
+            Logger.error(f"{e}", _TAG)
             self._inner_service.clean_close()
 
         loop.create_task(_serve())
@@ -93,8 +92,9 @@ class IconService(object):
         try:
             loop.run_forever()
         except FatalException as e:
-            Logger.exception(e, _TAG)
-            Logger.error(e, _TAG)
+            Logger.exception(f"{e}", _TAG)
+            Logger.error(f"{e}", _TAG)
+            self._inner_service.clean_close()
         finally:
             """
             If the function is called when the operation is not an endless loop 
@@ -167,13 +167,12 @@ def main():
     if conf_path is None:
         conf_path = str()
 
-    conf = IconConfig(conf_path, deepcopy(default_icon_config))
+    conf = IconConfig(conf_path, copy.deepcopy(default_icon_config))
     conf.load()
-    conf.update_conf(dict(vars(args)))
+    conf.update_conf(args_to_dict(args))
     Logger.load_config(conf)
-    ret, invalid_config_fields = normalize_input_config_fields(conf, default_icon_config)
-    if ret is False:
-        Logger.error(f"invalid configuration given : {invalid_config_fields}", _TAG)
+    if not check_config(conf, default_icon_config):
+        Logger.error(tag=_TAG, msg=f"Invalid Config")
         sys.exit(ExitCode.INVALID_CONFIG.value)
 
     Logger.print_config(conf, _TAG)
@@ -181,7 +180,7 @@ def main():
     _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
     icon_service.serve(config=conf)
-    Logger.info(f'==========IconService Done==========', ICON_SERVICE_CLI)
+    Logger.info(f'==========IconService Done==========', _TAG)
 
 
 def run_in_foreground(conf: 'IconConfig'):
@@ -203,7 +202,7 @@ async def _check_rabbitmq(amqp_target: str):
         connection = await aio_pika.connect(host=amqp_target, login=amqp_user_name, password=amqp_password)
         connection.connect()
     except ConnectionRefusedError:
-        Logger.error("rabbitmq-service disable", ICON_SERVICE_CLI)
+        Logger.error("rabbitmq-service disable", _TAG)
         exit(0)
     finally:
         if connection:
