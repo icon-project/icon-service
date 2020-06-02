@@ -1,6 +1,19 @@
 #!/usr/bin/env python
-import os
+import sys
+
 from setuptools import setup, find_packages
+
+from iconservice import __version__
+
+CURRENT_PYTHON = sys.version_info[:3]
+REQUIRED_PYTHON = (3, 6, 5)
+
+if CURRENT_PYTHON < REQUIRED_PYTHON:
+    sys.stderr.write(
+        f"Unsupported Python version* This version of Icon Service requires\n"
+        f"Python {'.'.join([str(v) for v in REQUIRED_PYTHON])}, "
+        f"but you're trying to install it on Python {'.'.join([str(v) for v in CURRENT_PYTHON])}. ")
+    sys.exit(1)
 
 with open('requirements.txt') as requirements:
     requires = list(requirements)
@@ -15,14 +28,9 @@ extra_requires = {
     ]
 }
 
-version = os.environ.get('VERSION')
-if version is None:
-    with open(os.path.join('.', 'VERSION')) as version_file:
-        version = version_file.read().strip()
-
 setup_options = {
     'name': 'iconservice',
-    'version': version,
+    'version': __version__,
     'description': 'ICON Service for Python',
     'long_description_content_type': 'text/markdown',
     'long_description': open('README.md').read(),
