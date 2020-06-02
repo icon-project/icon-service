@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import os
 from typing import TYPE_CHECKING, Optional, List, Dict, Iterable
 
@@ -21,13 +22,12 @@ from iconcommons import Logger
 from .base.block import Block, NULL_BLOCK
 from .base.exception import InvalidParamsException, InternalServiceErrorException
 from .database.batch import BlockBatch
-from .database.batch import TransactionBatchValue
 from .icon_constant import Revision
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iiss.reward_calc.msg_data import TxData
 from .inv.container import Container as INVContainer
 from .prep.prep_address_converter import PRepAddressConverter
-from .utils import bytes_to_hex, sha3_256
+from .utils import bytes_to_hex, sha3_256, to_camel_case
 
 if TYPE_CHECKING:
     from .base.address import Address
@@ -36,59 +36,69 @@ if TYPE_CHECKING:
 _TAG = "PRECOMMIT"
 
 
-def write_precommit_data_to_file(precommit_data: 'PrecommitData', path: str):
-    """
-    Write the human readable precommit data to the file for debugging
-    :param precommit_data:
-    :param path: path to record
-    :return:
-    """
-    dir_path: str = os.path.join(path, "precommit")
-    filename: str = f"{precommit_data.block.height}-precommit-data.txt"
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
+class PrecommitDataWriter:
+    VERSION = 0
+    DIR_NAME = "precommit"
 
-    with open(os.path.join(dir_path, filename), 'wt') as f:
-        try:
-            f.write(f"{precommit_data}")
-            f.write(f"\n--------------precommit-data----------------\n")
-            f.write(_convert_block_batch_to_string(precommit_data.block_batch))
-            f.write(f"\n------------rc-precommit-data---------------\n")
-            f.write(_convert_rc_block_batch_to_string(precommit_data.rc_block_batch))
-        except Exception as e:
-            Logger.warning(
-                tag=_TAG,
-                msg=f"Exception raised during writing the precommit-data: {e}"
-            )
+    def __init__(self, path: str):
+        self._dir_path: str = os.path.join(path, self.DIR_NAME)
+        if not os.path.exists(self._dir_path):
+            os.makedirs(self._dir_path)
+        self._filename_suffix = f"precommit-data-v{self.VERSION}.json"
 
+    def write(self, precommit_data: 'PrecommitData'):
+        """
+            Write the human readable precommit data to the file for debugging
+            :param precommit_data:
+            :param path: path to record
+            :return:
+            """
+        filename: str = f"{precommit_data.block.height}-{self._filename_suffix}"
 
-def _convert_block_batch_to_string(block_batch: 'BlockBatch') -> str:
-    lines = [f" * 'TX: -1' means deploying score or the data being been recorded outside of the transaction\n"]
+        with open(os.path.join(self._dir_path, filename), 'w') as f:
+            try:
+                block = precommit_data.block
+                json_dict = {
+                    "revision": precommit_data.revision,
+                    "block": block if block is None else block.to_dict(to_camel_case),
+                    "isStateRootHash": precommit_data.is_state_root_hash,
+                    "stateRootHash": precommit_data.state_root_hash,
+                    "prevBlockGenerator": precommit_data.prev_block_generator,
+                    "blockBatch": precommit_data.block_batch.to_list(),
+                    "rcBlockBatch": self._convert_rc_block_batch_to_list(precommit_data.rc_block_batch)
+                }
+                json.dump(json_dict, f, default=self._json_default)
+            except Exception as e:
+                Logger.warning(
+                    tag=_TAG,
+                    msg=f"Exception raised during writing the precommit-data: {e}"
+                )
 
-    for i, key in enumerate(block_batch):
-        value: 'TransactionBatchValue' = block_batch[key]
-        lines.append(
-            "TX: {:<3} | {:<3}: {} - {} - {}".format(
-                value.tx_index, i, key.hex(),
-                bytes_to_hex(value.value),
-                value.include_state_root_hash)
-        )
-    return "\n".join(lines)
+    @classmethod
+    def _json_default(cls, obj):
+        if isinstance(obj, bytes):
+            return bytes_to_hex(obj)
+        elif isinstance(obj, Address):
+            return str(obj)
+        return obj
 
+    @classmethod
+    def _convert_rc_block_batch_to_list(cls, rc_block_batch: list):
+        new_list = []
+        tx_index = 0
+        for data in rc_block_batch:
+            if isinstance(data, TxData):
+                key: bytes = data.make_key(tx_index)
+                tx_index += 1
+            else:
+                key: bytes = data.make_key()
 
-def _convert_rc_block_batch_to_string(rc_block_batch: list):
-    lines = []
-    tx_index = 0
-    for i, data in enumerate(rc_block_batch):
-        if isinstance(data, TxData):
-            key: bytes = data.make_key(tx_index)
-            tx_index += 1
-        else:
-            key: bytes = data.make_key()
-
-        value: bytes = data.make_value()
-        lines.append("{:<3}: {} - {}".format(i, key.hex(), value.hex()))
-    return "\n".join(lines)
+            value: bytes = data.make_value()
+            new_list.append({
+                "key": key,
+                "value": value
+            })
+        return new_list
 
 
 class PrecommitData(object):
@@ -159,7 +169,6 @@ class PrecommitData(object):
             f"added_transactions: {self.added_transactions}",
             f"next_preps: {self.next_preps}"
         ]
-
         return "\n".join(lines)
 
     @property
