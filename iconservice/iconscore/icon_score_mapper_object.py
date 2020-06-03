@@ -68,10 +68,9 @@ class IconScoreInfo(object):
         :param revision:
         :return:
         """
-        if revision <= Revision.TWO.value or is_builtin_score(str(self.address)):
+        if revision <= Revision.TWO.value:
             if self._score is None:
                 self._score = self.create_score()
-
             return self._score
 
         return self.create_score()
