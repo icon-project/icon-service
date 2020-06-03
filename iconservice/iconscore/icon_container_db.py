@@ -16,8 +16,6 @@
 
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
-from iconservice.icon_constant import IconScoreContextType, Revision
-from .context.context import ContextContainer
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
 from ..utils import int_to_bytes, bytes_to_int
@@ -33,14 +31,36 @@ DICT_DB_ID = b'\x01'
 VAR_DB_ID = b'\x02'
 
 
-def get_encoded_key(key: V) -> bytes:
+def rlp_encode_bytes(b: bytes) -> bytes:
+    blen = len(b)
+    if blen == 1 and b[0] < 0x80:
+        return b
+    elif blen <= 55:
+        return bytes([blen + 0x80]) + b
+    len_bytes = rlp_get_bytes(blen)
+    return bytes([len(len_bytes) + 0x80 + 55]) + len_bytes + b
+
+
+def rlp_get_bytes(x: int) -> bytes:
+    if x == 0:
+        return b''
+    else:
+        return rlp_get_bytes(int(x / 256)) + bytes([x % 256])
+
+
+def get_encoded_key_v1(key: V) -> bytes:
     return ContainerUtil.encode_key(key)
 
 
-class ContainerUtil(object):
+def get_encoded_key_v2(key: V) -> bytes:
+    bytes_key = ContainerUtil.encode_key(key)
+    return rlp_encode_bytes(bytes_key)
+
+
+class ContainerUtil:
 
     @classmethod
-    def create_db_prefix(cls, container_cls: type, var_key: K) -> bytes:
+    def create_db_prefix(cls, container_cls: type, var_key: K) -> list:
         """Create a prefix used
         as a parameter of IconScoreDatabase.get_sub_db()
 
@@ -55,8 +75,9 @@ class ContainerUtil(object):
         else:
             raise InvalidParamsException(f'Unsupported container class: {container_cls}')
 
-        encoded_key: bytes = get_encoded_key(var_key)
-        return b'|'.join([container_id, encoded_key])
+        encoded_key_v1: list = [container_id, get_encoded_key_v1(var_key)]
+        encoded_key_v2: list = [container_id, get_encoded_key_v2(var_key)]
+        return [encoded_key_v1, encoded_key_v2]
 
     @classmethod
     def encode_key(cls, key: K) -> bytes:
@@ -114,46 +135,46 @@ class ContainerUtil(object):
             obj_value = value
         return obj_value
 
-    @classmethod
-    def remove_prefix_from_iters(cls, iter_items: iter) -> iter:
-        return ((cls.__remove_prefix_from_key(key), value) for key, value in iter_items)
-
-    @classmethod
-    def __remove_prefix_from_key(cls, key_from_bytes: bytes) -> bytes:
-        return key_from_bytes[:-1]
-
-    @classmethod
-    def put_to_db(cls, db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
-        sub_db = db.get_sub_db(cls.encode_key(db_key))
-        if isinstance(container, dict):
-            cls.__put_to_db_internal(sub_db, container.items())
-        elif isinstance(container, (list, set, tuple)):
-            cls.__put_to_db_internal(sub_db, enumerate(container))
-
-    @classmethod
-    def get_from_db(cls, db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
-        sub_db = db.get_sub_db(cls.encode_key(db_key))
-        *args, last_arg = args
-        for arg in args:
-            sub_db = sub_db.get_sub_db(cls.encode_key(arg))
-
-        byte_key = sub_db.get(cls.encode_key(last_arg))
-        if byte_key is None:
-            return get_default_value(value_type)
-        return cls.decode_object(byte_key, value_type)
-
-    @classmethod
-    def __put_to_db_internal(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
-        for key, value in iters:
-            sub_db = db.get_sub_db(cls.encode_key(key))
-            if isinstance(value, dict):
-                cls.__put_to_db_internal(sub_db, value.items())
-            elif isinstance(value, (list, set, tuple)):
-                cls.__put_to_db_internal(sub_db, enumerate(value))
-            else:
-                db_key = cls.encode_key(key)
-                db_value = cls.encode_value(value)
-                db.put(db_key, db_value)
+    # @classmethod
+    # def remove_prefix_from_iters(cls, iter_items: iter) -> iter:
+    #     return ((cls.__remove_prefix_from_key(key), value) for key, value in iter_items)
+    #
+    # @classmethod
+    # def __remove_prefix_from_key(cls, key_from_bytes: bytes) -> bytes:
+    #     return key_from_bytes[:-1]
+    #
+    # @classmethod
+    # def put_to_db(cls, db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
+    #     sub_db = db.get_sub_db([cls.encode_key(db_key)])
+    #     if isinstance(container, dict):
+    #         cls.__put_to_db_internal(sub_db, container.items())
+    #     elif isinstance(container, (list, set, tuple)):
+    #         cls.__put_to_db_internal(sub_db, enumerate(container))
+    #
+    # @classmethod
+    # def get_from_db(cls, db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
+    #     sub_db = db.get_sub_db([cls.encode_key(db_key)])
+    #     *args, last_arg = args
+    #     for arg in args:
+    #         sub_db = sub_db.get_sub_db([cls.encode_key(arg)])
+    #
+    #     byte_key = sub_db.get([cls.encode_key(last_arg)])
+    #     if byte_key is None:
+    #         return get_default_value(value_type)
+    #     return cls.decode_object(byte_key, value_type)
+    #
+    # @classmethod
+    # def __put_to_db_internal(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
+    #     for key, value in iters:
+    #         sub_db = db.get_sub_db([cls.encode_key(key)])
+    #         if isinstance(value, dict):
+    #             cls.__put_to_db_internal(sub_db, value.items())
+    #         elif isinstance(value, (list, set, tuple)):
+    #             cls.__put_to_db_internal(sub_db, enumerate(value))
+    #         else:
+    #             db_key = cls.encode_key(key)
+    #             db_value = cls.encode_value(value)
+    #             db.put(db_key, db_value)
 
 
 class DictDB(object):
@@ -172,7 +193,12 @@ class DictDB(object):
                            'IconScoreSubDatabase'],
                  value_type: type,
                  depth: int = 1) -> None:
-        prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
+
+        if db.is_root:
+            prefix: list = ContainerUtil.create_db_prefix(type(self), var_key)
+        else:
+            prefix: list = [[get_encoded_key_v1(var_key)], [get_encoded_key_v2(var_key)]]
+
         self._db = db.get_sub_db(prefix)
 
         self.__value_type = value_type
@@ -190,17 +216,22 @@ class DictDB(object):
         if self.__depth != 1:
             raise InvalidContainerAccessException('DictDB depth mismatch')
 
-        encoded_key: bytes = get_encoded_key(key)
+        encoded_key: list = [[get_encoded_key_v1(key)], [get_encoded_key_v2(key)]]
         encoded_value: bytes = ContainerUtil.encode_value(value)
 
         self._db.put(encoded_key, encoded_value)
 
     def __getitem__(self, key: K) -> Any:
         if self.__depth == 1:
-            encoded_key: bytes = get_encoded_key(key)
+            encoded_key: list = [[get_encoded_key_v1(key)], [get_encoded_key_v2(key)]]
             return ContainerUtil.decode_object(self._db.get(encoded_key), self.__value_type)
         else:
-            return DictDB(key, self._db, self.__value_type, self.__depth - 1)
+            return DictDB(
+                var_key=key,
+                db=self._db,
+                value_type=self.__value_type,
+                depth=self.__depth - 1
+            )
 
     def __delitem__(self, key: K):
         self.__remove(key)
@@ -208,13 +239,13 @@ class DictDB(object):
     def __contains__(self, key: K):
         # Plyvel doesn't allow setting None value in the DB.
         # so there is no case of returning None value if the key exists.
-        value = self._db.get(get_encoded_key(key))
+        value = self._db.get([[get_encoded_key_v1(key)], [get_encoded_key_v2(key)]])
         return value is not None
 
     def __remove(self, key: K) -> None:
         if self.__depth != 1:
             raise InvalidContainerAccessException('DictDB depth mismatch')
-        self._db.delete(get_encoded_key(key))
+        self._db.delete([[get_encoded_key_v1(key)], [get_encoded_key_v2(key)]])
 
     def __iter__(self):
         raise InvalidContainerAccessException("Iteration not supported in DictDB")
@@ -228,11 +259,11 @@ class ArrayDB(object):
     :K: [int, str, Address, bytes]
     :V: [int, str, Address, bytes, bool]
     """
-    __SIZE = 'size'
-    __SIZE_BYTE_KEY = get_encoded_key(__SIZE)
+
+    __SIZE_BYTE_KEY = [[get_encoded_key_v1('size')], [b'']]
 
     def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
-        prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
+        prefix: list = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
         self.__value_type = value_type
         self.__size = self.__get_size_from_db()
@@ -259,7 +290,7 @@ class ArrayDB(object):
 
         index = size - 1
         last_val = self[index]
-        self._db.delete(get_encoded_key(index))
+        self._db.delete([[get_encoded_key_v1(index)], [get_encoded_key_v2(index)]])
         self.__set_size(index)
         return last_val
 
@@ -277,12 +308,13 @@ class ArrayDB(object):
 
     def __set_size(self, size: int) -> None:
         self.__size = size
-        byte_value = ContainerUtil.encode_value(size)
-        self._db.put(self.__SIZE_BYTE_KEY, byte_value)
+        value = ContainerUtil.encode_value(size)
+        self._db.put(self.__SIZE_BYTE_KEY, value)
 
     def __put(self, index: int, value: V) -> None:
-        byte_value = ContainerUtil.encode_value(value)
-        self._db.put(get_encoded_key(index), byte_value)
+        key = [[get_encoded_key_v1(index)], [get_encoded_key_v2(index)]]
+        value = ContainerUtil.encode_value(value)
+        self._db.put(key, value)
 
     def __iter__(self):
         return self._get_generator(self._db, self.__size, self.__value_type)
@@ -324,7 +356,7 @@ class ArrayDB(object):
             index += size
 
         if 0 <= index < size:
-            key: bytes = get_encoded_key(index)
+            key: list = [[get_encoded_key_v1(index)], [get_encoded_key_v2(index)]]
             return ContainerUtil.decode_object(db.get(key), value_type)
 
         raise InvalidParamsException('ArrayDB out of index')
@@ -346,8 +378,8 @@ class VarDB(object):
 
     def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
         # Use var_key as a db prefix in the case of VarDB
-        self._db = db.get_sub_db(VAR_DB_ID)
-        self.__var_byte_key = get_encoded_key(var_key)
+        self._db = db.get_sub_db([[VAR_DB_ID], [VAR_DB_ID]])
+        self.__var_byte_key = [[get_encoded_key_v1(var_key)], [get_encoded_key_v2(var_key)]]
         self.__value_type = value_type
 
     def set(self, value: V) -> None:

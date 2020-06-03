@@ -282,7 +282,7 @@ class TestIconScoreDatabase(unittest.TestCase):
         db_path = os.path.join(state_db_root_path, 'db')
         context_db = ContextDatabase.from_path(db_path, True)
 
-        self.db = IconScoreDatabase(address, context_db=context_db, prefix=b'')
+        self.db = IconScoreDatabase(address, context_db=context_db)
         self.address = address
 
     def tearDown(self):

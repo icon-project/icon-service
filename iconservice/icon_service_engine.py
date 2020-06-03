@@ -332,8 +332,6 @@ class IconServiceEngine(ContextContainer):
 
     def _load_builtin_scores(self, context: 'IconScoreContext', builtin_score_owner: 'Address'):
         context.icon_score_mapper.clear()
-
-        current_address: 'Address' = context.current_address
         context.current_address = GOVERNANCE_SCORE_ADDRESS
 
         try:
@@ -341,8 +339,6 @@ class IconServiceEngine(ContextContainer):
             IconBuiltinScoreLoader.load_builtin_scores(context, builtin_score_owner)
         finally:
             self._pop_context()
-
-        context.current_address = current_address
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
