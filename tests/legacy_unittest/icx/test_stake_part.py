@@ -19,6 +19,7 @@
 import unittest
 
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from iconservice.icon_constant import Revision
 from iconservice.icx.base_part import BasePartState
 from iconservice.icx.stake_part import StakePart
 from tests import create_address
@@ -29,7 +30,7 @@ class TestStakePart(unittest.TestCase):
     def test_stake_part_from_bytes_to_bytes(self):
         part1 = StakePart()
         part1.normalize(0)
-        data = part1.to_bytes()
+        data = part1.to_bytes(Revision.IISS.value)
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(5, len(data))
 
@@ -41,11 +42,33 @@ class TestStakePart(unittest.TestCase):
 
         part3 = StakePart(10, 20, 30)
         part3.normalize(0)
-        part4 = StakePart.from_bytes(part3.to_bytes())
+        part4 = StakePart.from_bytes(part3.to_bytes(Revision.IISS.value))
         part4.normalize(0)
         self.assertEqual(part3.stake, part4.stake)
         self.assertEqual(part3.unstake, part4.unstake)
         self.assertEqual(part3.unstake_block_height, part4.unstake_block_height)
+
+    def test_stake_part_from_bytes_to_bytes_multiple_unstake(self):
+        part1 = StakePart()
+        part1.normalize(0)
+        data = part1.to_bytes(Revision.MULTIPLE_UNSTAKE.value)
+        self.assertTrue(isinstance(data, bytes))
+        self.assertEqual(6, len(data))
+
+        part2 = StakePart.from_bytes(data)
+        part2.normalize(0)
+        self.assertEqual(part1.stake, part2.stake)
+        self.assertEqual(part1.unstake, part2.unstake)
+        self.assertEqual(part1.unstake_block_height, part2.unstake_block_height)
+        self.assertEqual(part1.unstakes_info, part2.unstakes_info)
+
+        part3 = StakePart(10, 20, 30)
+        part3.normalize(0)
+        part4 = StakePart.from_bytes(part3.to_bytes(Revision.MULTIPLE_UNSTAKE.value))
+        part4.normalize(0)
+        self.assertEqual(part3.stake, part4.stake)
+        self.assertEqual(part3.unstake, part4.unstake)
+        self.assertEqual(part3.unstakes_info, part4.unstakes_info)
 
     def test_stake_part_update(self):
         stake: int = 10
@@ -65,6 +88,23 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(stake, part2.stake)
         self.assertEqual(0, part2.unstake)
         self.assertEqual(0, part2.unstake_block_height)
+
+    def test_stake_part_update_multiple_unstake(self):
+        stake: int = 5
+        block_height = 3
+        unstake_info1 = (10, 1)
+        unstake_info2 = (30, 5)
+        unstake_info3 = (20, 2)
+        unstake_info4 = (40, 3)
+        unstake_info5 = (100, 5)
+        unstakes_info = [unstake_info1, unstake_info2, unstake_info3, unstake_info4, unstake_info5]
+        part = StakePart(stake=stake, unstakes_info=unstakes_info)
+        part.normalize(block_height)
+        self.assertEqual(stake, part.stake)
+        self.assertEqual(0, part.unstake)
+        self.assertEqual(0, part.unstake_block_height)
+        expected_info = [(30, 5), (40, 3), (100, 5)]
+        self.assertEqual(expected_info, part.unstakes_info)
 
     def test_stake_part(self):
         stake = 500
@@ -87,6 +127,46 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(remain_stake, stake_part.stake)
         self.assertEqual(unstake, stake_part.unstake)
         self.assertEqual(block_height, stake_part.unstake_block_height)
+
+    def test_set_unstakes_info(self):
+        stake = 500
+        unstake = 0
+        unstake_block_height = 0
+
+        stake_part: 'StakePart' = StakePart()
+        stake_part.normalize(0)
+        stake_part.add_stake(stake)
+
+        self.assertEqual(stake, stake_part.stake)
+        self.assertEqual(unstake, stake_part.unstake)
+        self.assertEqual(unstake_block_height, stake_part.unstake_block_height)
+
+        # test adding unstakes
+        unstakes_info = [(100, 10), (50, 15), (50, 20), (50, 25), (50, 30)]
+
+        for i in range(len(unstakes_info)):
+            unstake = sum(map(lambda info: info[0], unstakes_info[:i+1]))
+            remain_stake = stake - unstake
+            stake_part.set_unstakes_info(unstakes_info[i][1], unstake)
+            self.assertEqual(remain_stake, stake_part.stake)
+            self.assertEqual(0, stake_part.unstake)
+            self.assertEqual(0, stake_part.unstake_block_height)
+            self.assertEqual(stake_part.unstakes_info, unstakes_info[:i+1])
+
+        # test reducing last unstake
+        stake_part.set_unstakes_info(31, 270)
+        expected_unstakes_info = [(100, 10), (50, 15), (50, 20), (50, 25), (20, 30)]
+        self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
+
+        # test increase last unstake
+        stake_part.set_unstakes_info(32, 280)
+        expected_unstakes_info = [(100, 10), (50, 15), (50, 20), (50, 25), (30, 32)]
+        self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
+
+        # test reduce unstake slot
+        stake_part.set_unstakes_info(31, 210)
+        expected_unstakes_info = [(100, 10), (50, 15), (50, 20), (10, 25)]
+        self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
 
     def test_stake_part_make_key(self):
         key = StakePart.make_key(create_address())
@@ -153,12 +233,44 @@ class TestStakePart(unittest.TestCase):
         part.set_complete(True)
         self.assertEqual(stake+unstake, part.total_stake)
 
+    def test_stake_part_total_stake_multiple_unstake(self):
+        stake = 10
+        unstakes_info = [(10, 1), (10, 2)]
+        part = StakePart(stake=stake, unstakes_info=unstakes_info)
+        part.set_complete(True)
+        self.assertEqual(stake+20, part.total_stake)
+
     def test_stake_part_total_stake_overflow(self):
         part = StakePart()
 
         with self.assertRaises(Exception) as e:
             self.assertEqual(0, part.total_stake)
         self.assertEqual(AssertionError, type(e.exception))
+
+    def test_stake_part_unstakes_info(self):
+        unstakes_info = [(10, 1), (10, 2)]
+        part = StakePart(unstakes_info=unstakes_info)
+        part.set_complete(True)
+        self.assertEqual(unstakes_info, part.unstakes_info)
+
+    def test_stake_part_unstakes_info_overflow(self):
+        part = StakePart()
+
+        with self.assertRaises(Exception) as e:
+            self.assertEqual([], part.unstakes_info)
+        self.assertEqual(AssertionError, type(e.exception))
+
+    def test_stake_part_total_unstake(self):
+        unstake = 10
+        part = StakePart(unstake=10)
+        part.set_complete(True)
+        self.assertEqual(unstake, part.total_unstake)
+
+    def test_stake_part_total_unstake2(self):
+        unstakes_info = [(10, 1), (20, 1)]
+        part = StakePart(unstakes_info=unstakes_info)
+        part.set_complete(True)
+        self.assertEqual(30, part.total_unstake)
 
     def test_stake_part_add_stake(self):
         part = StakePart()

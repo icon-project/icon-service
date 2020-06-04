@@ -313,7 +313,7 @@ class Storage(StorageBase):
             if part and part.is_dirty():
                 key: bytes = part.make_key(account.address)
 
-                if isinstance(part, CoinPart):
+                if isinstance(part, CoinPart) or isinstance(part, StakePart):
                     value: bytes = part.to_bytes(context.revision)
                 else:
                     value: bytes = part.to_bytes()

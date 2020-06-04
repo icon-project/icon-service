@@ -21,6 +21,7 @@ from unittest.mock import Mock
 
 from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
+from iconservice.icon_constant import Revision
 from iconservice.icx.icx_account import Account
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.stake_part import StakePart
@@ -107,7 +108,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake1
 
-        account.set_stake(stake1, 0)
+        account.set_stake(stake1, 0, Revision.IISS.value)
 
         self.assertEqual(stake1, account.stake)
         self.assertEqual(0, account.unstake)
@@ -118,7 +119,7 @@ class TestAccount(unittest.TestCase):
         block_height = 10
         unstake = stake1 - stake2
         remain_balance = balance - stake1
-        account.set_stake(stake2, block_height)
+        account.set_stake(stake2, block_height, Revision.IISS.value)
 
         self.assertEqual(stake2, account.stake)
         self.assertEqual(unstake, account.unstake)
@@ -202,6 +203,19 @@ class TestAccount(unittest.TestCase):
         stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
         self.assertEqual(value, account.unstake_block_height)
+
+    def test_account_unstakes_info(self):
+        value: int = 0
+        stake_part = StakePart(unstake=value)
+        stake_part.set_complete(True)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual([], account.unstakes_info)
+
+        info = [(10, 1), (20, 5)]
+        stake_part = StakePart(unstakes_info=info)
+        stake_part.set_complete(True)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual(info, account.unstakes_info)
 
     def test_account_delegated_amount(self):
         value: int = 0

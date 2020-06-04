@@ -17,6 +17,7 @@
 from typing import TYPE_CHECKING, Optional
 
 from ..base.exception import InvalidParamsException
+from ..icon_constant import Revision
 
 if TYPE_CHECKING:
     from .coin_part import CoinPart
@@ -92,6 +93,11 @@ class Account(object):
         raise InvalidParamsException("Invalid intend: start_part is None")
 
     @property
+    def unstakes_info(self) -> Optional[list]:
+        if self.stake_part:
+            return self.stake_part.unstakes_info
+
+    @property
     def delegated_amount(self) -> int:
         if self.delegation_part:
             return self.delegation_part.delegated_amount
@@ -139,7 +145,7 @@ class Account(object):
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
-    def set_stake(self, value: int, unstake_lock_period: int):
+    def set_stake(self, value: int, unstake_lock_period: int, revision: int):
         if self.coin_part is None or self.stake_part is None:
             raise InvalidParamsException('Failed to stake: InvalidAccount')
 
@@ -154,15 +160,20 @@ class Account(object):
         offset: int = value - self.total_stake
 
         if offset == 0:
-            self.stake_part.reset_unstake()
+            if revision < Revision.MULTIPLE_UNSTAKE.value:
+                self.stake_part.reset_unstake()
         elif offset > 0:
             self.coin_part.withdraw(offset)
             self.stake_part.add_stake(offset)
-            self.stake_part.reset_unstake()
+            if revision < Revision.MULTIPLE_UNSTAKE.value:
+                self.stake_part.reset_unstake()
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
             self.coin_part.toggle_has_unstake(True)
-            self.stake_part.set_unstake(unlock_block_height,  self.total_stake - value)
+            if revision >= Revision.MULTIPLE_UNSTAKE.value:
+                self.stake_part.set_unstakes_info(unlock_block_height, self.total_stake - value)
+            else:
+                self.stake_part.set_unstake(unlock_block_height,  self.total_stake - value)
 
     def update_delegated_amount(self, offset: int):
         if self.delegation_part is None:
