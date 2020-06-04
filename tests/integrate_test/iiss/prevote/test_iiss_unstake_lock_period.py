@@ -55,6 +55,6 @@ class TestIISSUnStakeLockPeriod(TestIISSBase):
                            value=stake)
 
             actual_response: dict = self.get_stake(self._accounts[0])
-            actual_lockup_period = actual_response['unstakeBlockHeight'] - self._block_height
+            actual_lockup_period = actual_response["unstakeList"][0]['unstakeBlockHeight'] - self._block_height
             diff = abs(actual_lockup_period - EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT[stake_percent])
             assert diff <= 1

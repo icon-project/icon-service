@@ -33,13 +33,13 @@ class StakePart(BasePart):
                  stake: int = 0,
                  unstake: int = 0,
                  unstake_block_height: int = 0,
-                 unstakes_info: Optional[List[Tuple[int, int]]] = None):
+                 unstakes_info: Optional[List] = None):
         super().__init__()
 
         self._stake: int = stake
         self._unstake: int = unstake
         self._unstake_block_height: int = unstake_block_height
-        self._unstakes_info: List[Tuple[int, int]] = unstakes_info if unstakes_info else []
+        self._unstakes_info: List[List[int, int]] = unstakes_info if unstakes_info else []
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
@@ -71,7 +71,7 @@ class StakePart(BasePart):
         return self._stake + self.total_unstake
 
     @property
-    def unstakes_info(self) -> List[Tuple[int, int]]:
+    def unstakes_info(self) -> List:
         assert self.is_set(BasePartState.COMPLETE)
         return self._unstakes_info
 
@@ -109,7 +109,7 @@ class StakePart(BasePart):
 
     def set_unstakes_info(self, block_height: int, new_total_unstake: int):
         if self._unstake_block_height:
-            self._unstakes_info.append((self._unstake, self._unstake_block_height))
+            self._unstakes_info.append([self._unstake, self._unstake_block_height])
             self._unstake = 0
             self._unstake_block_height = 0
 
@@ -131,7 +131,7 @@ class StakePart(BasePart):
                     self._unstakes_info = self.unstakes_info[:index + 1]
                     old_value_pair = self._unstakes_info.pop()
                     new_value_pair = \
-                        (total_unstake - accumulated_unstake + old_value_pair[0]) + offset, old_value_pair[1]
+                        [(total_unstake - accumulated_unstake + old_value_pair[0]) + offset, old_value_pair[1]]
                     self._unstakes_info.append(new_value_pair)
                     break
 
@@ -140,7 +140,7 @@ class StakePart(BasePart):
             if len(self._unstakes_info) == UNSTAKE_SLOT_MAX:
                 old_value_pair = self._unstakes_info.pop()
                 increment_unstake += old_value_pair[0]
-            self._unstakes_info.append((increment_unstake, block_height))
+            self._unstakes_info.append([increment_unstake, block_height])
 
         self._stake = total_stake - new_total_unstake
         self.set_dirty(True)
