@@ -4,16 +4,6 @@ import sys
 
 from setuptools import setup, find_packages
 
-CURRENT_PYTHON = sys.version_info[:3]
-REQUIRED_PYTHON = (3, 6, 5)
-
-if CURRENT_PYTHON < REQUIRED_PYTHON:
-    sys.stderr.write(
-        f"Unsupported Python version* This version of Icon Service requires\n"
-        f"Python {'.'.join([str(v) for v in REQUIRED_PYTHON])}, "
-        f"but you're trying to install it on Python {'.'.join([str(v) for v in CURRENT_PYTHON])}. ")
-    sys.exit(1)
-
 with open('requirements.txt') as requirements:
     requires = list(requirements)
 
@@ -49,6 +39,7 @@ setup_options = {
     'license': "Apache License 2.0",
     'install_requires': requires,
     'extras_require': extra_requires,
+    'python_requires': '>=3.6.5, <3.8',
     'entry_points': {
         'console_scripts': [
             'iconservice=iconservice.icon_service_cli:main'
