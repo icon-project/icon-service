@@ -74,7 +74,7 @@ class InternalCall(object):
                 # System SCORE inter-call enabled after Revision.SYSTEM_SCORE_ENABLED
                 # Exception
                 #   - Governance SCORE can call system SCORE inter-call
-                if addr_to == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SYSTEM_SCORE_ENABLED.value :
+                if addr_to == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SYSTEM_SCORE_ENABLED.value:
                     if addr_from != GOVERNANCE_SCORE_ADDRESS:
                         raise ScoreNotFoundException(f"{SYSTEM_SCORE_ADDRESS} is not found")
 
