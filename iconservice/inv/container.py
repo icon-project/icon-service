@@ -121,30 +121,17 @@ class Container(object):
         self._is_migrated: bool = is_migrated
 
         self._tx_batch = self.BatchDict()
-        self._icon_network_values: dict = {
-            IconNetworkValueType.REVISION_CODE: None,
-            IconNetworkValueType.REVISION_NAME: None,
-            IconNetworkValueType.SCORE_BLACK_LIST: None,
-            IconNetworkValueType.STEP_PRICE: None,
-            IconNetworkValueType.STEP_COSTS: None,
-            IconNetworkValueType.MAX_STEP_LIMITS: None,
-            IconNetworkValueType.SERVICE_CONFIG: None,
-            IconNetworkValueType.IMPORT_WHITE_LIST: None,
-            IconNetworkValueType.IREP: None,
-        }
+        self._icon_network_values: dict = {}    # It must be set by DB loading and network proposal
 
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
     def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
-        value = self._tx_batch.get(type_, None)
-        if value is None:
-            value = self._icon_network_values[type_]
-            if value is None:
-                return None
-
-        return value.value
+        value = self._tx_batch.get(type_, self._icon_network_values[type_])
+        if isinstance(value, Value):
+            return value.value
+        return None
 
     @property
     def service_config(self) -> int:

@@ -89,10 +89,8 @@ class Engine(EngineBase, ContextContainer):
         try:
             self._push_context(context)
             governance = self._get_governance(context)
-            # for type_ in IconNetworkValueType:
-            #     value: Any = self._get_gs_data_mapper[type_](context, governance)
-            for type_, func in self._get_gs_data_mapper.items():
-                value: Any = func(context, governance)
+            for type_ in IconNetworkValueType.gs_migration_type_list():
+                value: Any = self._get_gs_data_mapper[type_](context, governance)
                 container.set_inv(ValueConverter.convert_for_icon_service(type_, value))
         except ScoreNotFoundException:
             pass
