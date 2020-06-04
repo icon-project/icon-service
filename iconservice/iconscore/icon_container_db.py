@@ -135,49 +135,49 @@ class ContainerUtil:
             obj_value = value
         return obj_value
 
-    # @classmethod
-    # def remove_prefix_from_iters(cls, iter_items: iter) -> iter:
-    #     return ((cls.__remove_prefix_from_key(key), value) for key, value in iter_items)
-    #
-    # @classmethod
-    # def __remove_prefix_from_key(cls, key_from_bytes: bytes) -> bytes:
-    #     return key_from_bytes[:-1]
-    #
-    # @classmethod
-    # def put_to_db(cls, db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
-    #     sub_db = db.get_sub_db([cls.encode_key(db_key)])
-    #     if isinstance(container, dict):
-    #         cls.__put_to_db_internal(sub_db, container.items())
-    #     elif isinstance(container, (list, set, tuple)):
-    #         cls.__put_to_db_internal(sub_db, enumerate(container))
-    #
-    # @classmethod
-    # def get_from_db(cls, db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
-    #     sub_db = db.get_sub_db([cls.encode_key(db_key)])
-    #     *args, last_arg = args
-    #     for arg in args:
-    #         sub_db = sub_db.get_sub_db([cls.encode_key(arg)])
-    #
-    #     byte_key = sub_db.get([cls.encode_key(last_arg)])
-    #     if byte_key is None:
-    #         return get_default_value(value_type)
-    #     return cls.decode_object(byte_key, value_type)
-    #
-    # @classmethod
-    # def __put_to_db_internal(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
-    #     for key, value in iters:
-    #         sub_db = db.get_sub_db([cls.encode_key(key)])
-    #         if isinstance(value, dict):
-    #             cls.__put_to_db_internal(sub_db, value.items())
-    #         elif isinstance(value, (list, set, tuple)):
-    #             cls.__put_to_db_internal(sub_db, enumerate(value))
-    #         else:
-    #             db_key = cls.encode_key(key)
-    #             db_value = cls.encode_value(value)
-    #             db.put(db_key, db_value)
+    @classmethod
+    def remove_prefix_from_iters(cls, iter_items: iter) -> iter:
+        return ((cls.__remove_prefix_from_key(key), value) for key, value in iter_items)
+
+    @classmethod
+    def __remove_prefix_from_key(cls, key_from_bytes: bytes) -> bytes:
+        return key_from_bytes[:-1]
+
+    @classmethod
+    def put_to_db(cls, db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
+        sub_db = db.get_sub_db([[get_encoded_key_v1(db_key)], [get_encoded_key_v2(db_key)]])
+        if isinstance(container, dict):
+            cls.__put_to_db_internal(sub_db, container.items())
+        elif isinstance(container, (list, set, tuple)):
+            cls.__put_to_db_internal(sub_db, enumerate(container))
+
+    @classmethod
+    def get_from_db(cls, db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
+        sub_db = db.get_sub_db([[get_encoded_key_v1(db_key)], [get_encoded_key_v2(db_key)]])
+        *args, last_arg = args
+        for arg in args:
+            sub_db = sub_db.get_sub_db([[get_encoded_key_v1(arg)], [get_encoded_key_v2(arg)]])
+
+        byte_key = sub_db.get([[get_encoded_key_v1(last_arg)], [get_encoded_key_v2(last_arg)]])
+        if byte_key is None:
+            return get_default_value(value_type)
+        return cls.decode_object(byte_key, value_type)
+
+    @classmethod
+    def __put_to_db_internal(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], iters: iter) -> None:
+        for key, value in iters:
+            sub_db = db.get_sub_db([[get_encoded_key_v1(key)], [get_encoded_key_v2(key)]])
+            if isinstance(value, dict):
+                cls.__put_to_db_internal(sub_db, value.items())
+            elif isinstance(value, (list, set, tuple)):
+                cls.__put_to_db_internal(sub_db, enumerate(value))
+            else:
+                db_key = [[get_encoded_key_v1(key)], [get_encoded_key_v2(key)]]
+                db_value = cls.encode_value(value)
+                db.put(db_key, db_value)
 
 
-class DictDB(object):
+class DictDB:
     """
     Utility classes wrapping the state DB.
     DictDB behaves more like python dict.
@@ -251,7 +251,7 @@ class DictDB(object):
         raise InvalidContainerAccessException("Iteration not supported in DictDB")
 
 
-class ArrayDB(object):
+class ArrayDB:
     """
     Utility classes wrapping the state DB.
     ArrayDB supports length and iterator, maintains order.
@@ -367,7 +367,7 @@ class ArrayDB(object):
             yield cls._get(db, size, index, value_type)
 
 
-class VarDB(object):
+class VarDB:
     """
     Utility classes wrapping the state DB.
     VarDB can be used to store simple key-value state.

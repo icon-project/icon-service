@@ -397,7 +397,7 @@ class IconScoreDatabase(ContextGetter):
         """
         hashed_key: list = self._hash_key(key)
 
-        # hashed_key_v1: bytes = b'|'.join(hashed_key)
+        # hashed_key_v1: bytes = b'|'.join(hashed_key[0])
         # value = self._context_db.get(self._context, hashed_key_v1)
         hashed_key_v2: bytes = b''.join(hashed_key[1])
         value = self._meta_db.get(self._context, hashed_key_v2)
@@ -417,6 +417,7 @@ class IconScoreDatabase(ContextGetter):
         :param key: key to set
         :param value: value to set
         """
+
         self._validate_ownership()
 
         hashed_key: list = self._hash_key(key)
@@ -491,6 +492,7 @@ class IconScoreDatabase(ContextGetter):
         :params key: key passed by SCORE
         :return: key bytes
         """
+
         return [p + k for p, k in zip(self._prefix, key)]
 
     def _validate_ownership(self):
