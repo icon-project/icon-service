@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Package for objects which are related with Icon Services"""
-
 from abc import ABCMeta, abstractmethod, ABC
 from functools import wraps
 from inspect import isfunction
@@ -29,3 +28,4 @@ from .iconscore.icon_score_base2 import (InterfaceScore, revert, sha3_256, sha_2
                                          create_address_with_key, create_interface_score)
 from .iconscore.icon_system_score_base import IconSystemScoreBase
 from .iconscore.system_score import InterfaceSystemScore
+from .__version__ import __version__

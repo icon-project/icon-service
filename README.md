@@ -72,13 +72,14 @@ $ source venv/bin/activate
 
 ## Building source code
 
-First, clone this project. Then go to the project folder and create a user environment and run build script.
+First, clone this project. Then go to the project folder and create a
+user environment and build using wheel
 
 ```bash
 $ virtualenv -p python3 venv  # Create a virtual environment.
 $ source venv/bin/activate    # Enter the virtual environment.
-(venv)$ ./build.sh            # run build script
-(venv)$ ls dist/              # check result wheel file
+(venv)$ pip install wheel
+(venv)$ python setup.py sdist bdist_wheel
 iconservice-x.x.x-py3-none-any.whl
 ```
 
