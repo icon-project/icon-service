@@ -19,11 +19,12 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus, PenaltyReason
 from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ConfigKey, ICX_IN_LOOP
+from iconservice.prep import PRepMethod
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
@@ -604,3 +605,31 @@ class TestIntegratePrep(TestIISSBase):
 
             prep: dict = self.get_prep(prep["address"])
             self.assertEqual(10 * ICX_IN_LOOP, prep["stake"])
+
+    def test_prep_query_via_icx_sendtransaction(self):
+        self.init_decentralized()
+        query = {
+            PRepMethod.GET_PREP: {"address": str(self._accounts[0].address)},
+            PRepMethod.GET_MAIN_PREPS: {},
+            PRepMethod.GET_SUB_PREPS: {},
+            PRepMethod.GET_PREPS: {"startRanking": "0x1", "endRanking": "0x2"},
+            PRepMethod.GET_PREP_TERM: {},
+            PRepMethod.GET_INACTIVE_PREPS: {},
+        }
+
+        # TEST : query via icx_sendTransaction (revision < ALLOW_INVOKE_SYSTEM_SCORE_READONLY)
+        for method, param in query.items():
+            self.check_query_via_icx_sendtransaction(method, param, False)
+
+        # TEST : query via icx_sendTransaction (revision >= ALLOW_INVOKE_SYSTEM_SCORE_READONLY)
+        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value)
+        for method, param in query.items():
+            self.check_query_via_icx_sendtransaction(method, param, True)
+        return
+
+    def check_query_via_icx_sendtransaction(self, method: str, params: dict, expected_status: bool):
+        tx = self.create_score_call_tx(from_=self._admin,
+                                       to_=SYSTEM_SCORE_ADDRESS,
+                                       func_name=method,
+                                       params=params)
+        return self.process_confirm_block_tx([tx], expected_status=expected_status)

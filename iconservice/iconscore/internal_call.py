@@ -21,10 +21,10 @@ from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
-from ..base.address import Address
-from ..base.exception import StackOverflowException
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.exception import StackOverflowException, ScoreNotFoundException
 from ..base.message import Message
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType, Revision
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -46,6 +46,7 @@ class InternalCall(object):
                             kw_params: Optional[dict] = None) -> Any:
         if func_name is None:
             func_name = STR_FALLBACK
+
         return InternalCall._call(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
     @staticmethod
@@ -70,6 +71,13 @@ class InternalCall(object):
                 InternalCall.emit_event_log_for_icx_transfer(context, addr_from, addr_to, amount)
 
             if addr_to.is_contract:
+                # System SCORE inter-call enabled after Revision.SYSTEM_SCORE_ENABLED
+                # Exception
+                #   - Governance SCORE can call system SCORE inter-call
+                if addr_to == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SYSTEM_SCORE_ENABLED.value:
+                    if addr_from != GOVERNANCE_SCORE_ADDRESS:
+                        raise ScoreNotFoundException(f"{SYSTEM_SCORE_ADDRESS} is not found")
+
                 return InternalCall._other_score_call(
                     context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
