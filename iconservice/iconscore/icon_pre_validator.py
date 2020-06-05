@@ -321,7 +321,7 @@ class IconPreValidator:
         if balance < value + fee:
             msg = f"Out of balance: from={from_} balance={balance} value={value} fee={fee}"
             if balance == 0:
-                Logger.info(tag=TAG, msg=msg)
+                Logger.info(tag=TAG, msg=f"{msg} {context.block}")
 
             raise OutOfBalanceException(msg)
 

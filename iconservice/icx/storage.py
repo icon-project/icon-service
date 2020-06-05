@@ -298,7 +298,7 @@ class Storage(StorageBase):
         value: bytes = self._db.get(context, key)
 
         if value is None and part_class is CoinPart:
-            Logger.info(tag="PV", msg=f"No CoinPart: {address}")
+            Logger.info(tag="PV", msg=f"No CoinPart: {address} {context.block}")
 
         return part_class.from_bytes(value) if value else part_class()
 
