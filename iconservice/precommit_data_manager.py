@@ -28,6 +28,7 @@ from .iiss.reward_calc.msg_data import TxData
 from .inv.container import Container as INVContainer
 from .prep.prep_address_converter import PRepAddressConverter
 from .utils import bytes_to_hex, sha3_256, to_camel_case
+from . import __version__
 
 if TYPE_CHECKING:
     from .base.address import Address
@@ -37,6 +38,9 @@ _TAG = "PRECOMMIT"
 
 
 class PrecommitDataWriter:
+    """
+    Write Precommit data to the file for debugging
+    """
     VERSION = 0
     DIR_NAME = "precommit"
 
@@ -54,14 +58,19 @@ class PrecommitDataWriter:
             :return:
             """
         filename: str = f"{precommit_data.block.height}-{self._filename_suffix}"
-
+        Logger.info(
+            tag=_TAG,
+            msg=f"Start writing precommit data:{precommit_data})"
+        )
         with open(os.path.join(self._dir_path, filename), 'w') as f:
             try:
                 block = precommit_data.block
                 json_dict = {
+                    "iconservice": __version__,
                     "revision": precommit_data.revision,
                     "block": block if block is None else block.to_dict(to_camel_case),
                     "isStateRootHash": precommit_data.is_state_root_hash,
+                    "rcStateRootHash": precommit_data.rc_state_root_hash,
                     "stateRootHash": precommit_data.state_root_hash,
                     "prevBlockGenerator": precommit_data.prev_block_generator,
                     "blockBatch": precommit_data.block_batch.to_list(),
@@ -76,6 +85,9 @@ class PrecommitDataWriter:
 
     @classmethod
     def _json_default(cls, obj):
+        # json package do not  Address obj
+        from iconservice import Address
+
         if isinstance(obj, bytes):
             return bytes_to_hex(obj)
         elif isinstance(obj, Address):
