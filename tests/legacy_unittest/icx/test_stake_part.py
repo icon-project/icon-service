@@ -142,7 +142,7 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(unstake_block_height, stake_part.unstake_block_height)
 
         # test adding unstakes
-        unstakes_info = [(100, 10), (50, 15), (50, 20), (50, 25), (50, 30)]
+        unstakes_info = [[100, 10], [50, 15], [50, 20], [50, 25], [50, 30]]
 
         for i in range(len(unstakes_info)):
             unstake = sum(map(lambda info: info[0], unstakes_info[:i+1]))
@@ -155,17 +155,17 @@ class TestStakePart(unittest.TestCase):
 
         # test reducing last unstake
         stake_part.set_unstakes_info(31, 270)
-        expected_unstakes_info = [(100, 10), (50, 15), (50, 20), (50, 25), (20, 30)]
+        expected_unstakes_info = [[100, 10], [50, 15], [50, 20], [50, 25], [20, 30]]
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
 
         # test increase last unstake
         stake_part.set_unstakes_info(32, 280)
-        expected_unstakes_info = [(100, 10), (50, 15), (50, 20), (50, 25), (30, 32)]
+        expected_unstakes_info = [[100, 10], [50, 15], [50, 20], [50, 25], [30, 32]]
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
 
         # test reduce unstake slot
         stake_part.set_unstakes_info(31, 210)
-        expected_unstakes_info = [(100, 10), (50, 15), (50, 20), (10, 25)]
+        expected_unstakes_info = [[100, 10], [50, 15], [50, 20], [10, 25]]
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
 
     def test_stake_part_make_key(self):
