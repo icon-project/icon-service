@@ -60,7 +60,7 @@ class PrecommitDataWriter:
         filename: str = f"{precommit_data.block.height}-{self._filename_suffix}"
         Logger.info(
             tag=_TAG,
-            msg=f"Start writing precommit data:{precommit_data})"
+            msg=f"PrecommitDataWriter.write() start (precommit: {precommit_data})"
         )
         with open(os.path.join(self._dir_path, filename), 'w') as f:
             try:
@@ -82,6 +82,10 @@ class PrecommitDataWriter:
                     tag=_TAG,
                     msg=f"Exception raised during writing the precommit-data: {e}"
                 )
+        Logger.info(
+            tag=_TAG,
+            msg=f"PrecommitDataWriter.write() end"
+        )
 
     @classmethod
     def _json_default(cls, obj):
