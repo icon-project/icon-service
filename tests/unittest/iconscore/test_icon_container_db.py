@@ -100,14 +100,18 @@ class TestIconContainerDB:
         assert ContainerUtil.get_from_db(score_db, 'test_tuple', args, value_type=value_type) == expected_value
 
     @staticmethod
-    def _check_the_db_prefix_format(name):
-        prefix: list = ContainerUtil.create_db_prefix(DictDB, name)
-        assert prefix[0] == [b'\x01', name.encode()]
+    def _check_the_db_prefix_format(name, score_db):
+        prefix: list = ContainerUtil.create_db_prefix(
+            container_cls=DictDB,
+            var_key=name,
+            revision=score_db.revision
+        )
+        assert prefix == [b'\x01|' + name.encode()]
 
     def test_dict_depth1(self, score_db):
         name = 'test_dict'
         test_dict = DictDB(name, score_db, value_type=int)
-        self._check_the_db_prefix_format(name)
+        self._check_the_db_prefix_format(name, score_db)
 
         test_dict['a'] = 1
         test_dict['b'] = 2
@@ -120,7 +124,7 @@ class TestIconContainerDB:
     def test_dict_other_Key(self, score_db):
         name = 'test_dict'
         test_dict = DictDB(name, score_db, depth=2, value_type=int)
-        self._check_the_db_prefix_format(name)
+        self._check_the_db_prefix_format(name, score_db)
 
         addr1 = create_address(1)
         addr2 = create_address(0)
@@ -133,7 +137,7 @@ class TestIconContainerDB:
     def test_dict_depth2(self, score_db):
         name = 'test_dict'
         test_dict = DictDB(name, score_db, depth=3, value_type=int)
-        self._check_the_db_prefix_format(name)
+        self._check_the_db_prefix_format(name, score_db)
 
         test_dict['a']['b']['c'] = 1
         test_dict['a']['b']['d'] = 2
@@ -235,7 +239,7 @@ class TestIconContainerDB:
     def test_var_db(self, score_db, value_type, expected_value):
         test_var = VarDB('test_var', score_db, value_type=value_type)
         assert test_var._db != score_db
-        assert test_var._db._prefix[0][0] == b'\x02'
+        assert test_var._db._prefix == [b'\x02']
 
         test_var.set(expected_value)
 
@@ -255,7 +259,6 @@ class TestIconContainerDB:
         # TEST: Check the default value of collection object (dict, list)
         ContainerUtil.put_to_db(score_db, 'test_collection', collection)
         actual_value = ContainerUtil.get_from_db(score_db, 'test_collection', key_or_index, value_type=value_type)
-
         assert actual_value == expected_value
 
     @pytest.mark.parametrize("value_type, expected_value", [
@@ -273,7 +276,7 @@ class TestIconContainerDB:
         name = "TEST"
         testarray = ArrayDB(name, score_db, value_type=int)
         assert testarray._db != score_db
-        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name)
+        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name, score_db.revision)
 
         testarray.put(1)
         testarray.put(3)
@@ -288,7 +291,7 @@ class TestIconContainerDB:
         name = "TEST"
         testarray = ArrayDB(name, score_db, value_type=int)
         assert testarray._db != score_db
-        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name)
+        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name, score_db.revision)
 
         testarray.put(1)
         testarray.put(2)
@@ -330,13 +333,13 @@ class TestIconContainerDB:
             a = testarray[5]
 
     @pytest.mark.parametrize("prefix, score_db_cls, expected_prefix", [
-        ('a', ArrayDB, [b'\x00', b'a']),
-        ('dictdb', DictDB, [b'\x01', b'dictdb']),
+        ('a', ArrayDB, [b'\x00|a']),
+        ('dictdb', DictDB, [b'\x01|dictdb']),
     ])
     def test_container_util(self, prefix, score_db_cls, expected_prefix):
-        actual_prefix: list = ContainerUtil.create_db_prefix(score_db_cls, prefix)
-        assert actual_prefix[0] == expected_prefix
+        actual_prefix: list = ContainerUtil.create_db_prefix(score_db_cls, prefix, 0)
+        assert actual_prefix == expected_prefix
 
     def test_when_create_var_db_prefix_using_container_util_should_raise_error(self):
         with pytest.raises(InvalidParamsException):
-            ContainerUtil.create_db_prefix(VarDB, 'vardb')
+            ContainerUtil.create_db_prefix(VarDB, 'vardb', 0)

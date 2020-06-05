@@ -158,6 +158,9 @@ class IconScoreContext(ABC):
         old: 'INVContainer' = self.engine.inv.inv_container
         new: 'INVContainer' = self.inv_container
 
+        if old is None or new is None:
+            return False
+
         return old.revision_code != new.revision_code and new.revision_code == target_rev
 
     def get_batches(self) -> Iterable['Batch']:

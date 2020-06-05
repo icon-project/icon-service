@@ -17,6 +17,7 @@
 
 import os
 import unittest
+from unittest import mock
 from unittest.mock import patch
 
 from iconservice.base.address import Address, AddressPrefix
@@ -295,6 +296,8 @@ class TestIconScoreDatabase(unittest.TestCase):
     @patch('iconservice.iconscore.context.context.ContextGetter._context')
     def test_put_and_get(self, context):
         context.current_address = self.address
+        context.is_revision_changed = mock.Mock(return_value=False)
+        context.revision = 0
         db = self.db
         key = self.address.body
         value = 100

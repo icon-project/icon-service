@@ -20,7 +20,7 @@ from iconcommons.logger import Logger
 
 from .batch import TransactionBatchValue
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
-from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType
+from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType, Revision
 from ..iconscore.context.context import ContextGetter
 
 if TYPE_CHECKING:
@@ -376,17 +376,24 @@ class IconScoreDatabase(ContextGetter):
         """
         self.address = address
         self._context_db = context_db
-        self._meta_db = MetaContextDatabase(context_db.key_value_db)
         self._observer: Optional[DatabaseObserver] = None
 
-        self._prefix: list = [[address.to_bytes()], [address.to_bytes()]]
+        self._prefix: bytes = address.to_bytes()
 
     @property
     def is_root(self) -> bool:
         return True
 
+    @property
+    def revision(self) -> int:
+        if self._context.is_revision_changed(Revision.CONTAINER_DB_RLP.value):
+            return self._context.revision - 1
+        else:
+            return self._context.revision
+
     def get(self, key: bytes) -> bytes:
-        return self._get([[key], [key]])
+        encoded_key: list = self._encoded_key(key)
+        return self._get(encoded_key)
 
     def _get(self, key: list) -> bytes:
         """
@@ -396,19 +403,19 @@ class IconScoreDatabase(ContextGetter):
         :return: value for the specified key, or None if not found
         """
         hashed_key: list = self._hash_key(key)
+        value: Optional[bytes] = self._context_db.get(self._context, hashed_key[0])
 
-        # hashed_key_v1: bytes = b'|'.join(hashed_key[0])
-        # value = self._context_db.get(self._context, hashed_key_v1)
-        hashed_key_v2: bytes = b''.join(hashed_key[1])
-        value = self._meta_db.get(self._context, hashed_key_v2)
+        if self.revision >= Revision.CONTAINER_DB_RLP.value:
+            if value is None:
+                value: Optional[bytes] = self._context_db.get(self._context, hashed_key[1])
 
         if self._observer:
-            observer_key: bytes = b'|'.join(key[0])
-            self._observer.on_get(self._context, observer_key, value)
+            self._observer.on_get(self._context, key[0], value)
         return value
 
     def put(self, key: bytes, value: bytes):
-        self._put([[key], [key]], value)
+        encoded_key: list = self._encoded_key(key)
+        self._put(encoded_key, value)
 
     def _put(self, key: list, value: bytes):
         """
@@ -421,24 +428,23 @@ class IconScoreDatabase(ContextGetter):
         self._validate_ownership()
 
         hashed_key: list = self._hash_key(key)
-        hashed_key_v1: bytes = b'|'.join(hashed_key[0])
-        hashed_key_v2: bytes = b''.join(hashed_key[1])
 
         if self._observer:
-            # old_value = self._context_db.get(self._context, hashed_key_v1)
-            old_value = self._meta_db.get(self._context, hashed_key_v2)
+            old_value = self._context_db.get(self._context, hashed_key[0])
 
-            observer_key: bytes = b'|'.join(key[0])
             if value:
-                self._observer.on_put(self._context, observer_key, old_value, value)
+                self._observer.on_put(self._context, key[0], old_value, value)
             elif old_value:
                 # If new value is None, then deletes the field
-                self._observer.on_delete(self._context, observer_key, old_value)
+                self._observer.on_delete(self._context, key[0], old_value)
 
-        self._context_db.put(self._context, hashed_key_v1, value)
-        self._meta_db.put(self._context, hashed_key_v2, value)
+        self._context_db.put(self._context, hashed_key[0], value)
 
-    def get_sub_db(self, prefix: list) -> 'IconScoreSubDatabase':
+    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
+        encoded_key: list = self._encoded_key(prefix)
+        return self._get_sub_db(encoded_key)
+
+    def _get_sub_db(self, prefix: list) -> 'IconScoreSubDatabase':
         """
         Returns sub db with a prefix
 
@@ -453,7 +459,8 @@ class IconScoreDatabase(ContextGetter):
         return IconScoreSubDatabase(self.address, self, prefix)
 
     def delete(self, key: bytes):
-        self._delete([[key], [key]])
+        encoded_key: list = self._encoded_key(key)
+        self._delete(encoded_key)
 
     def _delete(self, key: list):
         """
@@ -464,20 +471,13 @@ class IconScoreDatabase(ContextGetter):
         self._validate_ownership()
 
         hashed_key: list = self._hash_key(key)
-        hashed_key_v1: bytes = b'|'.join(hashed_key[0])
-        hashed_key_v2: bytes = b''.join(hashed_key[1])
 
         if self._observer:
-            # old_value = self._context_db.get(self._context, hashed_key_v1)
-            old_value = self._meta_db.get(self._context, hashed_key_v2)
-
-            observer_key: bytes = b'|'.join(key[0])
+            old_value = self._context_db.get(self._context, hashed_key[0])
             # If old value is None, won't fire the callback
             if old_value:
-                self._observer.on_delete(self._context, observer_key, old_value)
-
-        self._context_db.delete(self._context, hashed_key_v1)
-        self._meta_db.delete(self._context, hashed_key_v2)
+                self._observer.on_delete(self._context, key[0], old_value)
+        self._context_db.delete(self._context, hashed_key[0])
 
     def close(self):
         self._context_db.close(self._context)
@@ -493,7 +493,13 @@ class IconScoreDatabase(ContextGetter):
         :return: key bytes
         """
 
-        return [p + k for p, k in zip(self._prefix, key)]
+        if self.revision < Revision.CONTAINER_DB_RLP.value:
+            key_v1: bytes = b'|'.join((self._prefix, key[0]))
+            return [key_v1]
+        else:
+            key_v2: bytes = b''.join((self._prefix, key[0]))
+            key_v1: bytes = b'|'.join((self._prefix, key[1]))
+            return [key_v2, key_v1]
 
     def _validate_ownership(self):
         """Prevent a SCORE from accessing the database of another SCORE
@@ -501,6 +507,12 @@ class IconScoreDatabase(ContextGetter):
         """
         if self._context.current_address != self.address:
             raise AccessDeniedException(f"Invalid database ownership: {self._context.current_address}, {self.address}")
+
+    def _encoded_key(self, key: bytes) -> list:
+        if self.revision < Revision.CONTAINER_DB_RLP.value:
+            return [key]
+        else:
+            return [key, key]
 
 
 class IconScoreSubDatabase:
@@ -528,7 +540,15 @@ class IconScoreSubDatabase:
     def is_root(self) -> bool:
         return False
 
-    def get(self, key: list) -> bytes:
+    @property
+    def revision(self) -> int:
+        return self._score_db.revision
+
+    def get(self, key: bytes) -> bytes:
+        encoded_key: list = self._encoded_key(key)
+        return self._get(encoded_key)
+
+    def _get(self, key: list) -> bytes:
         """
         Gets the value for the specified key
 
@@ -538,7 +558,11 @@ class IconScoreSubDatabase:
         hashed_key: list = self._hash_key(key)
         return self._score_db._get(hashed_key)
 
-    def put(self, key: list, value: bytes):
+    def put(self, key: bytes, value: bytes):
+        encoded_key: list = self._encoded_key(key)
+        self._put(encoded_key, value)
+
+    def _put(self, key: list, value: bytes):
         """
         Sets a value for the specified key.
 
@@ -548,7 +572,11 @@ class IconScoreSubDatabase:
         hashed_key: list = self._hash_key(key)
         self._score_db._put(hashed_key, value)
 
-    def get_sub_db(self, prefix: list) -> 'IconScoreSubDatabase':
+    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
+        encoded_key: list = self._encoded_key(prefix)
+        return self._get_sub_db(encoded_key)
+
+    def _get_sub_db(self, prefix: list) -> 'IconScoreSubDatabase':
         """
         Returns sub db with a prefix
 
@@ -561,7 +589,11 @@ class IconScoreSubDatabase:
         hashed_key: list = self._hash_key(prefix)
         return IconScoreSubDatabase(self.address, self._score_db, hashed_key)
 
-    def delete(self, key: list):
+    def delete(self, key: bytes):
+        encoded_key: list = self._encoded_key(key)
+        self._delete(encoded_key)
+
+    def _delete(self, key: list):
         """
         Deletes the key/value pair for the specified key.
 
@@ -580,4 +612,17 @@ class IconScoreSubDatabase:
         :params key: key passed by SCORE
         :return: key bytes
         """
-        return [p + k for p, k in zip(self._prefix, key)]
+
+        if self.revision < Revision.CONTAINER_DB_RLP.value:
+            key_v1: bytes = b'|'.join((self._prefix[0], key[0]))
+            return [key_v1]
+        else:
+            key_v2: bytes = b''.join((self._prefix[0], key[0]))
+            key_v1: bytes = b'|'.join((self._prefix[1], key[1]))
+            return [key_v2, key_v1]
+
+    def _encoded_key(self, key: bytes) -> list:
+        if self.revision < Revision.CONTAINER_DB_RLP.value:
+            return [key]
+        else:
+            return [key, key]
