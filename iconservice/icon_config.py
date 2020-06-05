@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-from typing import Dict, Union, List, Type
+from typing import Dict, Union, List, Type, Optional
 
 from iconcommons.logger import Logger
 
@@ -25,6 +25,8 @@ from .icon_constant import (
     IISS_INITIAL_IREP, PREP_REGISTRATION_FEE)
 
 _TAG = "CFG"
+ConfigValue = Union[bool, dict, float, int, str]
+KeyTypeTable = Dict[str, Union[dict, Type[Union[bool, float, int, str]]]]
 
 default_icon_config = {
     ConfigKey.LOG: {
@@ -117,8 +119,8 @@ class ConfigSanityChecker(object):
     class Item(object):
         def __init__(self,
                      key: str,
-                     value: Union[int, str, bool, Dict],
-                     value_type: Union[None, dict, Type[int], Type[str], Type[bool], Type[float]]):
+                     value: ConfigValue,
+                     value_type: Optional[Type[ConfigValue]]):
             self._key = key
             self._value = value
             self._value_type = value_type
@@ -128,24 +130,24 @@ class ConfigSanityChecker(object):
             return self._key
 
         @property
-        def value(self) -> Union[int, str, bool, float, Dict]:
+        def value(self) -> ConfigValue:
             return self._value
 
         @property
-        def value_type(self) -> Union[None, Type[int], Type[str], Type[bool], Type[Dict]]:
+        def value_type(self) -> Optional[Type[ConfigValue]]:
             return self._value_type
 
         def __str__(self) -> str:
             return f"key={self._key} value={self._value} value_type={self._value_type}"
 
-    def __init__(self, default_conf: Dict[str, Union[bool, dict, float, int, str]]):
+    def __init__(self, default_conf: Dict[str, ConfigValue]):
         self._invalid_keys = []
         self._invalid_values = []
         self._key_type_table = self._init_key_type_table(default_conf)
         self._add_extra_value_types(self._key_type_table)
 
     @classmethod
-    def _init_key_type_table(cls, default_conf: dict) -> Dict[str, Union[dict, Type[Union[bool, float, int, str]]]]:
+    def _init_key_type_table(cls, default_conf: dict) -> KeyTypeTable:
         table = copy.deepcopy(default_conf)
 
         def get_value_type(value):
@@ -163,7 +165,7 @@ class ConfigSanityChecker(object):
         return get_value_type(table)
 
     @classmethod
-    def _add_extra_value_types(cls, table: Dict[str, Union[dict, Type[Union[bool, float, int, str]]]]):
+    def _add_extra_value_types(cls, table: KeyTypeTable):
         # Add some value types which cannot be contained to default_conf
         table[ConfigKey.LOG] = {
             ConfigKey.LOGGER: str,
@@ -188,7 +190,7 @@ class ConfigSanityChecker(object):
     def invalid_values(self) -> List:
         return self._invalid_values
 
-    def run(self, conf: Dict[str, Union[bool, dict, float, int, str]]) -> bool:
+    def run(self, conf: Dict[str, ConfigValue]) -> bool:
         self._invalid_keys.clear()
         self._invalid_values.clear()
 
@@ -203,8 +205,8 @@ class ConfigSanityChecker(object):
 
     @classmethod
     def _check(cls,
-               conf: Dict[str, Union[bool, dict, float, int, str]],
-               key_type_table: Dict[str, Union[Type[int], Type[str], Type[bool], Type[float], dict]],
+               conf: Dict[str, ConfigValue],
+               key_type_table: KeyTypeTable,
                invalid_keys: List[Item],
                invalid_values: List[Item]):
         for key, value in conf.items():
@@ -232,7 +234,7 @@ class ConfigSanityChecker(object):
                 invalid_values.append(cls.Item(key=e.args[0], value=e.args[1], value_type=e.args[2]))
 
     @classmethod
-    def _get_value_type(cls, key_type_table, key: str) -> Type[Union[bool, dict, float, int, str]]:
+    def _get_value_type(cls, key_type_table: KeyTypeTable, key: str) -> Type[ConfigValue]:
         """Returns the proper value type for configuration key from key_type_table
 
         :param key_type_table: key:value_type table
@@ -245,4 +247,3 @@ class ConfigSanityChecker(object):
             value_type = type(value_type)
 
         return value_type
-
