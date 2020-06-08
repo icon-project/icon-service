@@ -1,9 +1,10 @@
 import sys
+import traceback
 
 from tools.precommit_converter.commands import get_parser
 
 SUCCESS_CODE = 0
-COMMAND_LINE_SYNTAX_ERROR = 1
+FAILURE_CODE = 1
 
 
 def main():
@@ -12,13 +13,13 @@ def main():
 
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
-        return COMMAND_LINE_SYNTAX_ERROR
+        return FAILURE_CODE
 
     try:
         args.func(args)
     except Exception as e:
-        # Todo: print exception gracefully
-        return e
+        print(''.join(traceback.format_tb(e.__traceback__)), file=sys.stderr)
+        return FAILURE_CODE
 
     return SUCCESS_CODE
 

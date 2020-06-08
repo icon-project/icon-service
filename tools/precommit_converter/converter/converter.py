@@ -88,7 +88,7 @@ class DeployConverter(Converter):
     @classmethod
     def _convert_deploy_info(cls, key: bytes, value: bytes) -> Tuple[str, str]:
         bytes_address: bytes = key[len(DeployStorage._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX):]
-        converted_key: str = f"Deploy {Address.from_bytes(bytes_address)}"
+        converted_key: str = f"Deploy SCORE: {Address.from_bytes(bytes_address)}"
         converted_value: str = str(IconScoreDeployInfo.from_bytes(value))
         return converted_key, converted_value
 

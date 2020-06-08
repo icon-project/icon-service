@@ -1,10 +1,7 @@
-from collections import namedtuple
 from typing import List, Tuple, Union
 
 from tools.precommit_converter.converter.converter import Converter, NotMatchException
-from tools.precommit_converter.extractor.extractor import BytesKeyValue
-
-ConvertedKeyValue = namedtuple("ConvertedKeyValue", ['tx_index', 'position', 'key', 'value'])
+from tools.precommit_converter.key_value import KeyValue
 
 
 class ConvertEngine:
@@ -13,12 +10,9 @@ class ConvertEngine:
         for converter in Converter.__subclasses__():
             self._converters.append(converter())
 
-    def convert(self, key_values: List['BytesKeyValue']) -> List[ConvertedKeyValue]:
-        ret: List[ConvertedKeyValue] = []
-        for i, bkv in enumerate(key_values):
-            converted_key, converted_value = self._convert(bkv.key, bkv.value)
-            ret.append(ConvertedKeyValue(bkv.tx_index, i, converted_key, converted_value))
-        return ret
+    def set_converted_key_values(self, key_values: List['KeyValue']):
+        for kv in key_values:
+            kv.set_converted_key_value(*self._convert(kv.bytes_key, kv.bytes_value))
 
     def _convert(self, key: bytes, value: bytes) -> Tuple[Union[bytes, str], Union[bytes, str]]:
         for converter in self._converters:
@@ -28,5 +22,5 @@ class ConvertEngine:
             except NotMatchException:
                 continue
         else:
-            converted_key, converted_value = f"Hex: {key.hex()} Bytes: {key}", f"Hex: {value.hex()} Bytes: {value}"
+            converted_key, converted_value = f"Hex: 0x{key.hex()}", f"Hex: 0x{value.hex()}"
         return converted_key, converted_value

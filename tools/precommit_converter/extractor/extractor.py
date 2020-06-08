@@ -1,10 +1,8 @@
 import json
-from collections import namedtuple
 from typing import List, Tuple, Optional
 
 from iconservice.base.block import Block
-
-BytesKeyValue = namedtuple("BytesKeyValue", ['tx_index', 'key', 'value'])
+from tools.precommit_converter.key_value import KeyValue
 
 
 class IconServiceInfo:
@@ -25,13 +23,13 @@ class IconServiceInfo:
         self.prev_block_generator = prev_block_generator
 
     def __str__(self):
-        print(self.__dict__)
+        return str(self.__dict__)
 
 
 class Extractor:
 
     @classmethod
-    def extract(cls, path: str) -> Tuple[Optional[IconServiceInfo], List[BytesKeyValue]]:
+    def extract(cls, path: str) -> Tuple[Optional[IconServiceInfo], List[KeyValue]]:
         # Check the txt format and extract the data from the
         if path.endswith("txt"):
             return cls._extract_key_values_from_text(path)
@@ -47,7 +45,7 @@ class Extractor:
         return precommit_dict
 
     @classmethod
-    def _extract_key_values_from_json(cls, path: str) -> Tuple[IconServiceInfo, List[BytesKeyValue]]:
+    def _extract_key_values_from_json(cls, path: str) -> Tuple[IconServiceInfo, List[KeyValue]]:
         json_dict: dict = cls._extract_json(path)
         bytes_k_v: list = []
         block_batch = json_dict.get("blockBatch")
@@ -56,7 +54,7 @@ class Extractor:
             raise KeyError("blockBatch not found")
         for data in block_batch:
             key, value = data["key"][2:], data["value"][2:]
-            bytes_k_v.append(BytesKeyValue(data["txIndexes"], bytes.fromhex(key), bytes.fromhex(value)))
+            bytes_k_v.append(KeyValue(data["txIndexes"], bytes.fromhex(key), bytes.fromhex(value)))
 
         icon_service_info: 'IconServiceInfo' = IconServiceInfo(json_dict["iconservice"],
                                                                json_dict["revision"],
@@ -69,7 +67,7 @@ class Extractor:
         return icon_service_info, bytes_k_v
 
     @classmethod
-    def _extract_key_values_from_text(cls, path: str) -> Tuple[None, List[BytesKeyValue]]:
+    def _extract_key_values_from_text(cls, path: str) -> Tuple[None, List[KeyValue]]:
         """
         Extract key, value from the precommit text file
         If the format change, should fix this method
@@ -89,7 +87,7 @@ class Extractor:
                         if value[-1] == ",":
                             value = value[:len(value) - 1]
                         try:
-                            key_values.append(BytesKeyValue(None, bytes.fromhex(key), bytes.fromhex(value)))
+                            key_values.append(KeyValue(None, bytes.fromhex(key), bytes.fromhex(value)))
                         except Exception as e:
                             break
         return None, key_values

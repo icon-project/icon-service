@@ -1,6 +1,4 @@
-from typing import List
-
-from tools.precommit_converter.converter.convert_engine import ConvertEngine, ConvertedKeyValue
+from tools.precommit_converter.converter.convert_engine import ConvertEngine
 from tools.precommit_converter.extractor.extractor import Extractor
 from tools.precommit_converter.printer.printer import Printer
 
@@ -30,5 +28,5 @@ class Convert:
         printer = Printer()
 
         icon_service_info, kvs = Extractor.extract(file_path)
-        converted_kvs: List['ConvertedKeyValue'] = convert_engine.convert(kvs)
-        printer.print(icon_service_info, converted_kvs)
+        convert_engine.set_converted_key_values(kvs)
+        printer.print(icon_service_info, kvs)
