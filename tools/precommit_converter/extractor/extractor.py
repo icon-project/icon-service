@@ -5,6 +5,14 @@ from iconservice.base.block import Block
 from tools.precommit_converter.key_value import KeyValue
 
 
+class NotSupportFileException(Exception):
+    pass
+
+
+class ExtractException(Exception):
+    pass
+
+
 class IconServiceInfo:
     def __init__(self,
                  version: str,
@@ -23,26 +31,35 @@ class IconServiceInfo:
         self.prev_block_generator = prev_block_generator
 
     def __str__(self):
-        return f"version = {self.version} \n" \
-               f"revision = {self.revision} \n" \
-               f"block = {self.block} \n" \
-               f"is state root hash = {self.is_state_root_hash} \n" \
-               f"rc state root hash = {self.rc_state_root_hash} \n" \
-               f"state root hash = {self.state_root_hash} \n" \
-               f"prev block generator = {self.prev_block_generator} \n"
+        return f"Version = {self.version} \n" \
+               f"Revision = {self.revision} \n" \
+               f"Block = {self.block} \n" \
+               f"IS State Root Hash = {self.is_state_root_hash} \n" \
+               f"RC State Root Hash = {self.rc_state_root_hash} \n" \
+               f"State Root Hash = {self.state_root_hash} \n" \
+               f"Prev Block Generator = {self.prev_block_generator} \n"
 
 
 class Extractor:
 
     @classmethod
     def extract(cls, path: str) -> Tuple[Optional[IconServiceInfo], List[KeyValue]]:
+        try:
+            return cls._extract(path)
+        except NotSupportFileException as e:
+            raise e
+        except Exception as e:
+            raise ExtractException(f"Raise Exception during extract bytes key value from the file: {e}")
+
+    @classmethod
+    def _extract(cls, path: str) -> Tuple[Optional[IconServiceInfo], List[KeyValue]]:
         # Check the txt format and extract the data from the
         if path.endswith("txt"):
             return cls._extract_key_values_from_text(path)
         elif path.endswith("json"):
             return cls._extract_key_values_from_json(path)
         else:
-            raise Exception("Not Support file type")
+            raise NotSupportFileException()
 
     @classmethod
     def _extract_json(cls, path: str) -> dict:
@@ -88,12 +105,14 @@ class Extractor:
                 sliced_str: list = line.split(" ")
                 for i, string in enumerate(sliced_str):
                     if string == "-":
-                        key = sliced_str[i - 1]
-                        value = sliced_str[i + 1]
+                        key: str = sliced_str[i - 1]
+                        value: str = sliced_str[i + 1]
+                        if key.startswith("0x"):
+                            key = key[2:]
+                        if value.startswith("0x"):
+                            value = value[2:]
                         if value[-1] == ",":
                             value = value[:len(value) - 1]
-                        try:
-                            key_values.append(KeyValue(None, bytes.fromhex(key), bytes.fromhex(value)))
-                        except Exception as e:
-                            break
+                        key_values.append(KeyValue(None, bytes.fromhex(key), bytes.fromhex(value)))
+
         return None, key_values

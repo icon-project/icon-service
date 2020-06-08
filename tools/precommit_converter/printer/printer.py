@@ -14,17 +14,18 @@ class Printer:
             pass
 
         if icon_service_info is None:
-            print("cannot find iconservice info from the file")
+            print("Cannot find iconservice info from the file")
         else:
             print(icon_service_info)
 
         print(f"* 'Hex:' means fail to convert. If new key, "
               f"value is defined on iconservice, you should supplement converter")
+        prefix_format = "{:<12}==> {}"
         for i, kv in enumerate(kvs):
-            print(f"------------{i}-----------\n"
-                  f"TX Index    ==> {kv.tx_indexes} \n"
-                  f"Key         ==> {kv.converted_key} \n"
-                  f"Value       ==> {kv.converted_value}")
+            print("--------------------------------[{:^3}]--------------------------------".format(i))
+            print(prefix_format.format("TX Index", kv.tx_indexes))
+            print(prefix_format.format("Key", kv.converted_key))
+            print(prefix_format.format("Value", kv.converted_value))
             if self._verbose:
-                print(f"Bytes Key   ==> {kv.bytes_key} \n"
-                      f"Bytes Value ==> {kv.bytes_value}")
+                print(prefix_format.format("Bytes Key", kv.bytes_key))
+                print(prefix_format.format("Bytes Value", kv.bytes_value))
