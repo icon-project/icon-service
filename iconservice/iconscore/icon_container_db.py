@@ -194,10 +194,7 @@ class DictDB:
                  value_type: type,
                  depth: int = 1) -> None:
 
-        if db.is_root:
-            prefix: list = ContainerUtil.create_db_prefix(type(self), var_key)
-        else:
-            prefix: list = [[get_encoded_key_v1(var_key)], [get_encoded_key_v2(var_key)]]
+        prefix: list = ContainerUtil.create_db_prefix(type(self), var_key)
 
         self._db = db.get_sub_db(prefix)
 
