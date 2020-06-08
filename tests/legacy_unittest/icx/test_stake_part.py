@@ -92,18 +92,19 @@ class TestStakePart(unittest.TestCase):
     def test_stake_part_update_multiple_unstake(self):
         stake: int = 5
         block_height = 3
-        unstake_info1 = (10, 1)
-        unstake_info2 = (30, 5)
-        unstake_info3 = (20, 2)
-        unstake_info4 = (40, 3)
-        unstake_info5 = (100, 5)
+        unstake_info1 = [10, 1]
+        unstake_info2 = [20, 2]
+        unstake_info3 = [40, 3]
+        unstake_info4 = [30, 5]
+        unstake_info5 = [100, 5]
         unstakes_info = [unstake_info1, unstake_info2, unstake_info3, unstake_info4, unstake_info5]
         part = StakePart(stake=stake, unstakes_info=unstakes_info)
+        part.set_complete(True)
         part.normalize(block_height)
         self.assertEqual(stake, part.stake)
         self.assertEqual(0, part.unstake)
         self.assertEqual(0, part.unstake_block_height)
-        expected_info = [(30, 5), (40, 3), (100, 5)]
+        expected_info = [[40, 3], [30, 5], [100, 5]]
         self.assertEqual(expected_info, part.unstakes_info)
 
     def test_stake_part(self):
