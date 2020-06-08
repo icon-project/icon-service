@@ -23,7 +23,13 @@ class IconServiceInfo:
         self.prev_block_generator = prev_block_generator
 
     def __str__(self):
-        return str(self.__dict__)
+        return f"version = {self.version} \n" \
+               f"revision = {self.revision} \n" \
+               f"block = {self.block} \n" \
+               f"is state root hash = {self.is_state_root_hash} \n" \
+               f"rc state root hash = {self.rc_state_root_hash} \n" \
+               f"state root hash = {self.state_root_hash} \n" \
+               f"prev block generator = {self.prev_block_generator} \n"
 
 
 class Extractor:
@@ -58,7 +64,7 @@ class Extractor:
 
         icon_service_info: 'IconServiceInfo' = IconServiceInfo(json_dict["iconservice"],
                                                                json_dict["revision"],
-                                                               json_dict["block"],
+                                                               Block.from_dict(json_dict["block"]),
                                                                json_dict["isStateRootHash"],
                                                                json_dict["rcStateRootHash"],
                                                                json_dict["stateRootHash"],

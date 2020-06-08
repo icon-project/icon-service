@@ -23,9 +23,11 @@ class Convert:
 
     @classmethod
     def run(cls, args):
+        verbose: bool = args.verbose
         file_path: str = args.path
+
         convert_engine = ConvertEngine()
-        printer = Printer()
+        printer = Printer(verbose=verbose)
 
         icon_service_info, kvs = Extractor.extract(file_path)
         convert_engine.set_converted_key_values(kvs)
