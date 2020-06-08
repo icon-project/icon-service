@@ -11,7 +11,9 @@
 ### Explain
 
 * Convert pre-commit data from hexadecimal string to human-readable
-
+* Support converting below precommit data format
+  * Previous precommit text data (e.g. 132650-precommit-data.txt)
+  * Newly defined JSON format data (e.g. 132650-precommit-data.json)
 ```bash
 (venv) :~/icon-service$ python3 -m tools.precommit_converter convert -h
 usage: converter convert [-h] [-v] path
