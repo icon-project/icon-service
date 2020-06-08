@@ -1,7 +1,3 @@
-from tools.precommit_converter.converter.convert_engine import ConvertEngine
-from tools.precommit_converter.printer.printer import Printer
-
-
 class Diff(object):
     NAME = "diff"
     HELP_MSG = "Compare two precommit file"
@@ -22,7 +18,6 @@ class Diff(object):
 
     @classmethod
     def run(cls, args):
-        file_path: str = args.path
-        convert_engine = ConvertEngine()
-        printer = Printer()
         # Todo: TBD
+        raise NotImplementedError()
+

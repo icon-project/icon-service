@@ -17,6 +17,7 @@ def main():
     try:
         args.func(args)
     except Exception as e:
+        # Todo: print exception gracefully
         return e
 
     return SUCCESS_CODE

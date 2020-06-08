@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import List, Tuple, Union
 
 from tools.precommit_converter.converter.converter import Converter, NotMatchException
-from tools.precommit_converter.utils import BytesKeyValue
+from tools.precommit_converter.extractor.extractor import BytesKeyValue
 
 ConvertedKeyValue = namedtuple("ConvertedKeyValue", ['tx_index', 'position', 'key', 'value'])
 

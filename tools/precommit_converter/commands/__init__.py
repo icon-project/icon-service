@@ -27,4 +27,3 @@ def _get_common_parser() -> 'ArgumentParser':
 def _set_sub_parser(parser, common_parser):
     sub_parser = parser.add_subparsers(description="", help="")
     Convert.add_command(sub_parser)
-    Diff.add_command(sub_parser)
