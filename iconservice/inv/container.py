@@ -128,9 +128,12 @@ class Container(object):
         return self._is_migrated
 
     def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
-        value = self._tx_batch.get(type_, self._icon_network_values[type_])
-        if isinstance(value, Value):
-            return value.value
+        try:
+            value = self._tx_batch.get(type_, self._icon_network_values[type_])
+            if isinstance(value, Value):
+                return value.value
+        except KeyError:
+            return None
         return None
 
     @property
