@@ -251,7 +251,7 @@ class StakePart(BasePart):
         high: int = len(self._unstakes_info) - 1
         if high <= 30:
             for i, v in enumerate(reversed(self._unstakes_info)):
-                if v[1] < block_height:
+                if v[1] <= block_height:
                     return high - i
             return 0
         while low < high:
