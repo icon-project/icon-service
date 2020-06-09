@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, List, Tuple
+from typing import TYPE_CHECKING, Optional, List
 
 from .base_part import BasePart, BasePartState
 from ..base.exception import InvalidParamsException
@@ -140,7 +140,7 @@ class StakePart(BasePart):
             if len(self._unstakes_info) == UNSTAKE_SLOT_MAX:
                 old_value_pair = self._unstakes_info.pop()
                 increment_unstake += old_value_pair[0]
-            new_value_index = self.find_highest_lower_height_index(block_height)
+            new_value_index = self.find_index_highest_in_lower_height(block_height)
             self._unstakes_info.insert(new_value_index + 1, [increment_unstake, block_height])
 
         self._stake = total_stake - new_total_unstake
@@ -165,7 +165,7 @@ class StakePart(BasePart):
 
         if self._unstakes_info:
             total_unstake = self._total_unstake()
-            smaller_largest_index = self.find_highest_lower_height_index(block_height)
+            smaller_largest_index = self.find_index_highest_in_lower_height(block_height)
             self._unstakes_info = self._unstakes_info[smaller_largest_index:]
             new_total_unstake = self._total_unstake()
             if total_unstake > new_total_unstake:
@@ -246,10 +246,10 @@ class StakePart(BasePart):
 
         return not self.__eq__(other)
 
-    def find_highest_lower_height_index(self, block_height: int):
+    def find_index_highest_in_lower_height(self, block_height: int):
         low: int = 0
         high: int = len(self._unstakes_info) - 1
-        if high <= 1:
+        if high <= 30:
             for i, v in enumerate(reversed(self._unstakes_info)):
                 if v[1] < block_height:
                     return high - i

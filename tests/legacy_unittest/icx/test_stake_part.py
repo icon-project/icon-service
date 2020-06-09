@@ -14,12 +14,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import copy
+import random
 import unittest
 
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
-from iconservice.icon_constant import Revision
+from iconservice.icon_constant import Revision, UNSTAKE_SLOT_MAX
 from iconservice.icx.base_part import BasePartState
 from iconservice.icx.stake_part import StakePart
 from tests import create_address
@@ -143,7 +143,7 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(unstake_block_height, stake_part.unstake_block_height)
 
         # test adding unstakes
-        unstakes_info = [[100, 10], [50, 15], [50, 20], [50, 25], [50, 30]]
+        unstakes_info = [[random.randint(10, 100), index + 1] for index in range(UNSTAKE_SLOT_MAX)]
 
         for i in range(len(unstakes_info)):
             unstake = sum(map(lambda info: info[0], unstakes_info[:i+1]))
@@ -155,18 +155,29 @@ class TestStakePart(unittest.TestCase):
             self.assertEqual(stake_part.unstakes_info, unstakes_info[:i+1])
 
         # test reducing last unstake
-        stake_part.set_unstakes_info(31, 270)
-        expected_unstakes_info = [[100, 10], [50, 15], [50, 20], [50, 25], [20, 30]]
+        decrement = 1
+        unstake -= decrement
+        block_height = UNSTAKE_SLOT_MAX + 100
+        stake_part.set_unstakes_info(block_height, unstake)
+        expected_unstakes_info = copy.deepcopy(unstakes_info)
+        expected_unstakes_info[-1][0] -= decrement
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
+        self.assertNotEqual(stake_part.unstakes_info[-1][1], block_height)
 
         # test increase last unstake
-        stake_part.set_unstakes_info(32, 280)
-        expected_unstakes_info = [[100, 10], [50, 15], [50, 20], [50, 25], [30, 32]]
+        increment = 1
+        unstake += increment
+        block_height = UNSTAKE_SLOT_MAX + 1
+        stake_part.set_unstakes_info(block_height, unstake)
+        expected_unstakes_info[-1][0] += increment
+        expected_unstakes_info[-1][1] = block_height
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
+        self.assertEqual(stake_part.unstakes_info[-1][1], block_height)
 
         # test reduce unstake slot
-        stake_part.set_unstakes_info(31, 210)
-        expected_unstakes_info = [[100, 10], [50, 15], [50, 20], [10, 25]]
+        unstake = sum(map(lambda info: info[0], unstakes_info[:10]))
+        stake_part.set_unstakes_info(UNSTAKE_SLOT_MAX, unstake)
+        expected_unstakes_info = expected_unstakes_info[:10]
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
 
     def test_stake_part_make_key(self):
