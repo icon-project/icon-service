@@ -26,7 +26,7 @@ from .icon_constant import (
 
 _TAG = "CFG"
 ConfigValue = Union[bool, dict, float, int, str]
-KeyTypeTable = Dict[str, Union[dict, Type[Union[bool, float, int, str]]]]
+ConfigKeyTypeDict = Dict[str, Union[dict, Type[Union[bool, float, int, str]]]]
 
 default_icon_config = {
     ConfigKey.LOG: {
@@ -141,14 +141,19 @@ class ConfigSanityChecker(object):
             return f"key={self._key} value={self._value} value_type={self._value_type}"
 
     def __init__(self, default_conf: Dict[str, ConfigValue]):
+        """
+        :param default_conf: dict containing default configuration values
+        """
+
         self._invalid_keys = []
         self._invalid_values = []
-        self._key_type_table = self._init_key_type_table(default_conf)
-        self._add_extra_value_types(self._key_type_table)
+        # dict containing config_key:value_type
+        self._config_key_type_dict: ConfigKeyTypeDict = self._init_config_key_type_dict(default_conf)
+        self._add_extra_value_types(self._config_key_type_dict)
 
     @classmethod
-    def _init_key_type_table(cls, default_conf: dict) -> KeyTypeTable:
-        table = copy.deepcopy(default_conf)
+    def _init_config_key_type_dict(cls, default_conf: dict) -> ConfigKeyTypeDict:
+        config_key_type_dict = copy.deepcopy(default_conf)
 
         def get_value_type(value):
             if isinstance(value, dict):
@@ -162,10 +167,10 @@ class ConfigSanityChecker(object):
 
             return value
 
-        return get_value_type(table)
+        return get_value_type(config_key_type_dict)
 
     @classmethod
-    def _add_extra_value_types(cls, table: KeyTypeTable):
+    def _add_extra_value_types(cls, table: ConfigKeyTypeDict):
         # Add some value types which cannot be contained to default_conf
         table[ConfigKey.LOG] = {
             ConfigKey.LOGGER: str,
@@ -196,7 +201,7 @@ class ConfigSanityChecker(object):
 
         self._check(
             conf,
-            self._key_type_table,
+            self._config_key_type_dict,
             self._invalid_keys,
             self._invalid_values
         )
@@ -206,7 +211,7 @@ class ConfigSanityChecker(object):
     @classmethod
     def _check(cls,
                conf: Dict[str, ConfigValue],
-               key_type_table: KeyTypeTable,
+               key_type_table: ConfigKeyTypeDict,
                invalid_keys: List[Item],
                invalid_values: List[Item]):
         for key, value in conf.items():
@@ -234,7 +239,7 @@ class ConfigSanityChecker(object):
                 invalid_values.append(cls.Item(key=e.args[0], value=e.args[1], value_type=e.args[2]))
 
     @classmethod
-    def _get_value_type(cls, key_type_table: KeyTypeTable, key: str) -> Type[ConfigValue]:
+    def _get_value_type(cls, key_type_table: ConfigKeyTypeDict, key: str) -> Type[ConfigValue]:
         """Returns the proper value type for configuration key from key_type_table
 
         :param key_type_table: key:value_type table
