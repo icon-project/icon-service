@@ -19,7 +19,7 @@ import unittest
 
 from iconservice.base.block import Block
 from iconservice.base.exception import AccessDeniedException
-from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
+from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue, BlockBatchValue
 from iconservice.utils import sha3_256
 from tests import create_hash_256
 
@@ -86,14 +86,12 @@ class TestBatch(unittest.TestCase):
         tx_batch = TransactionBatch(create_hash_256())
         tx_batch[key] = TransactionBatchValue(b'value', True)
         self.block_batch.update(tx_batch)
-        self.assertEqual(TransactionBatchValue(b'value', True), self.block_batch[key])
+        self.assertEqual(BlockBatchValue(b'value', True, [-1]), self.block_batch[key])
 
         value = 100
         tx_batch[key] = TransactionBatchValue(value.to_bytes(8, byteorder), True)
         self.block_batch.update(tx_batch)
-        self.assertEqual(
-            value,
-            int.from_bytes(self.block_batch[key].value, byteorder))
+        self.assertEqual(value, int.from_bytes(self.block_batch[key].value, byteorder))
 
     def test_put_tx_batch(self):
         tx_hash = create_hash_256()

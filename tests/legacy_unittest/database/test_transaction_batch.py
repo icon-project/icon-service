@@ -16,7 +16,7 @@
 import unittest
 
 from iconservice.base.exception import DatabaseException
-from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
+from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue, BlockBatchValue
 
 
 class TestTransactionBatch(unittest.TestCase):
@@ -149,4 +149,4 @@ class TestTransactionBatch(unittest.TestCase):
 
         block_batch = BlockBatch()
         block_batch.update(tx_batch)
-        self.assertEqual(TransactionBatchValue(b'value0', True), block_batch[b'key0'])
+        self.assertEqual(BlockBatchValue(b'value0', True, [-1]), block_batch[b'key0'])

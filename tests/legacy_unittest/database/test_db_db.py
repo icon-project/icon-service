@@ -21,7 +21,7 @@ from unittest.mock import patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException, InvalidParamsException
-from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue
+from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue, BlockBatchValue
 from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
@@ -57,8 +57,8 @@ class TestKeyValueDatabase(unittest.TestCase):
 
     def test_write_batch(self):
         data = {
-            b'key0': TransactionBatchValue(b'value0', True),
-            b'key1': TransactionBatchValue(b'value1', True)
+            b'key0': BlockBatchValue(b'value0', True, [-1]),
+            b'key1': BlockBatchValue(b'value1', True, [-1])
         }
         db = self.db
 
@@ -150,8 +150,8 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def test_write_batch(self):
         context = self.context
         data = {
-            b'key0': TransactionBatchValue(b'value0', True),
-            b'key1': TransactionBatchValue(b'value1', True)
+            b'key0': BlockBatchValue(b'value0', True, [-1]),
+            b'key1': BlockBatchValue(b'value1', True, [-1])
         }
         db = self.context_db
         db.write_batch(context, StateWAL(data))
@@ -212,15 +212,19 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         context = self.context
         db = self.context_db
         tx_batch = context.tx_batch
-        state_wal = StateWAL(tx_batch)
+        block_batch = context.block_batch
 
         db._put(context, b'key0', b'value0', True)
         db._put(context, b'key1', b'value1', True)
         self.assertEqual(b'value0', db.get(context, b'key0'))
         self.assertEqual(TransactionBatchValue(b'value0', True), tx_batch[b'key0'])
 
+        block_batch.update(tx_batch)
+        state_wal = StateWAL(block_batch)
         db.write_batch(context, state_wal)
         tx_batch.clear()
+        block_batch.clear()
+
         self.assertEqual(0, len(tx_batch))
         self.assertEqual(b'value0', db.get(context, b'key0'))
 
@@ -230,8 +234,11 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(None, db.get(context, b'key1'))
         self.assertEqual(TransactionBatchValue(None, True), tx_batch[b'key0'])
         self.assertEqual(TransactionBatchValue(None, False), tx_batch[b'key1'])
+        block_batch.update(tx_batch)
         db.write_batch(context, state_wal)
         tx_batch.clear()
+        block_batch.clear()
+
         self.assertEqual(0, len(tx_batch))
         self.assertIsNone(db.get(context, b'key0'))
         self.assertIsNone(db.get(context, b'key1'))
