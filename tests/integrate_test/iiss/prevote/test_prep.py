@@ -607,7 +607,7 @@ class TestIntegratePrep(TestIISSBase):
             self.assertEqual(10 * ICX_IN_LOOP, prep["stake"])
 
     def test_prep_query_via_icx_sendtransaction(self):
-        self.init_decentralized()
+        self.init_decentralized(clear=False)
         query = {
             PRepMethod.GET_PREP: {"address": str(self._accounts[0].address)},
             PRepMethod.GET_MAIN_PREPS: {},
@@ -622,7 +622,7 @@ class TestIntegratePrep(TestIISSBase):
             self.check_query_via_icx_sendtransaction(method, param, False)
 
         # TEST : query via icx_sendTransaction (revision >= ALLOW_INVOKE_SYSTEM_SCORE_READONLY)
-        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value)
+        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value, with_np=True)
         for method, param in query.items():
             self.check_query_via_icx_sendtransaction(method, param, True)
         return

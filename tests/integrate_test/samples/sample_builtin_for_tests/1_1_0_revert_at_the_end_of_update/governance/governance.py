@@ -84,10 +84,10 @@ class Governance(IconSystemScoreBase):
 
     def on_update(self) -> None:
         super().on_update()
-        self._migrate_v1_0_1()
-        self._version.set('1.0.1')
+        self._migrate_v1_1_0()
+        self._version.set('1.1.0')
 
-    def _migrate_v1_0_1(self):
+    def _migrate_v1_1_0(self):
         # Migrate and Remove all icon network variables
         service_config = VarDB("service_config", self.db, value_type=int)
 

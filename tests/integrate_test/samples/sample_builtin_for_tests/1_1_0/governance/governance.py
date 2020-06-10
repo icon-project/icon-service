@@ -139,9 +139,9 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_5()
         if self.is_less_than_target_version('0.0.6'):
             self._migrate_v0_0_6()
-        if self.is_less_than_target_version('1.0.1'):
-            self._migrate_v1_0_1()
-        self._version.set('1.0.1')
+        if self.is_less_than_target_version('1.1.0'):
+            self._migrate_v1_1_0()
+        self._version.set('1.1.0')
 
     def on_install(self) -> None:
         pass
@@ -178,10 +178,13 @@ class Governance(IconSystemScoreBase):
     def _migrate_v0_0_6(self):
         pass
 
-    def _migrate_v1_0_1(self):
+    def _migrate_v1_1_0(self):
         # Migrate and Remove all icon network variables
+        service_config = VarDB("service_config", self.db, value_type=int)
+
         step_types = ArrayDB('step_types', self.db, value_type=str)
         step_costs = DictDB('step_costs', self.db, value_type=int)
+        step_price = VarDB('step_price', self.db, value_type=int)
         max_step_limits = DictDB('max_step_limits', self.db, value_type=int)
 
         revision_code = VarDB('revision_code', self.db, value_type=int)
@@ -191,29 +194,53 @@ class Governance(IconSystemScoreBase):
         import_white_list_keys = ArrayDB('import_white_list_keys', self.db, value_type=str)
         score_black_list = ArrayDB('score_black_list', self.db, value_type=Address)
 
-        # Convert DictDB to dict, ArrayDB to list
-        changed_max_step_limits = {
-            CONTEXT_TYPE_INVOKE: max_step_limits[CONTEXT_TYPE_INVOKE] + 100,
-            CONTEXT_TYPE_QUERY: max_step_limits[CONTEXT_TYPE_QUERY] + 200
-        }
-        changed_step_costs = {key: step_costs[key] + 5 for key in step_types}
-        changed_import_white_list = {key: import_white_list[key].split(',') for key in import_white_list_keys}
-        changed_import_white_list["inspect"] = ["*"]
-        changed_score_black_list = list(score_black_list)
-        changed_score_black_list.append(Address.from_string("cxcdaedb11746c4c9b68d5fd23f4015b519296cdba"))
+        deployer_list = ArrayDB('deployer_list', self.db, value_type=Address)
 
-        # Change the values
+        # Convert DictDB to dict, ArrayDB to list
+        pure_max_step_limits = {
+            CONTEXT_TYPE_INVOKE: max_step_limits[CONTEXT_TYPE_INVOKE],
+            CONTEXT_TYPE_QUERY: max_step_limits[CONTEXT_TYPE_QUERY]
+        }
+        pure_step_costs = {key: step_costs[key] for key in step_types}
+        pure_import_white_list = {key: import_white_list[key].split(',') for key in import_white_list_keys}
+        pure_score_black_list = list(score_black_list)
+
+        # Migrates
         system_values = {
-            IconNetworkValueType.SERVICE_CONFIG: 2,
-            IconNetworkValueType.STEP_PRICE: 300,
-            IconNetworkValueType.STEP_COSTS: changed_step_costs,
-            IconNetworkValueType.MAX_STEP_LIMITS: changed_max_step_limits,
-            IconNetworkValueType.IMPORT_WHITE_LIST: changed_import_white_list,
-            IconNetworkValueType.SCORE_BLACK_LIST: changed_score_black_list,
+            IconNetworkValueType.SERVICE_CONFIG: service_config.get(),
+            IconNetworkValueType.STEP_PRICE: step_price.get(),
+            IconNetworkValueType.STEP_COSTS: pure_step_costs,
+            IconNetworkValueType.MAX_STEP_LIMITS: pure_max_step_limits,
             IconNetworkValueType.REVISION_CODE: revision_code.get(),
-            IconNetworkValueType.REVISION_NAME: revision_name.get()
+            IconNetworkValueType.REVISION_NAME: revision_name.get(),
+            IconNetworkValueType.IMPORT_WHITE_LIST: pure_import_white_list,
+            IconNetworkValueType.SCORE_BLACK_LIST: pure_score_black_list
         }
         self.migrate_icon_network_value(system_values)
+
+        # Remove all icon network variables
+        service_config.remove()
+        revision_code.remove()
+        revision_name.remove()
+        step_price.remove()
+        max_step_limits.remove(CONTEXT_TYPE_QUERY)
+        max_step_limits.remove(CONTEXT_TYPE_INVOKE)
+
+        def _remove_array(array: ArrayDB):
+            while True:
+                ret = array.pop()
+                if ret is None:
+                    break
+
+        for type_ in step_types:
+            step_costs.remove(type_)
+        _remove_array(step_types)
+
+        for key in import_white_list_keys:
+            import_white_list.remove(key)
+        _remove_array(import_white_list_keys)
+        _remove_array(score_black_list)
+        _remove_array(deployer_list)
 
     @staticmethod
     def _versions(version: str):
@@ -618,6 +645,7 @@ class Governance(IconSystemScoreBase):
 
         self.set_icon_network_value(IconNetworkValueType.REVISION_CODE, code)
         self.set_icon_network_value(IconNetworkValueType.REVISION_NAME, name)
+        self.apply_revision_change(code)
         self.RevisionChanged(code, name)
 
     @external(readonly=True)
@@ -783,7 +811,6 @@ class Governance(IconSystemScoreBase):
 
         self.set_icon_network_value(IconNetworkValueType.REVISION_CODE, code)
         self.set_icon_network_value(IconNetworkValueType.REVISION_NAME, name)
-        self.apply_revision_change(code)
         self.RevisionChanged(code, name)
 
     @external
