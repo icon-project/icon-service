@@ -95,32 +95,31 @@ class TestBatch(unittest.TestCase):
 
     def test_put_tx_batch(self):
         tx_hash = create_hash_256()
+        tx_index = 1
         tx_batch = TransactionBatch(tx_hash)
-
         key = create_hash_256()
-        tx_batch[key] = TransactionBatchValue(b'value', True)
-
+        tx_batch[key] = TransactionBatchValue(b'value', True, tx_index)
         key0 = create_hash_256()
-        tx_batch[key0] = TransactionBatchValue(b'value0', True)
+        tx_batch[key0] = TransactionBatchValue(b'value0', True, tx_index)
         key1 = create_hash_256()
-        tx_batch[key1] = TransactionBatchValue(b'value1', True)
+        tx_batch[key1] = TransactionBatchValue(b'value1', True, tx_index)
         key2 = create_hash_256()
-        tx_batch[key2] = TransactionBatchValue(b'value2', True)
-
+        tx_batch[key2] = TransactionBatchValue(b'value2', True, tx_index)
         self.assertEqual(4, len(tx_batch))
-
-        tx_batch_2 = TransactionBatch(tx_hash)
-        tx_batch_2[key] = TransactionBatchValue(b'haha', True)
-        self.block_batch.update(tx_batch_2)
-        self.assertEqual(1, len(self.block_batch))
-
         self.block_batch.update(tx_batch)
-
         self.assertEqual(4, len(self.block_batch))
-        self.assertEqual(TransactionBatchValue(b'value0', True).value, self.block_batch[key0].value)
-        self.assertEqual(TransactionBatchValue(b'value1', True).value, self.block_batch[key1].value)
-        self.assertEqual(TransactionBatchValue(b'value2', True).value, self.block_batch[key2].value)
-        self.assertEqual(TransactionBatchValue(b'value', True).value, self.block_batch[key].value)
+
+        tx_index_2 = 2
+        tx_batch_2 = TransactionBatch(tx_hash)
+        tx_batch_2[key] = TransactionBatchValue(b'updated_value', True, tx_index_2)
+        self.block_batch.update(tx_batch_2)
+        self.assertEqual(4, len(self.block_batch))
+
+        self.assertEqual(BlockBatchValue(b'value0', True, [tx_index]), self.block_batch[key0])
+        self.assertEqual(BlockBatchValue(b'value1', True, [tx_index]), self.block_batch[key1])
+        self.assertEqual(BlockBatchValue(b'value2', True, [tx_index]), self.block_batch[key2])
+        # As overwrite twice
+        self.assertEqual(BlockBatchValue(b'updated_value', True, [tx_index, tx_index_2]), self.block_batch[key])
 
     def test_digest(self):
         block_batch = self.block_batch
@@ -193,6 +192,6 @@ class TestBatch(unittest.TestCase):
         tx_batch.clear()
         block_batch.update(tx_batch)
 
-        actual_overwrite_value: 'TransactionBatchValue' = block_batch.get(overwrite_key)
+        actual_overwrite_value: 'BlockBatchValue' = block_batch.get(overwrite_key)
         assert actual_overwrite_value.value == last_value
         assert actual_overwrite_value.tx_indexes == [0, 1, 2]
