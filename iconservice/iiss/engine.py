@@ -368,16 +368,13 @@ class Engine(EngineBase):
             data["unstakeList"] = unstakes_list
 
         if unstakes_info:
-            unstakes_map_object = map(lambda unstakes_data:
-                                      {
-                                          "unstake": unstakes_data[0],
-                                          "unstakeBlockHeight": unstakes_data[1],
-                                          "remainingBlocks": unstakes_data[1] - context.block.height
-                                       },
-                                      unstakes_info
-                                      )
-
-            data["unstakeList"] = list(unstakes_map_object)
+            data["unstakeList"] = [
+                {"unstake": unstakes_data[0],
+                 "unstakeBlockHeight": unstakes_data[1],
+                 "remainingBlocks": unstakes_data[1] - context.block.height
+                 }
+                for unstakes_data in unstakes_info
+            ]
         return data
 
     def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext'):
