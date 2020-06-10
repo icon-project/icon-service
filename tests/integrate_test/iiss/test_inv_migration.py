@@ -19,9 +19,9 @@
 from random import randint
 from typing import TYPE_CHECKING, Optional
 
-from iconservice import IconNetworkValueType, Address
+from iconservice import Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, AddressPrefix
-from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType, IconServiceFlag
+from iconservice.icon_constant import ConfigKey, Revision, IconScoreContextType, IconServiceFlag, IconNetworkValueType
 from iconservice.inv.container import ValueConverter, Container
 from iconservice.inv.data.value import Value
 from iconservice.iconscore.icon_score_context import IconScoreContext

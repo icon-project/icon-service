@@ -26,7 +26,8 @@ from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
-from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState
+from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState, BUILTIN_SCORE_IMPORT_WHITE_LIST
+from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -153,6 +154,10 @@ class IconScoreContextUtil(object):
         score_deploy_path: str = get_score_deploy_path(context.score_root_path, address, tx_hash)
         score_package_name: str = get_package_name_by_address_and_tx_hash(address, tx_hash)
         import_whitelist: dict = context.inv_container.import_white_list
+
+        # add import white list for builtin SCORE
+        if is_builtin_score(str(address)):
+            import_whitelist.update(BUILTIN_SCORE_IMPORT_WHITE_LIST)
 
         ScorePackageValidator.execute(import_whitelist, score_deploy_path, score_package_name)
 

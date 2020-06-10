@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from iconservice import *
+from iconservice.iconscore.system import *
 
 
 TAG = 'Governance'

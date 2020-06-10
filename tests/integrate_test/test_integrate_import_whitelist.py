@@ -297,7 +297,8 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/import_builtin',
             'import_test/import_builtin2',
             'import_test/import_builtin3',
-            'import_test/import_package'
+            'import_test/import_package',
+            'import_test/import_system_score_package',
         ]
 
         tx_list = [self.create_deploy_score_tx(score_root='sample_deploy_scores',

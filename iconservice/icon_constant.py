@@ -61,6 +61,7 @@ BUILTIN_SCORE_ADDRESS_MAPPER = {
     'governance': GOVERNANCE_ADDRESS,
     'system': SYSTEM_ADDRESS
 }
+BUILTIN_SCORE_IMPORT_WHITE_LIST = {"iconservice.iconscore.system": "['*']"}
 
 ZERO_TX_HASH = bytes(DEFAULT_BYTE_SIZE)
 
