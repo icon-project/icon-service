@@ -25,12 +25,13 @@ from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
 from ..base.exception import (
-    AccessDeniedException, InvalidParamsException, MethodNotFoundException, ServiceNotReadyException
+    AccessDeniedException, InvalidParamsException, MethodNotFoundException, ServiceNotReadyException,
+    InvalidRequestException
 )
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus, ROLLBACK_LOG_TAG
 from ..icon_constant import Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
-    PenaltyReason, TermFlag
+    PenaltyReason, TermFlag, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..iconscore.icon_score_step import StepType
@@ -211,6 +212,9 @@ class Engine(EngineBase, IISSEngineListener):
         handler(context, **params)
 
     def query(self, context: 'IconScoreContext', method: str, params: dict) -> Any:
+        if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and \
+                context.type == IconScoreContextType.INVOKE:
+            raise InvalidRequestException(f"Do not call readonly method '{method}' with 'icx_sendTransaction'")
         handler: callable = self._query_handler[method]
         ret = handler(context, **params)
         return ret

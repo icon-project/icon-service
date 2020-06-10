@@ -629,7 +629,9 @@ class TestTransactionValidator(unittest.TestCase):
         with self.assertRaises(OutOfBalanceException) as e:
             self.validator._check_balance(self.context, _from, value, fee)
         self.assertEqual(e.exception.code, ExceptionCode.OUT_OF_BALANCE)
-        self.assertEqual(e.exception.message, f"Out of balance: balance({balance}) < value({value}) + fee({fee})")
+        self.assertEqual(
+            e.exception.message,
+            f"Out of balance: from={_from} balance={balance} value={value} fee={fee}")
 
     def test_is_inactive_score(self):
         address = create_address()

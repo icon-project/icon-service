@@ -41,7 +41,7 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
     def setUp(self):
         super().setUp()
         self.update_governance()
-        self.set_revision(Revision.IISS.value)
+        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value)
 
         self.distribute_icx(accounts=self._accounts[:10],
                             init_balance=10000 * ICX_IN_LOOP)
@@ -224,4 +224,43 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
 
 
 class TestIntegrateSystemScoreInternalCallWithInterface(TestIntegrateSystemScoreInternalCall):
+    use_interface = 1
+
+
+class TestIntegrateSystemScoreInternalCallNotSupport(TestIISSBase):
+    use_interface = 0
+
+    def setUp(self):
+        super().setUp()
+        self.update_governance()
+        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value - 1)
+
+        self.distribute_icx(accounts=self._accounts[:10],
+                            init_balance=10000 * ICX_IN_LOOP)
+
+        tx1: dict = self.create_deploy_score_tx(score_root="sample_internal_call_scores",
+                                                score_name="sample_system_score_intercall",
+                                                from_=self._accounts[0],
+                                                to_=SYSTEM_SCORE_ADDRESS,
+                                                deploy_params={"use_interface": hex(self.use_interface)})
+
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1])
+        self.score_addr: 'Address' = tx_results[0].score_address
+
+    def test_system_score_intercall_revision(self):
+        value = 1 * ICX_IN_LOOP
+        self.transfer_icx(from_=self._admin,
+                          to_=self._accounts[0],
+                          value=value * 3)
+
+        # TEST: stake via 'setStake' system SCORE inter-call
+        self.score_call(from_=self._accounts[0],
+                        to_=self.score_addr,
+                        value=value,
+                        func_name="call_setStake",
+                        params={"value": hex(value)},
+                        expected_status=False)
+
+
+class TestIntegrateSystemScoreInternalCallNotSupportWithInterface(TestIntegrateSystemScoreInternalCallNotSupport):
     use_interface = 1
