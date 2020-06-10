@@ -39,14 +39,6 @@ class BatchValue:
     def include_state_root_hash(self):
         return self._include_state_root_hash
 
-    @value.setter
-    def value(self, _):
-        raise AccessDeniedException(f"Cannot set the value")
-
-    @include_state_root_hash.setter
-    def include_state_root_hash(self, _):
-        raise AccessDeniedException(f"Cannot set the include_state_root_hash")
-
     def to_dict(self, casing: Optional[callable] = None) -> dict:
         new_dict = {}
         for key, value in self.__dict__.items():
@@ -58,7 +50,7 @@ class BatchValue:
 
 
 class TransactionBatchValue(BatchValue):
-    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_index: Optional[int] = -1):
+    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_index: int = -1):
         super().__init__(value, include_state_root_hash)
         self._tx_index: int = tx_index
 
@@ -72,12 +64,8 @@ class TransactionBatchValue(BatchValue):
         # Fixme: Correct tx index should be set on deploying score (not -1)
         return self._tx_index
 
-    @tx_index.setter
-    def tx_index(self, _):
-        raise AccessDeniedException(f"Cannot set the tx index")
-
     def __repr__(self):
-        return 'TransactionBatchValue(%s, %d, %s)' % (self.value.hex(), self.include_state_root_hash, self.tx_index)
+        return 'TransactionBatchValue(%s, %d, %d)' % (self.value.hex(), self.include_state_root_hash, self.tx_index)
 
     def __eq__(self, other: 'TransactionBatchValue'):
         return self.value == other.value and \
@@ -86,12 +74,12 @@ class TransactionBatchValue(BatchValue):
 
 
 class BlockBatchValue(BatchValue):
-    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_indexes: List):
+    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_indexes: List[int]):
         super().__init__(value, include_state_root_hash)
-        self._tx_indexes: list = tx_indexes
+        self._tx_indexes: List[int] = tx_indexes
 
     @property
-    def tx_indexes(self) -> list:
+    def tx_indexes(self) -> List[int]:
         return copy(self._tx_indexes)
 
     def __repr__(self):
