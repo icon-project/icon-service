@@ -29,43 +29,43 @@ class TestStakePart(unittest.TestCase):
 
     def test_stake_part_from_bytes_to_bytes(self):
         part1 = StakePart()
-        part1.normalize(0)
+        part1.normalize(0, Revision.IISS.value)
         data = part1.to_bytes(Revision.IISS.value)
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(5, len(data))
 
         part2 = StakePart.from_bytes(data)
-        part2.normalize(0)
+        part2.normalize(0, Revision.IISS.value)
         self.assertEqual(part1.stake, part2.stake)
         self.assertEqual(part1.unstake, part2.unstake)
         self.assertEqual(part1.unstake_block_height, part2.unstake_block_height)
 
         part3 = StakePart(10, 20, 30)
-        part3.normalize(0)
+        part3.normalize(0, Revision.IISS.value)
         part4 = StakePart.from_bytes(part3.to_bytes(Revision.IISS.value))
-        part4.normalize(0)
+        part4.normalize(0, Revision.IISS.value)
         self.assertEqual(part3.stake, part4.stake)
         self.assertEqual(part3.unstake, part4.unstake)
         self.assertEqual(part3.unstake_block_height, part4.unstake_block_height)
 
     def test_stake_part_from_bytes_to_bytes_multiple_unstake(self):
         part1 = StakePart()
-        part1.normalize(0)
+        part1.normalize(0, Revision.IISS.value)
         data = part1.to_bytes(Revision.MULTIPLE_UNSTAKE.value)
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(6, len(data))
 
         part2 = StakePart.from_bytes(data)
-        part2.normalize(0)
+        part2.normalize(0, Revision.IISS.value)
         self.assertEqual(part1.stake, part2.stake)
         self.assertEqual(part1.unstake, part2.unstake)
         self.assertEqual(part1.unstake_block_height, part2.unstake_block_height)
         self.assertEqual(part1.unstakes_info, part2.unstakes_info)
 
         part3 = StakePart(10, 20, 30)
-        part3.normalize(0)
+        part3.normalize(0, Revision.IISS.value)
         part4 = StakePart.from_bytes(part3.to_bytes(Revision.MULTIPLE_UNSTAKE.value))
-        part4.normalize(0)
+        part4.normalize(0, Revision.IISS.value)
         self.assertEqual(part3.stake, part4.stake)
         self.assertEqual(part3.unstake, part4.unstake)
         self.assertEqual(part3.unstakes_info, part4.unstakes_info)
@@ -75,7 +75,7 @@ class TestStakePart(unittest.TestCase):
         unstake: int = 0
         unstake_block_height: int = 0
         part1 = StakePart(stake, unstake, unstake_block_height)
-        part1.normalize(0)
+        part1.normalize(0, Revision.IISS.value)
         self.assertEqual(stake, part1.stake)
         self.assertEqual(unstake, part1.unstake)
         self.assertEqual(unstake_block_height, part1.unstake_block_height)
@@ -84,7 +84,7 @@ class TestStakePart(unittest.TestCase):
         unstake: int = 5
         unstake_block_height: int = 3
         part2 = StakePart(stake, unstake, unstake_block_height)
-        part2.normalize(unstake_block_height + 1)
+        part2.normalize(unstake_block_height + 1, Revision.IISS.value)
         self.assertEqual(stake, part2.stake)
         self.assertEqual(0, part2.unstake)
         self.assertEqual(0, part2.unstake_block_height)
@@ -100,7 +100,7 @@ class TestStakePart(unittest.TestCase):
         unstakes_info = [unstake_info1, unstake_info2, unstake_info3, unstake_info4, unstake_info5]
         part = StakePart(stake=stake, unstakes_info=unstakes_info)
         part.set_complete(True)
-        part.normalize(block_height)
+        part.normalize(block_height, Revision.IISS.value)
         self.assertEqual(stake, part.stake)
         self.assertEqual(0, part.unstake)
         self.assertEqual(0, part.unstake_block_height)
@@ -113,7 +113,7 @@ class TestStakePart(unittest.TestCase):
         unstake_block_height = 0
 
         stake_part: 'StakePart' = StakePart()
-        stake_part.normalize(0)
+        stake_part.normalize(0, Revision.IISS.value)
         stake_part.add_stake(stake)
 
         self.assertEqual(stake, stake_part.stake)
@@ -135,7 +135,7 @@ class TestStakePart(unittest.TestCase):
         unstake_block_height = 0
 
         stake_part: 'StakePart' = StakePart()
-        stake_part.normalize(0)
+        stake_part.normalize(0, Revision.MULTIPLE_UNSTAKE.value)
         stake_part.add_stake(stake)
 
         self.assertEqual(stake, stake_part.stake)
@@ -316,21 +316,21 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(block_height, part.unstake_block_height)
         self.assertTrue(part.is_set(BasePartState.DIRTY | BasePartState.COMPLETE))
 
-        refund_unstake = part.normalize(block_height + 1)
+        refund_unstake = part.normalize(block_height + 1, Revision.IISS.value)
         self.assertEqual(unstake, refund_unstake)
 
     def test_delegation_part_equal(self):
         part1 = StakePart()
-        part1.normalize(0)
+        part1.normalize(0, Revision.IISS.value)
         part2 = StakePart()
-        part2.normalize(1)
+        part2.normalize(1, Revision.IISS.value)
         self.assertEqual(part1, part2)
 
         offset = 100
         part1.add_stake(offset)
 
         part3 = StakePart(stake=offset)
-        part3.normalize(100)
+        part3.normalize(100, Revision.IISS.value)
         self.assertEqual(part1, part3)
 
 

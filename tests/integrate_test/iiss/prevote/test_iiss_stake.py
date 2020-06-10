@@ -541,7 +541,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        unstake_info = response["unstakeList"][0]
+        self.assertEqual(response["unstakeList"][0]["unstake"], unstake)
 
         # set stake 120 icx and unstake info will be removed
         new_stake = 120 * ICX_IN_LOOP
@@ -566,10 +566,9 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        unstake_info = response["unstakeList"][0]
-        unstake_block_height = unstake_info["unstakeBlockHeight"]
+        self.assertEqual(response["unstakeList"][0]["unstake"], unstake)
 
-        # set stake 140 icx and unstake info will be removed/changed
+        # set stake 140 icx and unstake info will be removed
         new_stake2 = 140 * ICX_IN_LOOP
         tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=new_stake2)
         fee2 = tx_results[0].step_used * tx_results[0].step_price

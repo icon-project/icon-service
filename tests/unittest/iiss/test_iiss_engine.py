@@ -84,7 +84,7 @@ def create_account(
     delegation_part = DelegationPart(delegated_amount, delegations)
 
     return Account(
-        address, 1024,
+        address, 1024, Revision.IISS.value,
         coin_part=coin_part,
         stake_part=stake_part,
         delegation_part=delegation_part)
@@ -140,7 +140,7 @@ def get_account(context: 'IconScoreContext',
         delegated_amount = value if 1 <= value <= 10 else 0
         delegation_part = DelegationPart(delegated_amount=delegated_amount)
 
-    return Account(address, context.block.height,
+    return Account(address, context.block.height, Revision.IISS.value,
                    coin_part=coin_part,
                    stake_part=stake_part,
                    delegation_part=delegation_part)

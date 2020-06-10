@@ -176,7 +176,7 @@ class Storage(StorageBase):
         """
 
         coin_part: 'CoinPart' = CoinPart(coin_part_type)
-        account: 'Account' = Account(address, context.block.height, coin_part=coin_part)
+        account: 'Account' = Account(address, context.block.height, context.revision, coin_part=coin_part)
         account.deposit(int(amount))
         if not account.coin_part.is_dirty():
             account.coin_part.set_dirty(True)
@@ -277,7 +277,7 @@ class Storage(StorageBase):
         if AccountPartFlag.DELEGATION in part_flags:
             delegation_part: 'DelegationPart' = self._get_part(context, DelegationPart, address)
 
-        return Account(address, context.block.height,
+        return Account(address, context.block.height, context.revision,
                        coin_part=coin_part,
                        stake_part=stake_part,
                        delegation_part=delegation_part)

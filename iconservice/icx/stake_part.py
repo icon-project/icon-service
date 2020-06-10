@@ -108,34 +108,12 @@ class StakePart(BasePart):
         self.set_dirty(True)
 
     def set_unstakes_info(self, block_height: int, new_total_unstake: int):
-        if self._unstake_block_height:
-            self._unstakes_info.append([self._unstake, self._unstake_block_height])
-            self._unstake = 0
-            self._unstake_block_height = 0
-
         total_stake = self.total_stake
-        total_unstake = self.total_unstake
-        offset = new_total_unstake - total_unstake
 
-        if offset < 0:
-            unstakes_length = len(self._unstakes_info)
-            accumulated_unstake = 0
-            for index in range(unstakes_length):
-                accumulated_unstake += self.unstakes_info[index][0]
-                if new_total_unstake > accumulated_unstake:
-                    continue
-                elif new_total_unstake == accumulated_unstake:
-                    self._unstakes_info = self.unstakes_info[:index + 1]
-                    break
-                elif new_total_unstake < accumulated_unstake:
-                    self._unstakes_info = self.unstakes_info[:index + 1]
-                    old_value_pair = self._unstakes_info.pop()
-                    new_value_pair = \
-                        [(total_unstake - accumulated_unstake + old_value_pair[0]) + offset, old_value_pair[1]]
-                    self._unstakes_info.append(new_value_pair)
-                    break
+        if new_total_unstake < self.total_unstake:
+            self.withdraw_unstake(self.total_unstake - new_total_unstake)
 
-        elif offset > 0:
+        elif self.total_unstake < new_total_unstake:
             increment_unstake = new_total_unstake - self.total_unstake
             if len(self._unstakes_info) == UNSTAKE_SLOT_MAX:
                 old_value_pair = self._unstakes_info.pop()
@@ -146,27 +124,48 @@ class StakePart(BasePart):
         self._stake = total_stake - new_total_unstake
         self.set_dirty(True)
 
-    def reset_unstake(self, revision: int):
+    def withdraw_unstake(self, amount: int):
+        unstakes_length = len(self._unstakes_info)
+        accumulated_unstake = 0
+        total_unstake = self.total_unstake
+        new_total_unstake = total_unstake - amount
+        for index in range(unstakes_length):
+            accumulated_unstake += self.unstakes_info[index][0]
+            if new_total_unstake > accumulated_unstake:
+                continue
+            elif new_total_unstake == accumulated_unstake:
+                self._unstakes_info = self.unstakes_info[:index + 1]
+                return
+            elif new_total_unstake < accumulated_unstake:
+                self._unstakes_info = self.unstakes_info[:index + 1]
+                old_value_pair = self._unstakes_info.pop()
+                new_value_pair = \
+                    [(total_unstake - accumulated_unstake + old_value_pair[0]) - amount, old_value_pair[1]]
+                self._unstakes_info.append(new_value_pair)
+                return
+
+    def reset_unstake(self):
         assert self.is_set(BasePartState.COMPLETE)
 
-        if revision < Revision.MULTIPLE_UNSTAKE.value:
-            self._stake = self.total_stake
-            self._unstake = 0
-            self._unstake_block_height: int = 0
-        else:
-            self._stake = self.total_stake
-            self._unstakes_info = []
+        self._stake = self.total_stake
+        self._unstake = 0
+        self._unstake_block_height: int = 0
+        self._unstakes_info = []
 
         self.set_dirty(True)
 
-    def normalize(self, block_height: int) -> int:
+    def normalize(self, block_height: int, revision: int) -> int:
         unstake: int = 0
         state: 'BasePartState' = BasePartState.COMPLETE
 
+        if revision == Revision.MULTIPLE_UNSTAKE.value and self._unstake_block_height:
+            self._unstakes_info.append([self._unstake, self._unstake_block_height])
+            self._unstake = 0
+            self._unstake_block_height = 0
+
         if self._unstakes_info:
             total_unstake = self._total_unstake()
-            smaller_largest_index = self.find_index_highest_in_lower_height(block_height)
-            self._unstakes_info = self._unstakes_info[smaller_largest_index:]
+            self._unstakes_info = [info for info in self._unstakes_info if info[1] >= block_height]
             new_total_unstake = self._total_unstake()
             if total_unstake > new_total_unstake:
                 state |= BasePartState.DIRTY
@@ -249,11 +248,10 @@ class StakePart(BasePart):
     def find_index_highest_in_lower_height(self, block_height: int):
         low: int = 0
         high: int = len(self._unstakes_info) - 1
-        if high <= 30:
-            for i, v in enumerate(reversed(self._unstakes_info)):
-                if v[1] <= block_height:
-                    return high - i
+        if high == -1:
             return 0
+        elif high == 0:
+            return 0 if block_height < self._unstakes_info[high][1] else 1
         while low < high:
             mid = (high + low) // 2
             if self._unstakes_info[mid][1] <= block_height < self._unstakes_info[mid + 1][1]:

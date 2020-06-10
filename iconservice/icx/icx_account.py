@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 class Account(object):
-    def __init__(self, address: 'Address', current_block_height: int, *,
+    def __init__(self, address: 'Address', current_block_height: int, revision: int, *,
                  coin_part: Optional['CoinPart'] = None,
                  stake_part: Optional['StakePart'] = None,
                  delegation_part: Optional['DelegationPart'] = None):
@@ -38,7 +38,7 @@ class Account(object):
         self._stake_part: 'StakePart' = stake_part
         self._delegation_part: 'DelegationPart' = delegation_part
 
-        self.normalize()
+        self.normalize(revision)
 
     @property
     def address(self):
@@ -133,11 +133,11 @@ class Account(object):
 
         self.coin_part.withdraw(value)
 
-    def normalize(self):
+    def normalize(self, revision):
         if self.coin_part is None or self.stake_part is None:
             return
 
-        balance: int = self.stake_part.normalize(self._current_block_height)
+        balance: int = self.stake_part.normalize(self._current_block_height, revision)
         if balance > 0:
             if self.coin_part is None:
                 raise InvalidParamsException('Failed to normalize: no coin part')
@@ -160,11 +160,11 @@ class Account(object):
         offset: int = value - self.total_stake
 
         if offset == 0:
-            self.stake_part.reset_unstake(revision)
+            self.stake_part.reset_unstake()
         elif offset > 0:
             self.coin_part.withdraw(offset)
             self.stake_part.add_stake(offset)
-            self.stake_part.reset_unstake(revision)
+            self.stake_part.reset_unstake()
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
             self.coin_part.toggle_has_unstake(True)
