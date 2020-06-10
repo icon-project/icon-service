@@ -128,7 +128,9 @@ def teardown_function():
 
 def test_precommit_data_dir_and_file_name(precommit_data):
     expected_dir_path = PRECOMMIT_LOG_PATH
-    expected_file_name: str = f"{precommit_data.block.height}-precommit-data-v{PrecommitDataWriter.VERSION}.json"
+    expected_file_name: str = f"{precommit_data.block.height}" \
+                              f"-{precommit_data.state_root_hash.hex()[:8]}" \
+                              f"-precommit-v{PrecommitDataWriter.VERSION}.json"
     writer = PrecommitDataWriter(os.getcwd())
 
     # Acts
@@ -139,7 +141,9 @@ def test_precommit_data_dir_and_file_name(precommit_data):
 
 
 def test_precommit_data_check_the_written_json_data(precommit_data, expected_json_data):
-    file_name: str = f"{precommit_data.block.height}-precommit-data-v{PrecommitDataWriter.VERSION}.json"
+    file_name: str = f"{precommit_data.block.height}" \
+                     f"-{precommit_data.state_root_hash.hex()[:8]}" \
+                     f"-precommit-v{PrecommitDataWriter.VERSION}.json"
     writer = PrecommitDataWriter(os.getcwd())
 
     # Acts
@@ -152,7 +156,9 @@ def test_precommit_data_check_the_written_json_data(precommit_data, expected_jso
 
 
 def test_precommit_data_when_raising_exception_should_catch_it(precommit_data):
-    file_name: str = f"{precommit_data.block.height}-precommit-data-v{PrecommitDataWriter.VERSION}.json"
+    file_name: str = f"{precommit_data.block.height}" \
+                     f"-{precommit_data.state_root_hash.hex()[:8]}" \
+                     f"-precommit-v{PrecommitDataWriter.VERSION}.json"
     precommit_data.rc_block_batch.append("invalid data")
 
     writer = PrecommitDataWriter(os.getcwd())

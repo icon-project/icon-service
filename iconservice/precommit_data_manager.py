@@ -48,7 +48,7 @@ class PrecommitDataWriter:
         self._dir_path: str = os.path.join(path, self.DIR_NAME)
         if not os.path.exists(self._dir_path):
             os.makedirs(self._dir_path)
-        self._filename_suffix = f"precommit-data-v{self.VERSION}.json"
+        self._filename_suffix = f"precommit-v{self.VERSION}.json"
 
     def write(self, precommit_data: 'PrecommitData'):
         """
@@ -57,7 +57,9 @@ class PrecommitDataWriter:
             :param path: path to record
             :return:
             """
-        filename: str = f"{precommit_data.block.height}-{self._filename_suffix}"
+        filename: str = f"{precommit_data.block.height}" \
+                        f"-{precommit_data.state_root_hash.hex()[:8]}" \
+                        f"-{self._filename_suffix}"
         Logger.info(
             tag=_TAG,
             msg=f"PrecommitDataWriter.write() start (precommit: {precommit_data})"
@@ -68,7 +70,7 @@ class PrecommitDataWriter:
                 json_dict = {
                     "iconservice": __version__,
                     "revision": precommit_data.revision,
-                    "block": block if block is None else block.to_dict(to_camel_case),
+                    "block": block.to_dict(to_camel_case) if block is not None else None,
                     "isStateRootHash": precommit_data.is_state_root_hash,
                     "rcStateRootHash": precommit_data.rc_state_root_hash,
                     "stateRootHash": precommit_data.state_root_hash,
@@ -78,7 +80,7 @@ class PrecommitDataWriter:
                 }
                 json.dump(json_dict, f, default=self._json_default)
             except Exception as e:
-                Logger.warning(
+                Logger.exception(
                     tag=_TAG,
                     msg=f"Exception raised during writing the precommit-data: {e}"
                 )
