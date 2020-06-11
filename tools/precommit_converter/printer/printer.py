@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-from tools.precommit_converter.extractor.extractor import IconServiceInfo
-from tools.precommit_converter.key_value import KeyValue
+from tools.precommit_converter.data.icon_service_info import IconServiceInfo
+from tools.precommit_converter.data.key_value import KeyValue
 
 
 class Printer:

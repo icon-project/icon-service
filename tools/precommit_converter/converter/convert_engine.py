@@ -1,7 +1,7 @@
 from typing import List, Tuple, Union
 
 from tools.precommit_converter.converter.converter import Converter, NotMatchException
-from tools.precommit_converter.key_value import KeyValue
+from tools.precommit_converter.data.key_value import KeyValue
 
 
 class ConvertEngine:
