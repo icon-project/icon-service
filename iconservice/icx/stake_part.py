@@ -158,7 +158,7 @@ class StakePart(BasePart):
         unstake: int = 0
         state: 'BasePartState' = BasePartState.COMPLETE
 
-        if revision == Revision.MULTIPLE_UNSTAKE.value and self._unstake_block_height:
+        if revision >= Revision.MULTIPLE_UNSTAKE.value and self._unstake_block_height:
             self._unstakes_info.append([self._unstake, self._unstake_block_height])
             self._unstake = 0
             self._unstake_block_height = 0

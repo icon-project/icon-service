@@ -133,7 +133,7 @@ class Account(object):
 
         self.coin_part.withdraw(value)
 
-    def normalize(self, revision):
+    def normalize(self, revision: int):
         if self.coin_part is None or self.stake_part is None:
             return
 
