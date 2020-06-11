@@ -86,7 +86,6 @@ class IconScoreContext(ABC):
         self.current_address: Optional['Address'] = None
         self.block_batch: Optional['BlockBatch'] = None
         self.tx_batch: Optional['TransactionBatch'] = None
-        self.block_batch: Optional['BlockBatch'] = None
         # For 2-depth block invocation
         self._prev_block_batches: Optional[List['BlockBatch']] = \
             [] if context_type == IconScoreContextType.INVOKE else None

@@ -78,10 +78,11 @@ def rmtree(path: str) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
-def root_clear(score_path: str, state_db_path: str, iiss_db_path: str):
+def root_clear(score_path: str, state_db_path: str, iiss_db_path: str, precommit_log_path: str):
     rmtree(score_path)
     rmtree(state_db_path)
     rmtree(iiss_db_path)
+    rmtree(precommit_log_path)
 
 
 def create_timestamp():

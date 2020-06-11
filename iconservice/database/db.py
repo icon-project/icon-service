@@ -273,7 +273,8 @@ class ContextDatabase(object):
             self.key_value_db.put(key, value)
         else:
             self._check_tx_batch_value(context, key, include_state_root_hash)
-            context.tx_batch[key] = TransactionBatchValue(value, include_state_root_hash)
+            tx_index: int = context.tx.index if context.tx is not None else -1
+            context.tx_batch[key] = TransactionBatchValue(value, include_state_root_hash, tx_index)
 
     def delete(self,
                context: Optional['IconScoreContext'],
@@ -298,7 +299,8 @@ class ContextDatabase(object):
             self.key_value_db.delete(key)
         else:
             self._check_tx_batch_value(context, key, include_state_root_hash)
-            context.tx_batch[key] = TransactionBatchValue(None, include_state_root_hash)
+            tx_index: int = context.tx.index if context.tx is not None else -1
+            context.tx_batch[key] = TransactionBatchValue(None, include_state_root_hash, tx_index)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
