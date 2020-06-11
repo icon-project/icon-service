@@ -61,6 +61,7 @@ BUILTIN_SCORE_ADDRESS_MAPPER = {
     'governance': GOVERNANCE_ADDRESS,
     'system': SYSTEM_ADDRESS
 }
+BUILTIN_SCORE_IMPORT_WHITE_LIST = {"iconservice.iconscore.system": "['*']"}
 
 ZERO_TX_HASH = bytes(DEFAULT_BYTE_SIZE)
 
@@ -128,6 +129,7 @@ class Revision(Enum):
     SYSTEM_SCORE_ENABLED = 9
     CHANGE_MAX_DELEGATIONS_TO_100 = 9
     PREVENT_DUPLICATED_ENDPOINT = 9
+    SET_IREP_VIA_NETWORK_PROPOSAL = 9
     MULTIPLE_UNSTAKE = 9
 
     LATEST = 9
@@ -229,6 +231,25 @@ class IconNetworkValueType(Enum):
 
     SCORE_BLACK_LIST = b'score_black_list'
     IMPORT_WHITE_LIST = b'import_white_list'
+
+    IREP = b'irep'
+
+    @classmethod
+    def gs_migration_type_list(cls) -> list:
+        return [
+            cls.SERVICE_CONFIG,
+            cls.STEP_PRICE,
+            cls.STEP_COSTS,
+            cls.MAX_STEP_LIMITS,
+            cls.REVISION_CODE,
+            cls.REVISION_NAME,
+            cls.SCORE_BLACK_LIST,
+            cls.IMPORT_WHITE_LIST,
+        ]
+
+    @classmethod
+    def gs_migration_count(cls) -> int:
+        return len(cls.gs_migration_type_list())
 
 
 @unique

@@ -629,6 +629,7 @@ class PRep(Sortable):
             "txIndex": self._tx_index,
             "nodeAddress": self._node_address,
         }
+        # TODO Revision: remove irep, irepUpdateBlockHeight after SET_IREP_VIA_NETWORK_PROPOSAL
 
         if dict_type == PRepDictType.FULL:
             data[ConstantKeys.EMAIL] = self.email

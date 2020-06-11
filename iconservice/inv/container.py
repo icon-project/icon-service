@@ -121,23 +121,20 @@ class Container(object):
         self._is_migrated: bool = is_migrated
 
         self._tx_batch = self.BatchDict()
-        self._icon_network_values: dict = {
-            IconNetworkValueType.REVISION_CODE: None,
-            IconNetworkValueType.REVISION_NAME: None,
-            IconNetworkValueType.SCORE_BLACK_LIST: None,
-            IconNetworkValueType.STEP_PRICE: None,
-            IconNetworkValueType.STEP_COSTS: None,
-            IconNetworkValueType.MAX_STEP_LIMITS: None,
-            IconNetworkValueType.SERVICE_CONFIG: None,
-            IconNetworkValueType.IMPORT_WHITE_LIST: None
-        }
+        self._icon_network_values: dict = {}    # It must be set by DB loading and network proposal
 
     @property
     def is_migrated(self) -> bool:
         return self._is_migrated
 
     def get_by_type(self, type_: 'IconNetworkValueType') -> Any:
-        return self._tx_batch.get(type_, self._icon_network_values[type_]).value
+        try:
+            value = self._tx_batch.get(type_, self._icon_network_values[type_])
+            if isinstance(value, Value):
+                return value.value
+        except KeyError:
+            return None
+        return None
 
     @property
     def service_config(self) -> int:
@@ -171,6 +168,10 @@ class Container(object):
     def import_white_list(self) -> Dict[str, List[str]]:
         return self.get_by_type(IconNetworkValueType.IMPORT_WHITE_LIST)
 
+    @property
+    def irep(self) -> int:
+        return self.get_by_type(IconNetworkValueType.IREP)
+
     def update_batch(self):
         for value in self._tx_batch.values():
             self._set(value)
@@ -186,8 +187,8 @@ class Container(object):
         :param data:
         :return:
         """
-        if len(data) != len(self._icon_network_values):
-            raise InvalidParamsException("Icon Network Values are insufficient")
+        if len(data) != IconNetworkValueType.gs_migration_count():
+            raise InvalidParamsException("Migration data for Icon Network Values are insufficient")
 
         for value in data:
             self._tx_batch[value.TYPE] = value
@@ -203,10 +204,11 @@ class Container(object):
 
     def set_inv(self, value: 'Value', is_open: bool = False):
         """
-        Set value on system value instance from icon service.
+        Set value on ICON Network Value from icon service.
         There are two cases of calling this method.
         First: Before migration
         Second: Initiating 'system value' when opening icon service (i.e. first initiation)
+        Third:
 
         :param value:
         :param is_open:
@@ -220,7 +222,7 @@ class Container(object):
 
     def set_inv_to_tx_batch(self, value: 'Value'):
         """
-        Set values on ICON Network value and put these into DB.
+        Set values on ICON Network Value and put these into DB.
         Only Governance SCORE can set values after migration.
         :param value:
         :return:

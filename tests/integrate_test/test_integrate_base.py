@@ -17,6 +17,7 @@
 """IconServiceEngine testcase
 """
 import copy
+import json
 from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
@@ -28,7 +29,7 @@ from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDR
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, RCCalculateResult
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, RCCalculateResult, Revision
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
@@ -650,17 +651,14 @@ class TestIntegrateBase(TestCase):
                                     title: str,
                                     description: str,
                                     type_: int,
-                                    value: Union[str, int, 'Address'],
+                                    value: dict,
                                     step_limit: int = DEFAULT_BIG_STEP_LIMIT) -> dict:
-        text = '{"address":"%s"}' % value
-        json_data: bytes = text.encode("utf-8")
-
         method = "registerProposal"
         score_params = {
             "title": title,
             "description": description,
             "type": hex(type_),
-            "value": bytes_to_hex(json_data)
+            "value": "0x" + bytes.hex(json.dumps(value).encode())
         }
 
         return self.create_score_call_tx(from_=from_,
@@ -780,13 +778,38 @@ class TestIntegrateBase(TestCase):
 
     def set_revision(self,
                      revision: int,
-                     expected_status: bool = True) -> List['TransactionResult']:
+                     expected_status: bool = True,
+                     with_np: bool = False) -> List['TransactionResult']:
+        response = self.get_revision()
+        if not with_np:
+            # update revision value only
+            self.score_call(from_=self._admin,
+                            to_=GOVERNANCE_SCORE_ADDRESS,
+                            func_name="setRevision",
+                            params={"code": hex(revision), "name": f"1.1.{revision}"},
+                            expected_status=expected_status)
+        else:
+            # update latest governance SCORE (1.1.0 for revision 9 now)
+            self.update_governance(version="1_1_0",
+                                   expected_status=True,
+                                   root_path="sample_builtin_for_tests")
 
-        return self.score_call(from_=self._admin,
-                               to_=GOVERNANCE_SCORE_ADDRESS,
-                               func_name="setRevision",
-                               params={"code": hex(revision), "name": f"1.1.{revision}"},
-                               expected_status=expected_status)
+            # update revision via network proposal
+            tx_result: 'TransactionResult' = self.register_proposal(
+                from_=self._accounts[0],
+                title=f"set revision {revision}",
+                description=f"set revision {revision}",
+                type_=1,
+                value={"code": hex(revision), "name": f"test {revision}"})
+            np_id = tx_result.tx_hash
+
+            tx_list = []
+            for prep in self._accounts[1:22]:
+                tx_list.append(self.create_vote_proposal_tx(prep, np_id, 1))
+            self.process_confirm_block_tx(tx_list=tx_list)
+
+        response = self.get_revision()
+        self.assertEqual(revision, response.get("code", 0), response)
 
     def accept_score(self,
                      tx_hash: Union[bytes, str],
@@ -865,7 +888,7 @@ class TestIntegrateBase(TestCase):
                           title: str,
                           description: str,
                           type_: int,
-                          value: Union[str, int, 'Address'],
+                          value: dict,
                           expected_status: bool = True) -> 'TransactionResult':
         tx: dict = self.create_register_proposal_tx(from_, title, description, type_, value)
 
@@ -944,6 +967,32 @@ class TestIntegrateBase(TestCase):
             "data": {
                 "method": "getStepPrice",
                 "params": {}
+            }
+        }
+        return self._query(query_request)
+
+    def get_revision(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getRevision",
+                "params": {}
+            }
+        }
+        return self._query(query_request)
+
+    def get_network_proposal(self, id_: str) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getProposal",
+                "params": {"id": bytes_to_hex(id_, "0x")}
             }
         }
         return self._query(query_request)

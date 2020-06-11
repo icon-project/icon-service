@@ -34,6 +34,7 @@ class TestValueConverter:
         (IconNetworkValueType.MAX_STEP_LIMITS, {"invoke": 10}, MaxStepLimits({IconScoreContextType.INVOKE: 10})),
         (IconNetworkValueType.SERVICE_CONFIG, 1, ServiceConfig(1)),
         (IconNetworkValueType.IMPORT_WHITE_LIST, {"iconservice": ['*']}, ImportWhiteList({"iconservice": ['*']})),
+        (IconNetworkValueType.IREP, 1000, IRep(1000)),
     ])
     def test_convert_for_icon_service(self, inv_type, inv_value, expected_inv_value):
         actual_converted_value: 'Value' = ValueConverter.convert_for_icon_service(inv_type, inv_value)

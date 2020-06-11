@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from iconservice import *
+from iconservice.iconscore.system import *
 
 from .network_proposal import NetworkProposal, NetworkProposalType, MaliciousScoreType
 
@@ -138,9 +139,9 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_5()
         if self.is_less_than_target_version('0.0.6'):
             self._migrate_v0_0_6()
-        if self.is_less_than_target_version('1.0.1'):
-            self._migrate_v1_0_1()
-        self._version.set('1.0.1')
+        if self.is_less_than_target_version('1.1.0'):
+            self._migrate_v1_1_0()
+        self._version.set('1.1.0')
 
     def on_install(self) -> None:
         pass
@@ -177,7 +178,7 @@ class Governance(IconSystemScoreBase):
     def _migrate_v0_0_6(self):
         pass
 
-    def _migrate_v1_0_1(self):
+    def _migrate_v1_1_0(self):
         # Migrate and Remove all icon network variables
         step_types = ArrayDB('step_types', self.db, value_type=str)
         step_costs = DictDB('step_costs', self.db, value_type=int)
@@ -782,6 +783,7 @@ class Governance(IconSystemScoreBase):
 
         self.set_icon_network_value(IconNetworkValueType.REVISION_CODE, code)
         self.set_icon_network_value(IconNetworkValueType.REVISION_NAME, name)
+        self.apply_revision_change(code)
         self.RevisionChanged(code, name)
 
     @external

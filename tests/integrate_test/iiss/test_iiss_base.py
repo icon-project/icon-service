@@ -458,7 +458,12 @@ class TestIISSBase(TestIntegrateBase):
                                              prev_block_generator=prev_block_generator,
                                              prev_block_validators=prev_block_validators)
 
-    def init_decentralized(self, network_proposal: bool = False):
+    def init_decentralized(self, network_proposal: bool = False, clear: bool = True):
+        """
+        :param network_proposal: update governance score to enable network proposal
+        :param clear: clear stake, delegation and balance of self._accounts
+        :return:
+        """
         # decentralized
         self.update_governance()
 
@@ -542,6 +547,9 @@ class TestIISSBase(TestIntegrateBase):
             "totalDelegated": expected_total_delegated
         }
         self.assertEqual(expected_response, response)
+
+        if not clear:
+            return
 
         # delegate to PRep 0
         tx_list: list = []
