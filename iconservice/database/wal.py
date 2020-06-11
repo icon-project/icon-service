@@ -14,6 +14,7 @@
 # limitations under the License.
 from enum import Flag, auto
 
+from .batch import BlockBatchValue
 from ..icon_constant import DATA_BYTE_ORDER
 from ..iiss.reward_calc.msg_data import TxData
 from ..iiss.reward_calc.storage import Storage, get_rc_version
@@ -75,10 +76,10 @@ class WALState(Flag):
     ALL = 0xFFFFFFFF
 
 
-def tx_batch_value_to_bytes(tx_batch_value: 'TransactionBatchValue') -> Optional[bytes]:
-    if not isinstance(tx_batch_value, TransactionBatchValue):
-        raise InvalidParamsException(f"Invalid value type: {type(tx_batch_value)}")
-    return tx_batch_value.value
+def block_batch_value_to_bytes(block_batch_value: 'BlockBatchValue') -> Optional[bytes]:
+    if not isinstance(block_batch_value, BlockBatchValue):
+        raise InvalidParamsException(f"Invalid value type: {type(block_batch_value)}")
+    return block_batch_value.value
 
 
 class WALogable(metaclass=ABCMeta):
@@ -87,7 +88,7 @@ class WALogable(metaclass=ABCMeta):
 
 
 class StateWAL(WALogable):
-    def __init__(self, block_batch: 'BlockBatch', converter: Optional[callable] = tx_batch_value_to_bytes):
+    def __init__(self, block_batch: 'BlockBatch', converter: Optional[callable] = block_batch_value_to_bytes):
         self.block_batch: 'BlockBatch' = block_batch
         self.converter: callable = converter
 

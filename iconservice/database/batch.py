@@ -15,16 +15,80 @@
 # limitations under the License.
 
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from collections.abc import MutableMapping
-from typing import Optional
+from copy import copy
+from typing import Optional, List
 
 from ..base.block import Block
 from ..base.exception import DatabaseException, AccessDeniedException
 from ..icx import IcxStorage
-from ..utils import sha3_256
+from ..utils import sha3_256, to_camel_case
 
-TransactionBatchValue = namedtuple('TransactionBatchValue', ['value', 'include_state_root_hash'])
+
+class BatchValue:
+    def __init__(self, value: Optional[bytes], include_state_root_hash: bool):
+        self._value: bytes = value
+        self._include_state_root_hash: bool = include_state_root_hash
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def include_state_root_hash(self):
+        return self._include_state_root_hash
+
+    def to_dict(self, casing: Optional[callable] = None) -> dict:
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                key = key[1:]
+            new_dict[casing(key) if casing else key] = value
+
+        return new_dict
+
+
+class TransactionBatchValue(BatchValue):
+    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_index: int = -1):
+        super().__init__(value, include_state_root_hash)
+        self._tx_index: int = tx_index
+
+    @property
+    def tx_index(self) -> int:
+        """
+        Transaction index information for debugging
+        index -1 means deploying score or the data being been recorded outside of the transaction
+        :return:
+        """
+        # Fixme: Correct tx index should be set on deploying score (not -1)
+        return self._tx_index
+
+    def __repr__(self):
+        return f'TransactionBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_index})'
+
+    def __eq__(self, other: 'TransactionBatchValue'):
+        return self.value == other.value and \
+               self.include_state_root_hash == other.include_state_root_hash and \
+               self.tx_index == other.tx_index
+
+
+class BlockBatchValue(BatchValue):
+    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_indexes: List[int]):
+        super().__init__(value, include_state_root_hash)
+        self._tx_indexes: List[int] = tx_indexes
+
+    @property
+    def tx_indexes(self) -> List[int]:
+        return copy(self._tx_indexes)
+
+    def __repr__(self):
+        return f'BlockBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_indexes})'
+
+    def __eq__(self, other: 'BlockBatchValue'):
+        return self.value == other.value and \
+               self.include_state_root_hash == other.include_state_root_hash and \
+               self.tx_indexes == other.tx_indexes
 
 
 def digest(ordered_dict: OrderedDict):
@@ -71,7 +135,8 @@ class TransactionBatch(MutableMapping):
     key: Score Address
     value: IconScoreBatch
     """
-    def __init__(self, tx_hash: Optional[bytes]=None) -> None:
+
+    def __init__(self, tx_hash: Optional[bytes] = None) -> None:
         """Constructor
 
         :param tx_hash: tx_hash
@@ -88,6 +153,8 @@ class TransactionBatch(MutableMapping):
         return None
 
     def __setitem__(self, key, value):
+        assert isinstance(value, TransactionBatchValue)
+
         call_batch: OrderedDict = self._call_batches[-1]
         call_batch[key] = value
 
@@ -148,6 +215,7 @@ class BlockBatch(Batch):
     key: Address
     value: IconScoreBatch
     """
+
     def __init__(self, block: Optional['Block'] = None):
         """Constructor
 
@@ -159,9 +227,30 @@ class BlockBatch(Batch):
     def __setitem__(self, key, value):
         raise AccessDeniedException("Can not set data on block batch directly.")
 
+    def to_list(self) -> list:
+        """
+        Return list of key, value for Debugging
+        :return:
+        """
+        new_list: list = []
+        for key, val in self.items():
+            _dict = {"key": key}
+            _dict.update(val.to_dict(to_camel_case))
+            new_list.append(_dict)
+        return new_list
+
     def update(self, tx_batch: 'TransactionBatch', **kwargs):
+        assert isinstance(tx_batch, TransactionBatch)
+
         for key, value in tx_batch.items():
-            super().__setitem__(key, value)
+            prev_block_batch_value: Optional['BlockBatchValue'] = self.get(key)
+            if prev_block_batch_value is not None:
+                tx_indexes: list = prev_block_batch_value.tx_indexes
+                tx_indexes.append(value.tx_index)
+            else:
+                tx_indexes: list = [value.tx_index]
+            bbv = BlockBatchValue(value.value, value.include_state_root_hash, tx_indexes)
+            super().__setitem__(key, bbv)
 
     def update_block_hash(self, block_hash: bytes):
         self.block = Block(block_height=self.block.height,
@@ -173,7 +262,8 @@ class BlockBatch(Batch):
     def set_block_to_batch(self, revision: int):
         # Logger.debug(tag="DB", msg=f"set_block_to_batch() block={self.block}")
         block_key: bytes = IcxStorage.LAST_BLOCK_KEY
-        block_value: tuple = TransactionBatchValue(self.block.to_bytes(revision), False)
+        # As block is not relevant with a transaction, set tx_indexes as -1
+        block_value: 'BlockBatchValue' = BlockBatchValue(self.block.to_bytes(revision), False, [-1])
 
         super().__setitem__(block_key, block_value)
 
