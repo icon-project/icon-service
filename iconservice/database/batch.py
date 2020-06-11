@@ -65,7 +65,7 @@ class TransactionBatchValue(BatchValue):
         return self._tx_index
 
     def __repr__(self):
-        return 'TransactionBatchValue(%s, %d, %d)' % (self.value.hex(), self.include_state_root_hash, self.tx_index)
+        return f'TransactionBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_index})'
 
     def __eq__(self, other: 'TransactionBatchValue'):
         return self.value == other.value and \
@@ -83,7 +83,7 @@ class BlockBatchValue(BatchValue):
         return copy(self._tx_indexes)
 
     def __repr__(self):
-        return 'BlockBatchValue(%s, %d, %s)' % (self.value.hex(), self.include_state_root_hash, self.tx_indexes)
+        return f'BlockBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_indexes})'
 
     def __eq__(self, other: 'BlockBatchValue'):
         return self.value == other.value and \
