@@ -26,6 +26,7 @@ from iconservice.base.block import Block
 from iconservice.base.address import AddressPrefix, MalformedAddress
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
+from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.icx_account import Account
@@ -64,14 +65,14 @@ class TestIcxStorage(unittest.TestCase):
 
         address = create_address(AddressPrefix.EOA)
         coin_part: 'CoinPart' = CoinPart()
-        account: 'Account' = Account(address, 0, coin_part=coin_part)
+        account: 'Account' = Account(address, 0, Revision.IISS.value, coin_part=coin_part)
         account.deposit(10 ** 19)
 
         self.storage.put_account(context, account)
 
         address: 'Address' = create_address(AddressPrefix.EOA)
         coin_part: 'CoinPart' = CoinPart()
-        account: 'Account' = Account(address, self.context.block.height, coin_part=coin_part)
+        account: 'Account' = Account(address, self.context.block.height, Revision.IISS.value, coin_part=coin_part)
 
         account.deposit(10 ** 19)
 
@@ -139,7 +140,7 @@ class TestIcxStorageForMalformedAddress(unittest.TestCase):
         for address in self.addresses:
             coin_part: 'CoinPart' = CoinPart()
             account: 'Account' = Account(
-                address, self.context.block.height, coin_part=coin_part)
+                address, self.context.block.height, Revision.IISS.value, coin_part=coin_part)
             account.deposit(10 ** 19)
             accounts.append(account)
 

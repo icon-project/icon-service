@@ -301,7 +301,7 @@ class Engine(EngineBase):
                                                                        context.total_supply)
         # subtract account's staked amount from the total stake
         total_stake -= account.stake
-        account.set_stake(value, unstake_lock_period)
+        account.set_stake(value, unstake_lock_period, context.revision)
         # add account's newly set staked amount from the total stake
         total_stake += account.stake
         context.storage.icx.put_account(context, account)
@@ -354,16 +354,30 @@ class Engine(EngineBase):
         stake: int = account.stake
         unstake: int = account.unstake
         unstake_block_height: int = account.unstake_block_height
+        unstakes_info: Optional[List[Tuple[int, int]]] = account.unstakes_info
 
         data = {
             "stake": stake
         }
 
         if unstake_block_height:
-            data["unstake"] = unstake
-            data["unstakeBlockHeight"] = unstake_block_height
-            data["remainingBlocks"] = unstake_block_height - context.block.height
+            unstakes_list = []
+            unstake_data = {
+                "unstake": unstake,
+                "unstakeBlockHeight": unstake_block_height,
+                "remainingBlocks": unstake_block_height - context.block.height
+            }
+            unstakes_list.append(unstake_data)
+            data["unstakeList"] = unstakes_list
 
+        if unstakes_info:
+            data["unstakeList"] = [
+                {"unstake": unstakes_data[0],
+                 "unstakeBlockHeight": unstakes_data[1],
+                 "remainingBlocks": unstakes_data[1] - context.block.height
+                 }
+                for unstakes_data in unstakes_info
+            ]
         return data
 
     def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext'):
