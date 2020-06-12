@@ -19,6 +19,7 @@ def main():
         args.func(args)
     except Exception as e:
         print(''.join(traceback.format_tb(e.__traceback__)), file=sys.stderr)
+        print(e.args[0], file=sys.stderr)
         return FAILURE_CODE
 
     return SUCCESS_CODE

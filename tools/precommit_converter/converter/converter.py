@@ -140,13 +140,13 @@ class ScoreConverter(Converter):
             return True
         return False
 
-    def _convert_score_data(self, key, value):
+    def _convert_score_data(self, key: bytes, value: Optional[bytes]):
         # Score address | type | name ...
         score_addr = Address.from_bytes(key[:21])
         type_ = key[22:23]
         converted_key = self.mapper[type_](key[24:])
         converted_key: str = f"SCORE: {score_addr} || Type: {self.DECODER_STRING_MAPPER[type_]} || Key: {converted_key}"
-        return converted_key, value
+        return converted_key, str(value)
 
     @classmethod
     def _dict_db_decoder(cls, key: bytes):
@@ -204,7 +204,7 @@ class AccountMethod(Converter):
     @classmethod
     def _convert_total_supply(cls, key: bytes, value: bytes):
         converted_total_supply: int = int.from_bytes(value, DATA_BYTE_ORDER)
-        return key.decode(), converted_total_supply
+        return key.decode(), str(converted_total_supply)
 
     @classmethod
     def _is_coin_parts(cls, key: bytes):

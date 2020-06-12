@@ -20,4 +20,7 @@ class KeyValue:
         return "0x" + self.bytes_value.hex()
 
     def set_converted_key_value(self, converted_key: str, converted_value: str):
+        if not isinstance(converted_key, str) or not isinstance(converted_value, str):
+            raise ValueError(f"Invalid converted key, value type "
+                             f"Key:{type(converted_key)} Value:{type(converted_value)}")
         self.converted_key, self.converted_value = converted_key, converted_value
