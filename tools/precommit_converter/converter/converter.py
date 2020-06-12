@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from iconservice import ArrayDB
 from iconservice.base.address import ICON_ADDRESS_BODY_SIZE, ICON_ADDRESS_BYTES_SIZE, Address, \
@@ -40,12 +40,12 @@ class Converter:
 
         raise NotMatchException()
 
-    def convert(self, key: bytes, value: bytes) -> Tuple[str, str]:
+    def convert(self, key: bytes, value: Optional[bytes]) -> Tuple[str, str]:
         """
         Convert key, value from bytes to string
         If no match, raise NotMatchException
         :param key:
-        :param value:
+        :param value: value could be None (e.g. delete score data)
         :return:
         """
         try:

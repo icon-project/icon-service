@@ -18,22 +18,13 @@ class Extractor:
 
     @classmethod
     def extract(cls, path: str) -> Tuple[Optional[IconServiceInfo], List[KeyValue]]:
-        try:
-            return cls._extract(path)
-        except NotSupportFileException as e:
-            raise e
-        except Exception as e:
-            raise ExtractException(f"Raise Exception during extract bytes key value from the file: {e}")
-
-    @classmethod
-    def _extract(cls, path: str) -> Tuple[Optional[IconServiceInfo], List[KeyValue]]:
         # Check the txt format and extract the data from the
         if path.endswith("txt"):
             return cls._extract_key_values_from_text(path)
         elif path.endswith("json"):
             return cls._extract_key_values_from_json(path)
         else:
-            raise NotSupportFileException()
+            raise NotSupportFileException("Not supported file format.")
 
     @classmethod
     def _extract_json(cls, path: str) -> dict:
@@ -50,8 +41,9 @@ class Extractor:
         if block_batch is None:
             raise KeyError("blockBatch not found")
         for data in block_batch:
-            key, value = data["key"][2:], data["value"][2:]
-            bytes_k_v.append(KeyValue(data["txIndexes"], bytes.fromhex(key), bytes.fromhex(value)))
+            key = bytes.fromhex(data["key"][2:])
+            value = bytes.fromhex(data["value"][2:]) if data["value"] is not None else None
+            bytes_k_v.append(KeyValue(data["txIndexes"], key, value))
 
         icon_service_info: 'IconServiceInfo' = IconServiceInfo(json_dict["iconservice"],
                                                                json_dict["revision"],
@@ -87,6 +79,9 @@ class Extractor:
                             value = value[2:]
                         if value[-1] == ",":
                             value = value[:len(value) - 1]
-                        key_values.append(KeyValue(None, bytes.fromhex(key), bytes.fromhex(value)))
+
+                        hex_key = bytes.fromhex(key)
+                        hex_value = bytes.fromhex(value) if value != "None" else None
+                        key_values.append(KeyValue(None, hex_key, hex_value))
 
         return None, key_values

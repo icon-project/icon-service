@@ -2,10 +2,11 @@ from typing import Optional, List
 
 
 class KeyValue:
-    def __init__(self, tx_indexes: Optional[List[int]], bytes_key: bytes, bytes_value: bytes):
+    def __init__(self, tx_indexes: Optional[List[int]], bytes_key: bytes, bytes_value: Optional[bytes]):
         self.tx_indexes: Optional[List[int]] = tx_indexes
         self.bytes_key: bytes = bytes_key
-        self.bytes_value: bytes = bytes_value
+        # Some data could be None (e.g. delete SCORE data)
+        self.bytes_value: Optional[bytes] = bytes_value
 
         self.converted_key: Optional[str] = None
         self.converted_value: Optional[str] = None
