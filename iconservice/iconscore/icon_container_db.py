@@ -235,7 +235,7 @@ class ArrayDB(object):
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
         self.__value_type = value_type
-        self.__size = self.__get_size_from_db()
+        self.__legacy_size = self.__get_size_from_db()
 
     def put(self, value: V) -> None:
         """
@@ -243,7 +243,7 @@ class ArrayDB(object):
 
         :param value: value to add
         """
-        size: int = self.__size
+        size: int = self.__get_size()
         self.__put(size, value)
         self.__set_size(size + 1)
 
@@ -253,7 +253,7 @@ class ArrayDB(object):
 
         :return: last added value
         """
-        size: int = self.__size
+        size: int = self.__get_size()
         if size == 0:
             return None
 
@@ -272,11 +272,17 @@ class ArrayDB(object):
         """
         return self[index]
 
+    def __get_size(self) -> int:
+        if self.__is_defective_revision():
+            return self.__legacy_size
+        else:
+            return self.__get_size_from_db()
+
     def __get_size_from_db(self) -> int:
         return ContainerUtil.decode_object(self._db.get(self.__SIZE_BYTE_KEY), int)
 
     def __set_size(self, size: int) -> None:
-        self.__size = size
+        self.__legacy_size = size
         byte_value = ContainerUtil.encode_value(size)
         self._db.put(self.__SIZE_BYTE_KEY, byte_value)
 
@@ -285,16 +291,16 @@ class ArrayDB(object):
         self._db.put(get_encoded_key(index), byte_value)
 
     def __iter__(self):
-        return self._get_generator(self._db, self.__size, self.__value_type)
+        return self._get_generator(self._db, self.__get_size(), self.__value_type)
 
     def __len__(self):
-        return self.__size
+        return self.__get_size()
 
     def __setitem__(self, index: int, value: V) -> None:
         if not isinstance(index, int):
             raise InvalidParamsException('Invalid index type: not an integer')
 
-        size: int = self.__size
+        size: int = self.__get_size()
 
         # Negative index means that you count from the right instead of the left.
         if index < 0:
@@ -306,13 +312,19 @@ class ArrayDB(object):
             raise InvalidParamsException('ArrayDB out of index')
 
     def __getitem__(self, index: int) -> V:
-        return self._get(self._db, self.__size, index, self.__value_type)
+        return self._get(self._db, self.__get_size(), index, self.__value_type)
 
     def __contains__(self, item: V):
         for e in self:
             if e == item:
                 return True
         return False
+
+    @classmethod
+    def __is_defective_revision(cls):
+        context = ContextContainer._get_context()
+        revision = context.revision
+        return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
 
     @classmethod
     def _get(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:
