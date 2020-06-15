@@ -41,6 +41,11 @@ class StakePart(BasePart):
         self._unstake_block_height: int = unstake_block_height
         self._unstakes_info: List[List[int, int]] = unstakes_info if unstakes_info else []
 
+    def __str__(self):
+        return f"stake={self._stake}, " \
+               f"unstake={self._unstake}, " \
+               f"unstake_bh={self._unstake_block_height}"
+
     @staticmethod
     def make_key(address: 'Address') -> bytes:
         return StakePart.PREFIX + address.to_bytes_including_prefix()

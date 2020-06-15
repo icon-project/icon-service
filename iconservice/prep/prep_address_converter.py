@@ -47,6 +47,10 @@ class PRepAddressConverter:
         else:
             self._node_address_mapper: dict = {}
 
+    def __str__(self):
+        return f"prev_node_address_mapper={self._prev_node_address_mapper} \n" \
+               f"node_address_mapper={self._node_address_mapper}"
+
     def to_bytes(self) -> bytes:
         version: int = 0
         return MsgPackForDB.dumps([version, self._prev_node_address_mapper])
