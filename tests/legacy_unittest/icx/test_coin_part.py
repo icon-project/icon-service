@@ -20,10 +20,11 @@ import pytest
 
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
-from iconservice.icon_constant import Revision
+from iconservice.icon_constant import Revision, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 from iconservice.icx.base_part import BasePartState
-from iconservice.icx.coin_part import CoinPartType, CoinPartFlag, CoinPart
+from iconservice.icx.coin_part import CoinPartType, CoinPartFlag, CoinPart, CoinPartVersion
 from iconservice.utils import set_flag
+from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 
 
@@ -182,3 +183,39 @@ class TestCoinPart:
         part1.deposit(balance)
         part3 = CoinPart(balance=balance)
         assert part1 == part3
+
+    def test_coin_part_to_bytes_before_rev_iiss(self):
+        revision = Revision.THREE.value
+        coin_type = CoinPartType.GENERAL
+        coin_flag = CoinPartFlag.NONE
+        value = 5
+
+        coin_part = CoinPart(coin_type, coin_flag, value)
+        actual_bytes = coin_part.to_bytes(revision)
+        expected_bytes = CoinPart._STRUCT_FORMAT.pack(CoinPartVersion.STRUCT,
+                                                      CoinPartType.GENERAL.value,
+                                                      CoinPartFlag.NONE.value,
+                                                      value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
+
+        assert actual_bytes == expected_bytes
+
+    def test_coin_part_to_bytes_after_rev_iiss(self):
+        revision = Revision.IISS.value
+        coin_type = CoinPartType.GENERAL
+        coin_flag = CoinPartFlag.NONE
+        value = 5
+
+        coin_part = CoinPart(coin_type, coin_flag, value)
+        actual_bytes = coin_part.to_bytes(revision)
+
+        # 94 means list in msgpack
+        # def _pack_array_header(self, n):
+        #      if n <= 0x0F:
+        #      return self._buffer.write(struct.pack("B", 0x90 + n))
+        expected_bytes = b'\x94' + \
+                         MsgPackForDB.dumps(CoinPartVersion.MSG_PACK) + \
+                         coin_type.value.to_bytes(1, DATA_BYTE_ORDER) + \
+                         coin_flag.value.to_bytes(1, DATA_BYTE_ORDER) + \
+                         value.to_bytes(1, DATA_BYTE_ORDER)
+
+        assert actual_bytes == expected_bytes
