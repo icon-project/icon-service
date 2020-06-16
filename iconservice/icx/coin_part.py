@@ -72,6 +72,7 @@ class CoinPart(BasePart):
         """Constructor
         """
         super().__init__()
+        assert isinstance(coin_part_type, CoinPartType)
 
         self._type: 'CoinPartType' = coin_part_type
         self._flags: 'CoinPartFlag' = flags
@@ -227,7 +228,7 @@ class CoinPart(BasePart):
     def _to_msg_packed_bytes(self) -> bytes:
         data = [
             CoinPartVersion.MSG_PACK,
-            self._type,
+            self._type.value,
             self._flags.value,
             self.balance
         ]
@@ -236,6 +237,6 @@ class CoinPart(BasePart):
 
     def _to_struct_packed_bytes(self) -> bytes:
         return CoinPart._STRUCT_FORMAT.pack(CoinPartVersion.STRUCT,
-                                            self._type,
+                                            self._type.value,
                                             self._flags.value,
                                             self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
