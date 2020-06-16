@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
 
-from iconservice.icon_config import default_icon_config, check_config, args_to_dict
+from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
 
 if TYPE_CHECKING:
@@ -38,7 +38,6 @@ _TAG = "CLI"
 class ExitCode(IntEnum):
     SUCCEEDED = 0
     INVALID_COMMAND = 1
-    INVALID_CONFIG = 2
 
 
 def main():
@@ -99,11 +98,8 @@ def main():
 
     conf = IconConfig(conf_path, copy.deepcopy(default_icon_config))
     conf.load()
-    conf.update_conf(args_to_dict(args))
+    conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
-    if not check_config(conf, default_icon_config):
-        Logger.error(tag=_TAG, msg=f"Invalid Config")
-        sys.exit(ExitCode.INVALID_CONFIG.value)
 
     command = args.command[0]
     if command == 'start' and len(args.command) == 1:
