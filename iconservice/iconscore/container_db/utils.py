@@ -96,6 +96,16 @@ class Utils:
             db_key: str,
             container: iter
     ):
+        """
+        Only V1 supported.
+
+        TODO V2 support.
+
+        :param db:
+        :param db_key:
+        :param container:
+        :return:
+        """
         sub_db = db.get_sub_db(cls.encode_key(db_key))
         if isinstance(container, dict):
             cls.__put_to_db_internal(sub_db, container.items())
@@ -110,6 +120,18 @@ class Utils:
             *args,
             value_type: type
     ) -> Optional[K]:
+        """
+        Only V1 supported.
+
+        TODO V2 support.
+
+        :param db:
+        :param db_key:
+        :param args:
+        :param value_type:
+        :return:
+        """
+
         sub_db = db.get_sub_db(cls.encode_key(db_key))
         *args, last_arg = args
         for arg in args:
@@ -126,6 +148,16 @@ class Utils:
             db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
             iters: iter
     ):
+        """
+        Only V1 supported.
+
+        TODO V2 support.
+
+        :param db:
+        :param iters:
+        :return:
+        """
+
         for key, value in iters:
             sub_db = db.get_sub_db(cls.encode_key(key))
             if isinstance(value, dict):

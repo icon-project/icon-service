@@ -379,14 +379,27 @@ class IconScoreDatabase(ContextGetter):
 
     @property
     def is_root(self) -> bool:
+        """
+        To identify score_db and sub_db instead of isinstance method.
+        :return:
+        """
         return True
 
     @property
     def _is_v2(self) -> bool:
+        """
+        To branch logic for migration DB.
+        :return:
+        """
         return self._revision >= Revision.CONTAINER_DB_RLP.value
 
     @property
     def _revision(self) -> int:
+        """
+        During change revision especially Revision.CONTAINER_DB_RLP,
+        Must not apply is_v2 logic yet.
+        :return:
+        """
         if self._context.is_revision_changed(Revision.CONTAINER_DB_RLP.value):
             return self._context.revision - 1
         else:
@@ -397,20 +410,24 @@ class IconScoreDatabase(ContextGetter):
         Gets the value for the specified key
 
         :param key: key to retrieve
-        :param container_id:
+        :param container_id: default DICT_DB_ID
         :return: value for the specified key, or None if not found
+
+        ****** WORNING ******
+            In v2, the previous value is not actually removed.
+        *********************
         """
 
         input_key: list = self._make_input_key(key, container_id)
 
         if self._is_v2:
-            final_key: bytes = self._get_final_key(input_key)
+            final_key: bytes = self._make_final_key(input_key)
             value: Optional[bytes] = self._context_db.get(self._context, final_key)
             if value is None:
-                legacy_final_key: bytes = self._get_final_key(input_key, is_legacy=True)
+                legacy_final_key: bytes = self._make_final_key(input_key, is_legacy=True)
                 value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
         else:
-            final_key: bytes = self._get_final_key(input_key, is_legacy=True)
+            final_key: bytes = self._make_final_key(input_key, is_legacy=True)
             value: Optional[bytes] = self._context_db.get(self._context, final_key)
 
         if self._observer:
@@ -424,7 +441,7 @@ class IconScoreDatabase(ContextGetter):
 
         :param key: key to set
         :param value: value to set
-        :param container_id:
+        :param container_id: default DICT_DB_ID
 
         ****** WORNING ******
             In v2, the previous value is not actually removed.
@@ -436,15 +453,15 @@ class IconScoreDatabase(ContextGetter):
         input_key: list = self._make_input_key(key, container_id)
 
         if self._is_v2:
-            final_key: bytes = self._get_final_key(input_key)
+            final_key: bytes = self._make_final_key(input_key)
         else:
-            final_key: bytes = self._get_final_key(input_key, is_legacy=True)
+            final_key: bytes = self._make_final_key(input_key, is_legacy=True)
 
         if self._observer:
             if self._is_v2:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
                 if old_value is None:
-                    legacy_final_key: bytes = self._get_final_key(input_key, is_legacy=True)
+                    legacy_final_key: bytes = self._make_final_key(input_key, is_legacy=True)
                     old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
             else:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
@@ -462,7 +479,7 @@ class IconScoreDatabase(ContextGetter):
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
-        :param container_id:
+        :param container_id: default DICT_DB_ID
 
         ****** WORNING ******
             In v2, the previous value is not actually removed.
@@ -473,15 +490,15 @@ class IconScoreDatabase(ContextGetter):
         input_key: list = self._make_input_key(key, container_id)
 
         if self._is_v2:
-            final_key: bytes = self._get_final_key(input_key)
+            final_key: bytes = self._make_final_key(input_key)
         else:
-            final_key: bytes = self._get_final_key(input_key, is_legacy=True)
+            final_key: bytes = self._make_final_key(input_key, is_legacy=True)
 
         if self._observer:
             if self._is_v2:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
                 if old_value is None:
-                    legacy_final_key: bytes = self._get_final_key(input_key, is_legacy=True)
+                    legacy_final_key: bytes = self._make_final_key(input_key, is_legacy=True)
                     old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
             else:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
@@ -547,7 +564,7 @@ class IconScoreDatabase(ContextGetter):
         input_key: list = self.__convert_input_key(key)
         return self.__combine_container_id_to_key(input_key, container_id)
 
-    def _get_final_key(self, input_key: list, is_legacy: bool = False) -> bytes:
+    def _make_final_key(self, input_key: list, is_legacy: bool = False) -> bytes:
         bytes_list: list = self.__convert_bytes_list(input_key, is_legacy=is_legacy)
         separator: bytes = b'|' if is_legacy else b''
         return self.__concat_key(bytes_list, separator)
@@ -614,6 +631,10 @@ class IconScoreSubDatabase:
 
     @property
     def is_root(self) -> bool:
+        """
+        To identify score_db and sub_db instead of isinstance method.
+        :return:
+        """
         return False
 
     def get(self, key: Union[list, bytes]) -> Optional[bytes]:

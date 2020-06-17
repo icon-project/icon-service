@@ -39,14 +39,14 @@ class RLPPrefix:
             prefix: bytes,
             legacy_key: bytes = None
     ):
-        self._prefix: bytes = self.rlp_encode_bytes(prefix)
+        self._prefix: bytes = prefix
         if legacy_key:
             self._legacy_key: bytes = legacy_key
         else:
             self._legacy_key: bytes = prefix
 
     def __bytes__(self) -> bytes:
-        return self._prefix
+        return self.rlp_encode_bytes(self._prefix)
 
     @property
     def legacy_key(self) -> bytes:
