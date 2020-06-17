@@ -205,7 +205,7 @@ class TestCoinPart:
         coin_flag = CoinPartFlag.NONE
         value = 5
 
-        coin_part = CoinPart(coin_type, coin_flag, value)
+        coin_part = CoinPart(coin_type, coin_flag, value, False)
         actual_bytes = coin_part.to_bytes(revision)
 
         # 94 means list in msgpack

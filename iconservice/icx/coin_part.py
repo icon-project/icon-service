@@ -16,7 +16,7 @@
 
 from enum import IntEnum, unique, Flag
 from struct import Struct
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from .base_part import BasePart
 from ..base.address import AddressPrefix
@@ -68,11 +68,17 @@ class CoinPart(BasePart):
     def __init__(self,
                  coin_part_type: 'CoinPartType' = CoinPartType.GENERAL,
                  flags: 'CoinPartFlag' = CoinPartFlag.NONE,
-                 balance: int = 0):
+                 balance: int = 0,
+                 is_first: bool = True):
         """Constructor
         """
         super().__init__()
         assert isinstance(coin_part_type, CoinPartType)
+        # Encoded bytes format is different Between from Rev IISS to Rev FIX_COIN_PART_BYTES_STRUCTURE
+        # First recorded account: type is encoded as ExtType
+        # Previously recorded account: type is encoded as primitive type
+        # To distinguish, use is_first flag. It is only used between from Rev IISS to Rev FIX_COIN_PART_BYTES_STRUCTURE
+        self._is_first: bool = is_first
 
         self._type: 'CoinPartType' = coin_part_type
         self._flags: 'CoinPartFlag' = flags
@@ -170,9 +176,9 @@ class CoinPart(BasePart):
         :param other: (CoinPart)
         """
         return isinstance(other, CoinPart) \
-            and self._balance == other._balance \
-            and self._type == other._type \
-            and self._flags == other._flags
+               and self._balance == other._balance \
+               and self._type == other._type \
+               and self._flags == other._flags
 
     def __ne__(self, other) -> bool:
         """operator != overriding
@@ -199,7 +205,10 @@ class CoinPart(BasePart):
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
         balance: int = int.from_bytes(amount, DATA_BYTE_ORDER)
 
-        return CoinPart(CoinPartType(coin_type), CoinPartFlag(flags), balance)
+        return CoinPart(coin_part_type=CoinPartType(coin_type),
+                        flags=CoinPartFlag(flags),
+                        balance=balance,
+                        is_first=False)
 
     @staticmethod
     def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
@@ -213,22 +222,36 @@ class CoinPart(BasePart):
 
         return CoinPart(coin_part_type=CoinPartType(data[1]),
                         flags=CoinPartFlag(data[2]),
-                        balance=data[3])
+                        balance=data[3],
+                        is_first=False)
 
     def to_bytes(self, revision: int) -> bytes:
         """Convert CoinPart object to bytes
 
         :return: data including information of CoinPart object
         """
-        if revision >= Revision.IISS.value:
+        if revision >= Revision.FIX_COIN_PART_BYTES_STRUCTURE.value:
+            return self._to_fixed_msg_packed_bytes()
+        elif revision >= Revision.IISS.value:
             return self._to_msg_packed_bytes()
         else:
             return self._to_struct_packed_bytes()
 
+    def _to_fixed_msg_packed_bytes(self) -> bytes:
+        data = [
+            CoinPartVersion.MSG_PACK.value,
+            self._type.value,
+            self._flags.value,
+            self.balance
+        ]
+
+        return MsgPackForDB.dumps(data)
+
     def _to_msg_packed_bytes(self) -> bytes:
+        _type: Union[int, 'CoinPartType'] = self._type if self._is_first else self._type.value
         data = [
             CoinPartVersion.MSG_PACK,
-            self._type.value,
+            _type,
             self._flags.value,
             self.balance
         ]
@@ -237,6 +260,6 @@ class CoinPart(BasePart):
 
     def _to_struct_packed_bytes(self) -> bytes:
         return CoinPart._STRUCT_FORMAT.pack(CoinPartVersion.STRUCT,
-                                            self._type.value,
+                                            self._type,
                                             self._flags.value,
                                             self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
