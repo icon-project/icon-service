@@ -199,13 +199,14 @@ class TestCoinPart:
 
         assert actual_bytes == expected_bytes
 
-    def test_coin_part_to_bytes_after_rev_iiss(self):
+    def test_first_coin_part_to_bytes_from_rev_iiss_to_rev_9(self):
         revision = Revision.IISS.value
+        is_first = True
         coin_type = CoinPartType.GENERAL
         coin_flag = CoinPartFlag.NONE
         value = 5
 
-        coin_part = CoinPart(coin_type, coin_flag, value, False)
+        coin_part = CoinPart(coin_type, coin_flag, value, is_first)
         actual_bytes = coin_part.to_bytes(revision)
 
         # 94 means list in msgpack
@@ -214,6 +215,41 @@ class TestCoinPart:
         #      return self._buffer.write(struct.pack("B", 0x90 + n))
         expected_bytes = b'\x94' + \
                          MsgPackForDB.dumps(CoinPartVersion.MSG_PACK) + \
+                         MsgPackForDB.dumps(CoinPartType.GENERAL) + \
+                         coin_flag.value.to_bytes(1, DATA_BYTE_ORDER) + \
+                         value.to_bytes(1, DATA_BYTE_ORDER)
+
+        assert actual_bytes == expected_bytes
+
+    def test_coin_part_to_bytes_from_rev_iiss_to_rev_9(self):
+        revision = Revision.IISS.value
+        is_first = False
+        coin_type = CoinPartType.GENERAL
+        coin_flag = CoinPartFlag.NONE
+        value = 5
+
+        coin_part = CoinPart(coin_type, coin_flag, value, is_first)
+        actual_bytes = coin_part.to_bytes(revision)
+
+        expected_bytes = b'\x94' + \
+                         MsgPackForDB.dumps(CoinPartVersion.MSG_PACK) + \
+                         coin_type.value.to_bytes(1, DATA_BYTE_ORDER) + \
+                         coin_flag.value.to_bytes(1, DATA_BYTE_ORDER) + \
+                         value.to_bytes(1, DATA_BYTE_ORDER)
+
+        assert actual_bytes == expected_bytes
+
+    def test_coin_part_to_bytes_from_after_rev_9(self):
+        revision = Revision.FIX_COIN_PART_BYTES_STRUCTURE.value
+        coin_type = CoinPartType.GENERAL
+        coin_flag = CoinPartFlag.NONE
+        value = 5
+
+        coin_part = CoinPart(coin_type, coin_flag, value)
+        actual_bytes = coin_part.to_bytes(revision)
+
+        expected_bytes = b'\x94' + \
+                         CoinPartVersion.MSG_PACK.value.to_bytes(1, DATA_BYTE_ORDER) + \
                          coin_type.value.to_bytes(1, DATA_BYTE_ORDER) + \
                          coin_flag.value.to_bytes(1, DATA_BYTE_ORDER) + \
                          value.to_bytes(1, DATA_BYTE_ORDER)
