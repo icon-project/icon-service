@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, PropertyMock
 
 import pytest
 
@@ -35,8 +35,10 @@ def database_observer():
 
 @pytest.fixture(scope="function")
 def score_db(context_db, database_observer):
+    patch.object(IconScoreDatabase, '_is_v2', new_callable=PropertyMock)
     db = IconScoreDatabase(create_address(), context_db)
     db.set_observer(database_observer)
+    type(db)._is_v2 = PropertyMock(return_value=False)
     return db
 
 
@@ -52,7 +54,6 @@ def context(score_db):
 def test_database_observer(context, score_db, database_observer):
     # PUT
     key: bytes = b"key1"
-
     value: bytes = b"value1"
 
     score_db.put(key, value)

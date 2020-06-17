@@ -27,6 +27,7 @@ from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
+from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreFuncType
 from iconservice.database.wal import StateWAL
@@ -283,7 +284,12 @@ class TestIconScoreDatabase(unittest.TestCase):
         db_path = os.path.join(state_db_root_path, 'db')
         context_db = ContextDatabase.from_path(db_path, True)
 
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context.is_revision_changed = mock.Mock(return_value=False)
+        ContextContainer._push_context(context)
         self.db = IconScoreDatabase(address, context_db=context_db)
+        ContextContainer._clear_context()
+
         self.address = address
 
     def tearDown(self):
