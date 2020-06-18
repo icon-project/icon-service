@@ -147,10 +147,11 @@ class IconScoreInnerTask(object):
                 block_hash=block_hash
             )
 
-            results = {
-                'addedTransactions': added_transaction,
-                'currentRepsHash': bytes.hex(curr_preps_hash),
-            }
+            results: dict = {}
+            if added_transaction:
+                results["addedTransactions"] = added_transaction
+            if curr_preps_hash:
+                results["currentRepsHash"] = bytes.hex(curr_preps_hash)
 
             response = MakeResponse.make_response(results)
         except FatalException as e:
