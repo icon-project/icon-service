@@ -2109,10 +2109,11 @@ class IconServiceEngine(ContextContainer):
             context: 'IconScoreContext' = self._context_factory.create(
                 IconScoreContextType.QUERY,
                 block=self._get_last_block(),
-                node=None)
+                node=None
+            )
 
             is_decentralized = context.is_decentralized()
-            curr_preps_hash: bytes = context.term.root_hash
+            curr_preps_hash: bytes = context.term.root_hash if is_decentralized else None
         else:
             context: 'IconScoreContext' = self._context_factory.create(
                 IconScoreContextType.QUERY_BATCH,
@@ -2120,7 +2121,7 @@ class IconServiceEngine(ContextContainer):
                 node=self._precommit_data_manager.get_node(block_hash=block_hash))
 
             is_decentralized = context.is_decentralized()
-            curr_preps_hash: bytes = precommit_data.term.root_hash
+            curr_preps_hash: bytes = precommit_data.term.root_hash if is_decentralized else None
 
         if not is_decentralized:
             return None, None
