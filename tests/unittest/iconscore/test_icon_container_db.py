@@ -489,3 +489,47 @@ class TestIconContainerDB:
         ))
         args, _ = score_db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
+
+    def test_dict_db_migration(self, score_db):
+        name = 'test'
+        key1 = "aaaa"
+        key2 = "bbbb"
+        key3 = "cccc"
+        key4 = "dddd"
+        value = 1
+        depth = 4
+
+        test_db = DictDB(name, score_db, value_type=int, depth=depth)
+        test_db[key1][key2][key3][key4] = value
+        assert value == test_db[key1][key2][key3][key4]
+
+        type(score_db)._is_v2 = PropertyMock(return_value=True)
+
+        test_db = DictDB(name, score_db, value_type=int, depth=depth)
+        assert value == test_db[key1][key2][key3][key4]
+
+    def test_array_db_migration(self, score_db):
+        name = 'test'
+        value = 1
+
+        test_db = ArrayDB(name, score_db, value_type=int)
+        test_db.put(value)
+        assert value == test_db[0]
+
+        type(score_db)._is_v2 = PropertyMock(return_value=True)
+
+        test_db = ArrayDB(name, score_db, value_type=int)
+        assert value == test_db[0]
+
+    def test_var_db_migration(self, score_db):
+        name = 'test'
+        value = 1
+
+        test_db = VarDB(name, score_db, value_type=int)
+        test_db.set(value)
+        assert value == test_db.get()
+
+        type(score_db)._is_v2 = PropertyMock(return_value=True)
+
+        test_db = VarDB(name, score_db, value_type=int)
+        assert value == test_db.get()

@@ -31,9 +31,17 @@ if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase, IconScoreSubDatabase
 
 
-def make_encoded_rlp_prefix_list(key: K) -> list:
-    key: bytes = Utils.encode_key(key)
-    return make_rlp_prefix_list(key)
+def make_encoded_rlp_prefix_list(
+        prefix: K,
+        legacy_key: bytes = None,
+        prefix_container_id: bool = False
+) -> list:
+    prefix: bytes = Utils.encode_key(prefix)
+    return make_rlp_prefix_list(
+        prefix=prefix,
+        legacy_key=legacy_key,
+        prefix_container_id=prefix_container_id
+    )
 
 
 class DictDB:
@@ -53,7 +61,7 @@ class DictDB:
             value_type: type,
             depth: int = 1
     ):
-        key: list = make_encoded_rlp_prefix_list(key)
+        key: list = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
         if db.is_root:
             self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, DICT_DB_ID)
         else:
@@ -69,14 +77,14 @@ class DictDB:
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        key: list = make_encoded_rlp_prefix_list(key)
+        key: list = make_encoded_rlp_prefix_list(prefix=key)
         self._db.delete(key)
 
     def __setitem__(self, key: K, value: V):
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        key: list = make_encoded_rlp_prefix_list(key)
+        key: list = make_encoded_rlp_prefix_list(prefix=key)
         value: bytes = Utils.encode_value(value)
         self._db.put(key, value)
 
@@ -89,7 +97,7 @@ class DictDB:
                 depth=self.__depth - 1
             )
 
-        key: list = make_encoded_rlp_prefix_list(key)
+        key: list = make_encoded_rlp_prefix_list(prefix=key)
         value: bytes = self._db.get(key)
         return Utils.decode_object(value, self.__value_type)
 
@@ -97,7 +105,7 @@ class DictDB:
         self._remove(key)
 
     def __contains__(self, key: K) -> bool:
-        key: list = make_encoded_rlp_prefix_list(key)
+        key: list = make_encoded_rlp_prefix_list(prefix=key)
         value: bytes = self._db.get(key)
         return value is not None
 
@@ -128,7 +136,7 @@ class ArrayDB:
         self.__value_type = value_type
         self.__depth = depth
 
-        key: list = make_encoded_rlp_prefix_list(key)
+        key: list = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
         if db.is_root:
             self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, ARRAY_DB_ID)
         else:
@@ -179,7 +187,7 @@ class ArrayDB:
         index = size - 1
         last_val = self._get(self._db, self.__size, index, self.__value_type)
 
-        key: list = make_encoded_rlp_prefix_list(index)
+        key: list = make_encoded_rlp_prefix_list(prefix=index)
         self._db.delete(key)
         self.__set_size(index)
         return last_val
@@ -254,7 +262,7 @@ class ArrayDB:
             index += size
 
         if 0 <= index < size:
-            key: list = make_encoded_rlp_prefix_list(index)
+            key: list = make_encoded_rlp_prefix_list(prefix=index)
             value: bytes = db.get(key)
             return Utils.decode_object(value, value_type)
         raise InvalidParamsException('ArrayDB out of index')
@@ -271,7 +279,7 @@ class ArrayDB:
 
     @classmethod
     def _get_size_key(cls) -> list:
-        return [RLPPrefix(prefix=b'', legacy_key=b'size')]
+        return make_encoded_rlp_prefix_list(prefix=b'', legacy_key=b'size')
 
     @property
     def _is_leaf(self) -> bool:
@@ -333,7 +341,4 @@ class VarDB:
         self._db.delete(key=key, container_id=VAR_DB_ID)
 
     def _get_key(self) -> list:
-        key: list = make_encoded_rlp_prefix_list(self.__key)
-        if not self._db._is_v2:
-            key: list = [VAR_DB_ID] + key
-        return key
+        return make_encoded_rlp_prefix_list(prefix=self.__key, prefix_container_id=True)

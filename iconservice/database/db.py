@@ -418,16 +418,27 @@ class IconScoreDatabase(ContextGetter):
         *********************
         """
 
-        input_key: list = self._make_input_key(key, container_id)
+        input_key: list = self._convert_input_key(key)
 
         if self._is_v2:
-            final_key: bytes = self._make_final_key(input_key)
+            final_key: bytes = self._make_final_key(
+                input_key=input_key,
+                container_id=container_id
+            )
             value: Optional[bytes] = self._context_db.get(self._context, final_key)
             if value is None:
-                legacy_final_key: bytes = self._make_final_key(input_key, is_legacy=True)
+                legacy_final_key: bytes = self._make_final_key(
+                    input_key=input_key,
+                    container_id=container_id,
+                    is_legacy=True
+                )
                 value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
         else:
-            final_key: bytes = self._make_final_key(input_key, is_legacy=True)
+            final_key: bytes = self._make_final_key(
+                input_key=input_key,
+                container_id=container_id,
+                is_legacy=True
+            )
             value: Optional[bytes] = self._context_db.get(self._context, final_key)
 
         if self._observer:
@@ -450,18 +461,29 @@ class IconScoreDatabase(ContextGetter):
 
         self._validate_ownership()
 
-        input_key: list = self._make_input_key(key, container_id)
+        input_key: list = self._convert_input_key(key)
 
         if self._is_v2:
-            final_key: bytes = self._make_final_key(input_key)
+            final_key: bytes = self._make_final_key(
+                input_key=input_key,
+                container_id=container_id
+            )
         else:
-            final_key: bytes = self._make_final_key(input_key, is_legacy=True)
+            final_key: bytes = self._make_final_key(
+                input_key=input_key,
+                container_id=container_id,
+                is_legacy=True
+            )
 
         if self._observer:
             if self._is_v2:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
                 if old_value is None:
-                    legacy_final_key: bytes = self._make_final_key(input_key, is_legacy=True)
+                    legacy_final_key: bytes = self._make_final_key(
+                        input_key=input_key,
+                        container_id=container_id,
+                        is_legacy=True
+                    )
                     old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
             else:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
@@ -487,18 +509,29 @@ class IconScoreDatabase(ContextGetter):
         """
         self._validate_ownership()
 
-        input_key: list = self._make_input_key(key, container_id)
+        input_key: list = self._convert_input_key(key)
 
         if self._is_v2:
-            final_key: bytes = self._make_final_key(input_key)
+            final_key: bytes = self._make_final_key(
+                input_key=input_key,
+                container_id=container_id
+            )
         else:
-            final_key: bytes = self._make_final_key(input_key, is_legacy=True)
+            final_key: bytes = self._make_final_key(
+                input_key=input_key,
+                container_id=container_id,
+                is_legacy=True
+            )
 
         if self._observer:
             if self._is_v2:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
                 if old_value is None:
-                    legacy_final_key: bytes = self._make_final_key(input_key, is_legacy=True)
+                    legacy_final_key: bytes = self._make_final_key(
+                        input_key=input_key,
+                        container_id=container_id,
+                        is_legacy=True
+                    )
                     old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
             else:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
@@ -519,7 +552,7 @@ class IconScoreDatabase(ContextGetter):
                 'Invalid params: '
                 'prefix is None in IconScoreDatabase.get_sub_db()')
 
-        prefix: list = self._convert_input_prefix_to_list(prefix=prefix, container_id=container_id)
+        prefix: list = self._convert_input_prefix_to_list(prefix=prefix)
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self,
@@ -548,32 +581,23 @@ class IconScoreDatabase(ContextGetter):
         else:
             return final_key
 
-    def _convert_input_prefix_to_list(self, prefix: Union[list, bytes], container_id: bytes) -> list:
+    def _convert_input_prefix_to_list(self, prefix: Union[list, bytes]) -> list:
         if isinstance(prefix, bytes):
-            if self._is_v2:
-                return make_rlp_prefix_list(prefix)
-            else:
-                return [container_id] + make_rlp_prefix_list(prefix)
+            return make_rlp_prefix_list(prefix)
         else:
-            if self._is_v2:
-                return prefix
-            else:
-                return [container_id] + prefix
+            return prefix
 
-    def _make_input_key(self, key: Union[list, bytes], container_id: bytes) -> list:
-        input_key: list = self.__convert_input_key(key)
-        return self.__combine_container_id_to_key(input_key, container_id)
+    def _make_final_key(self, input_key: list, container_id: bytes, is_legacy: bool = False) -> bytes:
+        bytes_list: list = self.__convert_bytes_list(
+            key=input_key,
+            container_id=container_id,
+            is_legacy=is_legacy
+        )
 
-    def _make_final_key(self, input_key: list, is_legacy: bool = False) -> bytes:
-        bytes_list: list = self.__convert_bytes_list(input_key, is_legacy=is_legacy)
+        bytes_list: list = [container_id] + bytes_list if not is_legacy else bytes_list
         separator: bytes = b'|' if is_legacy else b''
-        return self.__concat_key(bytes_list, separator)
 
-    def __combine_container_id_to_key(self, key: list, container_id: bytes) -> list:
-        if self._is_v2:
-            return [container_id] + key
-        else:
-            return key
+        return self.__concat_key(bytes_list, separator)
 
     def __concat_key(self, key: list, separator: bytes) -> bytes:
         """All key is hashed and stored
@@ -585,7 +609,7 @@ class IconScoreDatabase(ContextGetter):
         return separator.join([self._prefix] + key)
 
     @classmethod
-    def __convert_input_key(cls, key: Union[list, bytes]) -> list:
+    def _convert_input_key(cls, key: Union[list, bytes]) -> list:
         if isinstance(key, bytes):
             return make_rlp_prefix_list(key)
         else:
@@ -594,15 +618,18 @@ class IconScoreDatabase(ContextGetter):
     @classmethod
     def __convert_bytes_list(
             cls,
-            keys: list,
+            key: list,
+            container_id: bytes,
             is_legacy: bool = False
     ) -> list:
         new_keys: list = []
-        for v in keys:
+        for v in key:
             if isinstance(v, RLPPrefix):
                 if not is_legacy:
                     new_keys.append(bytes(v))
                 else:
+                    if v.prefix_container_id:
+                        new_keys.append(container_id)
                     new_keys.append(v.legacy_key)
             elif isinstance(v, bytes):
                 new_keys.append(v)
@@ -673,7 +700,7 @@ class IconScoreSubDatabase:
                 'prefix is None in IconScoreDatabase.get_sub_db()'
             )
 
-        prefix: list = self._convert_input_prefix_to_list(prefix=prefix, container_id=self._container_id)
+        prefix: list = self._convert_input_prefix_to_list(prefix=prefix)
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self._score_db,
@@ -690,5 +717,5 @@ class IconScoreSubDatabase:
         else:
             return self._prefix + key
 
-    def _convert_input_prefix_to_list(self, prefix: Union[list, bytes], container_id: bytes) -> list:
-        return self._score_db._convert_input_prefix_to_list(prefix=prefix, container_id=container_id)
+    def _convert_input_prefix_to_list(self, prefix: Union[list, bytes]) -> list:
+        return self._score_db._convert_input_prefix_to_list(prefix=prefix)

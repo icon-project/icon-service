@@ -22,6 +22,7 @@ from iconservice import IconScoreDatabase
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.database.db import ContextDatabase
 from iconservice.database.db import DatabaseObserver
+from iconservice.database.score_db.utils import DICT_DB_ID, RLPPrefix
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -51,7 +52,7 @@ def context(score_db):
     ContextContainer._clear_context()
 
 
-def test_database_observer(context, score_db, database_observer):
+def test_database_observer_v1(context, score_db, database_observer):
     # PUT
     key: bytes = b"key1"
     value: bytes = b"value1"
@@ -93,4 +94,58 @@ def test_database_observer(context, score_db, database_observer):
     args, _ = database_observer.on_delete.call_args
 
     assert key == args[1]
+    assert last_value is args[2]
+
+
+def test_database_observer_v2(context, score_db, database_observer):
+    type(score_db)._is_v2 = PropertyMock(return_value=True)
+
+    # PUT
+    key: bytes = b"key1"
+    value: bytes = b"value1"
+
+    score_db.put(key, value)
+    database_observer.on_put.assert_called()
+    args, _ = database_observer.on_put.call_args
+
+    expected_key = b''.join((
+        score_db.address.to_bytes(),
+        DICT_DB_ID,
+        RLPPrefix.rlp_encode_bytes(key)
+    ))
+
+    assert expected_key == args[1]
+    assert None is args[2]
+    assert value == args[3]
+    last_value = value
+
+    # UPDATE
+    value: bytes = b"value2"
+
+    score_db.put(key, value)
+    database_observer.on_put.assert_called()
+    args, _ = database_observer.on_put.call_args
+
+    assert expected_key == args[1]
+    assert last_value is args[2]
+    assert value == args[3]
+    last_value = value
+
+    # GET
+    key: bytes = b"key1"
+    value: bytes = score_db.get(key)
+    database_observer.on_get.assert_called()
+    args, _ = database_observer.on_get.call_args
+
+    assert expected_key == args[1]
+    assert last_value is args[2]
+    assert value == last_value
+
+    # DELETE
+    key: bytes = b"key1"
+    score_db.delete(key)
+    database_observer.on_delete.assert_called()
+    args, _ = database_observer.on_delete.call_args
+
+    assert expected_key == args[1]
     assert last_value is args[2]

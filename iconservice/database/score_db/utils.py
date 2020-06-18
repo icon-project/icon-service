@@ -29,17 +29,30 @@ DICT_DB_ID = b'\x01'
 VAR_DB_ID = b'\x02'
 
 
-def make_rlp_prefix_list(key: bytes) -> list:
-    return [RLPPrefix(key)]
+def make_rlp_prefix_list(
+        prefix: bytes,
+        legacy_key: bytes = None,
+        prefix_container_id: bool = False
+) -> list:
+    return [
+        RLPPrefix(
+            prefix=prefix,
+            legacy_key=legacy_key,
+            prefix_container_id=prefix_container_id
+        )
+    ]
 
 
 class RLPPrefix:
     def __init__(
             self,
             prefix: bytes,
-            legacy_key: bytes = None
+            legacy_key: bytes = None,
+            prefix_container_id: bool = False
     ):
         self._prefix: bytes = prefix
+        self._prefix_container_id: bool = prefix_container_id
+
         if legacy_key:
             self._legacy_key: bytes = legacy_key
         else:
@@ -51,6 +64,10 @@ class RLPPrefix:
     @property
     def legacy_key(self) -> bytes:
         return self._legacy_key
+
+    @property
+    def prefix_container_id(self) -> bool:
+        return self._prefix_container_id
 
     @classmethod
     def rlp_encode_bytes(cls, b: bytes) -> bytes:
