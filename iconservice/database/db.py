@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, Optional, Tuple, Iterable, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable, Union, List
 
 import plyvel
 
@@ -405,7 +405,7 @@ class IconScoreDatabase(ContextGetter):
         else:
             return self._context.revision
 
-    def get(self, key: Union[list, bytes], container_id: bytes = DICT_DB_ID) -> Optional[bytes]:
+    def get(self, key: Union[List['RLPPrefix'], bytes], container_id: bytes = DICT_DB_ID) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
@@ -418,7 +418,7 @@ class IconScoreDatabase(ContextGetter):
         *********************
         """
 
-        input_key: list = self._convert_input_key(key)
+        input_key: List['RLPPrefix'] = self._convert_input_key(key)
 
         if self._is_v2:
             final_key: bytes = self._make_final_key(
@@ -446,7 +446,7 @@ class IconScoreDatabase(ContextGetter):
             self._observer.on_get(self._context, observer_key, value)
         return value
 
-    def put(self, key: Union[list, bytes], value: bytes, container_id: bytes = DICT_DB_ID):
+    def put(self, key: Union[List['RLPPrefix'], bytes], value: bytes, container_id: bytes = DICT_DB_ID):
         """
         Sets a value for the specified key.
 
@@ -461,7 +461,7 @@ class IconScoreDatabase(ContextGetter):
 
         self._validate_ownership()
 
-        input_key: list = self._convert_input_key(key)
+        input_key: List['RLPPrefix'] = self._convert_input_key(key)
 
         if self._is_v2:
             final_key: bytes = self._make_final_key(
@@ -496,7 +496,7 @@ class IconScoreDatabase(ContextGetter):
                 self._observer.on_delete(self._context, observer_key, old_value)
         self._context_db.put(self._context, final_key, value)
 
-    def delete(self, key: Union[list, bytes], container_id: bytes = DICT_DB_ID):
+    def delete(self, key: Union[List['RLPPrefix'], bytes], container_id: bytes = DICT_DB_ID):
         """
         Deletes the key/value pair for the specified key.
 
@@ -544,7 +544,7 @@ class IconScoreDatabase(ContextGetter):
 
     def get_sub_db(
             self,
-            prefix: Union[list, bytes],
+            prefix: Union[List['RLPPrefix'], bytes],
             container_id: bytes = DICT_DB_ID
     ) -> 'IconScoreSubDatabase':
         if not prefix:
@@ -552,7 +552,7 @@ class IconScoreDatabase(ContextGetter):
                 'Invalid params: '
                 'prefix is None in IconScoreDatabase.get_sub_db()')
 
-        prefix: list = self._convert_input_prefix_to_list(prefix=prefix)
+        prefix: List['RLPPrefix'] = self._convert_input_prefix_to_list(prefix=prefix)
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self,
@@ -581,25 +581,24 @@ class IconScoreDatabase(ContextGetter):
         else:
             return final_key
 
-    def _convert_input_prefix_to_list(self, prefix: Union[list, bytes]) -> list:
-        if isinstance(prefix, bytes):
-            return make_rlp_prefix_list(prefix)
-        else:
-            return prefix
-
-    def _make_final_key(self, input_key: list, container_id: bytes, is_legacy: bool = False) -> bytes:
-        bytes_list: list = self.__convert_bytes_list(
+    def _make_final_key(
+            self,
+            input_key: List['RLPPrefix'],
+            container_id: bytes,
+            is_legacy: bool = False
+    ) -> bytes:
+        bytes_list: List[bytes] = self.__convert_bytes_list(
             key=input_key,
             container_id=container_id,
             is_legacy=is_legacy
         )
 
-        bytes_list: list = [container_id] + bytes_list if not is_legacy else bytes_list
+        bytes_list: List[bytes] = [container_id] + bytes_list if not is_legacy else bytes_list
         separator: bytes = b'|' if is_legacy else b''
 
         return self.__concat_key(bytes_list, separator)
 
-    def __concat_key(self, key: list, separator: bytes) -> bytes:
+    def __concat_key(self, key: List[bytes], separator: bytes) -> bytes:
         """All key is hashed and stored
         to StateDB to avoid key conflicts among SCOREs
 
@@ -609,7 +608,20 @@ class IconScoreDatabase(ContextGetter):
         return separator.join([self._prefix] + key)
 
     @classmethod
-    def _convert_input_key(cls, key: Union[list, bytes]) -> list:
+    def _convert_input_prefix_to_list(
+            cls,
+            prefix: Union[List['RLPPrefix'], bytes]
+    ) -> List['RLPPrefix']:
+        if isinstance(prefix, bytes):
+            return make_rlp_prefix_list(prefix)
+        else:
+            return prefix
+
+    @classmethod
+    def _convert_input_key(
+            cls,
+            key: Union[List['RLPPrefix'], bytes]
+    ) -> List['RLPPrefix']:
         if isinstance(key, bytes):
             return make_rlp_prefix_list(key)
         else:
@@ -618,11 +630,11 @@ class IconScoreDatabase(ContextGetter):
     @classmethod
     def __convert_bytes_list(
             cls,
-            key: list,
+            key: List['RLPPrefix'],
             container_id: bytes,
             is_legacy: bool = False
-    ) -> list:
-        new_keys: list = []
+    ) -> List[bytes]:
+        new_keys: List[bytes] = []
         for v in key:
             if isinstance(v, RLPPrefix):
                 if not is_legacy:
@@ -631,8 +643,6 @@ class IconScoreDatabase(ContextGetter):
                     if v.prefix_container_id:
                         new_keys.append(container_id)
                     new_keys.append(v.legacy_key)
-            elif isinstance(v, bytes):
-                new_keys.append(v)
             else:
                 raise InvalidParamsException("Unsupported key")
         return new_keys
@@ -644,7 +654,7 @@ class IconScoreSubDatabase:
             self,
             address: 'Address',
             score_db: 'IconScoreDatabase',
-            prefix: list,
+            prefix: List['RLPPrefix'],
             container_id: bytes = DICT_DB_ID
     ):
         if prefix is None:
@@ -653,7 +663,7 @@ class IconScoreSubDatabase:
         self.address: 'Address' = address
         self._score_db: 'IconScoreDatabase' = score_db
 
-        self._prefix: list = prefix
+        self._prefix: List['RLPPrefix'] = prefix
         self._container_id: bytes = container_id
 
     @property
@@ -664,43 +674,43 @@ class IconScoreSubDatabase:
         """
         return False
 
-    def get(self, key: Union[list, bytes]) -> Optional[bytes]:
+    def get(self, key: Union[List['RLPPrefix'], bytes]) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
         :return: value for the specified key, or None if not found
         """
-        key: list = self._convert_key(key)
+        key: List['RLPPrefix'] = self._convert_key(key)
         return self._score_db.get(key=key, container_id=self._container_id)
 
-    def put(self, key: Union[list, bytes], value: bytes):
+    def put(self, key: Union[List['RLPPrefix'], bytes], value: bytes):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
         """
-        key: list = self._convert_key(key)
+        key: List['RLPPrefix'] = self._convert_key(key)
         self._score_db.put(key=key, value=value, container_id=self._container_id)
 
-    def delete(self, key: Union[list, bytes]):
+    def delete(self, key: Union[List['RLPPrefix'], bytes]):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
         """
-        key: list = self._convert_key(key)
+        key: List['RLPPrefix'] = self._convert_key(key)
         self._score_db.delete(key=key, container_id=self._container_id)
 
-    def get_sub_db(self, prefix: Union[list, bytes]) -> 'IconScoreSubDatabase':
+    def get_sub_db(self, prefix: Union[List['RLPPrefix'], bytes]) -> 'IconScoreSubDatabase':
         if not prefix:
             raise InvalidParamsException(
                 'Invalid params: '
                 'prefix is None in IconScoreDatabase.get_sub_db()'
             )
 
-        prefix: list = self._convert_input_prefix_to_list(prefix=prefix)
+        prefix: List['RLPPrefix'] = self._convert_input_prefix_to_list(prefix=prefix)
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self._score_db,
@@ -711,11 +721,11 @@ class IconScoreSubDatabase:
     def close(self):
         self._score_db.close()
 
-    def _convert_key(self, key: Union[list, bytes]) -> list:
+    def _convert_key(self, key: Union[List['RLPPrefix'], bytes]) -> List['RLPPrefix']:
         if isinstance(key, bytes):
             return self._prefix + make_rlp_prefix_list(key)
         else:
             return self._prefix + key
 
-    def _convert_input_prefix_to_list(self, prefix: Union[list, bytes]) -> list:
+    def _convert_input_prefix_to_list(self, prefix: Union[List['RLPPrefix'], bytes]) -> List['RLPPrefix']:
         return self._score_db._convert_input_prefix_to_list(prefix=prefix)
