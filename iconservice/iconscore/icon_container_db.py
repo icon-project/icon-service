@@ -273,7 +273,7 @@ class ArrayDB(object):
         return self[index]
 
     def __get_size(self) -> int:
-        return self.__legacy_size
+        return self.__get_size_from_db()
 
     def __get_size_from_db(self) -> int:
         value: bytes = self._db.get(self.__SIZE_BYTE_KEY)
