@@ -74,10 +74,10 @@ class CoinPart(BasePart):
         """
         super().__init__()
         assert isinstance(coin_part_type, CoinPartType)
-        # Encoded bytes format is different Between from Rev IISS to Rev FIX_COIN_PART_BYTES_STRUCTURE
+        # Encoded bytes format is different Between from Rev IISS to Rev FIX_COIN_PART_BYTES_ENCODING
         # First recorded account: type is encoded as ExtType
         # Previously recorded account: type is encoded as primitive type
-        # To distinguish, use is_first flag. It is only used between from Rev IISS to Rev FIX_COIN_PART_BYTES_STRUCTURE
+        # To distinguish, use is_first flag. It is only used between from Rev IISS to Rev FIX_COIN_PART_BYTES_ENCODING
         self._is_first: bool = is_first
 
         self._type: 'CoinPartType' = coin_part_type
