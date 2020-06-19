@@ -273,13 +273,11 @@ class ArrayDB(object):
         return self[index]
 
     def __get_size(self) -> int:
-        if self.__is_defective_revision():
-            return self.__legacy_size
-        else:
-            return self.__get_size_from_db()
+        return self.__legacy_size
 
     def __get_size_from_db(self) -> int:
-        return ContainerUtil.decode_object(self._db.get(self.__SIZE_BYTE_KEY), int)
+        value: bytes = self._db.get(self.__SIZE_BYTE_KEY)
+        return ContainerUtil.decode_object(value, int)
 
     def __set_size(self, size: int) -> None:
         self.__legacy_size = size
@@ -287,8 +285,9 @@ class ArrayDB(object):
         self._db.put(self.__SIZE_BYTE_KEY, byte_value)
 
     def __put(self, index: int, value: V) -> None:
+        byte_key: bytes = get_encoded_key(index)
         byte_value = ContainerUtil.encode_value(value)
-        self._db.put(get_encoded_key(index), byte_value)
+        self._db.put(byte_key, byte_value)
 
     def __iter__(self):
         return self._get_generator(self._db, self.__get_size(), self.__value_type)
@@ -321,12 +320,6 @@ class ArrayDB(object):
         return False
 
     @classmethod
-    def __is_defective_revision(cls):
-        context = ContextContainer._get_context()
-        revision = context.revision
-        return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
-
-    @classmethod
     def _get(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:
         if not isinstance(index, int):
             raise InvalidParamsException('Invalid index type: not an integer')
@@ -337,7 +330,8 @@ class ArrayDB(object):
 
         if 0 <= index < size:
             key: bytes = get_encoded_key(index)
-            return ContainerUtil.decode_object(db.get(key), value_type)
+            value: bytes = db.get(key)
+            return ContainerUtil.decode_object(value, value_type)
 
         raise InvalidParamsException('ArrayDB out of index')
 
