@@ -17,6 +17,7 @@
 from typing import Optional, Any, Union, TYPE_CHECKING, List
 
 from .container_db.utils import Utils
+from .context.context import ContextContainer
 from ..base.exception import InvalidContainerAccessException, InvalidParamsException
 from ..database.score_db.utils import (
     DICT_DB_ID,
@@ -25,6 +26,7 @@ from ..database.score_db.utils import (
     K, V,
     make_rlp_prefix_list
 )
+from ..icon_constant import IconScoreContextType, Revision
 
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase, IconScoreSubDatabase
@@ -143,6 +145,10 @@ class ArrayDB:
             self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
         self.__legacy_size: int = self.__get_size_from_db()
 
+    @property
+    def _is_leaf(self) -> bool:
+        return self.__depth == 1
+
     def put(self, value: V):
         """
         Puts the value at the end of array
@@ -152,7 +158,7 @@ class ArrayDB:
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        size: int = self.__size
+        size: int = self.__get_size()
         self.__put(size, value)
         self.__set_size(size + 1)
 
@@ -172,7 +178,7 @@ class ArrayDB:
                 depth=self.__depth - 1
             )
 
-        return self._get(self._db, self.__size, index, self.__value_type)
+        return self._get(self._db, self.__get_size(), index, self.__value_type)
 
     def pop(self) -> Optional[V]:
         """
@@ -180,12 +186,12 @@ class ArrayDB:
 
         :return: last added value
         """
-        size: int = self.__size
+        size: int = self.__get_size()
         if size == 0:
             return None
 
         index: int = size - 1
-        last_val = self._get(self._db, self.__size, index, self.__value_type)
+        last_val = self._get(self._db, self.__get_size(), index, self.__value_type)
 
         key: List['RLPPrefix'] = make_encoded_rlp_prefix_list(prefix=index)
         self._db.delete(key)
@@ -198,7 +204,7 @@ class ArrayDB:
         return Utils.decode_object(value, int)
 
     def __set_size(self, size: int):
-        self.__size: int = size
+        self.__legacy_size: int = size
         key: List['RLPPrefix'] = self._get_size_key()
         value: bytes = Utils.encode_value(size)
         self._db.put(key, value)
@@ -209,16 +215,16 @@ class ArrayDB:
         self._db.put(key, value)
 
     def __iter__(self):
-        return self._get_generator(self._db, self.__size, self.__value_type)
+        return self._get_generator(self._db, self.__get_size(), self.__value_type)
 
     def __len__(self):
-        return self.__size
+        return self.__get_size()
 
     def __setitem__(self, index: int, value: V):
         if not isinstance(index, int):
             raise InvalidParamsException('Invalid index type: not an integer')
 
-        size: int = self.__size
+        size: int = self.__get_size()
 
         # Negative index means that you count from the right instead of the left.
         if index < 0:
@@ -237,7 +243,7 @@ class ArrayDB:
                 value_type=self.__value_type,
                 depth=self.__depth - 1
             )
-        return self._get(self._db, self.__size, index, self.__value_type)
+        return self._get(self._db, self.__get_size(), index, self.__value_type)
 
     def __contains__(self, item: V):
         for e in self:
@@ -281,9 +287,17 @@ class ArrayDB:
     def _get_size_key(cls) -> List['RLPPrefix']:
         return make_encoded_rlp_prefix_list(prefix=b'', legacy_key=b'size')
 
-    @property
-    def _is_leaf(self) -> bool:
-        return self.__depth == 1
+    def __get_size(self) -> int:
+        if self.__is_defective_revision():
+            return self.__legacy_size
+        else:
+            return self.__get_size_from_db()
+
+    @classmethod
+    def __is_defective_revision(cls):
+        context = ContextContainer._get_context()
+        revision = context.revision
+        return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
 
 
 class VarDB:
