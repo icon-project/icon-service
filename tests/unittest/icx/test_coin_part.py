@@ -76,7 +76,7 @@ class TestCoinPart:
         part1.withdraw(0)
         assert old == part1.balance
 
-    @pytest.mark.parametrize("revision", [Revision(i) for i in range(Revision.LATEST.value + 1) if i in range(3, 5)])
+    @pytest.mark.parametrize("revision", [Revision(3), Revision(4)])
     def test_coin_part_from_bytes_to_bytes_revision_3_to_4(self, revision):
         # Todo: No need to tests after revision 4?
         part1 = CoinPart()
@@ -184,8 +184,8 @@ class TestCoinPart:
         part3 = CoinPart(balance=balance)
         assert part1 == part3
 
-    def test_coin_part_to_bytes_before_rev_iiss(self):
-        revision = Revision.THREE.value
+    @pytest.mark.parametrize("revision", [i for i in range(Revision.IISS.value)])
+    def test_coin_part_to_bytes_before_rev_iiss(self, revision):
         coin_type = CoinPartType.GENERAL
         coin_flag = CoinPartFlag.NONE
         value = 5
@@ -199,8 +199,11 @@ class TestCoinPart:
 
         assert actual_bytes == expected_bytes
 
-    def test_first_coin_part_to_bytes_from_rev_iiss_to_rev_9(self):
-        revision = Revision.IISS.value
+    @pytest.mark.parametrize(
+        "revision",
+        [i for i in range(Revision.IISS.value, Revision.FIX_COIN_PART_BYTES_ENCODING.value)]
+    )
+    def test_first_coin_part_to_bytes_from_rev_iiss_to_rev_9(self, revision):
         is_first = True
         coin_type = CoinPartType.GENERAL
         coin_flag = CoinPartFlag.NONE
@@ -213,16 +216,21 @@ class TestCoinPart:
         # def _pack_array_header(self, n):
         #      if n <= 0x0F:
         #      return self._buffer.write(struct.pack("B", 0x90 + n))
-        expected_bytes = b'\x94' + \
-                         MsgPackForDB.dumps(CoinPartVersion.MSG_PACK) + \
-                         MsgPackForDB.dumps(CoinPartType.GENERAL) + \
-                         coin_flag.value.to_bytes(1, DATA_BYTE_ORDER) + \
-                         value.to_bytes(1, DATA_BYTE_ORDER)
+        expected_bytes = (
+            b'\x94' +
+            MsgPackForDB.dumps(CoinPartVersion.MSG_PACK) +
+            MsgPackForDB.dumps(CoinPartType.GENERAL) +
+            coin_flag.value.to_bytes(1, DATA_BYTE_ORDER) +
+            value.to_bytes(1, DATA_BYTE_ORDER)
+        )
 
         assert actual_bytes == expected_bytes
 
-    def test_coin_part_to_bytes_from_rev_iiss_to_rev_9(self):
-        revision = Revision.IISS.value
+    @pytest.mark.parametrize(
+        "revision",
+        [i for i in range(Revision.IISS.value, Revision.FIX_COIN_PART_BYTES_ENCODING.value)]
+    )
+    def test_coin_part_to_bytes_from_rev_iiss_to_rev_9(self, revision):
         is_first = False
         coin_type = CoinPartType.GENERAL
         coin_flag = CoinPartFlag.NONE
@@ -240,7 +248,7 @@ class TestCoinPart:
         assert actual_bytes == expected_bytes
 
     def test_coin_part_to_bytes_from_after_rev_9(self):
-        revision = Revision.FIX_COIN_PART_BYTES_STRUCTURE.value
+        revision = Revision.FIX_COIN_PART_BYTES_ENCODING.value
         coin_type = CoinPartType.GENERAL
         coin_flag = CoinPartFlag.NONE
         value = 5

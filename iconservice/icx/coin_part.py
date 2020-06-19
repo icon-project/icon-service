@@ -230,7 +230,7 @@ class CoinPart(BasePart):
 
         :return: data including information of CoinPart object
         """
-        if revision >= Revision.FIX_COIN_PART_BYTES_STRUCTURE.value:
+        if revision >= Revision.FIX_COIN_PART_BYTES_ENCODING.value:
             return self._to_fixed_msg_packed_bytes()
         elif revision >= Revision.IISS.value:
             return self._to_msg_packed_bytes()
