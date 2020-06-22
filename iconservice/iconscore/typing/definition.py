@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
+from iconservice.base.exception import IllegalFormatException
 from .conversion import is_base_type
-from ...base.exception import IllegalFormatException
+from . import get_origin, get_args
 
 
 def get_type_name(type_template: type):
@@ -29,6 +30,23 @@ def get_type_name(type_template: type):
         return f"[]{name}"
 
     if isinstance(type_template, dict):
+        return "struct"
+
+
+def get_type_name_by_type_hint(type_hint: type):
+    # If type hint is a base type, just return its name
+    # Ex: bool, bytes, int, str, Address
+    if is_base_type(type_hint):
+        return type_hint.__name__
+
+    origin: type = get_origin(type_hint)
+    args: Tuple[type, ...] = get_args(type_hint)
+
+    if isinstance(origin, list):
+        name = "struct" if isinstance(args[0], dict) else item.__name__
+        return f"[]{name}"
+
+    if isinstance(origin, dict):
         return "struct"
 
 

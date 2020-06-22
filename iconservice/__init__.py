@@ -15,8 +15,10 @@
 from abc import ABCMeta, abstractmethod, ABC
 from functools import wraps
 from inspect import isfunction
+from typing import List
 
 from iconcommons.logger import Logger
+from typing_extensions import TypedDict
 
 from .base.address import Address, AddressPrefix, SYSTEM_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
 from .base.exception import IconScoreException

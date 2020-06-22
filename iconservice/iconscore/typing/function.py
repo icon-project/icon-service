@@ -14,14 +14,13 @@
 # limitations under the License.
 
 from inspect import signature, Signature, Parameter
-from collections import OrderedDict
 
 from iconservice.iconscore.icon_score_constant import (
     CONST_BIT_FLAG,
     ConstBitFlag,
     STR_FALLBACK,
 )
-from iconservice.utils.typing.type_hint import normalize_type_hint
+from iconservice.iconscore.typing.type_hint import normalize_type_hint
 
 
 def normalize_signature(sig: Signature) -> Signature:
