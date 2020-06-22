@@ -36,6 +36,7 @@ from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision, IconScoreContextType
+from ..iconscore.typing.function import Function
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -313,16 +314,24 @@ class IconScoreObject(ABC):
 class IconScoreBaseMeta(ABCMeta):
 
     def __new__(mcs, name, bases, namespace, **kwargs):
-        if IconScoreObject in bases or name == "IconSystemScoreBase":
-            return super().__new__(mcs, name, bases, namespace, **kwargs)
-
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        if IconScoreObject in bases or name == "IconSystemScoreBase":
+            return cls
 
         if not isinstance(namespace, dict):
             raise InvalidParamsException('namespace is not dict!')
 
         custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
                         if not key.startswith('__')]
+
+        # TODO: Normalize type hints of score parameters by goldworm
+        # Create funcs dict containing Function objects
+        # funcs = {
+        #     name: Function(func)
+        #     for name, func in getmembers(cls, predicate=isfunction)
+        #     if not name.startswith('__')
+        # }
 
         external_funcs = {func.__name__: signature(func) for func in custom_funcs
                           if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External}

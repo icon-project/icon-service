@@ -105,9 +105,10 @@ class IconScoreEngine(object):
 
         icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
 
-        converted_params = IconScoreEngine._convert_score_params_by_annotations(context, icon_score, func_name, kw_params)
+        converted_params = IconScoreEngine._convert_score_params_by_annotations(
+            context, icon_score, func_name, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
-        context.current_address: 'Address' = icon_score_address
+        context.current_address = icon_score_address
 
         score_func = getattr(icon_score, ATTR_SCORE_CALL)
         ret = score_func(func_name=func_name, kw_params=converted_params)
@@ -130,6 +131,7 @@ class IconScoreEngine(object):
             remove_invalid_params = True
 
         score_func = getattr(icon_score, func_name)
+        # TODO: Implement type conversion considering TypedDict by goldworm
         TypeConverter.adjust_params_to_method(score_func, tmp_params, remove_invalid_params)
 
         return tmp_params

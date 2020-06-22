@@ -39,6 +39,7 @@ from ..icon_constant import ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..iconscore.icon_score_step import StepType
+from ..iconscore.system_score import Delegation
 from ..icx import Intent
 from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
@@ -391,7 +392,7 @@ class Engine(EngineBase):
             "unstakeLockPeriod": unstake_lock_period
         }
 
-    def handle_set_delegation(self, context: 'IconScoreContext', delegations: list):
+    def handle_set_delegation(self, context: 'IconScoreContext', delegations: List[Delegation]):
         """Handles setDelegation JSON-RPC API request
         """
         # SCORE can stake via SCORE inter-call
@@ -442,7 +443,8 @@ class Engine(EngineBase):
     @classmethod
     def _convert_params_of_set_delegation(cls,
                                           context: 'IconScoreContext',
-                                          delegations: Optional[List]) -> Tuple[int, List[Tuple['Address', int]]]:
+                                          delegations: Optional[List[Delegation]]
+                                          ) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
@@ -458,6 +460,7 @@ class Engine(EngineBase):
 
         cls._check_delegation_count(context, delegations)
 
+        # TODO: Remove type conversion by goldworm
         temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []

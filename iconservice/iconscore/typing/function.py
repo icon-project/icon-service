@@ -13,40 +13,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List
 from inspect import signature, Signature, Parameter
+from collections import OrderedDict
 
 from iconservice.iconscore.icon_score_constant import (
     CONST_BIT_FLAG,
     ConstBitFlag,
     STR_FALLBACK,
 )
-from iconservice.utils.typing.conversion import is_base_type
+from iconservice.utils.typing.type_hint import normalize_type_hint
 
 
 def normalize_signature(sig: Signature) -> Signature:
+    params = sig.parameters
+    new_params = []
+
+    normalized = False
+    for k in params:
+        new_param = normalize_parameter(params[k])
+        new_params.append(new_param)
+
+        if params[k] != new_params:
+            normalized = True
+
+    if normalized:
+        sig = sig.replace(parameters=new_params)
+
     return sig
 
 
 def normalize_parameter(param: Parameter) -> Parameter:
     annotation = param.annotation
 
-    # BaseType
-    if is_base_type(annotation):
+    if annotation == Parameter.empty:
+        type_hint = str
+    else:
+        type_hint = normalize_type_hint(annotation)
+
+    if type_hint == annotation:
+        # Nothing to update
         return param
 
-    # No annotation
-    if annotation is Parameter.empty:
-        return param.replace(annotation=str)
-    if annotation is list:
-        return param.replace(annotation=List[str])
-
-    origin = getattr(annotation, "__origin__", None)
-
-    if origin is list:
-        return param.replace(annotation=List[str])
-
-    raise TypeError(f"Unsupported type hint: {annotation}")
+    return param.replace(annotation=type_hint)
 
 
 class Function(object):

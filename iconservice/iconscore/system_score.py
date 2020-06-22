@@ -160,7 +160,7 @@ class InterfaceSystemScore(InterfaceScore):
     def estimateUnstakeLockPeriod(self) -> dict: pass
 
     @interface
-    def setDelegation(self, delegations: list = None): pass
+    def setDelegation(self, delegations: List[Delegation] = None): pass
 
     @interface
     def getDelegation(self, address: Address) -> dict: pass
