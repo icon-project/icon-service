@@ -201,7 +201,7 @@ class ArrayDB:
 
     def __get_size_from_db(self) -> int:
         key: List['RLPPrefix'] = self._get_size_key()
-        value: bytes = self._db.get(key)
+        value: bytes = self._db.get(key=key, container_id=ARRAY_DB_ID)
         return Utils.decode_object(value, int)
 
     def __set_size(self, size: int):
