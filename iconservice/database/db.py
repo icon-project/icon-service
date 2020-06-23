@@ -423,16 +423,16 @@ class IconScoreDatabase(ContextGetter):
 
         # Test
         final_key: bytes = self._make_final_key(
-                    input_key=input_key,
-                    container_id=container_id
-                )
+            input_key=input_key,
+            container_id=container_id
+        )
         value = self._meta_db.get(self._context, final_key)
 
         old_final_key: bytes = self._make_final_key(
-                input_key=input_key,
-                container_id=container_id,
-                is_legacy=True
-            )
+            input_key=input_key,
+            container_id=container_id,
+            is_legacy=True
+        )
         old_value: Optional[bytes] = self._context_db.get(self._context, old_final_key)
         assert value == old_value
 
@@ -698,7 +698,11 @@ class IconScoreSubDatabase:
         key: List['RLPPrefix'] = self._convert_key(key)
         self._score_db.delete(key=key, container_id=self._container_id)
 
-    def get_sub_db(self, prefix: Union[List['RLPPrefix'], bytes]) -> 'IconScoreSubDatabase':
+    def get_sub_db(
+            self,
+            prefix: Union[List['RLPPrefix'], bytes],
+            container_id: Optional[bytes] = None
+    ) -> 'IconScoreSubDatabase':
         if not prefix:
             raise InvalidParamsException(
                 'Invalid params: '
@@ -706,11 +710,15 @@ class IconScoreSubDatabase:
             )
 
         prefix: List['RLPPrefix'] = self._convert_input_prefix_to_list(prefix=prefix)
+
+        if container_id is None:
+            container_id = self._container_id
+
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self._score_db,
             prefix=self._prefix + prefix,
-            container_id=self._container_id
+            container_id=container_id
         )
 
     def close(self):

@@ -63,14 +63,11 @@ class DictDB:
             value_type: type,
             depth: int = 1
     ):
-        key: List['RLPPrefix'] = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
-        if db.is_root:
-            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, DICT_DB_ID)
-        else:
-            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
-
         self.__value_type: type = value_type
         self.__depth: int = depth
+
+        key: List['RLPPrefix'] = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
+        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, DICT_DB_ID)
 
     def remove(self, key: K):
         self._remove(key)
@@ -139,10 +136,7 @@ class ArrayDB:
         self.__depth = depth
 
         key: List['RLPPrefix'] = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
-        if db.is_root:
-            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, ARRAY_DB_ID)
-        else:
-            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
+        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, ARRAY_DB_ID)
         self.__legacy_size: int = self.__get_size_from_db()
 
     @property
@@ -317,13 +311,10 @@ class VarDB:
     ):
         # Use var_key as a db prefix in the case of VarDB
 
-        if db.is_root:
-            self._db: 'IconScoreDatabase' = db
-        else:
-            self._db: 'IconScoreSubDatabase' = db
-
         self.__key = var_key
         self.__value_type = value_type
+
+        self._db: Union['IconScoreDatabase', 'IconScoreSubDatabase'] = db
 
     def set(self, value: V):
         """
