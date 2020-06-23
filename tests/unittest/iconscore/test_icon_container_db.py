@@ -490,6 +490,50 @@ class TestIconContainerDB:
         args, _ = score_db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
+    def test_sub_var_db_check_prefix_v1(self, score_db):
+        sub_prefix = b'sub'
+        sub_db = score_db.get_sub_db(sub_prefix)
+
+        name = 'test_var'
+        value = 1
+        test_var = VarDB(name, sub_db, value_type=int)
+
+        score_db._context_db.put = mock.Mock()
+
+        test_var.set(value)
+
+        expected_key = b'|'.join((
+            score_db.address.to_bytes(),
+            sub_prefix,
+            VAR_DB_ID,
+            name.encode()
+        ))
+        args, _ = score_db._context_db.put.call_args_list[0]
+        assert args[1] == expected_key
+
+    def test_sub_var_db_check_prefix_v2(self, score_db):
+        type(score_db)._is_v2 = PropertyMock(return_value=True)
+
+        sub_prefix = b'sub'
+        sub_db = score_db.get_sub_db(sub_prefix)
+
+        name = 'test_var'
+        value = 1
+        test_var = VarDB(name, sub_db, value_type=int)
+
+        score_db._context_db.put = mock.Mock()
+
+        test_var.set(value)
+
+        expected_key = b''.join((
+            score_db.address.to_bytes(),
+            VAR_DB_ID,
+            RLPPrefix.rlp_encode_bytes(sub_prefix),
+            RLPPrefix.rlp_encode_bytes(name.encode())
+        ))
+        args, _ = score_db._context_db.put.call_args_list[0]
+        assert args[1] == expected_key
+
     def test_dict_db_migration(self, score_db):
         name = 'test'
         key1 = "aaaa"
@@ -533,3 +577,19 @@ class TestIconContainerDB:
 
         test_db = VarDB(name, score_db, value_type=int)
         assert value == test_db.get()
+
+    def test_sub_var_db_migration(self, score_db):
+        name = 'test'
+        value = 1
+
+        sub_db = score_db.get_sub_db(b'sub')
+        test_db = VarDB(name, sub_db, value_type=int)
+        test_db.set(value)
+        assert value == test_db.get()
+
+        type(sub_db)._is_v2 = PropertyMock(return_value=True)
+
+        test_db = VarDB(name, sub_db, value_type=int)
+        assert value == test_db.get()
+
+

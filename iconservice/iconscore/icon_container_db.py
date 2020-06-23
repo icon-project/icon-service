@@ -312,11 +312,17 @@ class VarDB:
     def __init__(
             self,
             var_key: K,
-            db: 'IconScoreDatabase',
+            db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
             value_type: type
     ):
         # Use var_key as a db prefix in the case of VarDB
-        self._db: 'IconScoreDatabase' = db
+
+        if db.is_root:
+            self._db: 'IconScoreDatabase' = db
+        else:
+            db._container_id = VAR_DB_ID
+            self._db: 'IconScoreSubDatabase' = db
+
         self.__key = var_key
         self.__value_type = value_type
 
@@ -328,11 +334,18 @@ class VarDB:
         """
         key: List['RLPPrefix'] = self._get_key()
         value: bytes = Utils.encode_value(value)
-        self._db.put(
-            key=key,
-            value=value,
-            container_id=VAR_DB_ID
-        )
+
+        if self._db.is_root:
+            self._db.put(
+                key=key,
+                value=value,
+                container_id=VAR_DB_ID
+            )
+        else:
+            self._db.put(
+                key=key,
+                value=value
+            )
 
     def get(self) -> Optional[V]:
         """
@@ -341,10 +354,17 @@ class VarDB:
         :return: value of the var db
         """
         key: List['RLPPrefix'] = self._get_key()
-        value: bytes = self._db.get(
-            key=key,
-            container_id=VAR_DB_ID
-        )
+
+        if self._db.is_root:
+            value: bytes = self._db.get(
+                key=key,
+                container_id=VAR_DB_ID
+            )
+        else:
+            value: bytes = self._db.get(
+                key=key,
+            )
+
         return Utils.decode_object(value, self.__value_type)
 
     def remove(self):
@@ -352,7 +372,16 @@ class VarDB:
         Deletes the value
         """
         key: List['RLPPrefix'] = self._get_key()
-        self._db.delete(key=key, container_id=VAR_DB_ID)
+
+        if self._db.is_root:
+            self._db.delete(
+                key=key,
+                container_id=VAR_DB_ID
+            )
+        else:
+            self._db.delete(
+                key=key,
+            )
 
     def _get_key(self) -> List['RLPPrefix']:
         return make_encoded_rlp_prefix_list(prefix=self.__key, prefix_container_id=True)
