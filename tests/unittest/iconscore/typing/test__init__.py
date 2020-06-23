@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import List, Dict, Optional, Union, get_type_hints
-from typing_extensions import TypedDict
+from typing import Union, List, Dict, Optional
 
 import pytest
+from typing_extensions import TypedDict
 
-from iconservice.iconscore.typing import get_origin, get_args
 from iconservice.base.address import Address
+from iconservice.iconscore.typing import (
+    get_origin,
+    get_args,
+)
 
 
 class Person(TypedDict):
@@ -16,26 +19,44 @@ class Person(TypedDict):
     single: bool
 
 
-TYPE_HINTS = (
-    # bool, bytes, int, str, Address,
-    # list, List, List[int], List[Person], List["Person"],
-    # Optional[str], Optional[List[str]], Optional[Dict[str, str]],
-    # Dict, Dict[str, int], Optional[Dict],
-    Union[str, int], Union[str, int]
+@pytest.mark.parametrize(
+    "type_hint,expected",
+    [
+        (bool, bool),
+        (bytes, bytes),
+        (int, int),
+        (str, str),
+        (Address, Address),
+        (List[int], list),
+        (List[List[str]], list),
+        (Dict, dict),
+        (Dict[str, int], dict),
+        (Union[int, str], Union),
+        (Optional[int], Union),
+        (Person, Person),
+    ]
 )
+def test_get_origin(type_hint, expected):
+    origin = get_origin(type_hint)
+    assert origin == expected
 
-GET_ORIGIN_RESULTS = (
-    Union, Union
+
+@pytest.mark.parametrize(
+    "type_hint,expected",
+    [
+        (bool, ()),
+        (bytes, ()),
+        (int, ()),
+        (str, ()),
+        (Address, ()),
+        (List[int], (int,)),
+        (List[List[str]], (List[str],)),
+        (Dict[str, int], (str, int)),
+        (Union[int, str, Address], (int, str, Address)),
+        (Optional[int], (int, type(None))),
+        (List[Person], (Person,)),
+    ]
 )
-
-
-def func(person: Person):
-    pass
-
-
-@pytest.mark.parametrize("type_hint", TYPE_HINTS)
-@pytest.mark.parametrize("result", GET_ORIGIN_RESULTS)
-def test_get_origin(type_hint, result):
-    type_hints = get_type_hints(func)
-    origin = get_origin(type_hints["person"])
-    assert origin == Person
+def test_get_args(type_hint, expected):
+    args = get_args(type_hint)
+    assert args == expected

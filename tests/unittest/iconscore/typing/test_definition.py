@@ -13,14 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from inspect import signature
+from typing import List
+
+import pytest
 from typing_extensions import TypedDict
 
 from iconservice.base.address import Address
 from iconservice.iconscore.typing.definition import (
-    get_input,
-    _get_type,
+    get_inputs,
+    split_type_hint,
 )
+
+
+class Delegation(TypedDict):
+    address: Address
+    value: int
 
 
 class Person(TypedDict):
@@ -31,21 +39,86 @@ class Person(TypedDict):
     data: bytes
 
 
-def test__get_type():
-    types: List[type] = []
-    _get_type(List[List[int]], types)
-    assert types == [list, list, int]
+class Company(TypedDict):
+    name: str
+    delegation: Delegation
+    workers: List[Person]
 
 
-def test_get_fields_by_type_hints():
-    fields = [
-        ("name", str),
-        ("age", int),
-        ("single", bool),
-        ("wallet", Address),
-        ("data", bytes),
+def test_get_inputs_with_list_of_struct():
+    expected = [
+        {
+            "name": "_persons",
+            "type": "[]struct",
+            "fields": [
+                {"name": "name", "type": "str"},
+                {"name": "age", "type": "int"},
+                {"name": "single", "type": "bool"},
+                {"name": "wallet", "type": "Address"},
+                {"name": "data", "type": "bytes"},
+            ]
+        }
     ]
-    expected = [{"name": field[0], "type": field[1].__name__} for field in fields]
 
-    ret = get_fields_from_typed_dict(Person)
-    assert ret == expected
+    def func(_persons: List[Person]):
+        pass
+
+    sig = signature(func)
+    inputs = get_inputs(sig.parameters)
+    assert inputs == expected
+
+
+def test_get_inputs_with_list_of_struct_nesting_struct():
+    expected = [
+        {
+            "name": "_company",
+            "type": "struct",
+            "fields": [
+                {"name": "name", "type": "str"},
+                {
+                    "name": "delegation",
+                    "type": "struct",
+                    "fields": [
+                        {"name": "address", "type": "Address"},
+                        {"name": "value", "type": "int"},
+                    ]
+                },
+                {
+                    "name": "workers",
+                    "type": "[]struct",
+                    "fields": [
+                        {"name": "name", "type": "str"},
+                        {"name": "age", "type": "int"},
+                        {"name": "single", "type": "bool"},
+                        {"name": "wallet", "type": "Address"},
+                        {"name": "data", "type": "bytes"},
+                    ]
+                },
+            ]
+        }
+    ]
+
+    def func(_company: Company):
+        pass
+
+    sig = signature(func)
+    inputs = get_inputs(sig.parameters)
+    assert inputs == expected
+
+
+@pytest.mark.parametrize(
+    "type_hint,expected",
+    [
+        (bool, [bool]),
+        (bytes, [bytes]),
+        (int, [int]),
+        (str, [str]),
+        (Address, [Address]),
+        (List[int], [list, int]),
+        (List[List[str]], [list, list, str]),
+        (List[List[List[Person]]], [list, list, list, Person]),
+    ]
+)
+def test__get_type(type_hint, expected):
+    types: List[type] = split_type_hint(type_hint)
+    assert types == expected
