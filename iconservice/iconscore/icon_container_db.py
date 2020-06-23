@@ -320,7 +320,6 @@ class VarDB:
         if db.is_root:
             self._db: 'IconScoreDatabase' = db
         else:
-            db._container_id = VAR_DB_ID
             self._db: 'IconScoreSubDatabase' = db
 
         self.__key = var_key
