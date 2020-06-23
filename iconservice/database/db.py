@@ -669,39 +669,49 @@ class IconScoreSubDatabase:
         """
         return False
 
-    def get(self, key: Union[List['RLPPrefix'], bytes]) -> Optional[bytes]:
+    def get(self, key: Union[List['RLPPrefix'], bytes], container_id: Optional[bytes] = None) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
+        :param container_id:
         :return: value for the specified key, or None if not found
         """
         key: List['RLPPrefix'] = self._convert_key(key)
-        return self._score_db.get(key=key, container_id=self._container_id)
 
-    def put(self, key: Union[List['RLPPrefix'], bytes], value: bytes):
+        if not container_id:
+            container_id = self._container_id
+        return self._score_db.get(key=key, container_id=container_id)
+
+    def put(self, key: Union[List['RLPPrefix'], bytes], value: bytes, container_id: Optional[bytes] = None):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
+        :param container_id:
         """
         key: List['RLPPrefix'] = self._convert_key(key)
-        self._score_db.put(key=key, value=value, container_id=self._container_id)
+        if not container_id:
+            container_id = self._container_id
+        self._score_db.put(key=key, value=value, container_id=container_id)
 
-    def delete(self, key: Union[List['RLPPrefix'], bytes]):
+    def delete(self, key: Union[List['RLPPrefix'], bytes], container_id: Optional[bytes] = None):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
+        :param container_id:
         """
         key: List['RLPPrefix'] = self._convert_key(key)
-        self._score_db.delete(key=key, container_id=self._container_id)
+
+        if not container_id:
+            container_id = self._container_id
+        self._score_db.delete(key=key, container_id=container_id)
 
     def get_sub_db(
             self,
-            prefix: Union[List['RLPPrefix'], bytes],
-            container_id: Optional[bytes] = None
+            prefix: Union[List['RLPPrefix'], bytes]
     ) -> 'IconScoreSubDatabase':
         if not prefix:
             raise InvalidParamsException(
@@ -711,14 +721,11 @@ class IconScoreSubDatabase:
 
         prefix: List['RLPPrefix'] = self._convert_input_prefix_to_list(prefix=prefix)
 
-        if container_id is None:
-            container_id = self._container_id
-
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self._score_db,
             prefix=self._prefix + prefix,
-            container_id=container_id
+            container_id=self._container_id
         )
 
     def close(self):

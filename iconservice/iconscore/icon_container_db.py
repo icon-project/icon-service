@@ -67,7 +67,10 @@ class DictDB:
         self.__depth: int = depth
 
         key: List['RLPPrefix'] = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
-        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, DICT_DB_ID)
+        if db.is_root:
+            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, DICT_DB_ID)
+        else:
+            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
 
     def remove(self, key: K):
         self._remove(key)
@@ -136,7 +139,11 @@ class ArrayDB:
         self.__depth = depth
 
         key: List['RLPPrefix'] = make_encoded_rlp_prefix_list(prefix=key, prefix_container_id=True)
-        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, ARRAY_DB_ID)
+        if db.is_root:
+            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key, ARRAY_DB_ID)
+        else:
+            self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
+
         self.__legacy_size: int = self.__get_size_from_db()
 
     @property
@@ -325,17 +332,11 @@ class VarDB:
         key: List['RLPPrefix'] = self._get_key()
         value: bytes = Utils.encode_value(value)
 
-        if self._db.is_root:
-            self._db.put(
-                key=key,
-                value=value,
-                container_id=VAR_DB_ID
-            )
-        else:
-            self._db.put(
-                key=key,
-                value=value
-            )
+        self._db.put(
+            key=key,
+            value=value,
+            container_id=VAR_DB_ID
+        )
 
     def get(self) -> Optional[V]:
         """
@@ -345,15 +346,10 @@ class VarDB:
         """
         key: List['RLPPrefix'] = self._get_key()
 
-        if self._db.is_root:
-            value: bytes = self._db.get(
-                key=key,
-                container_id=VAR_DB_ID
-            )
-        else:
-            value: bytes = self._db.get(
-                key=key,
-            )
+        value: bytes = self._db.get(
+            key=key,
+            container_id=VAR_DB_ID
+        )
 
         return Utils.decode_object(value, self.__value_type)
 
@@ -363,15 +359,10 @@ class VarDB:
         """
         key: List['RLPPrefix'] = self._get_key()
 
-        if self._db.is_root:
-            self._db.delete(
-                key=key,
-                container_id=VAR_DB_ID
-            )
-        else:
-            self._db.delete(
-                key=key,
-            )
+        self._db.delete(
+            key=key,
+            container_id=VAR_DB_ID
+        )
 
     def _get_key(self) -> List['RLPPrefix']:
         return make_encoded_rlp_prefix_list(prefix=self.__key, prefix_container_id=True)
