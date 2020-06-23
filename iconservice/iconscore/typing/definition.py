@@ -13,49 +13,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Tuple
+from typing import List
 
 from iconservice.base.exception import IllegalFormatException
+from . import get_origin, get_args, is_struct
 from .conversion import is_base_type
-from . import get_origin, get_args
 
 
-def get_type_name(type_template: type):
-    if is_base_type(type(type_template)):
-        return type_template.__name__
+def get_input(name: str, type_hint: type) -> dict:
+    _input = {"name": name}
 
-    if isinstance(type_template, list):
-        item = type_template[0]
-        name = "struct" if isinstance(item, dict) else item.__name__
-        return f"[]{name}"
+    types: List[type] = []
+    _get_type(type_hint, types)
+    _input["type"] = types_to_name(types)
 
-    if isinstance(type_template, dict):
-        return "struct"
+    return _input
 
 
-def get_type_name_by_type_hint(type_hint: type):
-    # If type hint is a base type, just return its name
-    # Ex: bool, bytes, int, str, Address
-    if is_base_type(type_hint):
-        return type_hint.__name__
-
+def _get_type(type_hint: type, types: List[type]):
     origin: type = get_origin(type_hint)
-    args: Tuple[type, ...] = get_args(type_hint)
+    types.append(origin)
 
-    if isinstance(origin, list):
-        name = "struct" if isinstance(args[0], dict) else item.__name__
-        return f"[]{name}"
+    if origin is list:
+        args = get_args(type_hint)
+        if len(args) != 1:
+            raise IllegalFormatException(f"Invalid type: {type_hint}")
 
-    if isinstance(origin, dict):
-        return "struct"
+        _get_type(args[0], types)
 
 
-def get_fields(type_template: type) -> List[Dict[str, str]]:
-    if isinstance(type_template, list):
-        item = type_template[0]
-    elif isinstance(type_template, dict):
-        item = type_template
-    else:
-        raise IllegalFormatException(f"Invalid type: {type(type_template)}")
+def types_to_name(types: List[type]) -> str:
+    def func():
+        for _type in types:
+            if _type is list:
+                yield "[]"
+            elif is_base_type(_type):
+                yield _type.__name__
+            elif is_struct(_type):
+                yield "struct"
 
-    return [{"name": k, "type": item[k].__name__} for k in item]
+    return "".join(func())
+
+
+def get_fields(type_hint: type):
+    """Returns fields info from struct
+
+    :param type_hint: struct type
+    :return:
+    """
+
+    annotations = getattr(type_hint, "__annotations__", None)
+    if annotations is None:
+        raise IllegalFormatException(f"Not struct type: {type_hint}")
+
+    # annotations is a dictionary containing key-type pair which has field_name as a key and type as a value
+    return [{"name": k, "type": v.__name__} for k, v in annotations.items()]

@@ -13,12 +13,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = (
+    "is_base_type",
+    "get_origin",
+    "get_args",
+    "is_struct",
+)
+
 from typing import Tuple
+
+from iconservice.base.address import Address
+
+BASE_TYPES = {bool, bytes, int, str, Address}
+TYPE_NAME_TO_TYPE = {_type.__name__: _type for _type in BASE_TYPES}
+
+
+def is_base_type(value: type) -> bool:
+    try:
+        return value in BASE_TYPES
+    except:
+        return False
 
 
 def get_origin(type_hint: type) -> type:
+    """
+    Dict[str, int].__origin__ == dict
+    List[str].__origin__ == list
+
+    :param type_hint:
+    :return:
+    """
+    if is_base_type(type_hint) or is_struct(type_hint):
+        return type_hint
+
     return getattr(type_hint, "__origin__", None)
 
 
 def get_args(type_hint: type) -> Tuple[type, ...]:
     return getattr(type_hint, "__args__", ())
+
+
+def is_struct(type_hint) -> bool:
+    try:
+        return type_hint.__class__.__name__ == "_TypedDictMeta"
+    except:
+        return False

@@ -170,7 +170,7 @@ def type_hint_to_type_template(type_hint) -> Any:
     # If type_hint is a subclass of TypedDict
     attr = "__annotations__"
     if hasattr(type_hint, attr):
-        # annotations is a dictionary containing filed_name(str) as a key and type as a value
+        # annotations is a dictionary containing field_name(str) as a key and type as a value
         annotations = getattr(type_hint, attr)
         return {k: type_hint_to_type_template(v) for k, v in annotations.items()}
 

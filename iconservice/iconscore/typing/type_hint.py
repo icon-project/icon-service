@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List, Dict, get_type_hints
+from typing_extensions import TypedDict
+
+from iconservice.iconscore.typing import get_origin, get_args, is_struct
+
 
 def normalize_type_hint(type_hint) -> type:
     return type_hint
