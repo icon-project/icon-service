@@ -213,7 +213,7 @@ class ArrayDB:
     def __put(self, index: int, value: V):
         key: list = make_encoded_rlp_prefix_list(index)
         value = Utils.encode_value(value)
-        self._db.put(key, value)
+        self._db.put(key=key, value=value, container_id=ARRAY_DB_ID)
 
     def __iter__(self):
         return self._get_generator(self._db, self.__get_size(), self.__value_type)
@@ -270,7 +270,7 @@ class ArrayDB:
 
         if 0 <= index < size:
             key: list = make_encoded_rlp_prefix_list(prefix=index)
-            value: bytes = db.get(key)
+            value: bytes = db.get(key=key, container_id=ARRAY_DB_ID)
             return Utils.decode_object(value, value_type)
         raise InvalidParamsException('ArrayDB out of index')
 
