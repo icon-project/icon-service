@@ -208,7 +208,7 @@ class ArrayDB:
         self.__legacy_size: int = size
         key: List['RLPPrefix'] = self._get_size_key()
         value: bytes = Utils.encode_value(size)
-        self._db.put(key, value)
+        self._db.put(key=key, value=value, container_id=ARRAY_DB_ID)
 
     def __put(self, index: int, value: V):
         key: list = make_encoded_rlp_prefix_list(index)
