@@ -570,7 +570,6 @@ class Engine(EngineBase, IISSEngineListener):
             })
 
         prep_as_dict["preps"] = preps_as_list
-        prep_as_dict["rootHash"]: bytes = term.root_hash
 
         return prep_as_dict
 
