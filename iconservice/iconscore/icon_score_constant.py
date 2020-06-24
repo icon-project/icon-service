@@ -27,6 +27,7 @@ CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
 CONST_CLASS_INDEXES = '__indexes'
 CONST_CLASS_API = '__api'
+CONST_CLASS_ELEMENTS = '__elements'
 
 CONST_BIT_FLAG = '__bit_flag'
 CONST_INDEXED_ARGS_COUNT = '__indexed_args_count'
@@ -52,3 +53,4 @@ class ConstBitFlag(IntEnum):
     Payable = 4
     EventLog = 8
     Interface = 16
+

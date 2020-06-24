@@ -15,40 +15,67 @@
 
 __all__ = "get_inputs"
 
-from inspect import signature, Signature, Parameter
-from typing import List, Dict, Mapping
+from inspect import Signature, Parameter
+from typing import List, Dict, Mapping, Iterable
 
 from . import get_origin, get_args, is_struct
 from .conversion import is_base_type
-from ..icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, STR_FALLBACK
-from ...base.exception import IllegalFormatException, InvalidParamsException
+from .element import ScoreElement, Function, EventLog
+from ..icon_score_constant import STR_FALLBACK
+from ...base.exception import (
+    IllegalFormatException,
+    InvalidParamsException,
+    InternalServiceErrorException,
+)
 
 
-def get_functions(funcs: List[callable]) -> List:
-    ret = []
+def get_score_api(elements: Iterable[ScoreElement]) -> List:
+    """Returns score api used in icx_getScoreApi JSON-RPC method
 
-    for func in funcs:
-        const_bit_flag = getattr(func, CONST_BIT_FLAG, 0)
-        is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
-        is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
+    :param elements:
+    :return:
+    """
 
-        ret.append(_get_function(func, is_readonly, is_payable))
+    api = []
 
-    return ret
+    for element in elements:
+        if isinstance(element, Function):
+            func: Function = element
+            item = get_function(func.name, func.signature, func.is_readonly, func.is_payable)
+        elif isinstance(element, EventLog):
+            eventlog: EventLog = element
+            item = _get_eventlog(eventlog.name, eventlog.signature, eventlog.indexed_args_count)
+        else:
+            raise InternalServiceErrorException(f"Invalid score element: {element}")
+
+        api.append(item)
+
+    return api
 
 
-def _get_function(func: callable, is_readonly: bool, is_payable: bool) -> Dict:
-    if _is_fallback(func, is_payable):
+# def get_functions(funcs: List[callable]) -> List:
+#     ret = []
+#
+#     for func in funcs:
+#         const_bit_flag = getattr(func, CONST_BIT_FLAG, 0)
+#         is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
+#         is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
+#
+#         ret.append(get_function(func, is_readonly, is_payable))
+#
+#     return ret
+
+
+def get_function(func_name: str, sig: Signature, is_readonly: bool, is_payable: bool) -> Dict:
+    if _is_fallback(func_name, sig, is_payable):
         return _get_fallback_function()
     else:
-        return _get_normal_function(func, is_readonly, is_payable)
+        return _get_normal_function(func_name, sig, is_readonly, is_payable)
 
 
-def _get_normal_function(func: callable, is_readonly: bool, is_payable: bool) -> Dict:
-    sig = signature(func)
-
+def _get_normal_function(func_name: str, sig: Signature, is_readonly: bool, is_payable: bool) -> Dict:
     ret = {
-        "name": func.__name__,
+        "name": func_name,
         "type": "function",
         "inputs": get_inputs(sig.parameters),
         "outputs": get_outputs(sig.return_annotation)
@@ -63,10 +90,9 @@ def _get_normal_function(func: callable, is_readonly: bool, is_payable: bool) ->
     return ret
 
 
-def _is_fallback(func: callable, is_payable: bool) -> bool:
-    ret: bool = func.__name__ == STR_FALLBACK and is_payable
+def _is_fallback(func_name: str, sig: Signature, is_payable: bool) -> bool:
+    ret: bool = func_name == STR_FALLBACK and is_payable
     if ret:
-        sig = signature(func)
         if len(sig.parameters) > 1:
             raise InvalidParamsException("Invalid fallback signature")
 
@@ -97,17 +123,17 @@ def get_inputs(params: Mapping[str, Parameter]) -> list:
 
 
 def _get_input(name: str, type_hint: type) -> Dict:
-    _input = {"name": name}
+    inp = {"name": name}
 
     type_hints: List[type] = split_type_hint(type_hint)
-    _input["type"] = _type_hints_to_name(type_hints)
+    inp["type"] = _type_hints_to_name(type_hints)
 
     last_type_hint: type = type_hints[-1]
 
     if is_struct(last_type_hint):
-        _input["fields"] = _get_fields(last_type_hint)
+        inp["fields"] = _get_fields(last_type_hint)
 
-    return _input
+    return inp
 
 
 def split_type_hint(type_hint: type) -> List[type]:
@@ -185,3 +211,29 @@ def get_outputs(type_hint: type) -> List:
         raise IllegalFormatException(f"Invalid output type: {type_hint}")
 
     return [{"type": type_name}]
+
+
+def _get_eventlog(func_name: str, sig: Signature, indexed_args_count: int) -> Dict:
+    params = sig.parameters
+
+    inputs = []
+    for name, param in params.items():
+        if not _is_param_valid(param):
+            continue
+
+        annotation = param.annotation
+        type_hint = str if annotation is Parameter.empty else annotation
+        inp: Dict = _get_input(name, type_hint)
+        inp["indexed"] = len(inputs) < indexed_args_count
+
+        inputs.append(inp)
+
+    return {
+        "name": func_name,
+        "type": "eventlog",
+        "inputs": inputs
+    }
+
+
+def _is_param_valid(param: Parameter) -> bool:
+    return param.name not in ("self", "cls")

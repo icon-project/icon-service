@@ -15,33 +15,17 @@
 
 from typing import Optional, Dict, Union, Type, List, ForwardRef, Any
 
-from iconservice.base.address import Address
-from iconservice.base.exception import InvalidParamsException
+from . import (
+    BaseObject,
+    BaseObjectType,
+    is_base_type,
+    name_to_type,
+)
+from ...base.address import Address
+from ...base.exception import InvalidParamsException
 
-BaseObject = Union[bool, bytes, int, str, 'Address']
-BaseObjectType = Type[BaseObject]
 CommonObject = Union[bool, bytes, int, str, 'Address', Dict[str, BaseObject]]
 CommonType = Type[CommonObject]
-
-BASE_TYPES = {bool, bytes, int, str, Address}
-TYPE_NAME_TO_TYPE = {
-    "bool": bool,
-    "bytes": bytes,
-    "int": int,
-    "str": str,
-    "Address": Address,
-}
-
-
-def is_base_type(value: type) -> bool:
-    try:
-        return value in BASE_TYPES
-    except:
-        return False
-
-
-def type_name_to_type(type_name: str) -> BaseObjectType:
-    return TYPE_NAME_TO_TYPE[type_name]
 
 
 def str_to_int(value: str) -> int:
@@ -82,7 +66,7 @@ def object_to_str(value: Any) -> Union[List, Dict, CommonObject]:
 
 
 def str_to_base_object_by_type_name(type_name: str, value: str) -> BaseObject:
-    return str_to_base_object(type_name_to_type(type_name), value)
+    return str_to_base_object(name_to_type(type_name), value)
 
 
 def str_to_base_object(type_hint: BaseObjectType, value: str) -> BaseObject:
@@ -157,9 +141,9 @@ def type_hint_to_type_template(type_hint) -> Any:
     :return:
     """
     if isinstance(type_hint, ForwardRef):
-        type_hint = type_name_to_type(type_hint.__forward_arg__)
+        type_hint = name_to_type(type_hint.__forward_arg__)
     elif isinstance(type_hint, str):
-        type_hint = type_name_to_type(type_hint)
+        type_hint = name_to_type(type_hint)
 
     if is_base_type(type_hint):
         return type_hint

@@ -20,9 +20,12 @@ __all__ = (
     "is_struct",
 )
 
-from typing import Tuple
+from typing import Tuple, Union, Type
 
 from iconservice.base.address import Address
+
+BaseObject = Union[bool, bytes, int, str, 'Address']
+BaseObjectType = Type[BaseObject]
 
 BASE_TYPES = {bool, bytes, int, str, Address}
 TYPE_NAME_TO_TYPE = {_type.__name__: _type for _type in BASE_TYPES}
@@ -33,6 +36,10 @@ def is_base_type(value: type) -> bool:
         return value in BASE_TYPES
     except:
         return False
+
+
+def name_to_type(type_name: str) -> BaseObjectType:
+    return TYPE_NAME_TO_TYPE[type_name]
 
 
 def get_origin(type_hint: type) -> type:

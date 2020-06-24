@@ -23,6 +23,7 @@ from iconservice.base.address import Address
 from iconservice.iconscore.typing.definition import (
     get_inputs,
     split_type_hint,
+    _get_eventlog
 )
 
 
@@ -119,6 +120,25 @@ def test_get_inputs_with_list_of_struct_nesting_struct():
         (List[List[List[Person]]], [list, list, list, Person]),
     ]
 )
-def test__get_type(type_hint, expected):
+def test_split_type_hint(type_hint, expected):
     types: List[type] = split_type_hint(type_hint)
     assert types == expected
+
+
+def test__get_eventlog():
+    expected = {
+        "name": "ICXTransfer",
+        "type": "eventlog",
+        "inputs": [
+            {"name": "to", "type": "Address", "indexed": True},
+            {"name": "amount", "type": "int", "indexed": False},
+            {"name": "data", "type": "bytes", "indexed": False},
+        ]
+    }
+
+    indexed_args_count = 1
+    def ICXTransfer(to: Address, amount: int, data: bytes):
+        pass
+
+    ret = _get_eventlog(ICXTransfer.__name__, signature(ICXTransfer), indexed_args_count)
+    assert ret == expected

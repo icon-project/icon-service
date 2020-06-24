@@ -7,7 +7,7 @@ import pytest
 
 from typing_extensions import TypedDict
 
-from iconservice.iconscore.typing.function import (
+from iconservice.iconscore.typing.element import (
     normalize_signature,
 )
 

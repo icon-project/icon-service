@@ -18,25 +18,37 @@ import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from functools import partial, wraps
 from inspect import isfunction, getmembers, signature, Parameter
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Union, Dict
 
 from .context.context import ContextGetter, ContextContainer
-from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import InterfaceScore, revert, Block
-from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
-    ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
+from .icon_score_constant import (
+    CONST_INDEXED_ARGS_COUNT,
+    FORMAT_IS_NOT_FUNCTION_OBJECT,
+    CONST_BIT_FLAG,
+    ConstBitFlag,
+    FORMAT_DECORATOR_DUPLICATED,
+    FORMAT_IS_NOT_DERIVED_OF_OBJECT,
+    STR_FALLBACK,
+    CONST_CLASS_EXTERNALS,
+    CONST_CLASS_PAYABLES,
+    CONST_CLASS_API,
+    CONST_CLASS_ELEMENTS,
+    BaseType,
+    T,
+)
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
 from .internal_call import InternalCall
+from .typing.definition import get_score_api
+from .typing.element import Function, EventLog
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision, IconScoreContextType
-from ..iconscore.typing.function import Function
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -299,6 +311,7 @@ def payable(func):
     return __wrapper
 
 
+
 class IconScoreObject(ABC):
 
     def __init__(self, *args, **kwargs) -> None:
@@ -309,6 +322,33 @@ class IconScoreObject(ABC):
 
     def on_update(self, **kwargs) -> None:
         pass
+
+
+def create_score_elements(cls) -> Dict:
+    elements = {}
+    flags = (
+            ConstBitFlag.ReadOnly |
+            ConstBitFlag.External |
+            ConstBitFlag.Payable |
+            ConstBitFlag.EventLog
+    )
+
+    for name, func in getmembers(cls, predicate=isfunction):
+        if name.startswith("__"):
+            continue
+        if getattr(func, CONST_BIT_FLAG, 0) & flags:
+            elements[name] = create_score_element(func)
+
+    return elements
+
+
+def create_score_element(element: callable) -> Union[Function, EventLog]:
+    flags = getattr(element, CONST_BIT_FLAG, 0)
+
+    if flags & ConstBitFlag.EventLog:
+        return EventLog(element)
+    else:
+        return Function(element)
 
 
 class IconScoreBaseMeta(ABCMeta):
@@ -326,12 +366,8 @@ class IconScoreBaseMeta(ABCMeta):
                         if not key.startswith('__')]
 
         # TODO: Normalize type hints of score parameters by goldworm
-        # Create funcs dict containing Function objects
-        # funcs = {
-        #     name: Function(func)
-        #     for name, func in getmembers(cls, predicate=isfunction)
-        #     if not name.startswith('__')
-        # }
+        elements = create_score_elements(cls)
+        setattr(cls, CONST_CLASS_ELEMENTS, elements)
 
         external_funcs = {func.__name__: signature(func) for func in custom_funcs
                           if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External}
@@ -350,7 +386,9 @@ class IconScoreBaseMeta(ABCMeta):
             payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
 
-        api_list = ScoreApiGenerator.generate(custom_funcs)
+        # TODO: Replace it with a new list supporting struct and list
+        # api_list = ScoreApiGenerator.generate(custom_funcs)
+        api_list = get_score_api(elements)
         setattr(cls, CONST_CLASS_API, api_list)
 
         return cls
