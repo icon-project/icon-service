@@ -50,7 +50,13 @@ def get_origin(type_hint: type) -> type:
     :param type_hint:
     :return:
     """
-    if is_base_type(type_hint) or is_struct(type_hint):
+    # if (
+    #         is_base_type(type_hint)
+    #         or is_struct(type_hint)
+    #         or type_hint in (list, dict)
+    # ):
+    #     return type_hint
+    if isinstance(type_hint, type):
         return type_hint
 
     return getattr(type_hint, "__origin__", None)

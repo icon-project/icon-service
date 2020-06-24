@@ -388,7 +388,7 @@ class IconScoreBaseMeta(ABCMeta):
 
         # TODO: Replace it with a new list supporting struct and list
         # api_list = ScoreApiGenerator.generate(custom_funcs)
-        api_list = get_score_api(elements)
+        api_list = get_score_api(elements.values())
         setattr(cls, CONST_CLASS_API, api_list)
 
         return cls

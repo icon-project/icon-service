@@ -16,7 +16,7 @@
 __all__ = "get_inputs"
 
 from inspect import Signature, Parameter
-from typing import List, Dict, Mapping, Iterable
+from typing import List, Dict, Mapping, Iterable, Any
 
 from . import get_origin, get_args, is_struct
 from .conversion import is_base_type
@@ -46,7 +46,7 @@ def get_score_api(elements: Iterable[ScoreElement]) -> List:
             eventlog: EventLog = element
             item = _get_eventlog(eventlog.name, eventlog.signature, eventlog.indexed_args_count)
         else:
-            raise InternalServiceErrorException(f"Invalid score element: {element}")
+            raise InternalServiceErrorException(f"Invalid score element: {element} {type(element)}")
 
         api.append(item)
 
@@ -115,15 +115,26 @@ def get_inputs(params: Mapping[str, Parameter]) -> list:
     inputs = []
 
     for name, param in params.items():
+        if not _is_param_valid(param):
+            continue
+
         annotation = param.annotation
         type_hint = str if annotation is Parameter.empty else annotation
-        inputs.append(_get_input(name, type_hint))
+
+        inputs.append(_get_input(name, type_hint, param.default))
 
     return inputs
 
 
-def _get_input(name: str, type_hint: type) -> Dict:
+def _get_input(name: str, type_hint: type, default: Any) -> Dict:
     inp = {"name": name}
+
+    # Add default parameter value to score api
+    if default is not Parameter.empty:
+        if default is not None and not isinstance(default, type_hint):
+            raise InvalidParamsException(f"Default params type mismatch. value: {default} type: {type_hint}")
+
+        inp["default"] = default
 
     type_hints: List[type] = split_type_hint(type_hint)
     inp["type"] = _type_hints_to_name(type_hints)
@@ -208,7 +219,7 @@ def get_outputs(type_hint: type) -> List:
     elif origin is list:
         type_name = "[]"
     else:
-        raise IllegalFormatException(f"Invalid output type: {type_hint}")
+        return []
 
     return [{"type": type_name}]
 
@@ -223,7 +234,7 @@ def _get_eventlog(func_name: str, sig: Signature, indexed_args_count: int) -> Di
 
         annotation = param.annotation
         type_hint = str if annotation is Parameter.empty else annotation
-        inp: Dict = _get_input(name, type_hint)
+        inp: Dict = _get_input(name, type_hint, param.default)
         inp["indexed"] = len(inputs) < indexed_args_count
 
         inputs.append(inp)

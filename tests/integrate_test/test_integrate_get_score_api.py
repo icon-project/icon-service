@@ -49,6 +49,17 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
 
         expect_value1 = [
             {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': True
+                    }
+                ]
+            },
+            {
                 'type': 'function',
                 'name': 'base_value',
                 'inputs': [
@@ -85,6 +96,10 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 ],
                 'readonly': True
             },
+        ]
+        self.assertEqual(response1, expect_value1)
+
+        expect_value2 = [
             {
                 'type': 'eventlog',
                 'name': 'Changed',
@@ -95,11 +110,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                         'indexed': True
                     }
                 ]
-            }
-        ]
-        self.assertEqual(response1, expect_value1)
-
-        expect_value2 = [
+            },
             {
                 'type': 'function',
                 'name': 'base_value',
@@ -148,17 +159,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 ],
                 'readonly': True
             },
-            {
-                'type': 'eventlog',
-                'name': 'Changed',
-                'inputs': [
-                    {
-                        'name': 'value',
-                        'type': 'int',
-                        'indexed': True
-                    }
-                ]
-            }
         ]
         self.assertEqual(response2, expect_value2)
 
@@ -190,6 +190,17 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         response2: dict = self.get_score_api(score_addr2)
 
         expect_value1 = [
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': True
+                    }
+                ]
+            },
             {
                 'type': 'function',
                 'name': 'base_value1',
@@ -259,6 +270,10 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 ],
                 'readonly': True
             },
+        ]
+        self.assertEqual(response1, expect_value1)
+
+        expect_value2 = [
             {
                 'type': 'eventlog',
                 'name': 'Changed',
@@ -269,11 +284,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                         'indexed': True
                     }
                 ]
-            }
-        ]
-        self.assertEqual(response1, expect_value1)
-
-        expect_value2 = [
+            },
             {
                 'type': 'function',
                 'name': 'base_value1',
@@ -322,17 +333,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 ],
                 'readonly': True
             },
-            {
-                'type': 'eventlog',
-                'name': 'Changed',
-                'inputs': [
-                    {
-                        'name': 'value',
-                        'type': 'int',
-                        'indexed': True
-                    }
-                ]
-            }
         ]
         self.assertEqual(response2, expect_value2)
 
@@ -345,6 +345,17 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         response1: dict = self.get_score_api(score_addr1)
 
         expect_value1 = [
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': True
+                    }
+                ]
+            },
             {
                 'type': 'function',
                 'name': 'get_value',
@@ -361,17 +372,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 ],
                 'readonly': True
             },
-            {
-                'type': 'eventlog',
-                'name': 'Changed',
-                'inputs': [
-                    {
-                        'name': 'value',
-                        'type': 'int',
-                        'indexed': True
-                    }
-                ]
-            }
         ]
         self.assertEqual(response1, expect_value1)
 
