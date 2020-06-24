@@ -378,6 +378,7 @@ class IconScoreDatabase(ContextGetter):
 
         # for cache
         self._prefix: bytes = self.address.to_bytes()
+        self._meta_db = MetaContextDatabase(context_db.key_value_db)
 
     @property
     def _is_v2(self) -> bool:
@@ -418,26 +419,20 @@ class IconScoreDatabase(ContextGetter):
 
         key_elements: List['KeyElement'] = self._make_key_elements(key=key)
 
-        if self._is_v2:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id
-            )
-            value: Optional[bytes] = self._context_db.get(self._context, final_key)
-            if value is None:
-                legacy_final_key: bytes = self._make_final_key(
-                    key_elements=key_elements,
-                    container_id=container_id,
-                    is_legacy=True
-                )
-                value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
-        else:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id,
-                is_legacy=True
-            )
-            value: Optional[bytes] = self._context_db.get(self._context, final_key)
+        # Test
+        final_key: bytes = self._make_final_key(
+            key_elements=key_elements,
+            container_id=container_id
+        )
+        value = self._meta_db.get(self._context, final_key)
+
+        old_final_key: bytes = self._make_final_key(
+            key_elements=key_elements,
+            container_id=container_id,
+            is_legacy=True
+        )
+        old_value: Optional[bytes] = self._context_db.get(self._context, old_final_key)
+        assert value == old_value
 
         if self._observer:
             observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
@@ -465,30 +460,14 @@ class IconScoreDatabase(ContextGetter):
 
         key_elements: List['KeyElement'] = self._make_key_elements(key=key)
 
-        if self._is_v2:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id
-            )
-        else:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id,
-                is_legacy=True
-            )
+        final_key: bytes = self._make_final_key(
+            key_elements=key_elements,
+            container_id=container_id,
+            is_legacy=True
+        )
 
         if self._observer:
-            if self._is_v2:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
-                if old_value is None:
-                    legacy_final_key: bytes = self._make_final_key(
-                        key_elements=key_elements,
-                        container_id=container_id,
-                        is_legacy=True
-                    )
-                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
-            else:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+            old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
 
             observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
             if value:
@@ -497,6 +476,12 @@ class IconScoreDatabase(ContextGetter):
                 # If new value is None, then deletes the field
                 self._observer.on_delete(self._context, observer_key, old_value)
         self._context_db.put(self._context, final_key, value)
+
+        new_final_key: bytes = self._make_final_key(
+            key_elements=key_elements,
+            container_id=container_id
+        )
+        self._meta_db.put(self._context, new_final_key, value)
 
     def delete(
             self,
@@ -517,36 +502,26 @@ class IconScoreDatabase(ContextGetter):
 
         key_elements: List['KeyElement'] = self._make_key_elements(key=key)
 
-        if self._is_v2:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id
-            )
-        else:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id,
-                is_legacy=True
-            )
+        final_key: bytes = self._make_final_key(
+            key_elements=key_elements,
+            container_id=container_id,
+            is_legacy=True
+        )
 
         if self._observer:
-            if self._is_v2:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
-                if old_value is None:
-                    legacy_final_key: bytes = self._make_final_key(
-                        key_elements=key_elements,
-                        container_id=container_id,
-                        is_legacy=True
-                    )
-                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
-            else:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+            old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
 
             # If old value is None, won't fire the callback
             if old_value:
                 observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
                 self._observer.on_delete(self._context, observer_key, old_value)
         self._context_db.delete(self._context, final_key)
+
+        new_final_key: bytes = self._make_final_key(
+            key_elements=key_elements,
+            container_id=container_id
+        )
+        self._meta_db.delete(self._context, new_final_key)
 
     def get_sub_db(
             self,
