@@ -13,14 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, Optional, Tuple, Iterable
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable, Union, List
 
 import plyvel
-from iconcommons.logger import Logger
 
+from iconcommons.logger import Logger
 from .batch import TransactionBatchValue
+from .score_db.utils import DICT_DB_ID, KeyElement
 from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
-from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType
+from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType, Revision
 from ..iconscore.context.context import ContextGetter
 
 if TYPE_CHECKING:
@@ -366,91 +367,204 @@ class IconScoreDatabase(ContextGetter):
     IconScore can access its states only through IconScoreDatabase
     """
 
-    def __init__(self,
-                 address: 'Address',
-                 context_db: 'ContextDatabase',
-                 prefix: bytes = None) -> None:
-        """Constructor
-
-        :param address: the address of SCORE which this db is assigned to
-        :param context_db: ContextDatabase
-        :param prefix:
-        """
-        self.address = address
-        self._prefix = prefix
+    def __init__(
+            self,
+            address: 'Address',
+            context_db: 'ContextDatabase',
+    ):
+        self.address: 'Address' = address
         self._context_db = context_db
-        self._observer: Optional[DatabaseObserver] = None
+        self._observer: Optional['DatabaseObserver'] = None
 
-        self._prefix_hash_key: bytes = self._make_prefix_hash_key()
+        # for cache
+        self._prefix: bytes = self.address.to_bytes()
 
-    def _make_prefix_hash_key(self) -> bytes:
-        data = [self.address.to_bytes()]
-        if self._prefix is not None:
-            data.append(self._prefix)
-        return b'|'.join(data)
+    @property
+    def _is_v2(self) -> bool:
+        """
+        To branch logic for migration DB.
+        :return:
+        """
+        return self._revision >= Revision.CONTAINER_DB_RLP.value
 
-    def get(self, key: bytes) -> bytes:
+    @property
+    def _revision(self) -> int:
+        """
+        During change revision especially Revision.CONTAINER_DB_RLP,
+        Must not apply is_v2 logic yet.
+        :return:
+        """
+        if self._context.is_revision_changed(Revision.CONTAINER_DB_RLP.value):
+            return self._context.revision - 1
+        else:
+            return self._context.revision
+
+    def get(
+            self,
+            key: Union[List['KeyElement'], 'KeyElement', bytes],
+            container_id: bytes = DICT_DB_ID
+    ) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
+        :param container_id: default DICT_DB_ID
         :return: value for the specified key, or None if not found
+
+        ****** WORNING ******
+            In v2, the previous value is not actually removed.
+        *********************
         """
-        hashed_key = self._hash_key(key)
-        value = self._context_db.get(self._context, hashed_key)
+
+        key_elements: List['KeyElement'] = self._make_key_elements(key=key)
+
+        if self._is_v2:
+            final_key: bytes = self._make_final_key(
+                key_elements=key_elements,
+                container_id=container_id
+            )
+            value: Optional[bytes] = self._context_db.get(self._context, final_key)
+            if value is None:
+                legacy_final_key: bytes = self._make_final_key(
+                    key_elements=key_elements,
+                    container_id=container_id,
+                    is_legacy=True
+                )
+                value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
+        else:
+            final_key: bytes = self._make_final_key(
+                key_elements=key_elements,
+                container_id=container_id,
+                is_legacy=True
+            )
+            value: Optional[bytes] = self._context_db.get(self._context, final_key)
+
         if self._observer:
-            self._observer.on_get(self._context, key, value)
+            observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
+            self._observer.on_get(self._context, observer_key, value)
         return value
 
-    def put(self, key: bytes, value: bytes):
+    def put(
+            self,
+            key: Union[List['KeyElement'], 'KeyElement', bytes],
+            value: bytes, container_id: bytes = DICT_DB_ID
+    ):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
+        :param container_id: default DICT_DB_ID
+
+        ****** WORNING ******
+            In v2, the previous value is not actually removed.
+        *********************
         """
+
         self._validate_ownership()
-        hashed_key = self._hash_key(key)
+
+        key_elements: List['KeyElement'] = self._make_key_elements(key=key)
+
+        if self._is_v2:
+            final_key: bytes = self._make_final_key(
+                key_elements=key_elements,
+                container_id=container_id
+            )
+        else:
+            final_key: bytes = self._make_final_key(
+                key_elements=key_elements,
+                container_id=container_id,
+                is_legacy=True
+            )
+
         if self._observer:
-            old_value = self._context_db.get(self._context, hashed_key)
+            if self._is_v2:
+                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+                if old_value is None:
+                    legacy_final_key: bytes = self._make_final_key(
+                        key_elements=key_elements,
+                        container_id=container_id,
+                        is_legacy=True
+                    )
+                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
+            else:
+                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+
+            observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
             if value:
-                self._observer.on_put(self._context, key, old_value, value)
+                self._observer.on_put(self._context, observer_key, old_value, value)
             elif old_value:
                 # If new value is None, then deletes the field
-                self._observer.on_delete(self._context, key, old_value)
-        self._context_db.put(self._context, hashed_key, value)
+                self._observer.on_delete(self._context, observer_key, old_value)
+        self._context_db.put(self._context, final_key, value)
 
-    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
-        """
-        Returns sub db with a prefix
-
-        :param prefix: The prefix used by this sub db.
-        :return: sub db
-        """
-        if prefix is None:
-            raise InvalidParamsException(
-                'Invalid params: '
-                'prefix is None in IconScoreDatabase.get_sub_db()')
-
-        if self._prefix is not None:
-            prefix = b'|'.join((self._prefix, prefix))
-
-        return IconScoreSubDatabase(self.address, self, prefix)
-
-    def delete(self, key: bytes):
+    def delete(
+            self,
+            key: Union[List['KeyElement'], 'KeyElement', bytes],
+            container_id: bytes = DICT_DB_ID
+    ):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
+        :param container_id: default DICT_DB_ID
+
+        ****** WORNING ******
+            In v2, the previous value is not actually removed.
+        *********************
         """
         self._validate_ownership()
-        hashed_key = self._hash_key(key)
+
+        key_elements: List['KeyElement'] = self._make_key_elements(key=key)
+
+        if self._is_v2:
+            final_key: bytes = self._make_final_key(
+                key_elements=key_elements,
+                container_id=container_id
+            )
+        else:
+            final_key: bytes = self._make_final_key(
+                key_elements=key_elements,
+                container_id=container_id,
+                is_legacy=True
+            )
+
         if self._observer:
-            old_value = self._context_db.get(self._context, hashed_key)
+            if self._is_v2:
+                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+                if old_value is None:
+                    legacy_final_key: bytes = self._make_final_key(
+                        key_elements=key_elements,
+                        container_id=container_id,
+                        is_legacy=True
+                    )
+                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
+            else:
+                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+
             # If old value is None, won't fire the callback
             if old_value:
-                self._observer.on_delete(self._context, key, old_value)
-        self._context_db.delete(self._context, hashed_key)
+                observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
+                self._observer.on_delete(self._context, observer_key, old_value)
+        self._context_db.delete(self._context, final_key)
+
+    def get_sub_db(
+            self,
+            prefix: Union['KeyElement', bytes]
+    ) -> 'IconScoreSubDatabase':
+        if not prefix:
+            raise InvalidParamsException(
+                'Invalid params: '
+                'prefix is None in IconScoreDatabase.get_sub_db()')
+
+        if isinstance(prefix, bytes):
+            prefix: 'KeyElement' = KeyElement(key=prefix)
+
+        return IconScoreSubDatabase(
+            address=self.address,
+            score_db=self,
+            key_elements=[prefix]
+        )
 
     def close(self):
         self._context_db.close(self._context)
@@ -458,100 +572,157 @@ class IconScoreDatabase(ContextGetter):
     def set_observer(self, observer: 'DatabaseObserver'):
         self._observer = observer
 
-    def _hash_key(self, key: bytes) -> bytes:
+    def _validate_ownership(self):
+        """Prevent a SCORE from accessing the database of another SCORE
+        """
+        if self._context.current_address != self.address:
+            raise AccessDeniedException(
+                f"Invalid database ownership: "
+                f"{self._context.current_address}, "
+                f"{self.address}")
+
+    def _get_observer_key(self, key: bytes, final_key: bytes) -> bytes:
+        if not self._is_v2:
+            return key
+        else:
+            return final_key
+
+    def _make_final_key(
+            self,
+            key_elements: List['KeyElement'],
+            container_id: bytes,
+            is_legacy: bool = False
+    ) -> bytes:
+        bytes_list: List[bytes] = self.__convert_bytes_list(
+            key_elements=key_elements,
+            container_id=container_id,
+            is_legacy=is_legacy
+        )
+
+        bytes_list: List[bytes] = [container_id] + bytes_list if not is_legacy else bytes_list
+        separator: bytes = b'|' if is_legacy else b''
+
+        return self.__concat_keys(bytes_list, separator)
+
+    def __concat_keys(self, keys: List[bytes], separator: bytes) -> bytes:
         """All key is hashed and stored
         to StateDB to avoid key conflicts among SCOREs
 
-        :params key: key passed by SCORE
+        :params keys: key passed by SCORE
         :return: key bytes
         """
+        return separator.join([self._prefix] + keys)
 
-        return b'|'.join((self._prefix_hash_key, key))
+    @classmethod
+    def __convert_bytes_list(
+            cls,
+            key_elements: List['KeyElement'],
+            container_id: bytes,
+            is_legacy: bool = False
+    ) -> List[bytes]:
+        new_keys: List[bytes] = []
+        for v in key_elements:
+            if isinstance(v, KeyElement):
+                if not is_legacy:
+                    new_keys.append(bytes(v))
+                else:
+                    if v.is_append_container_id:
+                        new_keys.append(container_id)
+                    new_keys.append(v.legacy_key)
+            else:
+                raise InvalidParamsException("Unsupported key")
+        return new_keys
 
-    def _validate_ownership(self):
-        """Prevent a SCORE from accessing the database of another SCORE
+    @classmethod
+    def _make_key_elements(
+            cls,
+            key: Union[List['KeyElement'], 'KeyElement', bytes]
+    ) -> List['KeyElement']:
+        if isinstance(key, bytes):
+            return [KeyElement(key=key)]
+        elif isinstance(key, KeyElement):
+            return [key]
+        elif isinstance(key, list):
+            return key
+        else:
+            raise InvalidParamsException(f"Not Supported type: {type(key)}")
 
-        """
-        if self._context.current_address != self.address:
-            raise AccessDeniedException("Invalid database ownership")
 
+class IconScoreSubDatabase:
 
-class IconScoreSubDatabase(object):
-    def __init__(self, address: 'Address', score_db: 'IconScoreDatabase', prefix: bytes):
-        """Constructor
-
-        :param address: the address of SCORE which this db is assigned to
-        :param score_db: IconScoreDatabase
-        :param prefix:
-        """
-        if prefix is None or len(prefix) == 0:
+    def __init__(
+            self,
+            address: 'Address',
+            score_db: 'IconScoreDatabase',
+            key_elements: List['KeyElement']
+    ):
+        if not key_elements:
             raise InvalidParamsException("Invalid prefix")
 
-        self.address = address
-        self._prefix = prefix
-        self._score_db = score_db
+        self.address: 'Address' = address
+        self._score_db: 'IconScoreDatabase' = score_db
 
-        self._prefix_hash_key: bytes = self._make_prefix_hash_key()
+        self._key_elements: List['KeyElement'] = key_elements
 
-    def _make_prefix_hash_key(self) -> bytes:
-        data = []
-        if self._prefix is not None:
-            data.append(self._prefix)
-        return b'|'.join(data)
-
-    def get(self, key: bytes) -> bytes:
+    def get(
+            self,
+            key: Union['KeyElement', bytes],
+            container_id: bytes = DICT_DB_ID
+    ) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
+        :param container_id:
         :return: value for the specified key, or None if not found
         """
-        hashed_key = self._hash_key(key)
-        return self._score_db.get(hashed_key)
+        key_elements: List['KeyElement'] = self._combine_key_with_key_elements(key)
+        return self._score_db.get(key=key_elements, container_id=container_id)
 
-    def put(self, key: bytes, value: bytes):
+    def put(self, key: Union['KeyElement', bytes], value: bytes, container_id: bytes = DICT_DB_ID):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
+        :param container_id:
         """
-        hashed_key = self._hash_key(key)
-        self._score_db.put(hashed_key, value)
+        key_elements: List['KeyElement'] = self._combine_key_with_key_elements(key)
+        self._score_db.put(key=key_elements, value=value, container_id=container_id)
 
-    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
-        """
-        Returns sub db with a prefix
-
-        :param prefix: The prefix used by this sub db.
-        :return: sub db
-        """
-        if prefix is None:
-            raise InvalidParamsException("Invalid prefix")
-
-        if self._prefix is not None:
-            prefix = b'|'.join((self._prefix, prefix))
-
-        return IconScoreSubDatabase(self.address, self._score_db, prefix)
-
-    def delete(self, key: bytes):
+    def delete(self, key: Union['KeyElement', bytes], container_id: bytes = DICT_DB_ID):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
+        :param container_id:
         """
-        hashed_key = self._hash_key(key)
-        self._score_db.delete(hashed_key)
+        key_elements: List['KeyElement'] = self._combine_key_with_key_elements(key)
+        self._score_db.delete(key=key_elements, container_id=container_id)
+
+    def get_sub_db(
+            self,
+            prefix: Union['KeyElement', bytes]
+    ) -> 'IconScoreSubDatabase':
+        if not prefix:
+            raise InvalidParamsException(
+                'Invalid params: '
+                'prefix is None in IconScoreDatabase.get_sub_db()'
+            )
+
+        return IconScoreSubDatabase(
+            address=self.address,
+            score_db=self._score_db,
+            key_elements=self._combine_key_with_key_elements(prefix)
+        )
 
     def close(self):
         self._score_db.close()
 
-    def _hash_key(self, key: bytes) -> bytes:
-        """All key is hashed and stored
-        to StateDB to avoid key conflicts among SCOREs
-
-        :params key: key passed by SCORE
-        :return: key bytes
-        """
-
-        return b'|'.join((self._prefix_hash_key, key))
+    def _combine_key_with_key_elements(self, key: Union['KeyElement', bytes]) -> List['KeyElement']:
+        if isinstance(key, bytes):
+            return self._key_elements + [KeyElement(key=key)]
+        elif isinstance(key, KeyElement):
+            return self._key_elements + [key]
+        else:
+            raise InvalidParamsException(f"Not Supported Type: {type(key)}")

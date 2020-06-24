@@ -139,7 +139,9 @@ class Revision(Enum):
 
     FIX_BALANCE_BUG = 11
 
-    LATEST = 11
+    CONTAINER_DB_RLP = 12
+
+    LATEST = 12
 
 
 RC_DB_VERSION_0 = 0
