@@ -24,8 +24,8 @@ from typing import Dict, Union
 
 from .type_hint import normalize_type_hint
 from ..icon_score_constant import (
-    CONST_BIT_FLAG,
-    ConstBitFlag,
+    CONST_SCORE_FLAG,
+    ScoreFlag,
     STR_FALLBACK,
     CONST_INDEXED_ARGS_COUNT,
 )
@@ -70,8 +70,8 @@ def verify_score_flags(func: callable):
 
     If the combination is not valid, raise an exception
     """
-    flags = getattr(func, CONST_BIT_FLAG, 0)
-    counterpart = ConstBitFlag.ReadOnly | ConstBitFlag.Payable
+    flags = getattr(func, CONST_SCORE_FLAG, 0)
+    counterpart = ScoreFlag.READONLY | ScoreFlag.PAYABLE
 
     if (flags & counterpart) == counterpart:
         raise IllegalFormatException(f"Payable method cannot be readonly")
@@ -92,8 +92,8 @@ class ScoreElement(object):
         return self._element.__name__
 
     @property
-    def flags(self) -> int:
-        return getattr(self.element, CONST_BIT_FLAG, 0)
+    def flag(self) -> ScoreFlag:
+        return get_score_flag(self._element)
 
     @property
     def signature(self) -> Signature:
@@ -106,15 +106,15 @@ class Function(ScoreElement):
 
     @property
     def is_external(self) -> bool:
-        return bool(self.flags & ConstBitFlag.External)
+        return bool(self.flag & ScoreFlag.EXTERNAL)
 
     @property
     def is_payable(self) -> bool:
-        return bool(self.flags & ConstBitFlag.Payable)
+        return bool(self.flag & ScoreFlag.PAYABLE)
 
     @property
     def is_readonly(self) -> bool:
-        return bool(self.flags & ConstBitFlag.ReadOnly)
+        return bool(self.flag & ScoreFlag.READONLY)
 
     @property
     def is_fallback(self) -> bool:
@@ -133,25 +133,50 @@ class EventLog(ScoreElement):
 def create_score_elements(cls) -> Dict:
     elements = {}
     flags = (
-            ConstBitFlag.ReadOnly |
-            ConstBitFlag.External |
-            ConstBitFlag.Payable |
-            ConstBitFlag.EventLog
+            ScoreFlag.READONLY |
+            ScoreFlag.EXTERNAL |
+            ScoreFlag.PAYABLE |
+            ScoreFlag.EVENTLOG
     )
 
     for name, func in getmembers(cls, predicate=isfunction):
         if name.startswith("__"):
             continue
-        if getattr(func, CONST_BIT_FLAG, 0) & flags:
+
+        # Collect the only functions with one or more of the above 4 score flags
+        if is_any_score_flag_on(func, flags):
             elements[name] = create_score_element(func)
 
     return elements
 
 
 def create_score_element(element: callable) -> Union[Function, EventLog]:
-    flags = getattr(element, CONST_BIT_FLAG, 0)
+    flags = getattr(element, CONST_SCORE_FLAG, 0)
 
-    if flags & ConstBitFlag.EventLog:
+    if flags & ScoreFlag.EVENTLOG:
         return EventLog(element)
     else:
         return Function(element)
+
+
+def get_score_flag(obj: callable, default: ScoreFlag = ScoreFlag.NONE) -> ScoreFlag:
+    return getattr(obj, CONST_SCORE_FLAG, default)
+
+
+def set_score_flag(obj: callable, flag: ScoreFlag) -> ScoreFlag:
+    setattr(obj, CONST_SCORE_FLAG, flag)
+    return flag
+
+
+def set_score_flag_on(obj: callable, flag: ScoreFlag) -> ScoreFlag:
+    flag |= get_score_flag(obj)
+    set_score_flag(obj, flag)
+    return flag
+
+
+def is_all_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
+    return get_score_flag(obj) & flag == flag
+
+
+def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
+    return bool(get_score_flag(obj) & flag)

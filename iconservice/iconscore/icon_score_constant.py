@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum, unique
+from enum import Flag
 from typing import TypeVar
 
 from ..base.address import Address
@@ -29,7 +29,7 @@ CONST_CLASS_INDEXES = '__indexes'
 CONST_CLASS_API = '__api'
 CONST_CLASS_ELEMENTS = '__elements'
 
-CONST_BIT_FLAG = '__bit_flag'
+CONST_SCORE_FLAG = '__score_flag'
 CONST_INDEXED_ARGS_COUNT = '__indexed_args_count'
 
 FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
@@ -45,17 +45,17 @@ ATTR_SCORE_CALL = "_IconScoreBase__call"
 ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_method"
 
 
-@unique
-class ConstBitFlag(IntEnum):
-    NonFlag = 0
+class ScoreFlag(Flag):
+    NONE = 0
 
     # Used for external function
-    ReadOnly = 1
-    External = 2
-    Payable = 4
+    READONLY = 0x01
+    EXTERNAL = 0x02
+    PAYABLE = 0x04
+    FUNC = 0xFF
 
     # Used for eventlog declaration in score
-    EventLog = 8
+    EVENTLOG = 0x100
 
     # Used for interface declaration in score
-    Interface = 16
+    INTERFACE = 0x10000

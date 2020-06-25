@@ -25,8 +25,7 @@ from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import (
     CONST_INDEXED_ARGS_COUNT,
     FORMAT_IS_NOT_FUNCTION_OBJECT,
-    CONST_BIT_FLAG,
-    ConstBitFlag,
+    ScoreFlag,
     FORMAT_DECORATOR_DUPLICATED,
     FORMAT_IS_NOT_DERIVED_OF_OBJECT,
     STR_FALLBACK,
@@ -44,6 +43,10 @@ from .icx import Icx
 from .internal_call import InternalCall
 from .typing.definition import get_score_api
 from .typing.element import create_score_elements
+from .typing.element import (
+    set_score_flag_on,
+    is_any_score_flag_on,
+)
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
@@ -70,11 +73,10 @@ def interface(func):
     if not isfunction(func):
         raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Interface:
+    if is_any_score_flag_on(func, ScoreFlag.INTERFACE):
         raise InvalidInterfaceException(FORMAT_DECORATOR_DUPLICATED.format('interface', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Interface
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    set_score_flag_on(func, ScoreFlag.INTERFACE)
 
     @wraps(func)
     def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
@@ -128,13 +130,11 @@ def eventlog(func=None, *, indexed=0):
     if len(parameters) - 1 < indexed:
         raise InvalidEventLogException("Index exceeds the number of parameters")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
+    if is_any_score_flag_on(func, ScoreFlag.EVENTLOG):
         raise InvalidEventLogException(FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    set_score_flag_on(func, ScoreFlag.EVENTLOG)
     setattr(func, CONST_INDEXED_ARGS_COUNT, indexed)
-
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
@@ -265,11 +265,13 @@ def external(func=None, *, readonly=False):
     if func_name == STR_FALLBACK:
         raise InvalidExternalException(f"{func_name} cannot be declared as external")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External:
+    if is_any_score_flag_on(func, ScoreFlag.EXTERNAL):
         raise InvalidExternalException(FORMAT_DECORATOR_DUPLICATED.format('external', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.External | int(readonly)
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    score_flag = ScoreFlag.EXTERNAL
+    if readonly:
+        score_flag |= ScoreFlag.READONLY
+    set_score_flag_on(func, score_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: Any, *args, **kwargs):
@@ -294,11 +296,10 @@ def payable(func):
     if not isfunction(func):
         raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable:
+    if is_any_score_flag_on(func, ScoreFlag.PAYABLE):
         raise InvalidPayableException(FORMAT_DECORATOR_DUPLICATED.format('payable', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Payable
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    set_score_flag_on(func, ScoreFlag.PAYABLE)
 
     @wraps(func)
     def __wrapper(calling_obj: Any, *args, **kwargs):
@@ -342,13 +343,20 @@ class IconScoreBaseMeta(ABCMeta):
         elements = create_score_elements(cls)
         setattr(cls, CONST_CLASS_ELEMENTS, elements)
 
-        external_funcs = {func.__name__: signature(func) for func in custom_funcs
-                          if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External}
-        payable_funcs = [func for func in custom_funcs
-                         if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable]
+        external_funcs = {
+            func.__name__: signature(func) for func in custom_funcs
+            if is_any_score_flag_on(func, ScoreFlag.EXTERNAL)
+        }
 
-        readonly_payables = [func for func in payable_funcs
-                             if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
+        payable_funcs = [
+            func for func in custom_funcs
+            if is_any_score_flag_on(func, ScoreFlag.PAYABLE)
+        ]
+
+        readonly_payables = [
+            func for func in payable_funcs
+            if is_any_score_flag_on(func, ScoreFlag.READONLY)
+        ]
 
         if bool(readonly_payables):
             raise IllegalFormatException(f"Payable method cannot be readonly")
@@ -481,7 +489,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             return False
 
         func = getattr(self, func_name)
-        return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
+        return is_any_score_flag_on(func, ScoreFlag.READONLY)
 
     # noinspection PyUnusedLocal
     @staticmethod
