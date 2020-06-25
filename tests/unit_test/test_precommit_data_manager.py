@@ -12,7 +12,7 @@ from iconservice.iiss.reward_calc.msg_data import TxData, TxType, PRepRegisterTx
 from iconservice.precommit_data_manager import PrecommitData, PrecommitDataWriter
 from iconservice.utils import bytes_to_hex
 from tests import create_hash_256, create_timestamp, create_block_hash, create_address
-from tests.unittest.iiss.test_reward_calc_data_storage import DUMMY_BLOCK_HEIGHT, CONFIG_MAIN_PREP_COUNT, \
+from tests.unit_test.iiss.test_reward_calc_data_storage import DUMMY_BLOCK_HEIGHT, CONFIG_MAIN_PREP_COUNT, \
     CONFIG_SUB_PREP_COUNT
 
 PRECOMMIT_LOG_PATH = os.path.join(os.getcwd(), PrecommitDataWriter.DIR_NAME)

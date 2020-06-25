@@ -21,8 +21,8 @@ from typing_extensions import TypedDict
 
 from iconservice.base.address import Address
 from iconservice.iconscore.typing.definition import (
-    get_inputs,
-    split_type_hint,
+    _get_inputs,
+    _split_type_hint,
     _get_eventlog
 )
 
@@ -65,7 +65,7 @@ def test_get_inputs_with_list_of_struct():
         pass
 
     sig = signature(func)
-    inputs = get_inputs(sig.parameters)
+    inputs = _get_inputs(sig.parameters)
     assert inputs == expected
 
 
@@ -103,7 +103,7 @@ def test_get_inputs_with_list_of_struct_nesting_struct():
         pass
 
     sig = signature(func)
-    inputs = get_inputs(sig.parameters)
+    inputs = _get_inputs(sig.parameters)
     assert inputs == expected
 
 
@@ -121,7 +121,7 @@ def test_get_inputs_with_list_of_struct_nesting_struct():
     ]
 )
 def test_split_type_hint(type_hint, expected):
-    types: List[type] = split_type_hint(type_hint)
+    types: List[type] = _split_type_hint(type_hint)
     assert types == expected
 
 
