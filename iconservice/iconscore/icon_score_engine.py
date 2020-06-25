@@ -20,7 +20,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
-    ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
+    ATTR_SCORE_VALIDATE_EXTERNAL_METHOD
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
@@ -123,7 +123,7 @@ class IconScoreEngine(object):
                                              kw_params: dict) -> dict:
         tmp_params = deepcopy(kw_params)
 
-        validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
+        validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATE_EXTERNAL_METHOD)
         validate_external_method(func_name)
 
         remove_invalid_params = False

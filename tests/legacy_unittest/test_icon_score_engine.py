@@ -24,7 +24,7 @@ from iconservice import *
 from iconservice.base.address import AddressPrefix, SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.exception import ScoreNotFoundException, InvalidParamsException
 from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
-    ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
+    ATTR_SCORE_VALIDATE_EXTERNAL_METHOD
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
@@ -199,12 +199,12 @@ class TestIconScoreEngine(unittest.TestCase):
         context = Mock(spec=IconScoreContext)
         score_object = Mock(spec=IconScoreBase)
 
-        setattr(score_object, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD, Mock())
+        setattr(score_object, ATTR_SCORE_VALIDATE_EXTERNAL_METHOD, Mock())
         setattr(score_object, 'test_method', test_method)
         converted_params = \
             IconScoreEngine._convert_score_params_by_annotations(context, score_object, 'test_method', primitive_params)
 
-        validate_external_method = getattr(score_object, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
+        validate_external_method = getattr(score_object, ATTR_SCORE_VALIDATE_EXTERNAL_METHOD)
         validate_external_method.assert_called()
         # primitive_params must not be changed.
         self.assertEqual(type(primitive_params["address"]), str)
@@ -219,7 +219,7 @@ class TestIconScoreEngine(unittest.TestCase):
                           context, score_object, 'test_method', not_matching_type_params)
 
         # not enough number of params inputted,
-        validate_external_method = getattr(score_object, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
+        validate_external_method = getattr(score_object, ATTR_SCORE_VALIDATE_EXTERNAL_METHOD)
         validate_external_method.reset_mock()
         insufficient_params = {"address": str(create_address(AddressPrefix.EOA))}
 

@@ -42,7 +42,7 @@ STR_ON_UPDATE = 'on_update'
 
 ATTR_SCORE_GET_API = "_IconScoreBase__get_api"
 ATTR_SCORE_CALL = "_IconScoreBase__call"
-ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_method"
+ATTR_SCORE_VALIDATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_method"
 
 
 class ScoreFlag(Flag):
