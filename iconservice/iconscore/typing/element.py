@@ -13,7 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter
+from inspect import (
+    isfunction,
+    getmembers,
+    signature,
+    Signature,
+    Parameter,
+)
+from typing import Dict, Union
 
 from .type_hint import normalize_type_hint
 from ..icon_score_constant import (
@@ -58,9 +65,21 @@ def normalize_parameter(param: Parameter) -> Parameter:
     return param.replace(annotation=type_hint)
 
 
+def verify_score_flags(func: callable):
+    """Check if score flag combination is valid
+
+    If the combination is not valid, raise an exception
+    """
+    flags = getattr(func, CONST_BIT_FLAG, 0)
+    counterpart = ConstBitFlag.ReadOnly | ConstBitFlag.Payable
+
+    if (flags & counterpart) == counterpart:
+        raise IllegalFormatException(f"Payable method cannot be readonly")
+
+
 class ScoreElement(object):
     def __init__(self, element: callable):
-        self._verify(element)
+        verify_score_flags(element)
         self._element = element
         self._signature: Signature = normalize_signature(signature(element))
 
@@ -79,19 +98,6 @@ class ScoreElement(object):
     @property
     def signature(self) -> Signature:
         return self._signature
-
-    @classmethod
-    def _verify(cls, element: callable):
-        """Check whether the flags of the element is valid
-
-        :param element:
-        :return:
-        """
-        flags = getattr(element, CONST_BIT_FLAG, 0)
-        counterpart = ConstBitFlag.ReadOnly | ConstBitFlag.Payable
-
-        if (flags & counterpart) == counterpart:
-            raise IllegalFormatException(f"Payable method cannot be readonly")
 
 
 class Function(ScoreElement):
@@ -122,3 +128,30 @@ class EventLog(ScoreElement):
     @property
     def indexed_args_count(self) -> int:
         return getattr(self.element, CONST_INDEXED_ARGS_COUNT, 0)
+
+
+def create_score_elements(cls) -> Dict:
+    elements = {}
+    flags = (
+            ConstBitFlag.ReadOnly |
+            ConstBitFlag.External |
+            ConstBitFlag.Payable |
+            ConstBitFlag.EventLog
+    )
+
+    for name, func in getmembers(cls, predicate=isfunction):
+        if name.startswith("__"):
+            continue
+        if getattr(func, CONST_BIT_FLAG, 0) & flags:
+            elements[name] = create_score_element(func)
+
+    return elements
+
+
+def create_score_element(element: callable) -> Union[Function, EventLog]:
+    flags = getattr(element, CONST_BIT_FLAG, 0)
+
+    if flags & ConstBitFlag.EventLog:
+        return EventLog(element)
+    else:
+        return Function(element)

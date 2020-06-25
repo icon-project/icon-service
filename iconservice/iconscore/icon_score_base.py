@@ -18,7 +18,7 @@ import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from functools import partial, wraps
 from inspect import isfunction, getmembers, signature, Parameter
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Union, Dict
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple
 
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
@@ -43,7 +43,7 @@ from .icon_score_step import StepType
 from .icx import Icx
 from .internal_call import InternalCall
 from .typing.definition import get_score_api
-from .typing.element import Function, EventLog
+from .typing.element import create_score_elements
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
@@ -322,33 +322,6 @@ class IconScoreObject(ABC):
 
     def on_update(self, **kwargs) -> None:
         pass
-
-
-def create_score_elements(cls) -> Dict:
-    elements = {}
-    flags = (
-            ConstBitFlag.ReadOnly |
-            ConstBitFlag.External |
-            ConstBitFlag.Payable |
-            ConstBitFlag.EventLog
-    )
-
-    for name, func in getmembers(cls, predicate=isfunction):
-        if name.startswith("__"):
-            continue
-        if getattr(func, CONST_BIT_FLAG, 0) & flags:
-            elements[name] = create_score_element(func)
-
-    return elements
-
-
-def create_score_element(element: callable) -> Union[Function, EventLog]:
-    flags = getattr(element, CONST_BIT_FLAG, 0)
-
-    if flags & ConstBitFlag.EventLog:
-        return EventLog(element)
-    else:
-        return Function(element)
 
 
 class IconScoreBaseMeta(ABCMeta):

@@ -48,9 +48,14 @@ ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_metho
 @unique
 class ConstBitFlag(IntEnum):
     NonFlag = 0
+
+    # Used for external function
     ReadOnly = 1
     External = 2
     Payable = 4
-    EventLog = 8
-    Interface = 16
 
+    # Used for eventlog declaration in score
+    EventLog = 8
+
+    # Used for interface declaration in score
+    Interface = 16
