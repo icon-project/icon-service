@@ -52,10 +52,12 @@ class ScoreFlag(Flag):
     READONLY = 0x01
     EXTERNAL = 0x02
     PAYABLE = 0x04
-    FUNC = 0xFF
+    FUNC = 0xff
 
     # Used for eventlog declaration in score
     EVENTLOG = 0x100
 
     # Used for interface declaration in score
     INTERFACE = 0x10000
+
+    ALL = 0xffffff

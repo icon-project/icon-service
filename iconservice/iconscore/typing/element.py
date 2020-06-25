@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import MutableMapping
 from inspect import (
     isfunction,
     getmembers,
@@ -20,7 +21,7 @@ from inspect import (
     Signature,
     Parameter,
 )
-from typing import Dict, Union
+from typing import Union, Mapping
 
 from .type_hint import normalize_type_hint
 from ..icon_score_constant import (
@@ -29,7 +30,7 @@ from ..icon_score_constant import (
     STR_FALLBACK,
     CONST_INDEXED_ARGS_COUNT,
 )
-from ...base.exception import IllegalFormatException
+from ...base.exception import IllegalFormatException, InternalServiceErrorException
 
 
 def normalize_signature(sig: Signature) -> Signature:
@@ -65,21 +66,33 @@ def normalize_parameter(param: Parameter) -> Parameter:
     return param.replace(annotation=type_hint)
 
 
-def verify_score_flags(func: callable):
+def verify_score_flag(func: callable):
     """Check if score flag combination is valid
 
     If the combination is not valid, raise an exception
     """
-    flags = getattr(func, CONST_SCORE_FLAG, 0)
-    counterpart = ScoreFlag.READONLY | ScoreFlag.PAYABLE
+    flag: ScoreFlag = get_score_flag(func)
 
-    if (flags & counterpart) == counterpart:
-        raise IllegalFormatException(f"Payable method cannot be readonly")
+    if flag & ScoreFlag.READONLY:
+        # READONLY cannot be combined with PAYABLE
+        if flag & ScoreFlag.PAYABLE:
+            raise IllegalFormatException(f"Payable method cannot be readonly")
+        # READONLY cannot be set alone without EXTERNAL
+        elif not (flag & ScoreFlag.EXTERNAL):
+            raise IllegalFormatException(f"Invalid score flag: {flag}")
+
+    # EVENTLOG cannot be combined with other flags
+    if flag & ScoreFlag.EVENTLOG and flag != ScoreFlag.EVENTLOG:
+        raise IllegalFormatException(f"Invalid score flag: {flag}")
+
+    # INTERFACE cannot be combined with other flags
+    if flag & ScoreFlag.INTERFACE and flag != ScoreFlag.INTERFACE:
+        raise IllegalFormatException(f"Invalid score flag: {flag}")
 
 
 class ScoreElement(object):
     def __init__(self, element: callable):
-        verify_score_flags(element)
+        verify_score_flag(element)
         self._element = element
         self._signature: Signature = normalize_signature(signature(element))
 
@@ -130,8 +143,63 @@ class EventLog(ScoreElement):
         return getattr(self.element, CONST_INDEXED_ARGS_COUNT, 0)
 
 
-def create_score_elements(cls) -> Dict:
-    elements = {}
+class ScoreElementContainer(MutableMapping):
+    def __init__(self):
+        self._elements = {}
+        self._externals = 0
+        self._eventlogs = 0
+        self._readonly = False
+
+    @property
+    def externals(self) -> int:
+        return self._externals
+
+    @property
+    def eventlogs(self) -> int:
+        return self._eventlogs
+
+    def __getitem__(self, k: str) -> ScoreElement:
+        return self._elements[k]
+
+    def __setitem__(self, k: str, v: ScoreElement) -> None:
+        self._check_writable()
+        self._elements[k] = v
+
+        if isinstance(v, Function):
+            self._externals += 1
+        elif isinstance(v, EventLog):
+            self._eventlogs += 1
+        else:
+            raise InternalServiceErrorException(f"Invalid element: {v}")
+
+    def __iter__(self):
+        for k in self._elements:
+            yield k
+
+    def __len__(self) -> int:
+        return len(self._elements)
+
+    def __delitem__(self, k: str) -> None:
+        self._check_writable()
+
+        element = self._elements[k]
+        del self._elements[k]
+
+        if is_any_score_flag_on(element, ScoreFlag.EVENTLOG):
+            self._eventlogs -= 1
+        else:
+            self._externals -= 1
+
+    def _check_writable(self):
+        if self._readonly:
+            raise InternalServiceErrorException("ScoreElementContainer not writable")
+
+    def freeze(self):
+        self._readonly = True
+
+
+def create_score_elements(cls) -> Mapping:
+    elements = ScoreElementContainer()
     flags = (
             ScoreFlag.READONLY |
             ScoreFlag.EXTERNAL |
@@ -147,11 +215,12 @@ def create_score_elements(cls) -> Dict:
         if is_any_score_flag_on(func, flags):
             elements[name] = create_score_element(func)
 
+    elements.freeze()
     return elements
 
 
 def create_score_element(element: callable) -> Union[Function, EventLog]:
-    flags = getattr(element, CONST_SCORE_FLAG, 0)
+    flags = get_score_flag(element)
 
     if flags & ScoreFlag.EVENTLOG:
         return EventLog(element)
@@ -175,7 +244,7 @@ def set_score_flag_on(obj: callable, flag: ScoreFlag) -> ScoreFlag:
 
 
 def is_all_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
-    return get_score_flag(obj) & flag == flag
+    return (get_score_flag(obj) & flag) == flag
 
 
 def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:

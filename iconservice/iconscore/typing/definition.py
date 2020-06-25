@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = "get_inputs"
+__all__ = "get_score_api"
 
 from inspect import Signature, Parameter
 from typing import List, Dict, Mapping, Iterable, Any
@@ -28,6 +28,9 @@ from ...base.exception import (
     InternalServiceErrorException,
 )
 
+"""Utils to support icx_getScoreApi method
+"""
+
 
 def get_score_api(elements: Iterable[ScoreElement]) -> List:
     """Returns score api used in icx_getScoreApi JSON-RPC method
@@ -41,7 +44,7 @@ def get_score_api(elements: Iterable[ScoreElement]) -> List:
     for element in elements:
         if isinstance(element, Function):
             func: Function = element
-            item = get_function(func.name, func.signature, func.is_readonly, func.is_payable)
+            item = _get_function(func.name, func.signature, func.is_readonly, func.is_payable)
         elif isinstance(element, EventLog):
             eventlog: EventLog = element
             item = _get_eventlog(eventlog.name, eventlog.signature, eventlog.indexed_args_count)
@@ -53,20 +56,7 @@ def get_score_api(elements: Iterable[ScoreElement]) -> List:
     return api
 
 
-# def get_functions(funcs: List[callable]) -> List:
-#     ret = []
-#
-#     for func in funcs:
-#         const_bit_flag = getattr(func, CONST_BIT_FLAG, 0)
-#         is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
-#         is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
-#
-#         ret.append(get_function(func, is_readonly, is_payable))
-#
-#     return ret
-
-
-def get_function(func_name: str, sig: Signature, is_readonly: bool, is_payable: bool) -> Dict:
+def _get_function(func_name: str, sig: Signature, is_readonly: bool, is_payable: bool) -> Dict:
     if _is_fallback(func_name, sig, is_payable):
         return _get_fallback_function()
     else:
@@ -77,8 +67,8 @@ def _get_normal_function(func_name: str, sig: Signature, is_readonly: bool, is_p
     ret = {
         "name": func_name,
         "type": "function",
-        "inputs": get_inputs(sig.parameters),
-        "outputs": get_outputs(sig.return_annotation)
+        "inputs": _get_inputs(sig.parameters),
+        "outputs": _get_outputs(sig.return_annotation)
     }
 
     if is_readonly:
@@ -111,7 +101,7 @@ def _get_fallback_function() -> Dict:
     }
 
 
-def get_inputs(params: Mapping[str, Parameter]) -> list:
+def _get_inputs(params: Mapping[str, Parameter]) -> list:
     inputs = []
 
     for name, param in params.items():
@@ -132,11 +122,12 @@ def _get_input(name: str, type_hint: type, default: Any) -> Dict:
     # Add default parameter value to score api
     if default is not Parameter.empty:
         if default is not None and not isinstance(default, type_hint):
-            raise InvalidParamsException(f"Default params type mismatch. value: {default} type: {type_hint}")
+            raise InvalidParamsException(
+                f"Default params type mismatch. value: {default} type: {type_hint}")
 
         inp["default"] = default
 
-    type_hints: List[type] = split_type_hint(type_hint)
+    type_hints: List[type] = _split_type_hint(type_hint)
     inp["type"] = _type_hints_to_name(type_hints)
 
     last_type_hint: type = type_hints[-1]
@@ -147,7 +138,7 @@ def _get_input(name: str, type_hint: type, default: Any) -> Dict:
     return inp
 
 
-def split_type_hint(type_hint: type) -> List[type]:
+def _split_type_hint(type_hint: type) -> List[type]:
     origin: type = get_origin(type_hint)
     ret = [origin]
 
@@ -156,7 +147,7 @@ def split_type_hint(type_hint: type) -> List[type]:
         if len(args) != 1:
             raise IllegalFormatException(f"Invalid type: {type_hint}")
 
-        ret += split_type_hint(args[0])
+        ret += _split_type_hint(args[0])
 
     return ret
 
@@ -197,7 +188,7 @@ def _get_fields(struct: type) -> List[dict]:
     for name, type_hint in annotations.items():
         field = {"name": name}
 
-        type_hints: List[type] = split_type_hint(type_hint)
+        type_hints: List[type] = _split_type_hint(type_hint)
         field["type"] = _type_hints_to_name(type_hints)
 
         last_type_hint: type = type_hints[-1]
@@ -209,7 +200,7 @@ def _get_fields(struct: type) -> List[dict]:
     return fields
 
 
-def get_outputs(type_hint: type) -> List:
+def _get_outputs(type_hint: type) -> List:
     origin = get_origin(type_hint)
 
     if is_base_type(origin):

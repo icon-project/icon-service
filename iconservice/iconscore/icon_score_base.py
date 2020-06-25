@@ -18,7 +18,7 @@ import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from functools import partial, wraps
 from inspect import isfunction, getmembers, signature, Parameter
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping, Union
 
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
@@ -42,11 +42,14 @@ from .icon_score_step import StepType
 from .icx import Icx
 from .internal_call import InternalCall
 from .typing.definition import get_score_api
-from .typing.element import create_score_elements
 from .typing.element import (
+    ScoreElementContainer,
+    ScoreElement,
+    Function,
     set_score_flag_on,
     is_any_score_flag_on,
 )
+from .typing.element import create_score_elements
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
@@ -340,7 +343,7 @@ class IconScoreBaseMeta(ABCMeta):
                         if not key.startswith('__')]
 
         # TODO: Normalize type hints of score parameters by goldworm
-        elements = create_score_elements(cls)
+        elements: Mapping[str, ScoreElement] = create_score_elements(cls)
         setattr(cls, CONST_CLASS_ELEMENTS, elements)
 
         external_funcs = {
@@ -410,7 +413,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__owner = IconScoreContextUtil.get_owner(self._context, self.__address)
         self.__icx = None
 
-        if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
+        elements: ScoreElementContainer = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        if elements.externals == 0:
             raise InvalidExternalException('There is no external method in the SCORE')
 
         self.__db.set_observer(self.__create_db_observer())
@@ -440,7 +444,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not found: {type(self).__name__}.{func_name}")
 
     @classmethod
-    def __get_attr_dict(cls, attr: str) -> dict:
+    def __get_attr_dict(cls, attr: str) -> Union[dict, ScoreElementContainer]:
         return getattr(cls, attr, {})
 
     def __create_db_observer(self) -> 'DatabaseObserver':
@@ -479,19 +483,20 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not payable: {type(self).__name__}.{func_name}")
 
     def __is_external_method(self, func_name) -> bool:
-        return func_name in self.__get_attr_dict(CONST_CLASS_EXTERNALS)
+        elements = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        func: Function = elements.get(func_name)
+        return isinstance(func, Function) and func.is_external
 
     def __is_payable_method(self, func_name) -> bool:
-        return func_name in self.__get_attr_dict(CONST_CLASS_PAYABLES)
+        elements = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        func: Function = elements.get(func_name)
+        return isinstance(func, Function) and func.is_payable
 
     def __is_func_readonly(self, func_name: str) -> bool:
-        if not self.__is_external_method(func_name):
-            return False
+        elements = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        func: Function = elements.get(func_name)
+        return isinstance(func, Function) and func.is_readonly
 
-        func = getattr(self, func_name)
-        return is_any_score_flag_on(func, ScoreFlag.READONLY)
-
-    # noinspection PyUnusedLocal
     @staticmethod
     def __on_db_get(context: 'IconScoreContext',
                     key: bytes,
