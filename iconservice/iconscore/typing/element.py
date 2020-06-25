@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from collections.abc import MutableMapping
 from inspect import (
     isfunction,
@@ -30,6 +31,7 @@ from ..icon_score_constant import (
     STR_FALLBACK,
     CONST_INDEXED_ARGS_COUNT,
 )
+from ... import utils
 from ...base.exception import IllegalFormatException, InternalServiceErrorException
 
 
@@ -114,6 +116,9 @@ class ScoreElement(object):
 
 
 class Function(ScoreElement):
+    """Represents a exposed function of SCORE
+
+    """
     def __init__(self, func: callable):
         super().__init__(func)
 
@@ -135,6 +140,9 @@ class Function(ScoreElement):
 
 
 class EventLog(ScoreElement):
+    """Represents an eventlog declared in a SCORE
+    """
+
     def __init__(self, eventlog: callable):
         super().__init__(eventlog)
 
@@ -144,8 +152,11 @@ class EventLog(ScoreElement):
 
 
 class ScoreElementContainer(MutableMapping):
+    """Container which has score elements like function and eventlog
+    """
+
     def __init__(self):
-        self._elements = {}
+        self._elements = OrderedDict()
         self._externals = 0
         self._eventlogs = 0
         self._readonly = False
@@ -244,8 +255,8 @@ def set_score_flag_on(obj: callable, flag: ScoreFlag) -> ScoreFlag:
 
 
 def is_all_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
-    return (get_score_flag(obj) & flag) == flag
+    return utils.is_all_flag_on(get_score_flag(obj), flag)
 
 
 def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
-    return bool(get_score_flag(obj) & flag)
+    return utils.is_any_flag_on(get_score_flag(obj), flag)

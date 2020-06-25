@@ -23,9 +23,6 @@ T = TypeVar('T')
 # TODO add checking function for list, dict type
 BaseType = TypeVar("BaseType", bool, int, str, bytes, list, dict, Address)
 
-CONST_CLASS_EXTERNALS = '__externals'
-CONST_CLASS_PAYABLES = '__payables'
-CONST_CLASS_INDEXES = '__indexes'
 CONST_CLASS_API = '__api'
 CONST_CLASS_ELEMENTS = '__elements'
 
@@ -52,7 +49,7 @@ class ScoreFlag(Flag):
     READONLY = 0x01
     EXTERNAL = 0x02
     PAYABLE = 0x04
-    FUNC = 0xff
+    FUNC = 0xFF
 
     # Used for eventlog declaration in score
     EVENTLOG = 0x100
@@ -60,4 +57,4 @@ class ScoreFlag(Flag):
     # Used for interface declaration in score
     INTERFACE = 0x10000
 
-    ALL = 0xffffff
+    ALL = 0xFFFFFF

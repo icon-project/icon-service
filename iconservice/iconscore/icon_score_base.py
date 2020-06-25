@@ -17,8 +17,8 @@
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from functools import partial, wraps
-from inspect import isfunction, getmembers, signature, Parameter
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping, Union
+from inspect import isfunction, signature, Parameter
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
@@ -29,8 +29,6 @@ from .icon_score_constant import (
     FORMAT_DECORATOR_DUPLICATED,
     FORMAT_IS_NOT_DERIVED_OF_OBJECT,
     STR_FALLBACK,
-    CONST_CLASS_EXTERNALS,
-    CONST_CLASS_PAYABLES,
     CONST_CLASS_API,
     CONST_CLASS_ELEMENTS,
     BaseType,
@@ -315,7 +313,6 @@ def payable(func):
     return __wrapper
 
 
-
 class IconScoreObject(ABC):
 
     def __init__(self, *args, **kwargs) -> None:
@@ -339,36 +336,36 @@ class IconScoreBaseMeta(ABCMeta):
         if not isinstance(namespace, dict):
             raise InvalidParamsException('namespace is not dict!')
 
-        custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
-                        if not key.startswith('__')]
-
         # TODO: Normalize type hints of score parameters by goldworm
         elements: Mapping[str, ScoreElement] = create_score_elements(cls)
         setattr(cls, CONST_CLASS_ELEMENTS, elements)
 
-        external_funcs = {
-            func.__name__: signature(func) for func in custom_funcs
-            if is_any_score_flag_on(func, ScoreFlag.EXTERNAL)
-        }
-
-        payable_funcs = [
-            func for func in custom_funcs
-            if is_any_score_flag_on(func, ScoreFlag.PAYABLE)
-        ]
-
-        readonly_payables = [
-            func for func in payable_funcs
-            if is_any_score_flag_on(func, ScoreFlag.READONLY)
-        ]
-
-        if bool(readonly_payables):
-            raise IllegalFormatException(f"Payable method cannot be readonly")
-
-        if external_funcs:
-            setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
-        if payable_funcs:
-            payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
-            setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
+        # custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
+        #                 if not key.startswith('__')]
+        #
+        # external_funcs = {
+        #     func.__name__: signature(func) for func in custom_funcs
+        #     if is_any_score_flag_on(func, ScoreFlag.EXTERNAL)
+        # }
+        #
+        # payable_funcs = [
+        #     func for func in custom_funcs
+        #     if is_any_score_flag_on(func, ScoreFlag.PAYABLE)
+        # ]
+        #
+        # readonly_payables = [
+        #     func for func in payable_funcs
+        #     if is_any_score_flag_on(func, ScoreFlag.READONLY)
+        # ]
+        #
+        # if bool(readonly_payables):
+        #     raise IllegalFormatException(f"Payable method cannot be readonly")
+        #
+        # if external_funcs:
+        #     setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
+        # if payable_funcs:
+        #     payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
+        #     setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
 
         # TODO: Replace it with a new list supporting struct and list
         # api_list = ScoreApiGenerator.generate(custom_funcs)
@@ -413,7 +410,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__owner = IconScoreContextUtil.get_owner(self._context, self.__address)
         self.__icx = None
 
-        elements: ScoreElementContainer = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        elements: ScoreElementContainer = self.__get_score_elements()
         if elements.externals == 0:
             raise InvalidExternalException('There is no external method in the SCORE')
 
@@ -444,8 +441,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not found: {type(self).__name__}.{func_name}")
 
     @classmethod
-    def __get_attr_dict(cls, attr: str) -> Union[dict, ScoreElementContainer]:
-        return getattr(cls, attr, {})
+    def __get_score_elements(cls) -> ScoreElementContainer:
+        return getattr(cls, CONST_CLASS_ELEMENTS)
 
     def __create_db_observer(self) -> 'DatabaseObserver':
         return DatabaseObserver(
@@ -483,20 +480,21 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not payable: {type(self).__name__}.{func_name}")
 
     def __is_external_method(self, func_name) -> bool:
-        elements = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        elements = self.__get_score_elements()
         func: Function = elements.get(func_name)
         return isinstance(func, Function) and func.is_external
 
     def __is_payable_method(self, func_name) -> bool:
-        elements = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        elements = self.__get_score_elements()
         func: Function = elements.get(func_name)
         return isinstance(func, Function) and func.is_payable
 
     def __is_func_readonly(self, func_name: str) -> bool:
-        elements = self.__get_attr_dict(CONST_CLASS_ELEMENTS)
+        elements = self.__get_score_elements()
         func: Function = elements.get(func_name)
         return isinstance(func, Function) and func.is_readonly
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def __on_db_get(context: 'IconScoreContext',
                     key: bytes,
