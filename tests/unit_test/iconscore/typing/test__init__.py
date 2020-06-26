@@ -49,6 +49,7 @@ def test_get_origin(type_hint, expected):
         (int, ()),
         (str, ()),
         (Address, ()),
+        (Person, ()),
         (List[int], (int,)),
         (List[List[str]], (List[str],)),
         (Dict[str, int], (str, int)),
@@ -60,3 +61,17 @@ def test_get_origin(type_hint, expected):
 def test_get_args(type_hint, expected):
     args = get_args(type_hint)
     assert args == expected
+
+
+def test_get_args_with_struct():
+    expected = {
+        "name": str,
+        "age": int,
+        "single": bool,
+    }
+
+    annotations = Person.__annotations__
+    assert len(annotations) == len(expected)
+
+    for name, type_hint in annotations.items():
+        assert type_hint == expected[name]

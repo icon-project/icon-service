@@ -13,27 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Dict, Union, Type, List, ForwardRef, Any
+from inspect import Signature
+from typing import Optional, Dict, Union, Type, List, Any
 
 from . import (
     BaseObject,
     BaseObjectType,
     is_base_type,
+    is_struct,
     name_to_type,
+    get_origin,
+    get_args,
+    get_annotations,
 )
 from ...base.address import Address
-from ...base.exception import InvalidParamsException
 
 CommonObject = Union[bool, bytes, int, str, 'Address', Dict[str, BaseObject]]
 CommonType = Type[CommonObject]
-
-
-def str_to_int(value: str) -> int:
-    if isinstance(value, int):
-        return value
-
-    base = 16 if is_hex(value) else 10
-    return int(value, base)
 
 
 def base_object_to_str(value: Any) -> str:
@@ -52,24 +48,31 @@ def base_object_to_str(value: Any) -> str:
 
 
 def object_to_str(value: Any) -> Union[List, Dict, CommonObject]:
-    try:
+    if is_base_type(type(value)):
         return base_object_to_str(value)
-    except TypeError:
-        pass
 
     if isinstance(value, list):
-        return object_to_str_in_list(value)
-    elif isinstance(value, dict):
-        return object_to_str_in_dict(value)
+        return [object_to_str(i) for i in value]
+
+    if isinstance(value, dict):
+        return {k: object_to_str(value[k]) for k in value}
 
     raise TypeError(f"Unsupported type: {type(value)}")
 
 
 def str_to_base_object_by_type_name(type_name: str, value: str) -> BaseObject:
-    return str_to_base_object(name_to_type(type_name), value)
+    return str_to_base_object(value, name_to_type(type_name))
 
 
-def str_to_base_object(type_hint: BaseObjectType, value: str) -> BaseObject:
+def str_to_int(value: str) -> int:
+    if isinstance(value, int):
+        return value
+
+    base = 16 if is_hex(value) else 10
+    return int(value, base)
+
+
+def str_to_base_object(value: str, type_hint: type) -> BaseObject:
     if type_hint is bool:
         return bool(str_to_int(value))
     if type_hint is bytes:
@@ -82,13 +85,6 @@ def str_to_base_object(type_hint: BaseObjectType, value: str) -> BaseObject:
         return Address.from_string(value)
 
     raise TypeError(f"Unknown type: {type_hint}")
-
-
-def str_to_object(type_hint, value):
-    if isinstance(value, dict):
-        return str_to_object_in_typed_dict(type_hint, value)
-    else:
-        return str_to_base_object(type_hint, value)
 
 
 def bytes_to_hex(value: bytes, prefix: str = "0x") -> str:
@@ -109,61 +105,28 @@ def is_hex(value: str) -> bool:
     return value.startswith("0x") or value.startswith("-0x")
 
 
-def str_to_object_in_typed_dict(type_hints, value: Dict[str, str]) -> Dict[str, BaseObject]:
-    annotations = type_hints.__annotations__
-    return {k: str_to_base_object(annotations[k], value[k]) for k in annotations}
+def convert_score_parameters(params: Dict[str, Any], sig: Signature):
+    return {
+        name: str_to_object(param, sig.parameters[name].annotation)
+        for name, param in params.items()
+    }
 
 
-def object_to_str_in_dict(value: Dict[str, BaseObject]) -> Dict[str, str]:
-    return {k: object_to_str(value[k]) for k in value}
+def str_to_object(value: Union[str, list, dict], type_hint: type) -> Any:
+    origin = get_origin(type_hint)
 
+    if is_base_type(origin):
+        return str_to_base_object(value, origin)
 
-def str_to_object_in_list(type_hint, value: List[Any]) -> List[CommonObject]:
-    assert len(type_hint.__args__) == 1
+    if is_struct(origin):
+        annotations = get_annotations(origin, None)
+        return {k: str_to_object(v, annotations[k]) for k, v in value.items()}
 
-    args_type_hint = type_hint.__args__[0]
-    return [str_to_object(args_type_hint, i) for i in value]
+    args = get_args(type_hint)
 
+    if origin is list:
+        return [str_to_object(i, args[0]) for i in value]
 
-def object_to_str_in_list(value: List[CommonObject]) -> List[Union[str, Dict[str, str]]]:
-    """Return a copied list from a given list
-
-    All items in the origin list are copied to a copied list and converted in string format
-    There is no change in a given list
-    """
-    return [object_to_str(i) for i in value]
-
-
-def type_hint_to_type_template(type_hint) -> Any:
-    """Convert type_hint to type_template consisting of base_object_types, list and dict
-
-    :param type_hint:
-    :return:
-    """
-    if isinstance(type_hint, ForwardRef):
-        type_hint = name_to_type(type_hint.__forward_arg__)
-    elif isinstance(type_hint, str):
-        type_hint = name_to_type(type_hint)
-
-    if is_base_type(type_hint):
-        return type_hint
-
-    if type_hint is List:
-        raise InvalidParamsException(f"No arguments: {type_hint}")
-
-    # If type_hint is a subclass of TypedDict
-    attr = "__annotations__"
-    if hasattr(type_hint, attr):
-        # annotations is a dictionary containing field_name(str) as a key and type as a value
-        annotations = getattr(type_hint, attr)
-        return {k: type_hint_to_type_template(v) for k, v in annotations.items()}
-
-    try:
-        origin = getattr(type_hint, "__origin__")
-        if origin is list:
-            args = getattr(type_hint, "__args__")
-            return [type_hint_to_type_template(args[0])]
-    except:
-        pass
-
-    raise InvalidParamsException(f"Unsupported type: {type_hint}")
+    if origin is dict:
+        type_hint = args[1]
+        return {k: str_to_object(v, type_hint) for k, v in value.items()}

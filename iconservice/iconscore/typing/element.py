@@ -22,9 +22,15 @@ from inspect import (
     Signature,
     Parameter,
 )
-from typing import Union, Mapping
+from typing import Union, Mapping, List, Dict
 
-from .type_hint import normalize_type_hint
+from . import (
+    is_base_type,
+    is_struct,
+    get_origin,
+    get_args,
+    name_to_type,
+)
 from ..icon_score_constant import (
     CONST_SCORE_FLAG,
     ScoreFlag,
@@ -68,13 +74,33 @@ def normalize_parameter(param: Parameter) -> Parameter:
     return param.replace(annotation=type_hint)
 
 
-def verify_score_flag(func: callable):
+def normalize_type_hint(type_hint) -> type:
+    # If type hint is str, convert it to type hint
+    if isinstance(type_hint, str):
+        type_hint = name_to_type(type_hint)
+
+    origin = get_origin(type_hint)
+
+    if is_base_type(origin) or is_struct(origin):
+        return type_hint
+
+    args = get_args(type_hint)
+    size = len(args)
+
+    if origin is list and size == 1:
+        return List[normalize_type_hint(args[0])]
+
+    if origin is dict and size == 2 and args[0] is str:
+        return Dict[str, normalize_type_hint(args[1])]
+
+    raise IllegalFormatException(f"Unsupported type hint: {type_hint}")
+
+
+def verify_score_flag(flag: ScoreFlag):
     """Check if score flag combination is valid
 
     If the combination is not valid, raise an exception
     """
-    flag: ScoreFlag = get_score_flag(func)
-
     if flag & ScoreFlag.READONLY:
         # READONLY cannot be combined with PAYABLE
         if flag & ScoreFlag.PAYABLE:
@@ -94,7 +120,6 @@ def verify_score_flag(func: callable):
 
 class ScoreElement(object):
     def __init__(self, element: callable):
-        verify_score_flag(element)
         self._element = element
         self._signature: Signature = normalize_signature(signature(element))
 
@@ -223,7 +248,10 @@ def create_score_elements(cls) -> Mapping:
             continue
 
         # Collect the only functions with one or more of the above 4 score flags
-        if is_any_score_flag_on(func, flags):
+        flag = get_score_flag(func)
+
+        if utils.is_any_flag_on(flag, flags):
+            verify_score_flag(flag)
             elements[name] = create_score_element(func)
 
     elements.freeze()

@@ -15,12 +15,14 @@
 
 __all__ = (
     "is_base_type",
+    "name_to_type",
     "get_origin",
     "get_args",
     "is_struct",
+    "get_annotations",
 )
 
-from typing import Tuple, Union, Type
+from typing import Tuple, Union, Type, Dict, Any, Optional
 
 from iconservice.base.address import Address
 
@@ -42,20 +44,16 @@ def name_to_type(type_name: str) -> BaseObjectType:
     return TYPE_NAME_TO_TYPE[type_name]
 
 
-def get_origin(type_hint: type) -> type:
+def get_origin(type_hint: type) -> Optional[type]:
     """
-    Dict[str, int].__origin__ == dict
-    List[str].__origin__ == list
+    Dict[str, int] -> dict
+    List[str] -> list
+    subclass of type -> itself
+    subclass of TypedDict -> itself
 
     :param type_hint:
     :return:
     """
-    # if (
-    #         is_base_type(type_hint)
-    #         or is_struct(type_hint)
-    #         or type_hint in (list, dict)
-    # ):
-    #     return type_hint
     if isinstance(type_hint, type):
         return type_hint
 
@@ -71,3 +69,7 @@ def is_struct(type_hint) -> bool:
         return type_hint.__class__.__name__ == "_TypedDictMeta"
     except:
         return False
+
+
+def get_annotations(obj: Any, default: Any) -> Dict[str, type]:
+    return getattr(obj, "__annotations__", default)
