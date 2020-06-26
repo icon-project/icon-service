@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import shutil
 from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
@@ -229,7 +230,7 @@ class Storage(object):
     @staticmethod
     def _rename_db(old_db_path: str, new_db_path: str):
         if os.path.exists(old_db_path) and not os.path.exists(new_db_path):
-            os.rename(old_db_path, new_db_path)
+            shutil.move(old_db_path, new_db_path)
             Logger.info(tag=IISS_LOG_TAG, msg=f"Rename db: {old_db_path} -> {new_db_path}")
         else:
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
@@ -398,7 +399,7 @@ class IissDBNameRefactor(object):
         dst_path: str = os.path.join(rc_data_path, new_name)
 
         try:
-            os.rename(src_path, dst_path)
+            shutil.move(src_path, dst_path)
             Logger.info(tag=IISS_LOG_TAG, msg=f"Renaming iiss_db_name succeeded: old={old_name} new={new_name}")
         except BaseException as e:
             Logger.error(tag=IISS_LOG_TAG,
