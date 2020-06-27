@@ -236,12 +236,6 @@ class ScoreElementContainer(MutableMapping):
 
 def create_score_elements(cls) -> Mapping:
     elements = ScoreElementContainer()
-    flags = (
-            ScoreFlag.READONLY |
-            ScoreFlag.EXTERNAL |
-            ScoreFlag.PAYABLE |
-            ScoreFlag.EVENTLOG
-    )
 
     for name, func in getmembers(cls, predicate=isfunction):
         if name.startswith("__"):
@@ -250,7 +244,7 @@ def create_score_elements(cls) -> Mapping:
         # Collect the only functions with one or more of the above 4 score flags
         flag = get_score_flag(func)
 
-        if utils.is_any_flag_on(flag, flags):
+        if utils.is_any_flag_on(flag, ScoreFlag.FUNC | ScoreFlag.EVENTLOG):
             verify_score_flag(flag)
             elements[name] = create_score_element(func)
 

@@ -36,11 +36,14 @@ class Person(TypedDict):
         (int, int),
         (str, str),
         (Address, Address),
+        ("Address", Address),
         (list, None),
         (List, None),
         (List[int], List[int]),
         (List[Person], List[Person]),
         (List["Person"], None),
+        (List["Address"], None),
+        (dict, None),
         (Dict, None),
         (Dict[str, int], Dict[str, int]),
         (Dict[str, Person], Dict[str, Person]),
@@ -54,8 +57,6 @@ class Person(TypedDict):
     ]
 )
 def test_normalize_abnormal_type_hint(type_hint, expected):
-    print(type_hint)
-
     try:
         ret = normalize_type_hint(type_hint)
     except IllegalFormatException:
