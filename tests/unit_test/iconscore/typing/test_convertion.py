@@ -18,11 +18,10 @@ import os
 from typing import List, Dict
 
 import pytest
-
 from typing_extensions import TypedDict
 
-from iconservice.base.exception import IllegalFormatException
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.typing.conversion import (
     convert_score_parameters,
     object_to_str,
@@ -78,18 +77,13 @@ def test_convert_score_parameters():
     assert params_in_object == params
 
 
-def test_convert_score_parameters_without_no_type_hint():
-    def func(_a, _b, _c, _d: List, _e: Dict):
-        pass
+def test_convert_score_parameters_with_insufficient_parameters():
+    class TestScore:
+        def func(self, address: Address):
+            pass
 
-    params = {
-        "_a": "0x1234",
-        "_b": "hello",
-        "_c": "0x1",
-        "_d": ["0", "1", "2"],
-        "_e": {"a": "a", "b": "b"},
-    }
+    params = {}
 
-    with pytest.raises(IllegalFormatException):
-        function = Function(func)
+    with pytest.raises(InvalidParamsException):
+        function = Function(TestScore.func)
         convert_score_parameters(params, function.signature)

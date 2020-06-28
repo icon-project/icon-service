@@ -144,6 +144,7 @@ class TestIISSClaim(TestIISSBase):
         }
 
         # query iscore without an address
+        # with pytest.raises(InvalidParamsException):
         with pytest.raises(InvalidParamsException):
             self.icon_service_engine.query("icx_call", params)
 

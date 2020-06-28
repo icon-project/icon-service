@@ -36,6 +36,7 @@ from ..icon_score_constant import (
     ScoreFlag,
     STR_FALLBACK,
     CONST_INDEXED_ARGS_COUNT,
+    CONST_CLASS_ELEMENTS,
 )
 from ... import utils
 from ...base.exception import IllegalFormatException, InternalServiceErrorException
@@ -282,3 +283,8 @@ def is_all_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
 
 def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
     return utils.is_any_flag_on(get_score_flag(obj), flag)
+
+
+def get_score_element(score, func_name: str) -> ScoreElement:
+    elements = getattr(score, CONST_CLASS_ELEMENTS)
+    return elements[func_name]

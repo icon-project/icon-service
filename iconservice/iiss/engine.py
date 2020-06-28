@@ -31,8 +31,6 @@ from ..base.exception import (
     InvalidParamsException, InvalidRequestException,
     OutOfBalanceException, FatalException, InternalServiceErrorException
 )
-from ..base.type_converter import TypeConverter
-from ..base.type_converter_templates import ParamType
 from ..icon_constant import ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
     IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
     RevisionChangedFlag
@@ -461,12 +459,12 @@ class Engine(EngineBase):
         cls._check_delegation_count(context, delegations)
 
         # TODO: Remove type conversion by goldworm
-        temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
+        # temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
         delegated_addresses = set()
 
-        for delegation in temp_delegations:
+        for delegation in delegations:
             address: 'Address' = delegation["address"]
             value: int = delegation["value"]
             assert isinstance(address, Address)

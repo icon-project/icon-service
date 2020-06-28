@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import Signature
+from inspect import Signature, Parameter
 from typing import Optional, Dict, Union, Type, List, Any
+from enum import Flag, auto
 
 from . import (
     BaseObject,
-    BaseObjectType,
     is_base_type,
     is_struct,
     name_to_type,
@@ -27,6 +27,7 @@ from . import (
     get_annotations,
 )
 from ...base.address import Address
+from ...base.exception import InvalidParamsException
 
 CommonObject = Union[bool, bytes, int, str, 'Address', Dict[str, BaseObject]]
 CommonType = Type[CommonObject]
@@ -105,14 +106,47 @@ def is_hex(value: str) -> bool:
     return value.startswith("0x") or value.startswith("-0x")
 
 
-def convert_score_parameters(params: Dict[str, Any], sig: Signature):
-    return {
-        name: str_to_object(param, sig.parameters[name].annotation)
-        for name, param in params.items()
-    }
+class ConvertOption(Flag):
+    NONE = 0
+    IGNORE_UNKNOWN_PARAMS = auto()
+
+
+def convert_score_parameters(
+        params: Dict[str, Any],
+        sig: Signature,
+        options: ConvertOption = ConvertOption.NONE):
+    verify_arguments(params, sig)
+
+    converted_params = {}
+
+    for k, v in params.items():
+        if not isinstance(k, str):
+            raise InvalidParamsException(f"Invalid key type: key={k}")
+
+        try:
+            parameter: Parameter = sig.parameters[k]
+            converted_params[k] = str_to_object(v, parameter.annotation)
+        except KeyError:
+            if not (options & ConvertOption.IGNORE_UNKNOWN_PARAMS):
+                raise InvalidParamsException(f"Unknown param: key={k} value={v}")
+
+    return converted_params
+
+
+def verify_arguments(params: Dict[str, Any], sig: Signature):
+    for k in sig.parameters:
+        if k in ("self", "cls"):
+            continue
+
+        parameter: Parameter = sig.parameters[k]
+        if parameter.default == Parameter.empty and k not in params:
+            raise InvalidParamsException(f"Parameter not found: {k}")
 
 
 def str_to_object(value: Union[str, list, dict], type_hint: type) -> Any:
+    if type(value) not in (str, list, dict):
+        raise InvalidParamsException(f"Invalid value type: {value}")
+
     origin = get_origin(type_hint)
 
     if is_base_type(origin):
@@ -130,3 +164,5 @@ def str_to_object(value: Union[str, list, dict], type_hint: type) -> Any:
     if origin is dict:
         type_hint = args[1]
         return {k: str_to_object(v, type_hint) for k, v in value.items()}
+
+    raise InvalidParamsException(f"Failed to convert: value={value} type={type_hint}")
