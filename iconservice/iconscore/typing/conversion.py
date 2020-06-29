@@ -41,7 +41,7 @@ def base_object_to_str(value: Any) -> str:
     elif isinstance(value, bytes):
         return bytes_to_hex(value)
     elif isinstance(value, bool):
-        return "0x1" if value else "0x0"
+        return hex(value)
     elif isinstance(value, str):
         return value
 
@@ -115,6 +115,13 @@ def convert_score_parameters(
         params: Dict[str, Any],
         sig: Signature,
         options: ConvertOption = ConvertOption.NONE):
+    """Convert string values in score parameters to object values
+
+    :param params:
+    :param sig:
+    :param options:
+    :return:
+    """
     verify_arguments(params, sig)
 
     converted_params = {}

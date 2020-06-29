@@ -445,8 +445,8 @@ class Engine(EngineBase):
                                           ) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
-        [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
-        [(Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), 1000000000000000000), ...]
+        [{"address": Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), "value", 1234}, ...] ->
+        [(Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), 1234), ...]
 
         :param delegations: delegations of setDelegation JSON-RPC API request
         :return: total_delegating, (address, delegated)

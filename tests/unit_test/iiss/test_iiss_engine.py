@@ -156,10 +156,7 @@ def create_delegations_param() -> Tuple[int, List]:
         address = Address.from_prefix_and_int(AddressPrefix.EOA, _id)
         value = _id
 
-        delegations.append({
-            "address": str(address),
-            "value": hex(value)
-        })
+        delegations.append({"address": address, "value": value})
         total_delegating += value
 
     return total_delegating, delegations
@@ -188,10 +185,7 @@ class TestIissEngine:
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = random.randint(1, 10_000)
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": address, "value": value})
             total_delegating += value
 
         ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(context, delegations)
@@ -202,8 +196,8 @@ class TestIissEngine:
             address: 'Address' = item[0]
             value: int = item[1]
 
-            assert str(address) == delegations[i]["address"]
-            assert hex(value) == delegations[i]["value"]
+            assert address == delegations[i]["address"]
+            assert value == delegations[i]["value"]
 
     def test_convert_params_of_set_delegation_with_value_0(self, context):
         max_delegations: int = self._get_expected_max_delegations(context)
@@ -215,10 +209,7 @@ class TestIissEngine:
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = 0 if i < zero_value_cnt else i + 1
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": address, "value": value})
             total_delegating += value
 
         ret_total_delegating, ret_delegations = IISSEngine._convert_params_of_set_delegation(context, delegations)
@@ -229,8 +220,8 @@ class TestIissEngine:
         # 5 delegations including 0 value were dropped.
         for address, value in ret_delegations:
             delegation: Dict[str, Optional[str, int]] = delegations[i]
-            assert str(address) == delegation["address"]
-            assert hex(value) == delegation["value"]
+            assert address == delegation["address"]
+            assert value == delegation["value"]
             i += 1
 
     def test_convert_params_of_set_delegation_with_value_less_than_0(self, context):
@@ -242,10 +233,7 @@ class TestIissEngine:
             address = Address.from_prefix_and_int(AddressPrefix.EOA, i + 1)
             value = values[i]
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": address, "value": value})
 
         with pytest.raises(InvalidParamsException):
             IISSEngine._convert_params_of_set_delegation(context, delegations)
@@ -257,10 +245,7 @@ class TestIissEngine:
             address = Address.from_prefix_and_int(AddressPrefix.EOA, 1)
             value = random.randint(1, 100)
 
-            delegations.append({
-                "address": str(address),
-                "value": hex(value)
-            })
+            delegations.append({"address": address, "value": value})
 
         with pytest.raises(InvalidParamsException):
             IISSEngine._convert_params_of_set_delegation(context, delegations)
@@ -489,10 +474,9 @@ class TestIissEngine:
         context.msg = Message(SENDER_ADDRESS, 0)
         context.storage.icx.get_account = Mock(side_effect=get_account)
 
-        params = {}
         new_delegations = [{
-            "address": str(Address.from_prefix_and_int(AddressPrefix.EOA, 1)),
-            "value": hex(100)
+            "address": Address.from_prefix_and_int(AddressPrefix.EOA, 1),
+            "value": 100
         }]
 
         class IISSEngineListenerImpl(IISSEngineListener):
@@ -552,8 +536,8 @@ class TestIissEngine:
             address: 'Address' = item[0]
             value: int = item[1]
 
-            assert str(address) == delegations[i]["address"]
-            assert hex(value) == delegations[i]["value"]
+            assert address, value == delegations[i]["address"]
+            assert value == delegations[i]["value"]
 
         # IISSEngine._check_voting_power_is_enough()
         cached_accounts: Dict['Address', Tuple['Account', int]] = {}

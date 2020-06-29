@@ -139,7 +139,11 @@ class IconScoreEngine(object):
         # TypeConverter.adjust_params_to_method(score_func, tmp_params, remove_invalid_params)
 
         options = ConvertOption.NONE
-        if icon_score.address == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value:
+        if (
+                icon_score.address == SYSTEM_SCORE_ADDRESS
+                and func_name == "setPRep"
+                and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value
+        ):
             options = ConvertOption.IGNORE_UNKNOWN_PARAMS
 
         element: ScoreElement = get_score_element(icon_score, func_name)
