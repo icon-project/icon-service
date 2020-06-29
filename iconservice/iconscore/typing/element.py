@@ -39,7 +39,11 @@ from ..icon_score_constant import (
     CONST_CLASS_ELEMENTS,
 )
 from ... import utils
-from ...base.exception import IllegalFormatException, InternalServiceErrorException
+from ...base.exception import (
+    IllegalFormatException,
+    InternalServiceErrorException,
+    MethodNotFoundException
+)
 
 
 def normalize_signature(sig: Signature) -> Signature:
@@ -286,5 +290,9 @@ def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
 
 
 def get_score_element(score, func_name: str) -> ScoreElement:
-    elements = getattr(score, CONST_CLASS_ELEMENTS)
-    return elements[func_name]
+    try:
+        elements = getattr(score, CONST_CLASS_ELEMENTS)
+        return elements[func_name]
+    except KeyError:
+        raise MethodNotFoundException(
+            f"Method not found: {type(score).__name__}.{func_name}")

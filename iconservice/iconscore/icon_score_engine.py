@@ -19,19 +19,17 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
-    ATTR_SCORE_VALIDATE_EXTERNAL_METHOD, CONST_CLASS_ELEMENTS
+from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.address import Address, SYSTEM_SCORE_ADDRESS
-from ..base.exception import ScoreNotFoundException, InvalidParamsException
-from ..base.type_converter import TypeConverter
-from ..icon_constant import Revision
 from .typing.conversion import convert_score_parameters, ConvertOption
 from .typing.element import (
     ScoreElement,
     get_score_element,
 )
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS
+from ..base.exception import ScoreNotFoundException, InvalidParamsException
+from ..icon_constant import Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_base import IconScoreBase
@@ -53,8 +51,9 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
+        IconScoreEngine._validate_score_blacklist(context, icon_score_address)
+
         if data_type == 'call':
-            IconScoreEngine._validate_score_blacklist(context, icon_score_address)
             IconScoreEngine._call(context, icon_score_address, data)
         else:
             IconScoreEngine._fallback(context, icon_score_address)
@@ -126,18 +125,6 @@ class IconScoreEngine(object):
                                              icon_score: 'IconScoreBase',
                                              func_name: str,
                                              kw_params: dict) -> dict:
-        validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATE_EXTERNAL_METHOD)
-        validate_external_method(func_name)
-
-        # TODO: Implement type conversion considering TypedDict by goldworm
-        # remove_invalid_params = False
-        # if icon_score.address == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value:
-        #     remove_invalid_params = True
-        #
-        # score_func = getattr(icon_score, func_name)
-        # tmp_params = deepcopy(kw_params)
-        # TypeConverter.adjust_params_to_method(score_func, tmp_params, remove_invalid_params)
-
         options = ConvertOption.NONE
         if (
                 icon_score.address == SYSTEM_SCORE_ADDRESS
