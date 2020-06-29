@@ -458,8 +458,6 @@ class Engine(EngineBase):
 
         cls._check_delegation_count(context, delegations)
 
-        # TODO: Remove type conversion by goldworm
-        # temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
         delegated_addresses = set()

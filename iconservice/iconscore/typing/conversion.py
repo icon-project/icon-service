@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Flag, auto
 from inspect import Signature, Parameter
 from typing import Optional, Dict, Union, Type, List, Any
-from enum import Flag, auto
 
 from . import (
     BaseObject,
@@ -85,7 +85,7 @@ def str_to_base_object(value: str, type_hint: type) -> BaseObject:
     if type_hint is Address:
         return Address.from_string(value)
 
-    raise TypeError(f"Unknown type: {type_hint}")
+    raise InvalidParamsException(f"Unknown type: {type_hint}")
 
 
 def bytes_to_hex(value: bytes, prefix: str = "0x") -> str:
@@ -141,12 +141,13 @@ def convert_score_parameters(
 
 
 def verify_arguments(params: Dict[str, Any], sig: Signature):
+
     for k in sig.parameters:
         if k in ("self", "cls"):
             continue
 
         parameter: Parameter = sig.parameters[k]
-        if parameter.default == Parameter.empty and k not in params:
+        if k not in params and parameter.default == Parameter.empty:
             raise InvalidParamsException(f"Parameter not found: {k}")
 
 

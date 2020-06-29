@@ -340,33 +340,6 @@ class IconScoreBaseMeta(ABCMeta):
         elements: Mapping[str, ScoreElement] = create_score_elements(cls)
         setattr(cls, CONST_CLASS_ELEMENTS, elements)
 
-        # custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
-        #                 if not key.startswith('__')]
-        #
-        # external_funcs = {
-        #     func.__name__: signature(func) for func in custom_funcs
-        #     if is_any_score_flag_on(func, ScoreFlag.EXTERNAL)
-        # }
-        #
-        # payable_funcs = [
-        #     func for func in custom_funcs
-        #     if is_any_score_flag_on(func, ScoreFlag.PAYABLE)
-        # ]
-        #
-        # readonly_payables = [
-        #     func for func in payable_funcs
-        #     if is_any_score_flag_on(func, ScoreFlag.READONLY)
-        # ]
-        #
-        # if bool(readonly_payables):
-        #     raise IllegalFormatException(f"Payable method cannot be readonly")
-        #
-        # if external_funcs:
-        #     setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
-        # if payable_funcs:
-        #     payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
-        #     setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
-
         # TODO: Replace it with a new list supporting struct and list
         # api_list = ScoreApiGenerator.generate(custom_funcs)
         api_list = get_score_api(elements.values())

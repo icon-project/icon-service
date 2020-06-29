@@ -124,21 +124,21 @@ def verify_score_flag(flag: ScoreFlag):
 
 
 class ScoreElement(object):
-    def __init__(self, element: callable):
-        self._element = element
-        self._signature: Signature = normalize_signature(signature(element))
+    def __init__(self, origin: callable):
+        self._origin = origin
+        self._signature: Signature = normalize_signature(signature(origin))
 
     @property
-    def element(self) -> callable:
-        return self._element
+    def origin(self) -> callable:
+        return self._origin
 
     @property
     def name(self) -> str:
-        return self._element.__name__
+        return self._origin.__name__
 
     @property
     def flag(self) -> ScoreFlag:
-        return get_score_flag(self._element)
+        return get_score_flag(self._origin)
 
     @property
     def signature(self) -> Signature:
@@ -178,7 +178,7 @@ class EventLog(ScoreElement):
 
     @property
     def indexed_args_count(self) -> int:
-        return getattr(self.element, CONST_INDEXED_ARGS_COUNT, 0)
+        return getattr(self.origin, CONST_INDEXED_ARGS_COUNT, 0)
 
 
 class ScoreElementContainer(MutableMapping):
