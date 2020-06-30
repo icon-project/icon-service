@@ -17,6 +17,7 @@ import os
 from typing import TYPE_CHECKING
 
 from iconcommons import Logger
+
 from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_path
 from ..base.ComponentBase import EngineBase
@@ -317,4 +318,9 @@ class Engine(EngineBase):
             raise InvalidParamsException(f'Invalid deployType: {deploy_type}')
 
         TypeConverter.adjust_params_to_method(on_init, params)
+
+        # TODO: Replace TypeConverter with convert_score_parameters by goldworm
+        # sig = normalize_signature(inspect.signature(on_init))
+        # converted_params = convert_score_parameters(params, sig)
+
         on_init(**params)

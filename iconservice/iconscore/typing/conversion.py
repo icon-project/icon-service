@@ -122,7 +122,7 @@ def convert_score_parameters(
     :param options:
     :return:
     """
-    verify_arguments(params, sig)
+    _verify_arguments(params, sig)
 
     converted_params = {}
 
@@ -140,7 +140,7 @@ def convert_score_parameters(
     return converted_params
 
 
-def verify_arguments(params: Dict[str, Any], sig: Signature):
+def _verify_arguments(params: Dict[str, Any], sig: Signature):
 
     for k in sig.parameters:
         if k in ("self", "cls"):

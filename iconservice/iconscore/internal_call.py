@@ -146,6 +146,10 @@ class InternalCall(object):
             icon_score = IconScoreContextUtil.get_icon_score(context, addr_to)
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, ATTR_SCORE_CALL)
+
+            # TODO: verify internal call arguments by goldworm
+            # verify_internal_call_arguments(icon_score, func_name, arg_params, kw_params)
+
             return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
         finally:
             context.func_type = prev_func_type

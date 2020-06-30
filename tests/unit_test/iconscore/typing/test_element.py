@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, ForwardRef
 
 import pytest
 from typing_extensions import TypedDict
 
 from iconservice.base.address import Address
 from iconservice.base.exception import IllegalFormatException
-from iconservice.iconscore.typing.element import normalize_type_hint
 from iconservice.iconscore.icon_score_constant import ScoreFlag
+from iconservice.iconscore.typing.element import normalize_type_hint
 from iconservice.iconscore.typing.element import verify_score_flag
 
 
@@ -38,32 +38,58 @@ class Person(TypedDict):
         (int, int),
         (str, str),
         (Address, Address),
-        ("Address", Address),
         (list, None),
         (List, None),
+        (List[bool], List[bool]),
+        (List[bytes], List[bytes]),
         (List[int], List[int]),
+        (List[str], List[str]),
+        (List[Address], List[Address]),
         (List[Person], List[Person]),
         (List["Person"], None),
         (List["Address"], None),
         (dict, None),
         (Dict, None),
+        (Dict[str, bool], Dict[str, bool]),
+        (Dict[str, bytes], Dict[str, bytes]),
         (Dict[str, int], Dict[str, int]),
+        (Dict[str, str], Dict[str, str]),
+        (Dict[str, Address], Dict[str, Address]),
         (Dict[str, Person], Dict[str, Person]),
         (Dict[int, str], None),
-        (Optional[str], None),
-        (Optional[List[str]], None),
-        (Optional[Dict[str, str]], None),
+        (Dict[str, "Address"], None),
+        (Optional[bool], Union[bool, None]),
+        (Optional[bytes], Union[bytes, None]),
+        (Optional[int], Union[int, None]),
+        (Optional[str], Union[str, None]),
+        (Optional[Address], Union[Address, None]),
+        (Optional[List[str]], Union[List[str], None]),
+        (Optional[Dict[str, str]], Union[Dict[str, str], None]),
         (Optional[Dict], None),
         (Union[str], str),
         (Union[str, int], None),
+        (Union[bool, None], Union[bool, None]),
+        (Union[bytes, None], Union[bytes, None]),
+        (Union[int, None], Union[int, None]),
+        (Union[str, None], Union[str, None]),
+        (Union[None, str], Union[str, None]),
+        (Union[Address, None], Union[Address, None]),
+        (Union[Person, None], Union[Person, None]),
+        (Union["Person", None], None),
+        (ForwardRef("bool"), None),
+        (ForwardRef("bytes"), None),
+        (ForwardRef("int"), None),
+        (ForwardRef("str"), None),
+        (ForwardRef("Address"), None),
+        (Optional[ForwardRef("Address")], None),
+        (Dict[str, ForwardRef("Address")], None),
+        (Union[ForwardRef("Person"), None], None),
     ]
 )
 def test_normalize_abnormal_type_hint(type_hint, expected):
     try:
         ret = normalize_type_hint(type_hint)
     except IllegalFormatException:
-        ret = None
-    except TypeError:
         ret = None
 
     assert ret == expected

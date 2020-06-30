@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from inspect import (
@@ -22,7 +23,7 @@ from inspect import (
     Signature,
     Parameter,
 )
-from typing import Union, Mapping, List, Dict
+from typing import Union, Mapping, List, Dict, Optional, Tuple
 
 from . import (
     is_base_type,
@@ -41,7 +42,8 @@ from ... import utils
 from ...base.exception import (
     IllegalFormatException,
     InternalServiceErrorException,
-    MethodNotFoundException
+    MethodNotFoundException,
+    InvalidParamsException,
 )
 
 
@@ -91,11 +93,17 @@ def normalize_type_hint(type_hint) -> type:
     args = get_args(type_hint)
     size = len(args)
 
-    if origin is list and size == 1:
-        return List[normalize_type_hint(args[0])]
-
-    if origin is dict and size == 2 and args[0] is str:
-        return Dict[str, normalize_type_hint(args[1])]
+    if origin is list:
+        if size == 1:
+            return List[normalize_type_hint(args[0])]
+    elif origin is dict:
+        if size == 2 and args[0] is str:
+            return Dict[str, normalize_type_hint(args[1])]
+    elif origin is Union:
+        if size == 2 and type(None) in args:
+            arg = args[0] if args[1] is type(None) else args[1]
+            if arg is not None and arg:
+                return Union[normalize_type_hint(arg), None]
 
     raise IllegalFormatException(f"Unsupported type hint: {type_hint}")
 
@@ -292,3 +300,15 @@ def get_score_element(score, func_name: str) -> ScoreElement:
     except KeyError:
         raise MethodNotFoundException(
             f"Method not found: {type(score).__name__}.{func_name}")
+
+
+def verify_internal_call_arguments(score, func_name: str, args: Optional[Tuple], kwargs: Optional[Dict]):
+    element = get_score_element(score, func_name)
+    sig = element.signature
+    sig = inspect.signature(getattr(score, func_name))
+
+    try:
+        arguments = sig.bind(*args, **kwargs)
+    except TypeError:
+        raise InvalidParamsException(
+            f"Invalid internal call params: address={score.address} func={func_name}")
