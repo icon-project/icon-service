@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Flag
+from enum import Flag, unique
 from typing import TypeVar
 
 from ..base.address import Address
@@ -42,6 +42,7 @@ ATTR_SCORE_CALL = "_IconScoreBase__call"
 ATTR_SCORE_VALIDATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_method"
 
 
+@unique
 class ScoreFlag(Flag):
     NONE = 0
 
@@ -49,6 +50,7 @@ class ScoreFlag(Flag):
     READONLY = 0x01
     EXTERNAL = 0x02
     PAYABLE = 0x04
+    FALLBACK = 0x08
     FUNC = 0xFF
 
     # Used for eventlog declaration in score

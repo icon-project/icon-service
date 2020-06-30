@@ -300,7 +300,13 @@ def payable(func):
     if is_any_score_flag_on(func, ScoreFlag.PAYABLE):
         raise InvalidPayableException(FORMAT_DECORATOR_DUPLICATED.format('payable', func_name, cls_name))
 
-    set_score_flag_on(func, ScoreFlag.PAYABLE)
+    flag = ScoreFlag.PAYABLE
+    if func_name == STR_FALLBACK:
+        # If a function has payable decorator and its name is "fallback",
+        # then it is a fallback function
+        flag |= ScoreFlag.FALLBACK
+
+    set_score_flag_on(func, flag)
 
     @wraps(func)
     def __wrapper(calling_obj: Any, *args, **kwargs):

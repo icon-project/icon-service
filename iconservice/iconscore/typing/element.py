@@ -34,7 +34,6 @@ from . import (
 from ..icon_score_constant import (
     CONST_SCORE_FLAG,
     ScoreFlag,
-    STR_FALLBACK,
     CONST_INDEXED_ARGS_COUNT,
     CONST_CLASS_ELEMENTS,
 )
@@ -104,23 +103,19 @@ def normalize_type_hint(type_hint) -> type:
 def verify_score_flag(flag: ScoreFlag):
     """Check if score flag combination is valid
 
-    If the combination is not valid, raise an exception
+    If the flag combination is not valid, raise an exception
     """
-    if flag & ScoreFlag.READONLY:
-        # READONLY cannot be combined with PAYABLE
-        if flag & ScoreFlag.PAYABLE:
-            raise IllegalFormatException(f"Payable method cannot be readonly")
-        # READONLY cannot be set alone without EXTERNAL
-        elif not (flag & ScoreFlag.EXTERNAL):
-            raise IllegalFormatException(f"Invalid score flag: {flag}")
+    valid = {
+        ScoreFlag.EXTERNAL,
+        ScoreFlag.EXTERNAL | ScoreFlag.PAYABLE,
+        ScoreFlag.EXTERNAL | ScoreFlag.READONLY,
+        ScoreFlag.FALLBACK | ScoreFlag.PAYABLE,
+        ScoreFlag.EVENTLOG,
+        ScoreFlag.INTERFACE,
+    }
 
-    # EVENTLOG cannot be combined with other flags
-    if flag & ScoreFlag.EVENTLOG and flag != ScoreFlag.EVENTLOG:
-        raise IllegalFormatException(f"Invalid score flag: {flag}")
-
-    # INTERFACE cannot be combined with other flags
-    if flag & ScoreFlag.INTERFACE and flag != ScoreFlag.INTERFACE:
-        raise IllegalFormatException(f"Invalid score flag: {flag}")
+    if flag not in valid:
+        raise IllegalFormatException(f"Invalid score decorator: {flag}")
 
 
 class ScoreElement(object):
@@ -166,7 +161,8 @@ class Function(ScoreElement):
 
     @property
     def is_fallback(self) -> bool:
-        return self.name == STR_FALLBACK and self.is_payable
+        return utils.is_all_flag_on(
+            self.flag, ScoreFlag.FALLBACK | ScoreFlag.PAYABLE)
 
 
 class EventLog(ScoreElement):

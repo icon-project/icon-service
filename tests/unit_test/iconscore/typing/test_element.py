@@ -21,6 +21,8 @@ from typing_extensions import TypedDict
 from iconservice.base.address import Address
 from iconservice.base.exception import IllegalFormatException
 from iconservice.iconscore.typing.element import normalize_type_hint
+from iconservice.iconscore.icon_score_constant import ScoreFlag
+from iconservice.iconscore.typing.element import verify_score_flag
 
 
 class Person(TypedDict):
@@ -65,3 +67,26 @@ def test_normalize_abnormal_type_hint(type_hint, expected):
         ret = None
 
     assert ret == expected
+
+
+@pytest.mark.parametrize(
+    "flag,success",
+    [
+        (ScoreFlag.READONLY, False),
+        (ScoreFlag.PAYABLE, False),
+        (ScoreFlag.FALLBACK, False),
+        (ScoreFlag.READONLY | ScoreFlag.PAYABLE, False),
+        (ScoreFlag.READONLY | ScoreFlag.FALLBACK, False),
+        (ScoreFlag.EXTERNAL | ScoreFlag.FALLBACK, False),
+        (ScoreFlag.EXTERNAL | ScoreFlag.EVENTLOG, False),
+        (ScoreFlag.EXTERNAL | ScoreFlag.INTERFACE, False),
+        (ScoreFlag.EVENTLOG | ScoreFlag.READONLY, False),
+        (ScoreFlag.INTERFACE | ScoreFlag.PAYABLE, False)
+    ]
+)
+def test_verify_score_flag(flag, success):
+    if success:
+        verify_score_flag(flag)
+    else:
+        with pytest.raises(IllegalFormatException):
+            verify_score_flag(flag)
