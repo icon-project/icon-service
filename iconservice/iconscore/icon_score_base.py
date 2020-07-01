@@ -30,7 +30,7 @@ from .icon_score_constant import (
     FORMAT_IS_NOT_DERIVED_OF_OBJECT,
     STR_FALLBACK,
     CONST_CLASS_API,
-    CONST_CLASS_ELEMENTS,
+    CONST_CLASS_ELEMENT_METADATAS,
     BaseType,
     T,
 )
@@ -41,13 +41,13 @@ from .icx import Icx
 from .internal_call import InternalCall
 from .typing.definition import get_score_api
 from .typing.element import (
-    ScoreElementContainer,
-    ScoreElement,
-    Function,
+    ScoreElementMetadataContainer,
+    ScoreElementMetadata,
+    FunctionMetadata,
     set_score_flag_on,
     is_any_score_flag_on,
 )
-from .typing.element import create_score_elements
+from .typing.element import create_score_element_metadatas
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
@@ -343,8 +343,8 @@ class IconScoreBaseMeta(ABCMeta):
             raise InvalidParamsException('namespace is not dict!')
 
         # TODO: Normalize type hints of score parameters by goldworm
-        elements: Mapping[str, ScoreElement] = create_score_elements(cls)
-        setattr(cls, CONST_CLASS_ELEMENTS, elements)
+        elements: Mapping[str, ScoreElementMetadata] = create_score_element_metadatas(cls)
+        setattr(cls, CONST_CLASS_ELEMENT_METADATAS, elements)
 
         # TODO: Replace it with a new list supporting struct and list
         # api_list = ScoreApiGenerator.generate(custom_funcs)
@@ -389,7 +389,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__owner = IconScoreContextUtil.get_owner(self._context, self.__address)
         self.__icx = None
 
-        elements: ScoreElementContainer = self.__get_score_elements()
+        elements: ScoreElementMetadataContainer = self.__get_score_element_metadatas()
         if elements.externals == 0:
             raise InvalidExternalException('There is no external method in the SCORE')
 
@@ -420,8 +420,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not found: {type(self).__name__}.{func_name}")
 
     @classmethod
-    def __get_score_elements(cls) -> ScoreElementContainer:
-        return getattr(cls, CONST_CLASS_ELEMENTS)
+    def __get_score_element_metadatas(cls) -> ScoreElementMetadataContainer:
+        return getattr(cls, CONST_CLASS_ELEMENT_METADATAS)
 
     def __create_db_observer(self) -> 'DatabaseObserver':
         return DatabaseObserver(
@@ -459,19 +459,19 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not payable: {type(self).__name__}.{func_name}")
 
     def __is_external_method(self, func_name) -> bool:
-        elements = self.__get_score_elements()
-        func: Function = elements.get(func_name)
-        return isinstance(func, Function) and func.is_external
+        elements = self.__get_score_element_metadatas()
+        func: FunctionMetadata = elements.get(func_name)
+        return isinstance(func, FunctionMetadata) and func.is_external
 
     def __is_payable_method(self, func_name) -> bool:
-        elements = self.__get_score_elements()
-        func: Function = elements.get(func_name)
-        return isinstance(func, Function) and func.is_payable
+        elements = self.__get_score_element_metadatas()
+        func: FunctionMetadata = elements.get(func_name)
+        return isinstance(func, FunctionMetadata) and func.is_payable
 
     def __is_func_readonly(self, func_name: str) -> bool:
-        elements = self.__get_score_elements()
-        func: Function = elements.get(func_name)
-        return isinstance(func, Function) and func.is_readonly
+        elements = self.__get_score_element_metadatas()
+        func: FunctionMetadata = elements.get(func_name)
+        return isinstance(func, FunctionMetadata) and func.is_readonly
 
     # noinspection PyUnusedLocal
     @staticmethod

@@ -36,7 +36,7 @@ from ..icon_score_constant import (
     CONST_SCORE_FLAG,
     ScoreFlag,
     CONST_INDEXED_ARGS_COUNT,
-    CONST_CLASS_ELEMENTS,
+    CONST_CLASS_ELEMENT_METADATAS,
 )
 from ... import utils
 from ...base.exception import (
@@ -162,30 +162,30 @@ def verify_score_flag(flag: ScoreFlag):
         raise IllegalFormatException(f"Invalid score decorator: {flag}")
 
 
-class ScoreElement(object):
-    def __init__(self, origin: callable):
-        self._origin = origin
-        self._signature: Signature = normalize_signature(origin)
+class ScoreElementMetadata(object):
+    def __init__(self, element: callable):
+        self._signature: Signature = normalize_signature(element)
+        self._element = element
 
     @property
-    def origin(self) -> callable:
-        return self._origin
+    def element(self) -> callable:
+        return self._element
 
     @property
     def name(self) -> str:
-        return self._origin.__name__
+        return self._element.__name__
 
     @property
     def flag(self) -> ScoreFlag:
-        return get_score_flag(self._origin)
+        return get_score_flag(self._element)
 
     @property
     def signature(self) -> Signature:
         return self._signature
 
 
-class Function(ScoreElement):
-    """Represents a exposed function of SCORE
+class FunctionMetadata(ScoreElementMetadata):
+    """Represents metadata of an exposed function in a SCORE
 
     """
     def __init__(self, func: callable):
@@ -227,8 +227,8 @@ class Function(ScoreElement):
             raise IllegalFormatException("Invalid fallback signature")
 
 
-class EventLog(ScoreElement):
-    """Represents an eventlog declared in a SCORE
+class EventLogMetadata(ScoreElementMetadata):
+    """Represents metadata of an eventlog declared in a SCORE
     """
 
     def __init__(self, eventlog: callable):
@@ -236,10 +236,10 @@ class EventLog(ScoreElement):
 
     @property
     def indexed_args_count(self) -> int:
-        return getattr(self.origin, CONST_INDEXED_ARGS_COUNT, 0)
+        return getattr(self.element, CONST_INDEXED_ARGS_COUNT, 0)
 
 
-class ScoreElementContainer(MutableMapping):
+class ScoreElementMetadataContainer(MutableMapping):
     """Container which has score elements like function and eventlog
     """
 
@@ -257,16 +257,16 @@ class ScoreElementContainer(MutableMapping):
     def eventlogs(self) -> int:
         return self._eventlogs
 
-    def __getitem__(self, k: str) -> ScoreElement:
+    def __getitem__(self, k: str) -> ScoreElementMetadata:
         return self._elements[k]
 
-    def __setitem__(self, k: str, v: ScoreElement) -> None:
+    def __setitem__(self, k: str, v: ScoreElementMetadata) -> None:
         self._check_writable()
         self._elements[k] = v
 
-        if isinstance(v, Function):
+        if isinstance(v, FunctionMetadata):
             self._externals += 1
-        elif isinstance(v, EventLog):
+        elif isinstance(v, EventLogMetadata):
             self._eventlogs += 1
         else:
             raise InternalServiceErrorException(f"Invalid element: {v}")
@@ -291,14 +291,14 @@ class ScoreElementContainer(MutableMapping):
 
     def _check_writable(self):
         if self._readonly:
-            raise InternalServiceErrorException("ScoreElementContainer not writable")
+            raise InternalServiceErrorException(f"{self.__class__.__name__} not writable")
 
     def freeze(self):
         self._readonly = True
 
 
-def create_score_elements(cls: type) -> Mapping:
-    elements = ScoreElementContainer()
+def create_score_element_metadatas(cls: type) -> Mapping:
+    elements = ScoreElementMetadataContainer()
 
     for name, func in getmembers(cls, predicate=isfunction):
         if name.startswith("__"):
@@ -309,19 +309,19 @@ def create_score_elements(cls: type) -> Mapping:
 
         if utils.is_any_flag_on(flag, ScoreFlag.FUNC | ScoreFlag.EVENTLOG):
             verify_score_flag(flag)
-            elements[name] = create_score_element(func)
+            elements[name] = create_score_element_metadata(func)
 
     elements.freeze()
     return elements
 
 
-def create_score_element(element: callable) -> Union[Function, EventLog]:
+def create_score_element_metadata(element: callable) -> Union[FunctionMetadata, EventLogMetadata]:
     flags = get_score_flag(element)
 
     if flags & ScoreFlag.EVENTLOG:
-        return EventLog(element)
+        return EventLogMetadata(element)
     else:
-        return Function(element)
+        return FunctionMetadata(element)
 
 
 def get_score_flag(obj: callable, default: ScoreFlag = ScoreFlag.NONE) -> ScoreFlag:
@@ -347,9 +347,9 @@ def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
     return utils.is_any_flag_on(get_score_flag(obj), flag)
 
 
-def get_score_element(score, func_name: str) -> ScoreElement:
+def get_score_element(score, func_name: str) -> ScoreElementMetadata:
     try:
-        elements = getattr(score, CONST_CLASS_ELEMENTS)
+        elements = getattr(score, CONST_CLASS_ELEMENT_METADATAS)
         return elements[func_name]
     except KeyError:
         raise MethodNotFoundException(

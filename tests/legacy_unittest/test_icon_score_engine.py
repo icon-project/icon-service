@@ -23,12 +23,12 @@ from unittest.mock import Mock, patch
 from iconservice import *
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import ScoreNotFoundException, InvalidParamsException
-from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API, ATTR_SCORE_CALL, CONST_CLASS_ELEMENTS
+from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API, ATTR_SCORE_CALL, CONST_CLASS_ELEMENT_METADATAS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.iconscore.typing.element import Function
+from iconservice.iconscore.typing.element import FunctionMetadata
 from tests import create_address
 
 
@@ -202,7 +202,7 @@ class TestIconScoreEngine(unittest.TestCase):
         score_object = Mock(spec=[func_name, "__elements", "address"])
 
         setattr(score_object, func_name, test_method)
-        setattr(score_object, CONST_CLASS_ELEMENTS, {func_name: Function(test_method)})
+        setattr(score_object, CONST_CLASS_ELEMENT_METADATAS, {func_name: FunctionMetadata(test_method)})
 
         converted_params = IconScoreEngine._convert_score_params_by_annotations(
             context, score_object, func_name, primitive_params)

@@ -24,7 +24,7 @@ T = TypeVar('T')
 BaseType = TypeVar("BaseType", bool, int, str, bytes, list, dict, Address)
 
 CONST_CLASS_API = '__api'
-CONST_CLASS_ELEMENTS = '__elements'
+CONST_CLASS_ELEMENT_METADATAS = '__element_metadatas'
 
 CONST_SCORE_FLAG = '__score_flag'
 CONST_INDEXED_ARGS_COUNT = '__indexed_args_count'

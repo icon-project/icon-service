@@ -20,7 +20,7 @@ from typing import List, Dict, Mapping, Iterable, Any
 
 from . import get_origin, get_args, is_struct
 from .conversion import is_base_type
-from .element import ScoreElement, Function, EventLog
+from .element import ScoreElementMetadata, FunctionMetadata, EventLogMetadata
 from ..icon_score_constant import STR_FALLBACK
 from ...base.exception import (
     IllegalFormatException,
@@ -32,7 +32,7 @@ from ...base.exception import (
 """
 
 
-def get_score_api(elements: Iterable[ScoreElement]) -> List:
+def get_score_api(elements: Iterable[ScoreElementMetadata]) -> List:
     """Returns score api used in icx_getScoreApi JSON-RPC method
 
     :param elements:
@@ -42,11 +42,11 @@ def get_score_api(elements: Iterable[ScoreElement]) -> List:
     api = []
 
     for element in elements:
-        if isinstance(element, Function):
-            func: Function = element
+        if isinstance(element, FunctionMetadata):
+            func: FunctionMetadata = element
             item = _get_function(func.name, func.signature, func.is_readonly, func.is_payable)
-        elif isinstance(element, EventLog):
-            eventlog: EventLog = element
+        elif isinstance(element, EventLogMetadata):
+            eventlog: EventLogMetadata = element
             item = _get_eventlog(eventlog.name, eventlog.signature, eventlog.indexed_args_count)
         else:
             raise InternalServiceErrorException(f"Invalid score element: {element} {type(element)}")

@@ -26,7 +26,7 @@ from iconservice.iconscore.typing.conversion import (
     convert_score_parameters,
     object_to_str,
 )
-from iconservice.iconscore.typing.element import Function
+from iconservice.iconscore.typing.element import FunctionMetadata
 
 
 class User(TypedDict):
@@ -85,5 +85,5 @@ def test_convert_score_parameters_with_insufficient_parameters():
     params = {}
 
     with pytest.raises(InvalidParamsException):
-        function = Function(TestScore.func)
+        function = FunctionMetadata(TestScore.func)
         convert_score_parameters(params, function.signature)

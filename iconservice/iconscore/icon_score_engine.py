@@ -24,7 +24,7 @@ from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
 from .typing.conversion import convert_score_parameters, ConvertOption
 from .typing.element import (
-    ScoreElement,
+    ScoreElementMetadata,
     get_score_element,
 )
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
@@ -133,7 +133,7 @@ class IconScoreEngine(object):
         ):
             options = ConvertOption.IGNORE_UNKNOWN_PARAMS
 
-        element: ScoreElement = get_score_element(icon_score, func_name)
+        element: ScoreElementMetadata = get_score_element(icon_score, func_name)
         params = convert_score_parameters(kw_params, element.signature, options)
 
         return params
