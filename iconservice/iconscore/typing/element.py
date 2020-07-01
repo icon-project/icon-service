@@ -19,11 +19,10 @@ from collections.abc import MutableMapping
 from inspect import (
     isfunction,
     getmembers,
-    signature,
     Signature,
     Parameter,
 )
-from typing import Union, Mapping, List, Dict, Optional, Tuple
+from typing import Union, Mapping, List, Dict, Optional, Tuple, Any
 
 from . import (
     is_base_type,
@@ -102,6 +101,8 @@ def normalize_parameter(param: Parameter) -> Parameter:
     else:
         type_hint = normalize_type_hint(annotation)
 
+    check_parameter_default_type(type_hint, param.default)
+
     if type_hint == annotation:
         # Nothing to update
         return param
@@ -114,6 +115,27 @@ def normalize_return_annotation(return_annotation: type) -> Union[type, Signatur
         return Signature.empty
 
     return return_annotation
+
+
+def check_parameter_default_type(type_hint: type, default: Any):
+    # default value type check
+    if default in (Parameter.empty, None):
+        return
+
+    origin = get_origin(type_hint)
+
+    if origin is Union:
+        default_type = get_args(type_hint)[0]
+    else:
+        default_type = origin
+
+    if not isinstance(default, default_type):
+        raise InvalidParamsException(
+            f'Default params type mismatch. value={default} type={type_hint}')
+
+    if type(default) is bool and origin is not bool:
+        raise InvalidParamsException(
+            f'Default params type mismatch. value={default} type={type_hint}')
 
 
 def normalize_type_hint(type_hint) -> type:

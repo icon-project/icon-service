@@ -18,11 +18,14 @@ from typing import List, Dict, Union, Optional, ForwardRef
 import pytest
 from typing_extensions import TypedDict
 
-from iconservice.base.address import Address
-from iconservice.base.exception import IllegalFormatException
+from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.exception import IllegalFormatException, InvalidParamsException
 from iconservice.iconscore.icon_score_constant import ScoreFlag
-from iconservice.iconscore.typing.element import normalize_type_hint
-from iconservice.iconscore.typing.element import verify_score_flag
+from iconservice.iconscore.typing.element import (
+    normalize_type_hint,
+    verify_score_flag,
+    check_parameter_default_type,
+)
 
 
 class Person(TypedDict):
@@ -116,3 +119,41 @@ def test_verify_score_flag(flag, success):
     else:
         with pytest.raises(IllegalFormatException):
             verify_score_flag(flag)
+
+
+@pytest.mark.parametrize(
+    "type_hint,default,success",
+    [
+        (bool, 0, False),
+        (bytes, "hello", False),
+        (int, "world", False),
+        (int, False, False),
+        (str, True, False),
+        (Address, 1, False),
+        (str, None, True),
+        (bool, False, True),
+        (bytes, b"hello", True),
+        (int, 1, True),
+        (str, "hello", True),
+        (Address, Address.from_prefix_and_int(AddressPrefix.EOA, 1), True),
+        (str, None, True),
+        (Union[int, None], None, True),
+        (Union[None, int], 0, False),
+        (Person, None, True),
+        (List[int], None, True),
+        (Union[List[Person], None], None, True),
+        (Dict[str, int], None, True),
+        (Union[Dict[str, int], None], None, True),
+        (Optional[bool], None, True),
+        (Optional[bytes], None, True),
+        (Optional[int], None, True),
+        (Optional[str], None, True),
+        (Optional[Address], None, True),
+    ]
+)
+def test_check_parameter_default_type(type_hint, default, success):
+    if success:
+        check_parameter_default_type(type_hint, default)
+    else:
+        with pytest.raises(InvalidParamsException):
+            check_parameter_default_type(type_hint, default)
