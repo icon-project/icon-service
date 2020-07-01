@@ -47,20 +47,49 @@ from ...base.exception import (
 )
 
 
-def normalize_signature(sig: Signature) -> Signature:
+def normalize_signature(func: callable) -> Signature:
+    """Normalize signature of score methods
+
+    1. Normalize type hint: ex) no type hint -> str
+    2. Remove "self" parameter
+
+    :param func: function attribute from class
+    :return:
+    """
+    sig = inspect.signature(func)
     params = sig.parameters
     new_params = []
 
     normalized = False
-    for k in params:
-        new_param = normalize_parameter(params[k])
-        new_params.append(new_param)
 
-        if params[k] != new_params:
+    # CAUTION:
+    # def A:
+    #     def func(self):
+    #         pass
+    #
+    # inspect.isfunction(A.func) == True
+    # inspect.isfunction(A().func) == False
+    # inspect.ismethod(A.func) == False
+    # inspect.isfunction(A().func) == True
+    is_regular_method: bool = inspect.isfunction(func)
+
+    for i, k in enumerate(params):
+        # Remove "self" parameter from signature of regular method
+        if i == 0 and k == "self" and is_regular_method:
+            new_param = None
+        else:
+            new_param = normalize_parameter(params[k])
+            new_params.append(new_param)
+
+        if new_param is not params[k]:
             normalized = True
 
+    return_annotation = normalize_return_annotation(sig.return_annotation)
+    if return_annotation is not sig.return_annotation:
+        normalized = True
+
     if normalized:
-        sig = sig.replace(parameters=new_params)
+        sig = sig.replace(parameters=new_params, return_annotation=return_annotation)
 
     return sig
 
@@ -78,6 +107,13 @@ def normalize_parameter(param: Parameter) -> Parameter:
         return param
 
     return param.replace(annotation=type_hint)
+
+
+def normalize_return_annotation(return_annotation: type) -> Union[type, Signature.empty]:
+    if return_annotation in (None, Signature.empty):
+        return Signature.empty
+
+    return return_annotation
 
 
 def normalize_type_hint(type_hint) -> type:
@@ -129,7 +165,7 @@ def verify_score_flag(flag: ScoreFlag):
 class ScoreElement(object):
     def __init__(self, origin: callable):
         self._origin = origin
-        self._signature: Signature = normalize_signature(signature(origin))
+        self._signature: Signature = normalize_signature(origin)
 
     @property
     def origin(self) -> callable:
@@ -154,6 +190,7 @@ class Function(ScoreElement):
     """
     def __init__(self, func: callable):
         super().__init__(func)
+        self._verify()
 
     @property
     def is_external(self) -> bool:
@@ -171,6 +208,23 @@ class Function(ScoreElement):
     def is_fallback(self) -> bool:
         return utils.is_all_flag_on(
             self.flag, ScoreFlag.FALLBACK | ScoreFlag.PAYABLE)
+
+    def _verify(self):
+        if self.is_fallback:
+            self._verify_fallback_signature()
+
+    def _verify_fallback_signature(self):
+        """Verify if the signature of fallback() is valid
+
+        fallback function must have no parameters
+        """
+        sig = self.signature
+
+        if not (
+                len(sig.parameters) == 0
+                and sig.return_annotation in (None, Signature.empty)
+        ):
+            raise IllegalFormatException("Invalid fallback signature")
 
 
 class EventLog(ScoreElement):
@@ -243,7 +297,7 @@ class ScoreElementContainer(MutableMapping):
         self._readonly = True
 
 
-def create_score_elements(cls) -> Mapping:
+def create_score_elements(cls: type) -> Mapping:
     elements = ScoreElementContainer()
 
     for name, func in getmembers(cls, predicate=isfunction):
