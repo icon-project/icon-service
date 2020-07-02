@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from inspect import (
     isfunction,
     getmembers,
+    signature,
     Signature,
     Parameter,
 )
@@ -55,7 +55,7 @@ def normalize_signature(func: callable) -> Signature:
     :param func: function attribute from class
     :return:
     """
-    sig = inspect.signature(func)
+    sig = signature(func)
     params = sig.parameters
     new_params = []
 
@@ -70,7 +70,7 @@ def normalize_signature(func: callable) -> Signature:
     # inspect.isfunction(A().func) == False
     # inspect.ismethod(A.func) == False
     # inspect.isfunction(A().func) == True
-    is_regular_method: bool = inspect.isfunction(func)
+    is_regular_method: bool = isfunction(func)
 
     for i, k in enumerate(params):
         # Remove "self" parameter from signature of regular method
@@ -369,7 +369,7 @@ def is_any_score_flag_on(obj: callable, flag: ScoreFlag) -> bool:
     return utils.is_any_flag_on(get_score_flag(obj), flag)
 
 
-def get_score_element(score, func_name: str) -> ScoreElementMetadata:
+def get_score_element_metadata(score, func_name: str) -> ScoreElementMetadata:
     try:
         elements = getattr(score, CONST_CLASS_ELEMENT_METADATAS)
         return elements[func_name]
@@ -379,12 +379,16 @@ def get_score_element(score, func_name: str) -> ScoreElementMetadata:
 
 
 def verify_internal_call_arguments(score, func_name: str, args: Optional[Tuple], kwargs: Optional[Dict]):
-    element = get_score_element(score, func_name)
+    element = get_score_element_metadata(score, func_name)
     sig = element.signature
-    sig = inspect.signature(getattr(score, func_name))
 
     try:
-        arguments = sig.bind(*args, **kwargs)
+        if args is None:
+            args = ()
+        if kwargs is None:
+            kwargs = {}
+
+        sig.bind(*args, **kwargs)
     except TypeError:
         raise InvalidParamsException(
             f"Invalid internal call params: address={score.address} func={func_name}")

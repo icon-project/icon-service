@@ -21,6 +21,7 @@ from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
+from .typing.element import verify_internal_call_arguments
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import StackOverflowException, ScoreNotFoundException
 from ..base.message import Message
