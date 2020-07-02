@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from typing import List, Dict, Union, Optional, ForwardRef
 
 import pytest
@@ -25,6 +26,7 @@ from iconservice.iconscore.typing.element import (
     normalize_type_hint,
     verify_score_flag,
     check_parameter_default_type,
+    verify_internal_call_arguments,
 )
 
 
@@ -157,3 +159,26 @@ def test_check_parameter_default_type(type_hint, default, success):
     else:
         with pytest.raises(InvalidParamsException):
             check_parameter_default_type(type_hint, default)
+
+
+@pytest.mark.parametrize(
+    "args,kwargs,valid",
+    [
+        ((0,), None, True),
+        ((0,), {}, True),
+        (None, None, False),
+        (("hello",), {}, False),
+    ]
+)
+def test_verify_internal_call_arguments(args, kwargs, valid):
+    def func(a: int):
+        a += 1
+        pass
+
+    sig = inspect.signature(func)
+
+    if valid:
+        verify_internal_call_arguments(sig, args, kwargs)
+    else:
+        with pytest.raises(InvalidParamsException):
+            verify_internal_call_arguments(sig, args, kwargs)

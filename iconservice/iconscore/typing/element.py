@@ -386,10 +386,7 @@ def get_score_element_metadata(score, func_name: str) -> ScoreElementMetadata:
             f"Method not found: {type(score).__name__}.{func_name}")
 
 
-def verify_internal_call_arguments(score, func_name: str, args: Optional[Tuple], kwargs: Optional[Dict]):
-    element = get_score_element_metadata(score, func_name)
-    sig = element.signature
-
+def verify_internal_call_arguments(sig: Signature, args: Optional[Tuple], kwargs: Optional[Dict]):
     try:
         if args is None:
             args = ()
