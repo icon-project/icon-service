@@ -342,12 +342,9 @@ class IconScoreBaseMeta(ABCMeta):
         if not isinstance(namespace, dict):
             raise InvalidParamsException('namespace is not dict!')
 
-        # TODO: Normalize type hints of score parameters by goldworm
         elements: Mapping[str, ScoreElementMetadata] = create_score_element_metadatas(cls)
         setattr(cls, CONST_CLASS_ELEMENT_METADATAS, elements)
 
-        # TODO: Replace it with a new list supporting struct and list
-        # api_list = ScoreApiGenerator.generate(custom_funcs)
         api_list = get_score_api(elements.values())
         setattr(cls, CONST_CLASS_API, api_list)
 

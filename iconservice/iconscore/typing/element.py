@@ -66,10 +66,18 @@ def normalize_signature(func: callable) -> Signature:
     #     def func(self):
     #         pass
     #
+    #     @classmethod
+    #     def cfunc(self):
+    #         pass
+    #
     # inspect.isfunction(A.func) == True
     # inspect.isfunction(A().func) == False
     # inspect.ismethod(A.func) == False
-    # inspect.isfunction(A().func) == True
+    # inspect.ismethod(A().func) == True
+    # inspect.isfunction(A.cfunc) == False
+    # inspect.ismethod(A.cfunc) == True
+    # inspect.isfunction(A().cfunc) == False
+    # inspect.ismethod(A().cfunc) == True
     is_regular_method: bool = isfunction(func)
 
     for i, k in enumerate(params):
