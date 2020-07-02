@@ -151,7 +151,10 @@ def _verify_arguments(params: Dict[str, Any], sig: Signature):
             raise InvalidParamsException(f"Parameter not found: {k}")
 
 
-def str_to_object(value: Union[str, list, dict], type_hint: type) -> Any:
+def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
+    if value is None:
+        return None
+
     if type(value) not in (str, list, dict):
         raise InvalidParamsException(f"Invalid value type: {value}")
 
