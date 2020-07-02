@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import shutil
 from copy import deepcopy
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
@@ -1951,11 +1952,11 @@ class IconServiceEngine(ContextContainer):
             pass
         elif items[DBType.STANDBY][1]:
             # Rename standby_rc_db to iiss_rc_db
-            os.rename(items[DBType.STANDBY][0], items[DBType.IISS][0])
+            shutil.move(items[DBType.STANDBY][0], items[DBType.IISS][0])
         elif items[DBType.CURRENT][1]:
             # Rename current_db to iiss_rc_db
             path: str = items[DBType.CURRENT][0]
-            os.rename(path, items[DBType.IISS][0])
+            shutil.move(path, items[DBType.IISS][0])
         else:
             raise DatabaseException("IISS-related DB not found")
 
