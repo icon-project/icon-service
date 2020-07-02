@@ -105,9 +105,6 @@ def _get_inputs(params: Mapping[str, Parameter]) -> list:
     inputs = []
 
     for name, param in params.items():
-        if not _is_param_valid(param):
-            continue
-
         annotation = param.annotation
         type_hint = str if annotation is Parameter.empty else annotation
 
@@ -220,9 +217,6 @@ def _get_eventlog(func_name: str, sig: Signature, indexed_args_count: int) -> Di
 
     inputs = []
     for name, param in params.items():
-        if not _is_param_valid(param):
-            continue
-
         annotation = param.annotation
         type_hint = str if annotation is Parameter.empty else annotation
         inp: Dict = _get_input(name, type_hint, param.default)
@@ -235,7 +229,3 @@ def _get_eventlog(func_name: str, sig: Signature, indexed_args_count: int) -> Di
         "type": "eventlog",
         "inputs": inputs
     }
-
-
-def _is_param_valid(param: Parameter) -> bool:
-    return param.name not in ("self", "cls")
