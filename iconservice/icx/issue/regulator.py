@@ -34,7 +34,7 @@ class Regulator:
     Used for generating coin base transaction and emitting event log
 
     covered_icx_by_over_issue:
-    Used for generating coin base transaction and emitting event log It could be
+    Used for generating coin base transaction and emitting event log. It could be
     negative value (In case that Reward calculator issued ICX more then Icon service)
 
     remain_over_issued_icx:
@@ -83,6 +83,7 @@ class Regulator:
             # In case of the first term of decentralization.
             # Do not regulate on the first term of decentralization
             # as Icon service has not issued ICX on the last period of 'pre-vote'
+            # (On pre-vote, icon-foundation provided ICX instead of issuing it)
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
