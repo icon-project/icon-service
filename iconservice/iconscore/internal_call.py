@@ -22,10 +22,10 @@ from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
 from .typing.element import (
-    verify_internal_call_arguments,
     get_score_element_metadata,
     ScoreElementMetadata,
 )
+from .typing.verification import verify_internal_call_arguments
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import StackOverflowException, ScoreNotFoundException
 from ..base.message import Message
@@ -152,9 +152,10 @@ class InternalCall(object):
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, ATTR_SCORE_CALL)
 
-            # TODO: verify internal call arguments by goldworm
-            # metadata: ScoreElementMetadata = get_score_element_metadata(icon_score, func_name)
-            # verify_internal_call_arguments(metadata.signature, arg_params, kw_params)
+            if context.revision >= Revision.VERIFY_INTERNAL_CALL_ARGS.value:
+                # TODO: verify internal call arguments by goldworm
+                metadata: ScoreElementMetadata = get_score_element_metadata(icon_score, func_name)
+                verify_internal_call_arguments(metadata.signature, arg_params, kw_params)
 
             return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
         finally:

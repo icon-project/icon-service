@@ -54,6 +54,9 @@ def get_origin(type_hint: type) -> Optional[type]:
     :param type_hint:
     :return:
     """
+    if type_hint == "Address":
+        type_hint = Address
+
     if isinstance(type_hint, type):
         return type_hint
 
@@ -73,3 +76,13 @@ def is_struct(type_hint) -> bool:
 
 def get_annotations(obj: Any, default: Any) -> Dict[str, type]:
     return getattr(obj, "__annotations__", default)
+
+
+def isinstance_ex(value: Any, _type: type) -> bool:
+    if not isinstance(value, _type):
+        return False
+
+    if type(value) is bool and _type is not bool:
+        return False
+
+    return True

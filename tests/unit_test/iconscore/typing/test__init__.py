@@ -10,6 +10,7 @@ from iconservice.base.address import Address
 from iconservice.iconscore.typing import (
     get_origin,
     get_args,
+    isinstance_ex,
 )
 
 
@@ -27,6 +28,7 @@ class Person(TypedDict):
         (int, int),
         (str, str),
         (Address, Address),
+        ("Address", Address),
         (List[int], list),
         (List[List[str]], list),
         (Dict, dict),
@@ -75,3 +77,18 @@ def test_get_args_with_struct():
 
     for name, type_hint in annotations.items():
         assert type_hint == expected[name]
+
+
+@pytest.mark.parametrize(
+    "value,_type,expected",
+    [
+        (True, int, False),
+        (False, int, False),
+        (0, bool, False),
+        (1, bool, False),
+        (True, bool, True),
+        (False, bool, True),
+    ]
+)
+def test_isinstance_ex(value, _type, expected):
+    assert isinstance_ex(value, _type) == expected

@@ -384,16 +384,3 @@ def get_score_element_metadata(score, func_name: str) -> ScoreElementMetadata:
     except KeyError:
         raise MethodNotFoundException(
             f"Method not found: {type(score).__name__}.{func_name}")
-
-
-def verify_internal_call_arguments(sig: Signature, args: Optional[Tuple], kwargs: Optional[Dict]):
-    try:
-        if args is None:
-            args = ()
-        if kwargs is None:
-            kwargs = {}
-
-        sig.bind(*args, **kwargs)
-    except TypeError:
-        raise InvalidParamsException(
-            f"Invalid internal call params: address={score.address} func={func_name}")

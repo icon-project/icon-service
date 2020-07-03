@@ -141,13 +141,17 @@ def convert_score_parameters(
 
 
 def _verify_arguments(params: Dict[str, Any], sig: Signature):
+    """
 
-    for k in sig.parameters:
-        if k in ("self", "cls"):
-            continue
+    :param params:
+    :param sig: normalized signature
+    :return:
+    """
+    parameters = sig.parameters
 
-        parameter: Parameter = sig.parameters[k]
-        if k not in params and parameter.default == Parameter.empty:
+    for k in parameters:
+        parameter: Parameter = parameters[k]
+        if k not in params and parameter.default is Parameter.empty:
             raise InvalidParamsException(f"Parameter not found: {k}")
 
 
