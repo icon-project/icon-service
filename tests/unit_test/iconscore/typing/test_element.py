@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from inspect import (
+    Parameter
+)
 from typing import List, Dict, Union, Optional, ForwardRef
 
 import pytest
@@ -23,6 +26,7 @@ from iconservice.base.exception import IllegalFormatException, InvalidParamsExce
 from iconservice.iconscore.icon_score_constant import ScoreFlag
 from iconservice.iconscore.typing.element import (
     normalize_type_hint,
+    normalize_parameter,
     verify_score_flag,
     check_parameter_default_type,
 )
@@ -33,6 +37,29 @@ class Person(TypedDict):
     age: int
 
 
+class InvalidListType(TypedDict):
+    name: str
+    wallets: List
+
+
+class InvalidDictType(TypedDict):
+    persons: Dict[int, str]
+
+
+class InvalidUnionType(TypedDict):
+    value: Union[bool, int, str]
+
+
+class ValidNestedType(TypedDict):
+    value: int
+    nested: Person
+
+
+class InvalidNestedType(TypedDict):
+    value: int
+    nested: InvalidListType
+
+
 @pytest.mark.parametrize(
     "type_hint,expected",
     [
@@ -41,6 +68,7 @@ class Person(TypedDict):
         (int, int),
         (str, str),
         (Address, Address),
+        (Person, Person),
         (list, None),
         (List, None),
         (List[bool], List[bool]),
@@ -87,9 +115,14 @@ class Person(TypedDict):
         (Optional[ForwardRef("Address")], None),
         (Dict[str, ForwardRef("Address")], None),
         (Union[ForwardRef("Person"), None], None),
+        (InvalidListType, None),
+        (InvalidDictType, None),
+        (InvalidUnionType, None),
+        (InvalidNestedType, None),
+        (ValidNestedType, ValidNestedType),
     ]
 )
-def test_normalize_abnormal_type_hint(type_hint, expected):
+def test_normalize_type_hint(type_hint, expected):
     try:
         ret = normalize_type_hint(type_hint)
     except IllegalFormatException:
@@ -157,3 +190,25 @@ def test_check_parameter_default_type(type_hint, default, success):
     else:
         with pytest.raises(InvalidParamsException):
             check_parameter_default_type(type_hint, default)
+
+
+@pytest.mark.parametrize(
+    "type_hint,default,expected",
+    [
+        (int, 0, int),
+        (int, None, Optional[int]),
+        (int, None, Union[int, None]),
+        (Person, None, Optional[Person]),
+        (Person, Parameter.empty, Person),
+        (List[str], None, Union[List[str], None]),
+        (Dict[str, int], None, Union[Dict[str, int], None]),
+        (Union[str, None], None, Union[str, None]),
+        (Union[str, None], Parameter.empty, Union[str, None]),
+        (Optional[int], Parameter.empty, Union[int, None]),
+    ]
+)
+def test_normalize_parameter(type_hint, default, expected):
+    parameter = Parameter(
+        "a", Parameter.POSITIONAL_ONLY, default=default, annotation=type_hint)
+    new_parameter = normalize_parameter(parameter)
+    assert new_parameter.annotation == expected

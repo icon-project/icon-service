@@ -22,13 +22,14 @@ from inspect import (
     Signature,
     Parameter,
 )
-from typing import Union, Mapping, List, Dict, Optional, Tuple, Any
+from typing import Union, Mapping, List, Dict, Any, Set
 
 from . import (
     is_base_type,
     is_struct,
     get_origin,
     get_args,
+    get_annotations,
     name_to_type,
 )
 from ..icon_score_constant import (
@@ -109,6 +110,10 @@ def normalize_parameter(param: Parameter) -> Parameter:
     else:
         type_hint = normalize_type_hint(annotation)
 
+    # a: int = None -> a: Union[int, None] = None
+    if param.default is None and get_origin(type_hint) is not Union:
+        type_hint = Union[type_hint, None]
+
     check_parameter_default_type(type_hint, param.default)
 
     if type_hint == annotation:
@@ -153,25 +158,52 @@ def normalize_type_hint(type_hint) -> type:
 
     origin = get_origin(type_hint)
 
-    if is_base_type(origin) or is_struct(origin):
+    if is_base_type(origin):
         return type_hint
 
-    args = get_args(type_hint)
-    size = len(args)
+    if is_struct(origin):
+        # Check if type_hint cycling or invalid nested type hint are present
+        if not is_struct_valid(origin):
+            raise IllegalFormatException(f"Invalid type hint: {type_hint}")
+        return type_hint
 
     if origin is list:
-        if size == 1:
-            return List[normalize_type_hint(args[0])]
+        return normalize_list_type_hint(type_hint)
     elif origin is dict:
-        if size == 2 and args[0] is str:
-            return Dict[str, normalize_type_hint(args[1])]
+        return normalize_dict_type_hint(type_hint)
     elif origin is Union:
-        if size == 2 and type(None) in args:
-            arg = args[0] if args[1] is type(None) else args[1]
-            if arg is not None and arg:
-                return Union[normalize_type_hint(arg), None]
+        return normalize_union_type_hint(type_hint)
 
     raise IllegalFormatException(f"Unsupported type hint: {type_hint}")
+
+
+def normalize_list_type_hint(type_hint: type) -> type:
+    args = get_args(type_hint)
+
+    if len(args) == 1:
+        return List[normalize_type_hint(args[0])]
+
+    raise IllegalFormatException(f"Invalid type hint: {type_hint}")
+
+
+def normalize_dict_type_hint(type_hint: type) -> type:
+    args = get_args(type_hint)
+
+    if len(args) == 2 and args[0] is str:
+        return Dict[str, normalize_type_hint(args[1])]
+
+    raise IllegalFormatException(f"Invalid type hint: {type_hint}")
+
+
+def normalize_union_type_hint(type_hint: type) -> type:
+    args = get_args(type_hint)
+
+    if len(args) == 2 and type(None) in args:
+        arg = args[0] if args[1] is type(None) else args[1]
+        if arg is not None and arg:
+            return Union[normalize_type_hint(arg), None]
+
+    raise IllegalFormatException(f"Invalid type hint: {type_hint}")
 
 
 def verify_score_flag(flag: ScoreFlag):
@@ -384,3 +416,39 @@ def get_score_element_metadata(score, func_name: str) -> ScoreElementMetadata:
     except KeyError:
         raise MethodNotFoundException(
             f"Method not found: {type(score).__name__}.{func_name}")
+
+
+def is_struct_valid(type_hint: type) -> bool:
+    try:
+        check_if_struct_is_valid(type_hint)
+    except:
+        return False
+
+    return True
+
+
+def check_if_struct_is_valid(type_hint: type, structs: Set[Any] = None):
+    if structs is None:
+        structs = set()
+
+    if type_hint in structs:
+        raise IllegalFormatException(f"Circular type hint: {type_hint}")
+
+    structs.add(type_hint)
+    annotations = get_annotations(type_hint, None)
+
+    for type_hint in annotations.values():
+        origin = get_origin(type_hint)
+        if is_base_type(origin):
+            continue
+
+        if origin is list:
+            normalize_list_type_hint(type_hint)
+        elif origin is dict:
+            normalize_dict_type_hint(type_hint)
+        elif origin is Union:
+            normalize_union_type_hint(type_hint)
+        elif is_struct(origin):
+            check_if_struct_is_valid(type_hint, structs)
+        else:
+            raise IllegalFormatException(f"Invalid type hint: {type_hint}")
