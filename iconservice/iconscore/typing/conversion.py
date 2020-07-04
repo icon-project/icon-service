@@ -15,7 +15,7 @@
 
 from enum import Flag, auto
 from inspect import Signature, Parameter
-from typing import Optional, Dict, Union, Type, List, Any
+from typing import Optional, Dict, Union, Type, List, Any, Tuple
 
 from . import (
     BaseObject,
@@ -179,5 +179,8 @@ def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
     if origin is dict:
         type_hint = args[1]
         return {k: str_to_object(v, type_hint) for k, v in value.items()}
+
+    if origin is Union:
+        return str_to_object(value, args[0])
 
     raise InvalidParamsException(f"Failed to convert: value={value} type={type_hint}")

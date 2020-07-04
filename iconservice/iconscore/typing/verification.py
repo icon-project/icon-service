@@ -17,7 +17,7 @@ from inspect import (
     Signature,
     Parameter,
 )
-from typing import Optional, Tuple, Dict, Any, List, Mapping
+from typing import Optional, Tuple, Dict, Any, List, Mapping, Union
 
 from typing_extensions import TypedDict
 
@@ -112,6 +112,8 @@ def verify_type_hint(value: Any, type_hint: type):
         verify_list_type_hint(value, type_hint)
     elif origin is dict:
         verify_dict_type_hint(value, type_hint)
+    elif origin is Union:
+        verify_union_type_hint(value, type_hint)
     else:
         raise TypeError
 
@@ -143,3 +145,8 @@ def verify_dict_type_hint(values: Dict[str, Any], type_hint: type):
             raise TypeError
 
         verify_type_hint(v, value_type_hint)
+
+
+def verify_union_type_hint(value: Union[Any, None], type_hint: type):
+    args = get_args(type_hint)
+    verify_type_hint(value, args[0])

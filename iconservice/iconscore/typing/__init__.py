@@ -63,7 +63,7 @@ def get_origin(type_hint: type) -> Optional[type]:
     return getattr(type_hint, "__origin__", None)
 
 
-def get_args(type_hint: type) -> Tuple[type, ...]:
+def get_args(type_hint: type) -> Tuple[type]:
     return getattr(type_hint, "__args__", ())
 
 
