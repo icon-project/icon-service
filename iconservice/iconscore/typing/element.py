@@ -104,7 +104,8 @@ def normalize_signature(func: callable) -> Signature:
 
 def normalize_parameter(parameter: Parameter) -> Parameter:
     if parameter.kind != Parameter.POSITIONAL_OR_KEYWORD:
-        raise IllegalFormatException("Invalid signature")
+        raise IllegalFormatException(
+            f"Invalid signature: name={parameter.name} kind={parameter.kind}")
 
     annotation = parameter.annotation
 

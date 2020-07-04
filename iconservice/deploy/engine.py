@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import os
 from typing import TYPE_CHECKING
 
@@ -34,6 +35,8 @@ from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
 from ..iconscore.icon_score_step import StepType, get_deploy_content_size
+from ..iconscore.typing.conversion import convert_score_parameters
+from ..iconscore.typing.element import normalize_signature
 from ..iconscore.utils import get_score_deploy_path
 from ..utils import is_builtin_score
 
@@ -317,10 +320,10 @@ class Engine(EngineBase):
         else:
             raise InvalidParamsException(f'Invalid deployType: {deploy_type}')
 
-        TypeConverter.adjust_params_to_method(on_init, params)
+        # TypeConverter.adjust_params_to_method(on_init, params)
 
         # TODO: Replace TypeConverter with convert_score_parameters by goldworm
-        # sig = normalize_signature(inspect.signature(on_init))
-        # converted_params = convert_score_parameters(params, sig)
+        sig = normalize_signature(on_init)
+        params = convert_score_parameters(params, sig)
 
         on_init(**params)
