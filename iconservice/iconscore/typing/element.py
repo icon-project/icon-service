@@ -57,7 +57,7 @@ def normalize_signature(func: callable) -> Signature:
     :return:
     """
     sig = signature(func)
-    params = sig.parameters
+    parameters = sig.parameters
     new_params = []
 
     normalized = False
@@ -81,15 +81,15 @@ def normalize_signature(func: callable) -> Signature:
     # inspect.ismethod(A().cfunc) == True
     is_regular_method: bool = isfunction(func)
 
-    for i, k in enumerate(params):
+    for i, k in enumerate(parameters):
         # Remove "self" parameter from signature of regular method
         if i == 0 and k == "self" and is_regular_method:
             new_param = None
         else:
-            new_param = normalize_parameter(params[k])
+            new_param = normalize_parameter(parameters[k])
             new_params.append(new_param)
 
-        if new_param is not params[k]:
+        if new_param is not parameters[k]:
             normalized = True
 
     return_annotation = normalize_return_annotation(sig.return_annotation)
@@ -102,8 +102,11 @@ def normalize_signature(func: callable) -> Signature:
     return sig
 
 
-def normalize_parameter(param: Parameter) -> Parameter:
-    annotation = param.annotation
+def normalize_parameter(parameter: Parameter) -> Parameter:
+    if parameter.kind != Parameter.POSITIONAL_OR_KEYWORD:
+        raise IllegalFormatException("Invalid signature")
+
+    annotation = parameter.annotation
 
     if annotation == Parameter.empty:
         type_hint = str
@@ -111,16 +114,16 @@ def normalize_parameter(param: Parameter) -> Parameter:
         type_hint = normalize_type_hint(annotation)
 
     # a: int = None -> a: Union[int, None] = None
-    if param.default is None and get_origin(type_hint) is not Union:
+    if parameter.default is None and get_origin(type_hint) is not Union:
         type_hint = Union[type_hint, None]
 
-    check_parameter_default_type(type_hint, param.default)
+    check_parameter_default_type(type_hint, parameter.default)
 
     if type_hint == annotation:
         # Nothing to update
-        return param
+        return parameter
 
-    return param.replace(annotation=type_hint)
+    return parameter.replace(annotation=type_hint)
 
 
 def normalize_return_annotation(return_annotation: type) -> Union[type, Signature.empty]:

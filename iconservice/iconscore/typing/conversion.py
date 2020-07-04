@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from enum import Flag, auto
 from inspect import Signature, Parameter
-from typing import Optional, Dict, Union, Type, List, Any, Tuple
+from typing import Optional, Dict, Union, Type, List, Any
 
 from . import (
     BaseObject,
@@ -141,7 +142,7 @@ def convert_score_parameters(
 
 
 def _verify_arguments(params: Dict[str, Any], sig: Signature):
-    """
+    """Check if all required arguments are present
 
     :param params:
     :param sig: normalized signature
@@ -152,14 +153,14 @@ def _verify_arguments(params: Dict[str, Any], sig: Signature):
     for k in parameters:
         parameter: Parameter = parameters[k]
         if k not in params and parameter.default is Parameter.empty:
-            raise InvalidParamsException(f"Parameter not found: {k}")
+            raise InvalidParamsException(f"Argument not found: {k}")
 
 
 def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
     if value is None:
         return None
 
-    if type(value) not in (str, list, dict):
+    if not isinstance(value, (dict, list, str)):
         raise InvalidParamsException(f"Invalid value type: {value}")
 
     origin = get_origin(type_hint)
@@ -169,7 +170,9 @@ def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
 
     if is_struct(origin):
         annotations = get_annotations(origin, None)
-        return {k: str_to_object(v, annotations[k]) for k, v in value.items()}
+        return OrderedDict(
+            (k, str_to_object(v, annotations[k])) for k, v in value.items()
+        )
 
     args = get_args(type_hint)
 
@@ -177,8 +180,9 @@ def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
         return [str_to_object(i, args[0]) for i in value]
 
     if origin is dict:
-        type_hint = args[1]
-        return {k: str_to_object(v, type_hint) for k, v in value.items()}
+        return OrderedDict(
+            (k, str_to_object(v, type_hint=args[1])) for k, v in value.items()
+        )
 
     if origin is Union:
         return str_to_object(value, args[0])

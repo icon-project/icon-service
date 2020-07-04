@@ -24,7 +24,7 @@ from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.typing.verification import (
     verify_internal_call_arguments,
     verify_type_hint,
-    bind_arguments,
+    merge_arguments,
 )
 from . import Person
 
@@ -52,22 +52,36 @@ def test_verify_internal_call_arguments(args, kwargs, valid):
 
 
 @pytest.mark.parametrize(
-    "args,kwargs",
+    "args,kwargs,success",
     [
-        ((True, b"hello", 0), {}),
-        ((), {"a": True, "b": b"bytes", "c": 100}),
-        ((), {"a": True, "b": b"bytes", "c": "hello"})
+        ((True, b"bytes", 0), {}, True),
+        ((), {"a": True, "b": b"bytes", "c": 100}, True),
+        ((), {"a": True, "b": b"bytes", "c": "hello"}, True),
+        ((True,), {"b": b"bytes", "c": 0}, True),
+        ((True, b"bytes"), {"c": "hello"}, True),
+        ((True, b"bytes"), {"c": "hello", "d": 0}, False),
+        ((True, b"bytes", 0, "hello"), {}, False),
+        ((), {"a": True, "b": b"bytes", "c": "hello", "d": 1}, False),
+        ((True, b"bytes", 0), {"b": b"bytes2"}, False),
+        ((True, b"bytes"), {}, True),
+        ((), {"a": False}, True),
+        ((True,), {"a": False}, False),
+        ((), {}, True),
     ]
 )
-def test_bind_arguments(args, kwargs):
+def test_merge_arguments(args, kwargs, success):
     def func(a: bool, b: bytes, c: int):
         pass
 
     params = {}
     sig = inspect.signature(func)
 
-    params = bind_arguments(params, sig.parameters, args, kwargs)
-    assert len(params) == len(args) + len(kwargs)
+    if success:
+        merge_arguments(params, sig.parameters, args, kwargs)
+        assert len(params) == len(args) + len(kwargs)
+    else:
+        with pytest.raises(InvalidParamsException):
+            merge_arguments(params, sig.parameters, args, kwargs)
 
 
 @pytest.mark.parametrize(

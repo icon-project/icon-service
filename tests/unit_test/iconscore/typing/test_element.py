@@ -209,6 +209,6 @@ def test_check_parameter_default_type(type_hint, default, success):
 )
 def test_normalize_parameter(type_hint, default, expected):
     parameter = Parameter(
-        "a", Parameter.POSITIONAL_ONLY, default=default, annotation=type_hint)
+        "a", Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=type_hint)
     new_parameter = normalize_parameter(parameter)
     assert new_parameter.annotation == expected

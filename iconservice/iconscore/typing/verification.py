@@ -48,7 +48,7 @@ def verify_internal_call_arguments(sig: Signature, args: Optional[Tuple], kwargs
     params: Dict[str, Any] = {}
     parameters = sig.parameters
 
-    bind_arguments(params, parameters, args, kwargs)
+    merge_arguments(params, parameters, args, kwargs)
     add_default_value_to_params(params, parameters)
 
     for name, parameter in parameters.items():
@@ -65,10 +65,23 @@ def verify_internal_call_arguments(sig: Signature, args: Optional[Tuple], kwargs
                 f"Type mismatch: name={name} type_hint={type_hint} value_type={type(value)}")
 
 
-def bind_arguments(
+def merge_arguments(
         params: Dict[str, Any],
         parameters: Mapping[str, Parameter],
-        args: Optional[Tuple], kwargs: Optional[Dict]) -> Dict[str, Any]:
+        args: Optional[Tuple], kwargs: Optional[Dict]):
+    """Merge args and kwargs to a dictionary
+
+    Type checking and parameter default value will be handled in the next phase
+
+    :param params: dictionary which will contain merged arguments from args and kwargs
+    :param parameters: function signature
+    :param args: arguments in tuple
+    :param kwargs: keyword arguments in dict
+    :return:
+    """
+    if len(args) > len(parameters):
+        raise InvalidParamsException(f"Too many arguments")
+
     for arg, k in zip(args, parameters):
         params[k] = arg
 
@@ -80,8 +93,6 @@ def bind_arguments(
             raise InvalidParamsException(f"Invalid argument: name={k} value={kwargs[k]}")
 
         params[k] = kwargs[k]
-
-    return params
 
 
 def add_default_value_to_params(params: Dict[str, Any], parameters: Mapping[str, Parameter]):
