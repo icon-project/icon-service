@@ -210,13 +210,17 @@ class Engine(EngineBase):
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)
-            ScoreApiGenerator.check_on_deploy(context, score)
+
+            # check_on_deploy will be done by normalize_signature()
+            # since Revision.THREE
+            if context.revision < Revision.THREE.value:
+                ScoreApiGenerator.check_on_deploy(context, score)
 
             # owner is set in IconScoreBase.__init__()
             context.msg = Message(sender=score.owner)
             context.tx = None
 
-            self._initialize_score(tx_params.deploy_type, score, params)
+            self._initialize_score(context, tx_params.deploy_type, score, params)
             new_tx_score_mapper[score_address] = score_info
         except BaseException as e:
             Logger.warning(f'Failed to deploy a SCORE: {score_address}', ICON_DEPLOY_LOG_TAG)
@@ -306,7 +310,10 @@ class Engine(EngineBase):
             IconScoreDeployer.deploy_legacy(score_deploy_path, content)
 
     @staticmethod
-    def _initialize_score(deploy_type: DeployType, score: 'IconScoreBase', params: dict):
+    def _initialize_score(
+            context: 'Context',
+            deploy_type: DeployType,
+            score: 'IconScoreBase', params: dict):
         """Call on_install() or on_update() of a SCORE
         only once when installing or updating it
         :param deploy_type: DeployType.INSTALL or DeployType.UPDATE
@@ -320,10 +327,10 @@ class Engine(EngineBase):
         else:
             raise InvalidParamsException(f'Invalid deployType: {deploy_type}')
 
-        # TypeConverter.adjust_params_to_method(on_init, params)
-
-        # TODO: Replace TypeConverter with convert_score_parameters by goldworm
-        sig = normalize_signature(on_init)
-        params = convert_score_parameters(params, sig)
+        if context.revision < Revision.THREE.value:
+            TypeConverter.adjust_params_to_method(on_init, params)
+        else:
+            sig = normalize_signature(on_init)
+            params = convert_score_parameters(params, sig)
 
         on_init(**params)

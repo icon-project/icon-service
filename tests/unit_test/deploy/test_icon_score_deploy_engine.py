@@ -230,7 +230,7 @@ def test_on_deploy(mock_engine, context, mocker):
                                                                    next_tx_hash)
     mock_engine._create_score_info.assert_called_with(context, SCORE_ADDRESS, next_tx_hash)
     score_info.get_score.assert_called_with(context.revision)
-    mock_engine._initialize_score.assert_called_with(deploy_type, mock_score, deploy_params)
+    mock_engine._initialize_score.assert_called_with(context, deploy_type, mock_score, deploy_params)
 
     assert context.msg == backup_msg
     assert context.tx == backup_tx
@@ -455,11 +455,14 @@ class TestInitializeScore:
     def test_initialize_score_invalid(self, mock_engine, mocker):
         """case invalid method name"""
         deploy_type = 'invalid'
+        context = Mock(spec=["revision"])
+        context.revision = 0
 
         self.set_test(mocker)
 
         with pytest.raises(InvalidParamsException) as e:
-            mock_engine._initialize_score(deploy_type, self.mock_score, self.params)
+            mock_engine._initialize_score(
+                context, deploy_type, self.mock_score, self.params)
 
         assert e.value.code == ExceptionCode.INVALID_PARAMETER
         assert e.value.message == f"Invalid deployType: {deploy_type}"
