@@ -1,6 +1,11 @@
 from iconservice import *
 
 
+class Delegation(TypedDict):
+    address: Address
+    value: int
+
+
 class SampleSystemScoreInterCall(IconScoreBase):
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
@@ -52,7 +57,7 @@ class SampleSystemScoreInterCall(IconScoreBase):
                              func_name="estimateUnstakeLockPeriod",
                              kw_dict=self._get_kw_dict(locals()))
     @external
-    def call_setDelegation(self, delegations: list):
+    def call_setDelegation(self, delegations: List[Delegation]):
         use_interface = self.use_interface.get()
         if use_interface:
             test_interface = self.create_interface_score(SYSTEM_SCORE_ADDRESS, InterfaceSystemScore)

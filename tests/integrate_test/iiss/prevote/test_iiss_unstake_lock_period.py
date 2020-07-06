@@ -18,7 +18,7 @@
 """
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP, ConfigKey, IISS_DAY_BLOCK
-from tests.unittest.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
+from tests.unit_test.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 

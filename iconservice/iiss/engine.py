@@ -31,14 +31,13 @@ from ..base.exception import (
     InvalidParamsException, InvalidRequestException,
     OutOfBalanceException, FatalException, InternalServiceErrorException
 )
-from ..base.type_converter import TypeConverter
-from ..base.type_converter_templates import ParamType
 from ..icon_constant import ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
     IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
     RevisionChangedFlag
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..iconscore.icon_score_step import StepType
+from ..iconscore.system_score import Delegation
 from ..icx import Intent
 from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
@@ -391,7 +390,7 @@ class Engine(EngineBase):
             "unstakeLockPeriod": unstake_lock_period
         }
 
-    def handle_set_delegation(self, context: 'IconScoreContext', delegations: list):
+    def handle_set_delegation(self, context: 'IconScoreContext', delegations: List[Delegation]):
         """Handles setDelegation JSON-RPC API request
         """
         # SCORE can stake via SCORE inter-call
@@ -442,11 +441,12 @@ class Engine(EngineBase):
     @classmethod
     def _convert_params_of_set_delegation(cls,
                                           context: 'IconScoreContext',
-                                          delegations: Optional[List]) -> Tuple[int, List[Tuple['Address', int]]]:
+                                          delegations: Optional[List[Delegation]]
+                                          ) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
-        [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
-        [(Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), 1000000000000000000), ...]
+        [{"address": Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), "value", 1234}, ...] ->
+        [(Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), 1234), ...]
 
         :param delegations: delegations of setDelegation JSON-RPC API request
         :return: total_delegating, (address, delegated)
@@ -458,12 +458,11 @@ class Engine(EngineBase):
 
         cls._check_delegation_count(context, delegations)
 
-        temp_delegations: list = TypeConverter.convert(delegations, ParamType.IISS_SET_DELEGATION)
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
         delegated_addresses = set()
 
-        for delegation in temp_delegations:
+        for delegation in delegations:
             address: 'Address' = delegation["address"]
             value: int = delegation["value"]
             assert isinstance(address, Address)
