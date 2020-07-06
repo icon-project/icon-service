@@ -60,6 +60,11 @@ class InvalidNestedType(TypedDict):
     nested: InvalidListType
 
 
+class InvalidNestedType2(TypedDict):
+    value: int
+    nested_dict: Dict[str, str]
+
+
 @pytest.mark.parametrize(
     "type_hint,expected",
     [
@@ -81,12 +86,12 @@ class InvalidNestedType(TypedDict):
         (List["Address"], None),
         (dict, None),
         (Dict, None),
-        (Dict[str, bool], Dict[str, bool]),
-        (Dict[str, bytes], Dict[str, bytes]),
-        (Dict[str, int], Dict[str, int]),
-        (Dict[str, str], Dict[str, str]),
-        (Dict[str, Address], Dict[str, Address]),
-        (Dict[str, Person], Dict[str, Person]),
+        (Dict[str, bool], None),
+        (Dict[str, bytes], None),
+        (Dict[str, int], None),
+        (Dict[str, str], None),
+        (Dict[str, Address], None),
+        (Dict[str, Person], None),
         (Dict[int, str], None),
         (Dict[str, "Address"], None),
         (Optional[bool], Union[bool, None]),
@@ -95,7 +100,7 @@ class InvalidNestedType(TypedDict):
         (Optional[str], Union[str, None]),
         (Optional[Address], Union[Address, None]),
         (Optional[List[str]], Union[List[str], None]),
-        (Optional[Dict[str, str]], Union[Dict[str, str], None]),
+        (Optional[Dict[str, str]], None),
         (Optional[Dict], None),
         (Union[str], str),
         (Union[str, int], None),
@@ -201,14 +206,22 @@ def test_check_parameter_default_type(type_hint, default, success):
         (Person, None, Optional[Person]),
         (Person, Parameter.empty, Person),
         (List[str], None, Union[List[str], None]),
-        (Dict[str, int], None, Union[Dict[str, int], None]),
         (Union[str, None], None, Union[str, None]),
         (Union[str, None], Parameter.empty, Union[str, None]),
         (Optional[int], Parameter.empty, Union[int, None]),
+        (Dict[str, int], None, None),
+        (List[Dict[str, int]], None, None),
+        (Optional[Dict[str, int]], None, None),
+        (Union[Dict[str, int], None], None, None),
     ]
 )
 def test_normalize_parameter(type_hint, default, expected):
     parameter = Parameter(
         "a", Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=type_hint)
-    new_parameter = normalize_parameter(parameter)
-    assert new_parameter.annotation == expected
+
+    if expected is None:
+        with pytest.raises(IllegalFormatException):
+            normalize_parameter(parameter)
+    else:
+        new_parameter = normalize_parameter(parameter)
+        assert new_parameter.annotation == expected

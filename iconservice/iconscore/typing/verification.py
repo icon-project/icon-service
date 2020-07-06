@@ -19,8 +19,6 @@ from inspect import (
 )
 from typing import Optional, Tuple, Dict, Any, List, Mapping, Union
 
-from typing_extensions import TypedDict
-
 from . import (
     get_origin,
     get_args,
@@ -49,7 +47,7 @@ def verify_internal_call_arguments(sig: Signature, args: Optional[Tuple], kwargs
     parameters = sig.parameters
 
     merge_arguments(params, parameters, args, kwargs)
-    add_default_value_to_params(params, parameters)
+    set_default_value_to_params(params, parameters)
 
     for name, parameter in parameters.items():
         if name not in params:
@@ -60,7 +58,7 @@ def verify_internal_call_arguments(sig: Signature, args: Optional[Tuple], kwargs
 
         try:
             verify_type_hint(value, type_hint)
-        except:
+        except TypeError:
             raise InvalidParamsException(
                 f"Type mismatch: name={name} type_hint={type_hint} value_type={type(value)}")
 
@@ -95,18 +93,27 @@ def merge_arguments(
         params[k] = kwargs[k]
 
 
-def add_default_value_to_params(params: Dict[str, Any], parameters: Mapping[str, Parameter]):
+def set_default_value_to_params(params: Dict[str, Any], parameters: Mapping[str, Parameter]):
+    """Set default parameter value to missing parameter
+
+    If No default parameter value is available for missing argument, an exception is raised
+
+    :param params:
+    :param parameters:
+    :return:
+    """
     if len(params) == len(parameters):
         return
 
-    # fill default values in params:
+    # Set default parameter values to missing arguments
     for k in parameters:
         if k in params:
             continue
 
         parameter = parameters[k]
-        if parameter is Parameter.empty:
-            raise InvalidParamsException(f"Argument not found: name={k}")
+        if parameter.default is Parameter.empty:
+            raise InvalidParamsException(
+                f"Missing argument: name={k} type={parameter.annotation}")
 
         params[k] = parameter.default
 
@@ -129,11 +136,14 @@ def verify_type_hint(value: Any, type_hint: type):
         raise TypeError
 
 
-def verify_struct_type_hint(value: TypedDict, type_hint: type):
+def verify_struct_type_hint(value: Dict[str, Any], type_hint: type):
     annotations = get_annotations(type_hint, None)
     assert annotations is not None
 
     for name, type_hint in annotations.items():
+        if name not in value:
+            raise InvalidParamsException(f"Missing field in struct: name={name}")
+
         verify_type_hint(value[name], type_hint)
 
 

@@ -22,7 +22,7 @@ from inspect import (
     Signature,
     Parameter,
 )
-from typing import Union, Mapping, List, Dict, Any, Set
+from typing import Union, Mapping, List, Any, Set
 
 from . import (
     is_base_type,
@@ -32,6 +32,7 @@ from . import (
     get_annotations,
     name_to_type,
 )
+from . import isinstance_ex
 from ..icon_score_constant import (
     CONST_SCORE_FLAG,
     ScoreFlag,
@@ -146,19 +147,18 @@ def check_parameter_default_type(type_hint: type, default: Any):
     else:
         default_type = origin
 
-    if not isinstance(default, default_type):
+    if not isinstance_ex(default, default_type):
         raise InvalidParamsException(
-            f'Default params type mismatch. value={default} type={type_hint}')
-
-    if type(default) is bool and origin is not bool:
-        raise InvalidParamsException(
-            f'Default params type mismatch. value={default} type={type_hint}')
+            f'Default value type mismatch. value={default} type={type_hint}')
 
 
 def normalize_type_hint(type_hint) -> type:
     # If type hint is str, convert it to type hint
     if isinstance(type_hint, str):
-        type_hint = name_to_type(type_hint)
+        if type_hint == "Address":
+            type_hint = name_to_type(type_hint)
+        else:
+            raise IllegalFormatException(f"Invalid type hint: {repr(type_hint)}")
 
     origin = get_origin(type_hint)
 
@@ -191,12 +191,15 @@ def normalize_list_type_hint(type_hint: type) -> type:
 
 
 def normalize_dict_type_hint(type_hint: type) -> type:
-    args = get_args(type_hint)
+    raise IllegalFormatException(f"Dict not supported: {type_hint}")
 
-    if len(args) == 2 and args[0] is str:
-        return Dict[str, normalize_type_hint(args[1])]
-
-    raise IllegalFormatException(f"Invalid type hint: {type_hint}")
+    # TODO: To support Dict type as SCORE parameter comment out the code below by goldworm
+    # args = get_args(type_hint)
+    #
+    # if len(args) == 2 and args[0] is str:
+    #     return Dict[str, normalize_type_hint(args[1])]
+    #
+    # raise IllegalFormatException(f"Invalid type hint: {type_hint}")
 
 
 def normalize_union_type_hint(type_hint: type) -> type:

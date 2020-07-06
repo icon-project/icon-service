@@ -15,7 +15,7 @@
 
 import inspect
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional, Union
 
 import pytest
 from typing_extensions import TypedDict
@@ -25,7 +25,9 @@ from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.typing.conversion import (
     convert_score_parameters,
     object_to_str,
+    str_to_object_in_struct,
 )
+from iconservice.iconscore.typing.element import normalize_signature
 from iconservice.iconscore.typing.element import FunctionMetadata
 
 
@@ -33,7 +35,12 @@ class User(TypedDict):
     name: str
     age: int
     single: bool
-    wallet: Address
+    wallet: Union[Address, None]
+
+
+class Person(TypedDict):
+    name: str
+    age: Optional[int]
 
 
 def test_convert_score_parameters():
@@ -64,11 +71,11 @@ def test_convert_score_parameters():
         "_struct": {"name": "hello", "age": 30, "single": True, "wallet": address},
         "_list_of_struct": [
             {"name": "hello", "age": 30, "single": True, "wallet": address},
-            {"name": "world", "age": 40, "single": False},
+            {"name": "world", "age": 40, "single": False, "wallet": address},
         ],
         "_dict_of_str_and_struct": {
             "a": {"name": "hello", "age": 30, "single": True, "wallet": address},
-            "b": {"age": 27},
+            "b": {"name": "h", "age": 10, "single": False, "wallet": None},
         },
     }
 
@@ -77,7 +84,7 @@ def test_convert_score_parameters():
     assert params_in_object == params
 
 
-def test_convert_score_parameters_with_insufficient_parameters():
+def test_convert_score_parameters_with_insufficient_params():
     class TestScore:
         def func(self, address: Address):
             pass
@@ -87,3 +94,64 @@ def test_convert_score_parameters_with_insufficient_parameters():
     with pytest.raises(InvalidParamsException):
         function = FunctionMetadata(TestScore.func)
         convert_score_parameters(params, function.signature)
+
+
+@pytest.mark.parametrize(
+    "skipped_field,success",
+    [
+        (None, True),
+        ("name", False),
+        ("age", False),
+        ("single", False),
+        ("wallet", False),
+    ]
+)
+def test_str_to_object(skipped_field, success):
+    class TestScore:
+        def func(self, user: User):
+            pass
+
+    address = Address(AddressPrefix.EOA, os.urandom(20))
+    params = {
+        "user": {
+            "name": "hello",
+            "age": 30,
+            "single": True,
+            "wallet": address,
+        }
+    }
+
+    if skipped_field:
+        del params["user"][skipped_field]
+
+    str_params = object_to_str(params)
+    sig = normalize_signature(TestScore.func)
+
+    if success:
+        ret = convert_score_parameters(str_params, sig)
+        assert ret == params
+    else:
+        with pytest.raises(InvalidParamsException):
+            convert_score_parameters(str_params, sig)
+
+
+@pytest.mark.parametrize(
+    "age,success",
+    [
+        (10, True),
+        (None, True),
+        (-1, False),
+    ]
+)
+def test_str_to_object_in_struct(age, success):
+    expected = {"name": "john"}
+    if age is None or age > 0:
+        expected["age"] = age
+
+    params = object_to_str(expected)
+
+    if success:
+        assert str_to_object_in_struct(params, Person) == expected
+    else:
+        with pytest.raises(InvalidParamsException):
+            str_to_object_in_struct(params, Person)

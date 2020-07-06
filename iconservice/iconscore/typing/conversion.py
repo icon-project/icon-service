@@ -16,7 +16,7 @@
 from collections import OrderedDict
 from enum import Flag, auto
 from inspect import Signature, Parameter
-from typing import Optional, Dict, Union, Type, List, Any
+from typing import Optional, Dict, Union, Any
 
 from . import (
     BaseObject,
@@ -27,11 +27,9 @@ from . import (
     get_args,
     get_annotations,
 )
+from .verification import set_default_value_to_params
 from ...base.address import Address
 from ...base.exception import InvalidParamsException
-
-CommonObject = Union[bool, bytes, int, str, 'Address', Dict[str, BaseObject]]
-CommonType = Type[CommonObject]
 
 
 def base_object_to_str(value: Any) -> str:
@@ -49,7 +47,7 @@ def base_object_to_str(value: Any) -> str:
     raise TypeError(f"Unsupported type: {type(value)}")
 
 
-def object_to_str(value: Any) -> Union[List, Dict, CommonObject]:
+def object_to_str(value: Any) -> Union[Any]:
     if is_base_type(type(value)):
         return base_object_to_str(value)
 
@@ -58,6 +56,9 @@ def object_to_str(value: Any) -> Union[List, Dict, CommonObject]:
 
     if isinstance(value, dict):
         return {k: object_to_str(value[k]) for k in value}
+
+    if value is None:
+        return None
 
     raise TypeError(f"Unsupported type: {type(value)}")
 
@@ -126,17 +127,20 @@ def convert_score_parameters(
     _verify_arguments(params, sig)
 
     converted_params = {}
+    parameters = sig.parameters
 
     for k, v in params.items():
         if not isinstance(k, str):
             raise InvalidParamsException(f"Invalid key type: key={k}")
 
         try:
-            parameter: Parameter = sig.parameters[k]
+            parameter: Parameter = parameters[k]
             converted_params[k] = str_to_object(v, parameter.annotation)
         except KeyError:
             if not (options & ConvertOption.IGNORE_UNKNOWN_PARAMS):
                 raise InvalidParamsException(f"Unknown param: key={k} value={v}")
+
+    set_default_value_to_params(params, parameters)
 
     return converted_params
 
@@ -157,10 +161,7 @@ def _verify_arguments(params: Dict[str, Any], sig: Signature):
 
 
 def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
-    if value is None:
-        return None
-
-    if not isinstance(value, (dict, list, str)):
+    if not isinstance(value, (dict, list, str, type(None))):
         raise InvalidParamsException(f"Invalid value type: {value}")
 
     origin = get_origin(type_hint)
@@ -169,10 +170,7 @@ def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
         return str_to_base_object(value, origin)
 
     if is_struct(origin):
-        annotations = get_annotations(origin, None)
-        return OrderedDict(
-            (k, str_to_object(v, annotations[k])) for k, v in value.items()
-        )
+        return str_to_object_in_struct(value, type_hint)
 
     args = get_args(type_hint)
 
@@ -185,6 +183,24 @@ def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
         )
 
     if origin is Union:
-        return str_to_object(value, args[0])
+        # Assume that only the specific type of Union (= Optional) is allowed in iconservice
+        return None if value is None else str_to_object(value, args[0])
 
-    raise InvalidParamsException(f"Failed to convert: value={value} type={type_hint}")
+    raise InvalidParamsException(f"Type mismatch: value={value} type_hint={type_hint}")
+
+
+def str_to_object_in_struct(value: Dict[str, Optional[str]], type_hint: type) -> Dict[str, Any]:
+    annotations = get_annotations(type_hint, None)
+
+    ret = OrderedDict()
+
+    for k, v in value.items():
+        if k not in annotations:
+            raise InvalidParamsException(f"Unknown field in struct: key={k}")
+
+        ret[k] = str_to_object(v, annotations[k])
+
+    if len(ret) != len(annotations):
+        raise InvalidParamsException(f"Missing field in struct")
+
+    return ret

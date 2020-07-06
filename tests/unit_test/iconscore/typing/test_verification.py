@@ -18,6 +18,7 @@ import os
 from typing import List
 
 import pytest
+from typing_extensions import TypedDict
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidParamsException
@@ -25,8 +26,16 @@ from iconservice.iconscore.typing.verification import (
     verify_internal_call_arguments,
     verify_type_hint,
     merge_arguments,
+    set_default_value_to_params,
 )
-from . import Person
+
+
+class Person(TypedDict):
+    name: str
+    age: int
+    single: bool
+    data: bytes
+    wallets: List[Address]
 
 
 @pytest.mark.parametrize(
@@ -36,7 +45,7 @@ from . import Person
         ((0,), {}, True),
         (None, None, False),
         (("hello",), {}, False),
-    ]
+    ],
 )
 def test_verify_internal_call_arguments(args, kwargs, valid):
     def func(a: int):
@@ -67,7 +76,7 @@ def test_verify_internal_call_arguments(args, kwargs, valid):
         ((), {"a": False}, True),
         ((True,), {"a": False}, False),
         ((), {}, True),
-    ]
+    ],
 )
 def test_merge_arguments(args, kwargs, success):
     def func(a: bool, b: bytes, c: int):
@@ -82,6 +91,45 @@ def test_merge_arguments(args, kwargs, success):
     else:
         with pytest.raises(InvalidParamsException):
             merge_arguments(params, sig.parameters, args, kwargs)
+
+
+@pytest.mark.parametrize(
+    "_name,_age,success",
+    [
+        ("john", 13, True),
+        ("", 10, True),
+        ("bob", None, True),
+        ("", None, True),
+        (None, 10, False),
+        (None, None, False),
+    ],
+)
+def test_set_default_value_to_params(_name, _age, success):
+    default = -1
+
+    def func(name: str, age: int = default):
+        pass
+
+    sig = inspect.signature(func)
+
+    params = {}
+    expected = {}
+
+    if _name is not None:
+        expected["name"] = params["name"] = _name
+
+    if _age is not None:
+        expected["age"] = params["age"] = _age
+    else:
+        expected["age"] = default
+
+    if success:
+        set_default_value_to_params(params, sig.parameters)
+        assert params == expected
+        assert params["age"] == expected["age"]
+    else:
+        with pytest.raises(InvalidParamsException):
+            set_default_value_to_params(params, sig.parameters)
 
 
 @pytest.mark.parametrize(
@@ -106,17 +154,41 @@ def test_merge_arguments(args, kwargs, success):
         (["a", "b", "c"], List[bool], False),
         (
             {
-                "name": "hello", "age": 100, "single": True, "data": b"world",
+                "name": "hello",
+                "age": 100,
+                "single": True,
+                "data": b"world",
                 "wallets": [Address(AddressPrefix.CONTRACT, os.urandom(20))],
             },
             Person,
-            True
+            True,
         ),
-    ]
+        (
+            {
+                "name": "hello",
+                "age": False,
+                "single": True,
+                "data": b"world",
+                "wallets": [Address(AddressPrefix.CONTRACT, os.urandom(20))],
+            },
+            Person,
+            False,
+        ),
+        (
+            {
+                "name": "hello",
+                "age": 50,
+                "single": True,
+                "wallets": [Address(AddressPrefix.CONTRACT, os.urandom(20))],
+            },
+            Person,
+            False,
+        ),
+    ],
 )
 def test_verify_type_hint(value, type_hint, success):
     if success:
         verify_type_hint(value, type_hint)
     else:
-        with pytest.raises(expected_exception=(TypeError, KeyError)):
+        with pytest.raises(expected_exception=(TypeError, InvalidParamsException)):
             verify_type_hint(value, type_hint)
