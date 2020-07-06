@@ -38,7 +38,7 @@ setup_options = {
     'license': "Apache License 2.0",
     'install_requires': requires,
     'extras_require': extra_requires,
-    'python_requires': '>=3.6.5, <3.8',
+    'python_requires': '>=3.7, <3.8',
     'entry_points': {
         'console_scripts': [
             'iconservice=iconservice.icon_service_cli:main'
@@ -50,7 +50,6 @@ setup_options = {
         'Intended Audience :: System Administrators',
         'Natural Language :: English',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7'
     ]
 }
