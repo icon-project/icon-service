@@ -26,6 +26,23 @@ if TYPE_CHECKING:
 
 
 class Regulator:
+    """ Regulate ICX issue amount
+    * The difference of I-SCORE calculation between icon service and reward calculator
+    * Fee from the transaction
+
+    covered_icx_by_fee:
+    Used for generating coin base transaction and emitting event log
+
+    covered_icx_by_over_issue:
+    Used for generating coin base transaction and emitting event log. It could be
+    negative value (In case that Reward calculator issued ICX more then Icon service)
+
+    remain_over_issued_icx:
+    Only used for emitting eventlog
+
+    corrected_icx_issue_amount:
+    Used for issuing, generating coin base transaction and emitting event log
+    """
     def __init__(self, context: 'IconScoreContext', issue_amount: int):
         self._regulator_variable: Optional['RegulatorVariable'] = None
         self._covered_icx_by_fee: Optional[int] = None
@@ -63,6 +80,10 @@ class Regulator:
 
             assert prev_calc_period_issued_iscore >= 0
 
+            # In case of the first term of decentralization.
+            # Do not regulate on the first term of decentralization
+            # as Icon service has not issued ICX on the last period of 'pre-vote'
+            # (On pre-vote, icon-foundation provided ICX instead of issuing it)
             if regulator_variable.prev_calc_period_issued_icx == -1:
                 regulator_variable.prev_calc_period_issued_icx, prev_calc_period_issued_iscore = 0, 0
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
@@ -118,9 +139,10 @@ class Regulator:
                                    icx_issue_amount: int,
                                    over_issued_icx: int) -> Tuple[int, int, int]:
         corrected_issue_amount = icx_issue_amount - over_issued_icx
+        # In case that Reward calculator issued ICX more then Icon service
         if over_issued_icx < 0:
-            covered_icx_by_remain = over_issued_icx
             remain_over_issued_icx = 0
+            covered_icx_by_remain = over_issued_icx
             return covered_icx_by_remain, remain_over_issued_icx, corrected_issue_amount
 
         if corrected_issue_amount >= 0:
@@ -166,14 +188,23 @@ class Regulator:
                                              remain_over_issued_iscore: int,
                                              icx_issue_amount: int,
                                              prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
+        """
+
+        :param prev_calc_period_issued_icx: Calculated from Icon Service
+        :param prev_calc_period_issued_iscore: Calculated from Reward Calculator
+        :param remain_over_issued_iscore: Amount
+        :param icx_issue_amount:
+        :param prev_block_cumulative_fee:
+        :return:
+        """
         assert icx_issue_amount >= 0
         assert prev_block_cumulative_fee >= 0
         assert prev_calc_period_issued_iscore >= 0
 
-        # get difference between icon_service and reward_calc after set exchange rates
         prev_calc_over_issued_iscore: int = \
             prev_calc_period_issued_icx * ISCORE_EXCHANGE_RATE - prev_calc_period_issued_iscore
         total_over_issued_iscore: int = prev_calc_over_issued_iscore + remain_over_issued_iscore
+        # Over issued amount could be negative value. It means reward calculator issued more then icon service.
         over_issued_icx, over_issued_iscore = cls._separate_icx_and_iscore(total_over_issued_iscore)
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
