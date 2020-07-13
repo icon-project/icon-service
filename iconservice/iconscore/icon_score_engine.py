@@ -133,8 +133,8 @@ class IconScoreEngine(object):
         ):
             options = ConvertOption.IGNORE_UNKNOWN_PARAMS
 
-        element: ScoreElementMetadata = get_score_element_metadata(icon_score, func_name)
-        params = convert_score_parameters(kw_params, element.signature, options)
+        element_metadata: ScoreElementMetadata = get_score_element_metadata(icon_score, func_name)
+        params = convert_score_parameters(kw_params, element_metadata.signature, options)
 
         return params
 
