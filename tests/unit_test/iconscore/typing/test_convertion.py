@@ -96,6 +96,18 @@ def test_convert_score_parameters_with_insufficient_params():
         convert_score_parameters(params, function.signature)
 
 
+def test_convert_score_parameters_with_type_mismatch():
+    class TestScore:
+        def func(self, seed: str):
+            pass
+
+    params = {"seed": ["1", "2"]}
+
+    with pytest.raises(InvalidParamsException):
+        function = FunctionMetadata(TestScore.func)
+        convert_score_parameters(params, function.signature)
+
+
 @pytest.mark.parametrize(
     "skipped_field,success",
     [
