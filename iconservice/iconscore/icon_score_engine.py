@@ -120,15 +120,17 @@ class IconScoreEngine(object):
         # No problem even though ret is None
         return deepcopy(ret)
 
-    @staticmethod
-    def _convert_score_params_by_annotations(context: 'IconScoreContext',
-                                             icon_score: 'IconScoreBase',
-                                             func_name: str,
-                                             kw_params: dict) -> dict:
+    @classmethod
+    def _convert_score_params_by_annotations(
+            cls, context: 'IconScoreContext',
+            icon_score: 'IconScoreBase',
+            func_name: str,
+            kw_params: dict) -> dict:
+
         options = ConvertOption.NONE
         if (
                 icon_score.address == SYSTEM_SCORE_ADDRESS
-                and func_name == "setPRep"
+                and func_name in ("registerPRep", "setPRep")
                 and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value
         ):
             options = ConvertOption.IGNORE_UNKNOWN_PARAMS
