@@ -381,3 +381,34 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                           from_=self._accounts[0],
                           expected_status=False)
         raise_exception_end_tag("test_get_score_no_fallback")
+
+    def test_get_score_api_with_payable_only(self):
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="get_api", score_name="payable_only", from_=self._accounts[0])
+
+        score_address: 'Address' = tx_results[0].score_address
+        api: dict = self.get_score_api(score_address)
+
+        expected = [
+            {
+                'type': 'fallback',
+                'name': 'fallback',
+                'payable': True
+            },
+            {
+                'type': 'function',
+                'name': 'get_value',
+                'inputs': [{'name': 'value', 'type': 'int'}],
+                'outputs': [{'type': 'int'}],
+                'readonly': True
+            },
+            {
+                'type': 'function',
+                'name': 'set_value',
+                'inputs': [{'name': 'value', 'type': 'int'}],
+                'outputs': [],
+                'payable': True,
+            },
+        ]
+
+        assert api == expected

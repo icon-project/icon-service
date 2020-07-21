@@ -20,7 +20,12 @@ from typing import List, Dict, Mapping, Iterable, Any
 
 from . import get_origin, get_args, is_struct
 from .conversion import is_base_type
-from .element import ScoreElementMetadata, FunctionMetadata, EventLogMetadata
+from .element import (
+    ScoreElementMetadata,
+    FunctionMetadata,
+    EventLogMetadata,
+    ScoreFlag,
+)
 from ..icon_score_constant import STR_FALLBACK
 from ...base.exception import (
     IllegalFormatException,
@@ -44,6 +49,9 @@ def get_score_api(elements: Iterable[ScoreElementMetadata]) -> List:
     for element in elements:
         if isinstance(element, FunctionMetadata):
             func: FunctionMetadata = element
+            if func.flag == ScoreFlag.PAYABLE:
+                continue
+
             item = _get_function(func.name, func.signature, func.is_readonly, func.is_payable)
         elif isinstance(element, EventLogMetadata):
             eventlog: EventLogMetadata = element

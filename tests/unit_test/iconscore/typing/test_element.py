@@ -29,7 +29,6 @@ from iconservice.iconscore.typing.element import (
     normalize_parameter,
     verify_score_flag,
     check_parameter_default_type,
-    check_if_struct_is_valid,
 )
 
 
