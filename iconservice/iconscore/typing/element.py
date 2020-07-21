@@ -47,6 +47,18 @@ from ...base.exception import (
     InvalidParamsException,
 )
 
+_VALID_SCORE_FLAG_COMBINATION = {
+    ScoreFlag.EXTERNAL,
+    ScoreFlag.EXTERNAL | ScoreFlag.PAYABLE,
+    ScoreFlag.EXTERNAL | ScoreFlag.READONLY,
+    ScoreFlag.FALLBACK | ScoreFlag.PAYABLE,
+    ScoreFlag.EVENTLOG,
+    ScoreFlag.INTERFACE,
+}
+
+
+_MAX_STRUCT_FIELDS = 16
+
 
 def normalize_signature(func: callable) -> Signature:
     """Normalize signature of score methods
@@ -193,7 +205,7 @@ def normalize_list_type_hint(type_hint: type) -> type:
 def normalize_dict_type_hint(type_hint: type) -> type:
     raise IllegalFormatException(f"Dict not supported: {type_hint}")
 
-    # TODO: To support Dict type as SCORE parameter comment out the code below by goldworm
+    # TODO: The below codes are commented out to prevent Dict type for being used as SCORE parameter
     # args = get_args(type_hint)
     #
     # if len(args) == 2 and args[0] is str:
@@ -213,22 +225,19 @@ def normalize_union_type_hint(type_hint: type) -> type:
     raise IllegalFormatException(f"Invalid type hint: {type_hint}")
 
 
-def verify_score_flag(flag: ScoreFlag):
+def verify_score_flag(flag: ScoreFlag, allow_payable_only: bool = True):
     """Check if score flag combination is valid
 
     If the flag combination is not valid, raise an exception
     """
-    valid = {
-        ScoreFlag.EXTERNAL,
-        ScoreFlag.EXTERNAL | ScoreFlag.PAYABLE,
-        ScoreFlag.EXTERNAL | ScoreFlag.READONLY,
-        ScoreFlag.FALLBACK | ScoreFlag.PAYABLE,
-        ScoreFlag.EVENTLOG,
-        ScoreFlag.INTERFACE,
-    }
+    if flag in _VALID_SCORE_FLAG_COMBINATION:
+        return
 
-    if flag not in valid:
-        raise IllegalFormatException(f"Invalid score decorator: {flag}")
+    if allow_payable_only and flag == ScoreFlag.PAYABLE:
+        # Allow BH-6573883 to be synchronized for mainnet backward compatibility
+        return
+
+    raise IllegalFormatException(f"Invalid score decorator: {flag}")
 
 
 class ScoreElementMetadata(object):
@@ -444,6 +453,11 @@ def check_if_struct_is_valid(type_hint: type, structs: Set[Any] = None):
     structs.add(type_hint)
     annotations = get_annotations(type_hint, None)
 
+    size = len(annotations)
+    if size > _MAX_STRUCT_FIELDS:
+        raise IllegalFormatException(
+            f"Too many fields in struct: {size} > {_MAX_STRUCT_FIELDS}")
+
     for type_hint in annotations.values():
         origin = get_origin(type_hint)
         if is_base_type(origin):
@@ -459,3 +473,17 @@ def check_if_struct_is_valid(type_hint: type, structs: Set[Any] = None):
             check_if_struct_is_valid(type_hint, structs)
         else:
             raise IllegalFormatException(f"Invalid type hint: {type_hint}")
+
+
+def check_score_flag(score_class: Union[type, object]):
+    """Check for score flags strictly
+
+    :param score_class:
+    :return:
+    """
+    elements = getattr(score_class, CONST_CLASS_ELEMENT_METADATAS)
+    if elements is None:
+        raise IllegalFormatException(f"Invalid score class: {score_class}")
+
+    for metadata in elements.values():
+        verify_score_flag(metadata.flag, allow_payable_only=False)

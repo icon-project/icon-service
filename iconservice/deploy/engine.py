@@ -35,6 +35,7 @@ from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
 from ..iconscore.icon_score_step import StepType, get_deploy_content_size
 from ..iconscore.typing.conversion import convert_score_parameters
+from ..iconscore.typing.element import check_score_flag
 from ..iconscore.typing.element import normalize_signature
 from ..iconscore.utils import get_score_deploy_path
 from ..utils import is_builtin_score
@@ -206,6 +207,10 @@ class Engine(EngineBase):
 
             score_info: 'IconScoreInfo' =\
                 self._create_score_info(context, score_address, next_tx_hash)
+
+            if context.revision >= Revision.STRICT_SCORE_DECORATOR_CHECK.value:
+                check_score_flag(score_info.score_class)
+
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)

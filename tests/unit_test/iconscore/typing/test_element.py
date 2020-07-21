@@ -29,6 +29,7 @@ from iconservice.iconscore.typing.element import (
     normalize_parameter,
     verify_score_flag,
     check_parameter_default_type,
+    check_if_struct_is_valid,
 )
 
 
@@ -63,6 +64,45 @@ class InvalidNestedType(TypedDict):
 class InvalidNestedType2(TypedDict):
     value: int
     nested_dict: Dict[str, str]
+
+
+class TooManyFieldsType(TypedDict):
+    value0: int
+    value1: int
+    value2: int
+    value3: int
+    value4: int
+    value5: int
+    value6: int
+    value7: int
+    value8: int
+    value9: int
+    value10: int
+    value11: int
+    value12: int
+    value13: int
+    value14: int
+    value15: int
+    value16: int
+
+
+class MaxFieldsType(TypedDict):
+    value0: int
+    value1: int
+    value2: int
+    value3: int
+    value4: int
+    value5: int
+    value6: int
+    value7: int
+    value8: int
+    value9: int
+    value10: int
+    value11: int
+    value12: int
+    value13: int
+    value14: int
+    value15: int
 
 
 @pytest.mark.parametrize(
@@ -125,6 +165,8 @@ class InvalidNestedType2(TypedDict):
         (InvalidUnionType, None),
         (InvalidNestedType, None),
         (ValidNestedType, ValidNestedType),
+        (TooManyFieldsType, None),
+        (MaxFieldsType, MaxFieldsType),
     ]
 )
 def test_normalize_type_hint(type_hint, expected):
@@ -152,11 +194,18 @@ def test_normalize_type_hint(type_hint, expected):
     ]
 )
 def test_verify_score_flag(flag, success):
+    allow_payable_only = False
+
     if success:
-        verify_score_flag(flag)
+        verify_score_flag(flag, allow_payable_only)
     else:
         with pytest.raises(IllegalFormatException):
-            verify_score_flag(flag)
+            verify_score_flag(flag, allow_payable_only)
+
+
+def test_verify_score_flag_with_allow_payable_only():
+    verify_score_flag(ScoreFlag.PAYABLE)
+    verify_score_flag(ScoreFlag.PAYABLE, allow_payable_only=True)
 
 
 @pytest.mark.parametrize(
