@@ -120,6 +120,7 @@ def test_get_inputs_with_list_of_struct_nesting_struct():
         (List[List[List[Person]]], [list, list, list, Person]),
         (Optional[List[Person]], [Union, list, Person]),
         (Union[List[Person], None], [Union, list, Person]),
+        (Union[List[Optional[int]], None], [Union, list, Union, int]),
     ]
 )
 def test_split_type_hint(type_hint, expected):
@@ -133,8 +134,8 @@ def test__get_eventlog():
         "type": "eventlog",
         "inputs": [
             {"name": "to", "type": "Address", "indexed": True},
-            {"name": "amount", "type": "int", "indexed": False},
-            {"name": "data", "type": "bytes", "indexed": False},
+            {"name": "amount", "type": "int"},
+            {"name": "data", "type": "bytes"},
         ]
     }
 
@@ -143,4 +144,18 @@ def test__get_eventlog():
         pass
 
     ret = _get_eventlog(ICXTransfer.__name__, signature(ICXTransfer), indexed_args_count)
+    assert ret == expected
+
+
+def test__get_eventlog_without_parameter():
+    expected = {
+        "name": "TestEventLog",
+        "type": "eventlog",
+        "inputs": [],
+    }
+
+    def TestEventLog():
+        pass
+
+    ret = _get_eventlog(TestEventLog.__name__, signature(TestEventLog), indexed_args_count=0)
     assert ret == expected

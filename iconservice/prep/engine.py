@@ -869,7 +869,10 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_preps(self, context: "IconScoreContext", startRanking: int, endRanking: int) -> dict:
+    def handle_get_preps(self,
+                         context: "IconScoreContext",
+                         startRanking: Optional[int],
+                         endRanking: Optional[int]) -> dict:
         """
         Returns P-Reps ranging in ranking from startRanking to endRanking
 

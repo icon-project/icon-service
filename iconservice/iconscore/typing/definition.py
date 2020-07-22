@@ -171,6 +171,9 @@ def _split_type_hint(type_hint: type) -> List[type]:
 def _type_hints_to_name(type_hints: List[type]) -> str:
     def func():
         for _type in type_hints:
+            if _type is Union:
+                continue
+
             if _type is list:
                 yield "[]"
             elif is_base_type(_type):
@@ -239,7 +242,8 @@ def _get_eventlog(func_name: str, sig: Signature, indexed_args_count: int) -> Di
         annotation = param.annotation
         type_hint = str if annotation is Parameter.empty else annotation
         inp: Dict = _get_input(name, type_hint, param.default)
-        inp["indexed"] = len(inputs) < indexed_args_count
+        if len(inputs) < indexed_args_count:
+            inp["indexed"] = True
 
         inputs.append(inp)
 
