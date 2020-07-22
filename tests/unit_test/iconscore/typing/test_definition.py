@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from inspect import signature
-from typing import List
+from typing import List, Union, Optional
 
 import pytest
 from typing_extensions import TypedDict
@@ -118,6 +118,8 @@ def test_get_inputs_with_list_of_struct_nesting_struct():
         (List[int], [list, int]),
         (List[List[str]], [list, list, str]),
         (List[List[List[Person]]], [list, list, list, Person]),
+        (Optional[List[Person]], [Union, list, Person]),
+        (Union[List[Person], None], [Union, list, Person]),
     ]
 )
 def test_split_type_hint(type_hint, expected):
