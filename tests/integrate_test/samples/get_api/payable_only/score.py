@@ -23,7 +23,7 @@ class PayableOnlyScore(IconScoreBase):
 
     @payable
     def bet(self):
-        """function whose invalid decorator combination is invalid
+        """function whose decorator combination is invalid
         """
         pass
 
