@@ -152,8 +152,7 @@ class InternalCall(object):
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, ATTR_SCORE_CALL)
 
-            if context.revision >= Revision.VERIFY_INTERNAL_CALL_ARGS.value:
-                # TODO: verify internal call arguments by goldworm
+            if context.revision >= Revision.SCORE_FUNC_PARAMS_CHECK.value:
                 metadata: ScoreElementMetadata = get_score_element_metadata(icon_score, func_name)
                 verify_internal_call_arguments(metadata.signature, arg_params, kw_params)
 
