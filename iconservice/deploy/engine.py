@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import os
 from typing import TYPE_CHECKING
 
@@ -36,6 +35,7 @@ from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
 from ..iconscore.icon_score_step import StepType, get_deploy_content_size
 from ..iconscore.typing.conversion import convert_score_parameters
+from ..iconscore.typing.element import check_score_flag
 from ..iconscore.typing.element import normalize_signature
 from ..iconscore.utils import get_score_deploy_path
 from ..utils import is_builtin_score
@@ -207,6 +207,10 @@ class Engine(EngineBase):
 
             score_info: 'IconScoreInfo' =\
                 self._create_score_info(context, score_address, next_tx_hash)
+
+            if context.revision >= Revision.STRICT_SCORE_DECORATOR_CHECK.value:
+                check_score_flag(score_info.score_class)
+
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)
@@ -230,7 +234,8 @@ class Engine(EngineBase):
             context.tx = backup_tx
             self._update_new_score_mapper(context.new_icon_score_mapper, new_tx_score_mapper)
 
-    def _update_new_score_mapper(self, block_mapper: 'IconScoreMapper', tx_mapper: dict):
+    @classmethod
+    def _update_new_score_mapper(cls, block_mapper: 'IconScoreMapper', tx_mapper: dict):
         for address, score_info in tx_mapper.items():
             block_mapper[address] = score_info
 
@@ -311,7 +316,7 @@ class Engine(EngineBase):
 
     @staticmethod
     def _initialize_score(
-            context: 'Context',
+            context: 'IconScoreContext',
             deploy_type: DeployType,
             score: 'IconScoreBase', params: dict):
         """Call on_install() or on_update() of a SCORE
@@ -330,7 +335,16 @@ class Engine(EngineBase):
         if context.revision < Revision.THREE.value:
             TypeConverter.adjust_params_to_method(on_init, params)
         else:
-            sig = normalize_signature(on_init)
+            signatures = [None, None]
+            if context.revision >= Revision.SCORE_FUNC_PARAMS_CHECK.value:
+                # Do not allow **kwargs, *args used in on_install() and on_update() of score
+                signatures[DeployType.INSTALL.value] = normalize_signature(score.on_install)
+                signatures[DeployType.UPDATE.value] = normalize_signature(score.on_update)
+
+            sig = signatures[deploy_type.value]
+            if sig is None:
+                sig = normalize_signature(on_init)
+
             params = convert_score_parameters(params, sig)
 
         on_init(**params)

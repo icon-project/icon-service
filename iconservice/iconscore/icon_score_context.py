@@ -20,6 +20,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional, List, Iterable
 
 from iconcommons.logger import Logger
+
 from .icon_score_mapper import IconScoreMapper
 from .icon_score_step import IconScoreStepCounter
 from .icon_score_trace import Trace
@@ -44,7 +45,6 @@ if TYPE_CHECKING:
     from ..prep.prep_address_converter import PRepAddressConverter
     from ..inv.container import Container as INVContainer
     from ..database.batch import Batch
-
 
 
 class IconScoreContext(ABC):

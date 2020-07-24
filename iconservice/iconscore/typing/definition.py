@@ -16,11 +16,16 @@
 __all__ = "get_score_api"
 
 from inspect import Signature, Parameter
-from typing import List, Dict, Mapping, Iterable, Any
+from typing import List, Dict, Mapping, Iterable, Any, Union
 
 from . import get_origin, get_args, is_struct
 from .conversion import is_base_type
-from .element import ScoreElementMetadata, FunctionMetadata, EventLogMetadata
+from .element import (
+    ScoreElementMetadata,
+    FunctionMetadata,
+    EventLogMetadata,
+    ScoreFlag,
+)
 from ..icon_score_constant import STR_FALLBACK
 from ...base.exception import (
     IllegalFormatException,
@@ -44,6 +49,9 @@ def get_score_api(elements: Iterable[ScoreElementMetadata]) -> List:
     for element in elements:
         if isinstance(element, FunctionMetadata):
             func: FunctionMetadata = element
+            if func.flag == ScoreFlag.PAYABLE:
+                continue
+
             item = _get_function(func.name, func.signature, func.is_readonly, func.is_payable)
         elif isinstance(element, EventLogMetadata):
             eventlog: EventLogMetadata = element
@@ -136,15 +144,26 @@ def _get_input(name: str, type_hint: type, default: Any) -> Dict:
 
 
 def _split_type_hint(type_hint: type) -> List[type]:
-    origin: type = get_origin(type_hint)
-    ret = [origin]
+    type_hints = [type_hint]
+    ret = []
 
-    if origin is list:
-        args = get_args(type_hint)
-        if len(args) != 1:
-            raise IllegalFormatException(f"Invalid type: {type_hint}")
+    while len(type_hints) > 0:
+        type_hint = type_hints.pop(0)
+        origin: type = get_origin(type_hint)
+        ret.append(origin)
 
-        ret += _split_type_hint(args[0])
+        if origin is list:
+            args = get_args(type_hint)
+            if len(args) != 1:
+                raise IllegalFormatException(f"Invalid type: {type_hint}")
+
+            type_hints.append(args[0])
+        elif origin is Union:
+            args = get_args(type_hint)
+            if not (len(args) == 2 and args[1] is type(None)):
+                raise IllegalFormatException(f"Invalid type: {type_hint}")
+
+            type_hints.append(args[0])
 
     return ret
 
@@ -152,6 +171,9 @@ def _split_type_hint(type_hint: type) -> List[type]:
 def _type_hints_to_name(type_hints: List[type]) -> str:
     def func():
         for _type in type_hints:
+            if _type is Union:
+                continue
+
             if _type is list:
                 yield "[]"
             elif is_base_type(_type):
@@ -220,7 +242,8 @@ def _get_eventlog(func_name: str, sig: Signature, indexed_args_count: int) -> Di
         annotation = param.annotation
         type_hint = str if annotation is Parameter.empty else annotation
         inp: Dict = _get_input(name, type_hint, param.default)
-        inp["indexed"] = len(inputs) < indexed_args_count
+        if len(inputs) < indexed_args_count:
+            inp["indexed"] = True
 
         inputs.append(inp)
 

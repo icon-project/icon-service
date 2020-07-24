@@ -16,7 +16,7 @@
 from collections import OrderedDict
 from enum import Flag, auto
 from inspect import Signature, Parameter
-from typing import Optional, Dict, Union, Any
+from typing import Optional, Dict, Union, Any, List
 
 from . import (
     BaseObject,
@@ -76,6 +76,9 @@ def str_to_int(value: str) -> int:
 
 
 def str_to_base_object(value: str, type_hint: type) -> BaseObject:
+    if not isinstance(value, str):
+        raise InvalidParamsException(f"Type mismatch: value={value} type_hint={type_hint}")
+
     if type_hint is bool:
         return bool(str_to_int(value))
     if type_hint is bytes:
@@ -156,7 +159,9 @@ def _verify_arguments(params: Dict[str, Any], sig: Signature):
 
     for k in parameters:
         parameter: Parameter = parameters[k]
-        if k not in params and parameter.default is Parameter.empty:
+        param = params.get(k, parameter.default)
+
+        if param is Parameter.empty:
             raise InvalidParamsException(f"Argument not found: {k}")
 
 
@@ -168,28 +173,23 @@ def str_to_object(value: Union[str, list, dict, None], type_hint: type) -> Any:
 
     if is_base_type(origin):
         return str_to_base_object(value, origin)
-
-    if is_struct(origin):
+    elif is_struct(origin):
         return str_to_object_in_struct(value, type_hint)
-
-    args = get_args(type_hint)
-
-    if origin is list:
-        return [str_to_object(i, args[0]) for i in value]
-
-    if origin is dict:
-        return OrderedDict(
-            (k, str_to_object(v, type_hint=args[1])) for k, v in value.items()
-        )
-
-    if origin is Union:
+    elif origin is list:
+        return str_to_object_in_list(value, type_hint)
+    elif origin is dict:
+        return str_to_object_in_dict(value, type_hint)
+    elif origin is Union:
         # Assume that only the specific type of Union (= Optional) is allowed in iconservice
-        return None if value is None else str_to_object(value, args[0])
+        return str_to_object_in_union(value, type_hint)
 
     raise InvalidParamsException(f"Type mismatch: value={value} type_hint={type_hint}")
 
 
 def str_to_object_in_struct(value: Dict[str, Optional[str]], type_hint: type) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise InvalidParamsException(f"Type mismatch: value={value} type_hint={type_hint}")
+
     annotations = get_annotations(type_hint, None)
 
     ret = OrderedDict()
@@ -204,3 +204,26 @@ def str_to_object_in_struct(value: Dict[str, Optional[str]], type_hint: type) ->
         raise InvalidParamsException(f"Missing field in struct")
 
     return ret
+
+
+def str_to_object_in_list(value: List[Any], type_hint: type) -> List[Any]:
+    if not isinstance(value, list):
+        raise InvalidParamsException(f"Type mismatch: value={value} type_hint={type_hint}")
+
+    args = get_args(type_hint)
+    return [str_to_object(i, args[0]) for i in value]
+
+
+def str_to_object_in_dict(value: Dict[str, Any], type_hint: type) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise InvalidParamsException(f"Type mismatch: value={value} type_hint={type_hint}")
+
+    args = get_args(type_hint)
+    return OrderedDict(
+        (k, str_to_object(v, type_hint=args[1])) for k, v in value.items()
+    )
+
+
+def str_to_object_in_union(value: Union[Any], type_hint: type) -> Optional[Any]:
+    args = get_args(type_hint)
+    return None if value is None else str_to_object(value, args[0])

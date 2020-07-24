@@ -15,7 +15,7 @@
 from abc import ABCMeta, abstractmethod, ABC
 from functools import wraps
 from inspect import isfunction
-from typing import List
+from typing import List, Union, Optional, Dict
 
 from iconcommons.logger import Logger
 from typing_extensions import TypedDict

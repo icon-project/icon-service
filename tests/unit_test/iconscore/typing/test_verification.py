@@ -15,7 +15,7 @@
 
 import inspect
 import os
-from typing import List
+from typing import List, Optional, Union
 
 import pytest
 from typing_extensions import TypedDict
@@ -45,19 +45,31 @@ class Person(TypedDict):
         ((0,), {}, True),
         (None, None, False),
         (("hello",), {}, False),
+        ((2, None), None, True),
+        ((2,), None, True),
+        ((2,), {"b": b"world"}, True),
+        ((2, b"world"), None, True),
+        ((2, b"world"), {}, True),
+        ((2, b"world"), {"b": b"\x00"}, False),
+        ((2, b"world"), {"c": b"\x00"}, False),
+        ((2, b"world", 3), None, False),
     ],
 )
 def test_verify_internal_call_arguments(args, kwargs, valid):
-    def func(a: int):
+    def func1(a: int, b: Optional[bytes] = None):
         a += 1
 
-    sig = inspect.signature(func)
+    def func2(a: int, b: Union[bytes, None] = None):
+        a += 1
 
-    if valid:
-        verify_internal_call_arguments(sig, args, kwargs)
-    else:
-        with pytest.raises(InvalidParamsException):
+    for func in (func1, func2):
+        sig = inspect.signature(func)
+
+        if valid:
             verify_internal_call_arguments(sig, args, kwargs)
+        else:
+            with pytest.raises(InvalidParamsException):
+                verify_internal_call_arguments(sig, args, kwargs)
 
 
 @pytest.mark.parametrize(

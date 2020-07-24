@@ -169,5 +169,8 @@ def verify_dict_type_hint(values: Dict[str, Any], type_hint: type):
 
 
 def verify_union_type_hint(value: Union[Any, None], type_hint: type):
+    if value is None:
+        return
+
     args = get_args(type_hint)
     verify_type_hint(value, args[0])

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, List
 from iconcommons.logger import Logger
 from typing_extensions import TypedDict
 
-from .icon_score_base import IconScoreBase, interface, external, payable
+from .icon_score_base import IconScoreBase, interface, external, payable, eventlog
 from .icon_score_base2 import InterfaceScore
 from ..base.address import Address
 from ..base.exception import *
@@ -41,6 +41,22 @@ class Delegation(TypedDict):
 
 
 class SystemScore(IconScoreBase):
+    @eventlog
+    def IScoreClaimed(self, iscore: int, icx: int):
+        pass
+
+    @eventlog
+    def PRepRegistered(self, address: Address):
+        pass
+
+    @eventlog
+    def PRepUnregistered(self, address: Address):
+        pass
+
+    @eventlog
+    def PRepSet(self, address: Address):
+        pass
+
     def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
 
@@ -98,7 +114,7 @@ class SystemScore(IconScoreBase):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
-    def setGovernanceVariables(self, irep: int = None):
+    def setGovernanceVariables(self, irep: int):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from inspect import signature
-from typing import List
+from typing import List, Union, Optional
 
 import pytest
 from typing_extensions import TypedDict
@@ -118,6 +118,9 @@ def test_get_inputs_with_list_of_struct_nesting_struct():
         (List[int], [list, int]),
         (List[List[str]], [list, list, str]),
         (List[List[List[Person]]], [list, list, list, Person]),
+        (Optional[List[Person]], [Union, list, Person]),
+        (Union[List[Person], None], [Union, list, Person]),
+        (Union[List[Optional[int]], None], [Union, list, Union, int]),
     ]
 )
 def test_split_type_hint(type_hint, expected):
@@ -125,14 +128,14 @@ def test_split_type_hint(type_hint, expected):
     assert types == expected
 
 
-def test__get_eventlog():
+def test_get_eventlog():
     expected = {
         "name": "ICXTransfer",
         "type": "eventlog",
         "inputs": [
             {"name": "to", "type": "Address", "indexed": True},
-            {"name": "amount", "type": "int", "indexed": False},
-            {"name": "data", "type": "bytes", "indexed": False},
+            {"name": "amount", "type": "int"},
+            {"name": "data", "type": "bytes"},
         ]
     }
 
@@ -141,4 +144,18 @@ def test__get_eventlog():
         pass
 
     ret = _get_eventlog(ICXTransfer.__name__, signature(ICXTransfer), indexed_args_count)
+    assert ret == expected
+
+
+def test__get_eventlog_without_parameter():
+    expected = {
+        "name": "TestEventLog",
+        "type": "eventlog",
+        "inputs": [],
+    }
+
+    def TestEventLog():
+        pass
+
+    ret = _get_eventlog(TestEventLog.__name__, signature(TestEventLog), indexed_args_count=0)
     assert ret == expected
