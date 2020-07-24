@@ -174,6 +174,41 @@ class TestIISSDelegate(TestIISSBase):
         self.assertEqual(expected_response, response["delegations"])
         self.assertEqual(total_delegating, response["totalDelegated"])
 
+    def test_delegation_after_rev_9_overflow_100(self):
+        max_delegations: int = 101
+        self.init_decentralized()
+
+        # set Revision CHANGE_MAX_DELEGATIONS_TO_100
+        self.set_revision(Revision.CHANGE_MAX_DELEGATIONS_TO_100.value)
+
+        # gain 1000 icx
+        balance: int = 1_000 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=balance)
+
+        # stake 100 icx
+        stake: int = 100 * ICX_IN_LOOP
+        self.set_stake(from_=self._accounts[0],
+                       value=stake)
+
+        # set delegation 1 icx addr0 ~ addr99
+        delegation_amount: int = 1 * ICX_IN_LOOP
+        total_delegating: int = 0
+        delegations: list = []
+        start_index: int = 0
+        for i in range(max_delegations):
+            delegation_info: tuple = \
+                (
+                    self._accounts[start_index + i],
+                    delegation_amount
+                )
+            delegations.append(delegation_info)
+            total_delegating += delegation_amount
+
+        self.set_delegation(from_=self._accounts[0],
+                            origin_delegations=delegations,
+                            expected_status=False)
+
     def test_delegation_invalid_params(self):
         self.update_governance()
 

@@ -239,3 +239,22 @@ class TestIntegrateScores(TestIntegrateBase):
                                                                 expected_status=False)
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
+
+    def test_slow_query(self):
+        tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_scores",
+                                                                  score_name="slow_query_score",
+                                                                  from_=self._accounts[0])
+        score_addr1 = tx_results[0].score_address
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": score_addr1,
+            "dataType": "call",
+            "data": {
+                "method": "slow_query",
+                "params": {}
+            }
+        }
+        response = self._query(query_request)
+        print(response)

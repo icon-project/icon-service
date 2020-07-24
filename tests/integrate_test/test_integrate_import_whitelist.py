@@ -287,6 +287,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/sample_score_compile_method',
             'import_test/exec_in_submodule',
             'import_test/exec_in_indirect_submodule',
+            'import_test/exec_in_indirect_submodule_method',
             'import_test/as_test/sample_score_import_in_top_level',
             'import_test/as_test/sample_score_import_in_class',
             'import_test/as_test/sample_score_import_in_method',

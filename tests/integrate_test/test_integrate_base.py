@@ -69,7 +69,7 @@ class TestIntegrateBase(TestCase):
         cls._genesis: 'Address' = create_address()
         cls._fee_treasury: 'Address' = create_address()
 
-        cls._accounts = cls.create_eoa_accounts(100)
+        cls._accounts = cls.create_eoa_accounts(150)
 
         cls._tx_results: dict = {}
 

@@ -223,7 +223,7 @@ class TestIISSDecentralized2(TestIISSBase):
 
         # register PRep
         tx_list: list = []
-        for account in self._accounts[PREP_MAIN_PREPS:]:
+        for account in self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS+20]:
             tx: dict = self.create_register_prep_tx(from_=account)
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)

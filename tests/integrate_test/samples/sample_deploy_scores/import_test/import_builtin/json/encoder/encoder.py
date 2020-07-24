@@ -4,4 +4,5 @@ class JSONEncoder:
         print("encode")
 
     def test(self):
+        import os
         print("test")

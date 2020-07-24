@@ -1,0 +1,5 @@
+{
+    "version": "0.0.1",
+    "main_file": "slow_query_score",
+    "main_score": "SlowQueryScore"
+}

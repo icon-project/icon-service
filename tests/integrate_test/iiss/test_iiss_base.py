@@ -553,7 +553,7 @@ class TestIISSBase(TestIntegrateBase):
 
         # delegate to PRep 0
         tx_list: list = []
-        for account in self._accounts:
+        for account in self._accounts[:PREP_MAIN_AND_SUB_PREPS]:
             tx: dict = self.create_set_delegation_tx(from_=account,
                                                      origin_delegations=[])
             tx_list.append(tx)
@@ -579,7 +579,7 @@ class TestIISSBase(TestIntegrateBase):
         self.make_blocks(self._block_height + max_expired_block_height + 1)
 
         tx_list: list = []
-        for account in self._accounts:
+        for account in self._accounts[:PREP_MAIN_AND_SUB_PREPS]:
             tx: dict = self.create_set_stake_tx(from_=account, value=0)
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
@@ -588,7 +588,7 @@ class TestIISSBase(TestIntegrateBase):
         step_price: int = self.get_step_price()
         fee: int = DEFAULT_STEP_LIMIT * step_price
 
-        for account in self._accounts:
+        for account in self._accounts[:PREP_MAIN_AND_SUB_PREPS]:
             balance: int = self.get_balance(account)
 
             if balance - fee > 0:
