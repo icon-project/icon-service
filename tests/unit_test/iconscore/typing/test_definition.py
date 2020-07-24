@@ -128,7 +128,7 @@ def test_split_type_hint(type_hint, expected):
     assert types == expected
 
 
-def test__get_eventlog():
+def test_get_eventlog():
     expected = {
         "name": "ICXTransfer",
         "type": "eventlog",
