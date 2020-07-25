@@ -480,7 +480,7 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"not {value}")
 
         if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
-            self._remove_node_key_from_params(params=kwargs)
+            self._remove_node_address_from_params(params=kwargs)
 
         validate_prep_data(context=context,
                            prep_address=address,
@@ -519,7 +519,11 @@ class Engine(EngineBase, IISSEngineListener):
         )
 
     @classmethod
-    def _remove_node_key_from_params(cls, params: dict):
+    def _remove_node_address_from_params(cls, params: dict):
+        """Just for backward compatibility with the previous version
+
+        :param params: parameters of registerPRep or setPRep
+        """
         if ConstantKeys.NODE_ADDRESS in params:
             del params[ConstantKeys.NODE_ADDRESS]
 
@@ -658,7 +662,7 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
         if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
-            cls._remove_node_key_from_params(params=kwargs)
+            cls._remove_node_address_from_params(params=kwargs)
 
         params = deepcopy(kwargs)
         validate_prep_data(context=context,
