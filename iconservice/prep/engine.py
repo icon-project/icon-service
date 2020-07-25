@@ -479,6 +479,9 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"Registration Fee Must be {context.storage.prep.prep_registration_fee} "
                                          f"not {value}")
 
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            self._remove_node_address_from_params(params=kwargs)
+
         validate_prep_data(context=context,
                            prep_address=address,
                            tx_data=kwargs)
@@ -514,6 +517,15 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[address],
             indexed_args_count=0
         )
+
+    @classmethod
+    def _remove_node_address_from_params(cls, params: dict):
+        """Just for backward compatibility with the previous version
+
+        :param params: parameters of registerPRep or setPRep
+        """
+        if ConstantKeys.NODE_ADDRESS in params:
+            del params[ConstantKeys.NODE_ADDRESS]
 
     @classmethod
     def _put_reg_prep_in_rc_db(cls, context: 'IconScoreContext', address: 'Address'):
@@ -648,6 +660,9 @@ class Engine(EngineBase, IISSEngineListener):
         dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
+
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            cls._remove_node_address_from_params(params=kwargs)
 
         params = deepcopy(kwargs)
         validate_prep_data(context=context,
