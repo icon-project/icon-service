@@ -336,15 +336,10 @@ class Engine(EngineBase):
             TypeConverter.adjust_params_to_method(on_init, params)
         else:
             signatures = [None, None]
-            if context.revision >= Revision.SCORE_FUNC_PARAMS_CHECK.value:
-                # Do not allow **kwargs, *args used in on_install() and on_update() of score
-                signatures[DeployType.INSTALL.value] = normalize_signature(score.on_install)
-                signatures[DeployType.UPDATE.value] = normalize_signature(score.on_update)
+            # Do not allow **kwargs, *args used in on_install() and on_update() of score
+            signatures[DeployType.INSTALL.value] = normalize_signature(score.on_install)
+            signatures[DeployType.UPDATE.value] = normalize_signature(score.on_update)
 
-            sig = signatures[deploy_type.value]
-            if sig is None:
-                sig = normalize_signature(on_init)
-
-            params = convert_score_parameters(params, sig)
+            params = convert_score_parameters(params, signatures[deploy_type.value])
 
         on_init(**params)
