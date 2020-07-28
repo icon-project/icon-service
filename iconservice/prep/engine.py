@@ -661,10 +661,11 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
-            cls._remove_node_address_from_params(params=kwargs)
+        params: dict = deepcopy(kwargs)
 
-        params = deepcopy(kwargs)
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            cls._remove_node_address_from_params(params=params)
+
         validate_prep_data(context=context,
                            prep_address=address,
                            tx_data=params,
@@ -689,10 +690,20 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
+        cls._validate_node_key_back_compatibillity_below_rev_9(context, kwargs)
         # Update registration info
         dirty_prep.set(**params)
 
         context.put_dirty_prep(dirty_prep)
+
+    @classmethod
+    def _validate_node_key_back_compatibillity_below_rev_9(cls, context: 'IconScoreContext', data: dict):
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            if ConstantKeys.NODE_ADDRESS in data and \
+                    data[ConstantKeys.NODE_ADDRESS] is not None:
+                # For Backward compatibility
+                raise TypeError("nodeAddress not Allowed")
+
 
     def handle_set_governance_variables(self, context: 'IconScoreContext', irep: int):
         """Handles setGovernanceVariables JSON-RPC API request
