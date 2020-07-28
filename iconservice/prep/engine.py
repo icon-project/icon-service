@@ -690,14 +690,20 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
-        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
-            if ConstantKeys.NODE_ADDRESS in kwargs:
-                # For Backward compatibility
-                raise TypeError("dummy")
+        cls._validate_node_key_back_compatibillity_below_rev_9(context, kwargs)
         # Update registration info
         dirty_prep.set(**params)
 
         context.put_dirty_prep(dirty_prep)
+
+    @classmethod
+    def _validate_node_key_back_compatibillity_below_rev_9(cls, context: 'IconScoreContext', data: dict):
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            if ConstantKeys.NODE_ADDRESS in data and \
+                    data[ConstantKeys.NODE_ADDRESS] is not None:
+                # For Backward compatibility
+                raise TypeError("nodeAddress not Allowed")
+
 
     def handle_set_governance_variables(self, context: 'IconScoreContext', irep: int):
         """Handles setGovernanceVariables JSON-RPC API request
