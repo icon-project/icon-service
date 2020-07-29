@@ -126,11 +126,11 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
                                                                   score_name=f"install/sample_legacy_kwargs_params",
                                                                   from_=self._accounts[0],
                                                                   to_=SYSTEM_SCORE_ADDRESS)
-        score_addr = tx_results[0].score_address
+        score_address = tx_results[0].score_address
 
         query_request = {
             "from": self._admin,
-            "to": score_addr,
+            "to": score_address,
             "dataType": "call",
             "data": {
                 "method": "hello",
@@ -147,4 +147,3 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
                           to_=SYSTEM_SCORE_ADDRESS,
                           expected_status=False)
         raise_exception_end_tag("sample_invalid_kwargs_parameter_value_oninstall")
-

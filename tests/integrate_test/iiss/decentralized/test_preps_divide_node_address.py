@@ -54,10 +54,12 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx: dict = self.create_register_prep_tx(from_=account,
                                                 reg_data=reg_data)
 
-        _, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_results[1].failure.message,
-                         f"nodeAddress not supported: revision={Revision.DECENTRALIZATION.value}")
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
+        self._write_precommit_state(block)
+
+        response = self.get_prep(account)
+        self.assertEqual(str(response["nodeAddress"]), str(account.address))
+        self.assertNotEqual(str(response["nodeAddress"]), str(dummy_node))
 
     def test_prep_set_node_address_before_rev_DIVIDE_NODE_ADDRESS(self):
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
@@ -70,10 +72,12 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         tx: dict = self.create_set_prep_tx(from_=account,
                                            set_data={"nodeAddress": str(dummy_node)})
 
-        _, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
-        self.assertEqual(tx_results[1].failure.message,
-                         f"nodeAddress not supported: revision={Revision.DECENTRALIZATION.value}")
+        block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx])
+        self._write_precommit_state(block)
+
+        response = self.get_prep(account)
+        self.assertEqual(str(response["nodeAddress"]), str(account.address))
+        self.assertNotEqual(str(response["nodeAddress"]), str(dummy_node))
 
     def test_prep_register_node_address(self):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)

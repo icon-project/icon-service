@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import shutil
 from copy import deepcopy
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
@@ -444,6 +445,8 @@ class IconServiceEngine(ContextContainer):
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
+                Logger.debug(_TAG, f"INVOKE tx: {tx_request}")
+
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
                 if is_block_editable and not self._continue_to_invoke(tx_request, tx_timer):
@@ -472,6 +475,8 @@ class IconServiceEngine(ContextContainer):
 
                 if context.revision >= Revision.IISS.value:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
+
+                Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
 
         if self._check_end_block_height_of_calc(context):
             context.revision_changed_flag |= RevisionChangedFlag.IISS_CALC
@@ -1951,11 +1956,11 @@ class IconServiceEngine(ContextContainer):
             pass
         elif items[DBType.STANDBY][1]:
             # Rename standby_rc_db to iiss_rc_db
-            os.rename(items[DBType.STANDBY][0], items[DBType.IISS][0])
+            shutil.move(items[DBType.STANDBY][0], items[DBType.IISS][0])
         elif items[DBType.CURRENT][1]:
             # Rename current_db to iiss_rc_db
             path: str = items[DBType.CURRENT][0]
-            os.rename(path, items[DBType.IISS][0])
+            shutil.move(path, items[DBType.IISS][0])
         else:
             raise DatabaseException("IISS-related DB not found")
 

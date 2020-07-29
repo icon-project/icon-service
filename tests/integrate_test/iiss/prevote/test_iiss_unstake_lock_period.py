@@ -18,7 +18,7 @@
 """
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP, ConfigKey, IISS_DAY_BLOCK
-from tests.unittest.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
+from tests.unit_test.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -55,6 +55,6 @@ class TestIISSUnStakeLockPeriod(TestIISSBase):
                            value=stake)
 
             actual_response: dict = self.get_stake(self._accounts[0])
-            actual_lockup_period = actual_response["unstakeList"][0]['unstakeBlockHeight'] - self._block_height
+            actual_lockup_period = actual_response['unstakeBlockHeight'] - self._block_height
             diff = abs(actual_lockup_period - EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT[stake_percent])
             assert diff <= 1

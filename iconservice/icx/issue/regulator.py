@@ -171,6 +171,21 @@ class Regulator:
         return covered_icx_by_fee, remain_over_issued_icx, corrected_issue_amount
 
     @classmethod
+    def _calculate_prev_block_cumulative_fee(cls,
+                                             remain_over_issued_icx: int,
+                                             corrected_issue_amount: int,
+                                             prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
+        corrected_issue_amount -= prev_block_cumulative_fee
+        if corrected_issue_amount >= 0:
+            covered_icx_by_fee = prev_block_cumulative_fee
+        else:
+            covered_icx_by_fee = prev_block_cumulative_fee + corrected_issue_amount
+            remain_over_issued_icx = remain_over_issued_icx + abs(corrected_issue_amount)
+            corrected_issue_amount = 0
+
+        return covered_icx_by_fee, remain_over_issued_icx, corrected_issue_amount
+
+    @classmethod
     def _separate_icx_and_iscore(cls, iscore: int) -> Tuple[int, int]:
         abs_iscore = abs(iscore)
         over_issued_icx = abs_iscore // ISCORE_EXCHANGE_RATE

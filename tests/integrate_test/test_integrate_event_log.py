@@ -120,7 +120,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
 
         tx_results: List['TransactionResult'] = self.score_call(from_=self._accounts[0],
                                                                 to_=score_addr1,
-                                                                func_name="call_even_log_in_read_only_method",
+                                                                func_name="call_event_log_in_read_only_method",
                                                                 expected_status=False)
         self.assertEqual(1, len(tx_results))
 

@@ -129,10 +129,10 @@ class TestIISSStake(TestIISSBase):
             "unstake": unstake
         }
         self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response["unstakeList"][0]['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response["unstakeList"][0])
+        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
+        self.assertIn('unstakeBlockHeight', actual_response)
         self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"],
-                         actual_response["unstakeList"][0]["remainingBlocks"])
+                         actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -175,10 +175,10 @@ class TestIISSStake(TestIISSBase):
             "unstake": unstake
         }
         self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response["unstakeList"][0]['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response["unstakeList"][0])
+        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
+        self.assertIn('unstakeBlockHeight', actual_response)
         self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"],
-                         actual_response["unstakeList"][0]["remainingBlocks"])
+                         actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -221,10 +221,10 @@ class TestIISSStake(TestIISSBase):
             "unstake": unstake
         }
         self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response["unstakeList"][0]['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response["unstakeList"][0])
+        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
+        self.assertIn('unstakeBlockHeight', actual_response)
         self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"],
-                         actual_response["unstakeList"][0]["remainingBlocks"])
+                         actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -246,15 +246,15 @@ class TestIISSStake(TestIISSBase):
             "unstake": unstake,
         }
         self.assertEqual(expected_response['stake'], actual_response['stake'])
-        self.assertEqual(expected_response['unstake'], actual_response["unstakeList"][0]['unstake'])
-        self.assertIn('unstakeBlockHeight', actual_response["unstakeList"][0])
+        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
+        self.assertIn('unstakeBlockHeight', actual_response)
 
         # get balance
         remain_balance: int = balance - total_stake
         actual_balance: int = self.get_balance(self._accounts[0])
         self.assertEqual(remain_balance, actual_balance)
 
-        expired_block_height: int = actual_response["unstakeList"][0]['unstakeBlockHeight']
+        expired_block_height: int = actual_response['unstakeBlockHeight']
         self.make_blocks(expired_block_height + 1)
 
         # after unstake_lock_period
@@ -415,7 +415,7 @@ class TestIISSStake(TestIISSBase):
 
         response: dict = self.get_stake(self._accounts[0])
         for i in range(unstake_slot_max):
-            unstake_response = response["unstakeList"][i]["unstake"]
+            unstake_response = response["unstakes"][i]["unstake"]
             self.assertEqual(unstake_list[i], unstake_response)
 
         # increase unstake in last slot
@@ -427,12 +427,12 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        last_slot_block_height = response["unstakeList"][unstake_slot_max-1]["unstakeBlockHeight"]
+        last_slot_block_height = response["unstakes"][unstake_slot_max-1]["unstakeBlockHeight"]
         original_unstake = unstake_list.pop()
         unstake_list.append(original_unstake + ICX_IN_LOOP)
-        last_slot_block_height2 = response["unstakeList"][unstake_slot_max-1]["unstakeBlockHeight"]
+        last_slot_block_height2 = response["unstakes"][unstake_slot_max-1]["unstakeBlockHeight"]
         for i in range(len(unstake_list)):
-            self.assertEqual(unstake_list[i], response["unstakeList"][i]["unstake"])
+            self.assertEqual(unstake_list[i], response["unstakes"][i]["unstake"])
         # unstakeBlockHeight in last slot will be updated
         self.assertGreaterEqual(last_slot_block_height2, last_slot_block_height)
 
@@ -446,7 +446,7 @@ class TestIISSStake(TestIISSBase):
         response: dict = self.get_stake(self._accounts[0])
         expected_unstakes = [unstake, unstake, unstake]
         for i in range(len(expected_unstakes)):
-            self.assertEqual(expected_unstakes[i], response["unstakeList"][i]["unstake"])
+            self.assertEqual(expected_unstakes[i], response["unstakes"][i]["unstake"])
 
     def test_migrate_unstake_data(self):
         self.update_governance()
@@ -478,7 +478,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        unstake_info = response["unstakeList"][0]
+        unstake_info = response
         unstake_block_height = unstake_info["unstakeBlockHeight"]
 
         # unstake 10 again and unstakeBlockHeight will be changed in rev IISS
@@ -491,7 +491,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        unstake_info = response["unstakeList"][0]
+        unstake_info = response
         unstake_block_height2 = unstake_info["unstakeBlockHeight"]
         self.assertGreaterEqual(unstake_block_height2, unstake_block_height)
 
@@ -508,7 +508,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        unstake_info = response["unstakeList"][0]
+        unstake_info = response["unstakes"][0]
         unstake_block_height3 = unstake_info["unstakeBlockHeight"]
         self.assertEqual(unstake_block_height2, unstake_block_height3)
 
@@ -521,8 +521,8 @@ class TestIISSStake(TestIISSBase):
         response: int = self.get_balance(self._accounts[0])
         self.assertEqual(expected_balance, response)
         response: dict = self.get_stake(self._accounts[0])
-        self.assertEqual(2, len(response['unstakeList']))
-        for unstake_info in response["unstakeList"]:
+        self.assertEqual(2, len(response['unstakes']))
+        for unstake_info in response["unstakes"]:
             self.assertEqual(10 * ICX_IN_LOOP, unstake_info['unstake'])
 
     def test_update_unstake_block_height(self):
@@ -555,7 +555,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        self.assertEqual(response["unstakeList"][0]["unstake"], unstake)
+        self.assertEqual(response["unstake"], unstake)
 
         # set stake 120 icx and unstake info will be removed
         new_stake = 120 * ICX_IN_LOOP
@@ -566,7 +566,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        self.assertNotIn("unstakeList", response)
+        self.assertNotIn("unstakes", response)
 
         # set Revision REV_MULTIPLE_UNSTAKE
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
@@ -580,7 +580,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
         response: dict = self.get_stake(self._accounts[0])
-        self.assertEqual(response["unstakeList"][0]["unstake"], unstake)
+        self.assertEqual(response["unstakes"][0]["unstake"], unstake)
 
         # set stake 140 icx and unstake info will be removed
         new_stake2 = 140 * ICX_IN_LOOP
@@ -590,7 +590,7 @@ class TestIISSStake(TestIISSBase):
         response: int = self.get_balance(self._accounts[0])
         self.assertEqual(expected_balance, response)
         response: dict = self.get_stake(self._accounts[0])
-        self.assertNotIn("unstakeList", response)
+        self.assertNotIn("unstakes", response)
 
     def test_stake_with_value_should_raise_exception(self):
         self.update_governance()

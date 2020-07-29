@@ -479,6 +479,9 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"Registration Fee Must be {context.storage.prep.prep_registration_fee} "
                                          f"not {value}")
 
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            self._remove_node_address_from_params(params=kwargs)
+
         validate_prep_data(context=context,
                            prep_address=address,
                            tx_data=kwargs)
@@ -514,6 +517,15 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[address],
             indexed_args_count=0
         )
+
+    @classmethod
+    def _remove_node_address_from_params(cls, params: dict):
+        """Just for backward compatibility with the previous version
+
+        :param params: parameters of registerPRep or setPRep
+        """
+        if ConstantKeys.NODE_ADDRESS in params:
+            del params[ConstantKeys.NODE_ADDRESS]
 
     @classmethod
     def _put_reg_prep_in_rc_db(cls, context: 'IconScoreContext', address: 'Address'):
@@ -649,7 +661,11 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        params = deepcopy(kwargs)
+        params: dict = deepcopy(kwargs)
+
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            cls._remove_node_address_from_params(params=params)
+
         validate_prep_data(context=context,
                            prep_address=address,
                            tx_data=params,
@@ -674,10 +690,20 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
+        cls._validate_node_key_back_compatibillity_below_rev_9(context, kwargs)
         # Update registration info
         dirty_prep.set(**params)
 
         context.put_dirty_prep(dirty_prep)
+
+    @classmethod
+    def _validate_node_key_back_compatibillity_below_rev_9(cls, context: 'IconScoreContext', data: dict):
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            if ConstantKeys.NODE_ADDRESS in data and \
+                    data[ConstantKeys.NODE_ADDRESS] is not None:
+                # For Backward compatibility
+                raise TypeError("nodeAddress not Allowed")
+
 
     def handle_set_governance_variables(self, context: 'IconScoreContext', irep: int):
         """Handles setGovernanceVariables JSON-RPC API request
@@ -869,7 +895,10 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_preps(self, context: "IconScoreContext", startRanking: int, endRanking: int) -> dict:
+    def handle_get_preps(self,
+                         context: "IconScoreContext",
+                         startRanking: Optional[int],
+                         endRanking: Optional[int]) -> dict:
         """
         Returns P-Reps ranging in ranking from startRanking to endRanking
 

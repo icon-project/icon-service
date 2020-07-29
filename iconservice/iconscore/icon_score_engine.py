@@ -19,13 +19,16 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
-    ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
+from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
+from .typing.conversion import convert_score_parameters, ConvertOption
+from .typing.element import (
+    ScoreElementMetadata,
+    get_score_element_metadata,
+)
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, InvalidParamsException
-from ..base.type_converter import TypeConverter
 from ..icon_constant import Revision
 
 if TYPE_CHECKING:
@@ -48,8 +51,9 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
+        IconScoreEngine._validate_score_blacklist(context, icon_score_address)
+
         if data_type == 'call':
-            IconScoreEngine._validate_score_blacklist(context, icon_score_address)
             IconScoreEngine._call(context, icon_score_address, data)
         else:
             IconScoreEngine._fallback(context, icon_score_address)
@@ -90,8 +94,8 @@ class IconScoreEngine(object):
 
         IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
-    @staticmethod
-    def _call(context: 'IconScoreContext',
+    @classmethod
+    def _call(cls, context: 'IconScoreContext',
               icon_score_address: 'Address',
               data: dict) -> Any:
         """Handle jsonrpc including both invoke and query
@@ -103,11 +107,12 @@ class IconScoreEngine(object):
         func_name: str = data['method']
         kw_params: dict = data.get('params', {})
 
-        icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
+        icon_score = cls._get_icon_score(context, icon_score_address)
 
-        converted_params = IconScoreEngine._convert_score_params_by_annotations(context, icon_score, func_name, kw_params)
+        converted_params = cls._convert_score_params_by_annotations(
+            context, icon_score, func_name, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
-        context.current_address: 'Address' = icon_score_address
+        context.current_address = icon_score_address
 
         score_func = getattr(icon_score, ATTR_SCORE_CALL)
         ret = score_func(func_name=func_name, kw_params=converted_params)
@@ -115,24 +120,25 @@ class IconScoreEngine(object):
         # No problem even though ret is None
         return deepcopy(ret)
 
-    @staticmethod
-    def _convert_score_params_by_annotations(context: 'IconScoreContext',
-                                             icon_score: 'IconScoreBase',
-                                             func_name: str,
-                                             kw_params: dict) -> dict:
-        tmp_params = deepcopy(kw_params)
+    @classmethod
+    def _convert_score_params_by_annotations(
+            cls, context: 'IconScoreContext',
+            icon_score: 'IconScoreBase',
+            func_name: str,
+            kw_params: dict) -> dict:
 
-        validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
-        validate_external_method(func_name)
+        options = ConvertOption.NONE
+        if (
+                icon_score.address == SYSTEM_SCORE_ADDRESS
+                and func_name in ("registerPRep", "setPRep")
+                and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value
+        ):
+            options = ConvertOption.IGNORE_UNKNOWN_PARAMS
 
-        remove_invalid_params = False
-        if icon_score.address == SYSTEM_SCORE_ADDRESS and context.revision < Revision.SCORE_FUNC_PARAMS_CHECK.value:
-            remove_invalid_params = True
+        element_metadata: ScoreElementMetadata = get_score_element_metadata(icon_score, func_name)
+        params = convert_score_parameters(kw_params, element_metadata.signature, options)
 
-        score_func = getattr(icon_score, func_name)
-        TypeConverter.adjust_params_to_method(score_func, tmp_params, remove_invalid_params)
-
-        return tmp_params
+        return params
 
     @staticmethod
     def _fallback(context: 'IconScoreContext',

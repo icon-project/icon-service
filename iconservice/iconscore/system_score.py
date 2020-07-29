@@ -17,10 +17,12 @@
 """
 
 from inspect import currentframe
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from iconcommons.logger import Logger
-from .icon_score_base import IconScoreBase, interface, external, payable
+from typing_extensions import TypedDict
+
+from .icon_score_base import IconScoreBase, interface, external, payable, eventlog
 from .icon_score_base2 import InterfaceScore
 from ..base.address import Address
 from ..base.exception import *
@@ -33,7 +35,28 @@ if TYPE_CHECKING:
     from ..iiss.storage import RewardRate
 
 
+class Delegation(TypedDict):
+    address: Address
+    value: int
+
+
 class SystemScore(IconScoreBase):
+    @eventlog
+    def IScoreClaimed(self, iscore: int, icx: int):
+        pass
+
+    @eventlog
+    def PRepRegistered(self, address: Address):
+        pass
+
+    @eventlog
+    def PRepUnregistered(self, address: Address):
+        pass
+
+    @eventlog
+    def PRepSet(self, address: Address):
+        pass
+
     def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
 
@@ -52,7 +75,7 @@ class SystemScore(IconScoreBase):
         return self._context.engine.iiss.query(*self._get_params(locals_params=locals()))
 
     @external
-    def setDelegation(self, delegations: list = None) -> None:
+    def setDelegation(self, delegations: List[Delegation] = None) -> None:
         self._context.engine.iiss.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
@@ -91,7 +114,7 @@ class SystemScore(IconScoreBase):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external
-    def setGovernanceVariables(self, irep: int = None):
+    def setGovernanceVariables(self, irep: int):
         self._context.engine.prep.invoke(*self._get_params(locals_params=locals()))
 
     @external(readonly=True)
@@ -153,7 +176,7 @@ class InterfaceSystemScore(InterfaceScore):
     def estimateUnstakeLockPeriod(self) -> dict: pass
 
     @interface
-    def setDelegation(self, delegations: list = None): pass
+    def setDelegation(self, delegations: List[Delegation] = None): pass
 
     @interface
     def getDelegation(self, address: Address) -> dict: pass
