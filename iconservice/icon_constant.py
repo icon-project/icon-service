@@ -14,15 +14,13 @@
 
 from enum import IntFlag, unique, IntEnum, Enum, auto, Flag
 
+SYSTEM_ADDRESS = "cx0000000000000000000000000000000000000000"
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
-ICON_SERVICE_LOG_TAG = 'IconService'
-ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
-ICON_DEPLOY_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Deploy'
-ICON_LOADER_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Loader'
-ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
-ICON_DB_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_DB'
-ICON_INNER_LOG_TAG = f'IconInnerService'
+ICON_DEPLOY_LOG_TAG = "DEPLOY"
+ICON_LOADER_LOG_TAG = "LOADER"
+ICX_LOG_TAG = "ICX"
+ICON_DB_LOG_TAG = "DB"
 IISS_LOG_TAG = "IISS"
 STEP_LOG_TAG = "STEP"
 WAL_LOG_TAG = "WAL"
@@ -59,9 +57,13 @@ ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
 
-BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': GOVERNANCE_ADDRESS}
+BUILTIN_SCORE_ADDRESS_MAPPER = {
+    'governance': GOVERNANCE_ADDRESS,
+    'system': SYSTEM_ADDRESS
+}
+BUILTIN_SCORE_IMPORT_WHITE_LIST = {"iconservice.iconscore.system": "['*']"}
 
-ZERO_TX_HASH = bytes(32)
+ZERO_TX_HASH = bytes(DEFAULT_BYTE_SIZE)
 
 
 class IssueDataKey:
@@ -106,6 +108,7 @@ BASE_TRANSACTION_INDEX = 0
 
 
 class Revision(Enum):
+    GENESIS = 0
     TWO = 2
     THREE = 3
     FOUR = 4
@@ -117,7 +120,21 @@ class Revision(Enum):
     REALTIME_P2P_ENDPOINT_UPDATE = 8
     OPTIMIZE_DIRTY_PREP_UPDATE = 8
 
-    LATEST = 8
+    # Revision 9
+    FIX_EMAIL_VALIDATION = 9
+    DIVIDE_NODE_ADDRESS = 9
+    FIX_BURN_EVENT_SIGNATURE = 9
+    ADD_LOGS_BLOOM_ON_BASE_TX = 9
+    SCORE_FUNC_PARAMS_CHECK = 9
+    SYSTEM_SCORE_ENABLED = 9
+    CHANGE_MAX_DELEGATIONS_TO_100 = 9
+    PREVENT_DUPLICATED_ENDPOINT = 9
+    SET_IREP_VIA_NETWORK_PROPOSAL = 9
+    MULTIPLE_UNSTAKE = 9
+    FIX_COIN_PART_BYTES_ENCODING = 9
+    STRICT_SCORE_DECORATOR_CHECK = 9
+
+    LATEST = 9
 
 
 RC_DB_VERSION_0 = 0
@@ -142,7 +159,6 @@ class ConfigKey:
     SERVICE = 'service'
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
-    SERVICE_DEPLOYER_WHITE_LIST = 'deployerWhiteList'
     SERVICE_SCORE_PACKAGE_VALIDATOR = 'scorePackageValidator'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
@@ -160,12 +176,25 @@ class ConfigKey:
 
     # log
     LOG = 'log'
+    LOGGER = "logger"
     LOG_FILE_PATH = 'filePath'
+    LOG_LEVEL = "level"
+    LOG_OUTPUT_TYPE = "outputType"
+    LOG_ROTATE = "rotate"
+    LOG_ROTATE_TYPE = "type"
+    LOG_ROTATE_PERIOD = "period"
+    LOG_ROTATE_INTERVAL = "interval"
+    LOG_ROTATE_AT_TIME = "atTime"
+    LOG_ROTATE_MAX_BYTES = "maxBytes"
+    LOG_ROTATE_BACKUP_COUNT = "backupCount"
     STEP_TRACE_FLAG = 'stepTraceFlag'
     PRECOMMIT_DATA_LOG_FLAG = 'precommitDataLogFlag'
 
-    # Reward calculator executable path
+    # Reward calculator
+    # executable path
     ICON_RC_DIR_PATH = 'iconRcPath'
+    # Boolean which determines Opening RC monitor channel (Default True)
+    ICON_RC_MONITOR = 'iconRcMonitor'
 
     # IISS meta data
     IISS_META_DATA = "iissMetaData"
@@ -198,8 +227,41 @@ class EnableThreadFlag(IntFlag):
 class IconServiceFlag(IntFlag):
     FEE = 1
     AUDIT = 2
-    DEPLOYER_WHITE_LIST = 4
+    # DEPLOYER_WHITE_LIST = 4
     SCORE_PACKAGE_VALIDATOR = 8
+
+
+class IconNetworkValueType(Enum):
+    SERVICE_CONFIG = b'service_config'
+
+    STEP_PRICE = b'step_price'
+    STEP_COSTS = b'step_costs'
+    MAX_STEP_LIMITS = b'max_step_limits'
+
+    REVISION_CODE = b'revision_code'
+    REVISION_NAME = b'revision_name'
+
+    SCORE_BLACK_LIST = b'score_black_list'
+    IMPORT_WHITE_LIST = b'import_white_list'
+
+    IREP = b'irep'
+
+    @classmethod
+    def gs_migration_type_list(cls) -> list:
+        return [
+            cls.SERVICE_CONFIG,
+            cls.STEP_PRICE,
+            cls.STEP_COSTS,
+            cls.MAX_STEP_LIMITS,
+            cls.REVISION_CODE,
+            cls.REVISION_NAME,
+            cls.SCORE_BLACK_LIST,
+            cls.IMPORT_WHITE_LIST,
+        ]
+
+    @classmethod
+    def gs_migration_count(cls) -> int:
+        return len(cls.gs_migration_type_list())
 
 
 @unique
@@ -240,33 +302,6 @@ INVALID_CLAIM_TX = [
     b'\xb9\xee\xb25\xf7\x15\xb1f\xcfK\x91\xff\xcf\x8c\xc4\x8a\x81\x918\x96\x08m0\x10O\xfc\x0c\xf4~\xed\x1c\xbd'
 ]
 
-IISS_METHOD_TABLE = [
-    "setStake",
-    "getStake",
-    "setDelegation",
-    "getDelegation",
-    "claimIScore",
-    "queryIScore",
-    "estimateUnstakeLockPeriod"
-]
-
-PREP_METHOD_TABLE = [
-    "registerPRep",
-    "unregisterPRep",
-    "setPRep",
-    "setGovernanceVariables",
-    "getPRep",
-    "getMainPReps",
-    "getSubPReps",
-    "getPReps",
-    "getPRepTerm",
-    "getInactivePReps"
-]
-
-DEBUG_METHOD_TABLE = [
-    "getIISSInfo"
-]
-
 HASH_TYPE_TABLE = [
     "blockHash",
     "txHash",
@@ -274,11 +309,9 @@ HASH_TYPE_TABLE = [
     "rootHash"
 ]
 
-NEW_METHOD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE + DEBUG_METHOD_TABLE
-
-IISS_MAX_DELEGATIONS = 10
 PREP_MAIN_PREPS = 22
 PREP_MAIN_AND_SUB_PREPS = 100
+PREP_REGISTRATION_FEE = 2_000 * ICX_IN_LOOP
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000 * ICX_IN_LOOP
@@ -293,6 +326,8 @@ IISS_DAY_BLOCK = 24 * 60 * 60 // 2
 IISS_MONTH_BLOCK = IISS_DAY_BLOCK * 30
 IISS_MONTH = 12
 IISS_ANNUAL_BLOCK = IISS_MONTH_BLOCK * IISS_MONTH
+
+UNSTAKE_SLOT_MAX = 1_000
 
 PERCENTAGE_FOR_BETA_2 = 100
 
@@ -379,6 +414,7 @@ class PRepFlag(Flag):
     UNVALIDATED_SEQUENCE_BLOCKS = auto()
     IREP = auto()  # irep, irep_block_height
     IREP_BLOCK_HEIGHT = auto()
+    NODE_ADDRESS = auto()
 
     BLOCK_STATISTICS = TOTAL_BLOCKS | VALIDATED_BLOCKS | UNVALIDATED_SEQUENCE_BLOCKS
     ALL = 0xFFFFFFFF
@@ -394,5 +430,34 @@ class TermFlag(Flag):
     MAIN_PREPS = auto()
     SUB_PREPS = auto()
     MAIN_PREP_P2P_ENDPOINT = auto()
+    MAIN_PREP_NODE_ADDRESS = auto()
 
     ALL = 0xFFFFFFFF
+
+
+class RevisionChangedFlag(Flag):
+    # Empty
+    NONE = 0x0
+    # Set when STEP price changed on the block
+    # STEP_PRICE_CHANGED = 0x10
+    # Set when STEP costs changed on the block
+    # STEP_COST_CHANGED = 0x20
+    # Set when Max STEP limits changed on the block
+    # STEP_MAX_LIMIT_CHANGED = 0x40
+    # STEP changed flag mask
+    # STEP_ALL_CHANGED = 0xf0
+
+    # CHANGE REVISION
+    GENESIS_IISS_CALC = 0x100
+    IISS_CALC = 0x200
+    DECENTRALIZATION = 0x400
+
+
+class RPCMethod:
+    ICX_GET_BALANCE = 'icx_getBalance'
+    ICX_GET_TOTAL_SUPPLY = 'icx_getTotalSupply'
+    ICX_GET_SCORE_API = 'icx_getScoreApi'
+    ISE_GET_STATUS = 'ise_getStatus'
+    ICX_CALL = 'icx_call'
+    ICX_SEND_TRANSACTION = 'icx_sendTransaction'
+    DEBUG_ESTIMATE_STEP = "debug_estimateStep"

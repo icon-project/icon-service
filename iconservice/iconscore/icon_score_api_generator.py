@@ -17,8 +17,9 @@
 from inspect import signature, Signature, Parameter, isclass, getmembers, isfunction
 from typing import Any, Optional, TYPE_CHECKING
 
-from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, BaseType, \
+from .icon_score_constant import ScoreFlag, CONST_INDEXED_ARGS_COUNT, BaseType, \
     STR_FALLBACK, STR_ON_INSTALL, STR_ON_UPDATE
+from .typing.element import get_score_flag, is_any_score_flag_on
 from ..base.address import Address
 from ..base.exception import IllegalFormatException, InvalidParamsException
 from ..base.type_converter import TypeConverter
@@ -77,12 +78,12 @@ class ScoreApiGenerator:
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
         for func in score_funcs:
-            const_bit_flag = getattr(func, CONST_BIT_FLAG, 0)
-            is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
-            is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
+            score_flag = get_score_flag(func)
+            is_readonly = bool(score_flag & ScoreFlag.READONLY)
+            is_payable = bool(score_flag & ScoreFlag.PAYABLE)
 
             try:
-                if const_bit_flag & ConstBitFlag.External:
+                if score_flag & ScoreFlag.EXTERNAL:
                     src.append(ScoreApiGenerator.__generate_normal_function(
                         func.__name__, is_readonly, is_payable, signature(func)))
                 elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
@@ -130,12 +131,16 @@ class ScoreApiGenerator:
 
     @staticmethod
     def __generate_events(src: list, score_funcs: list) -> None:
-        event_funcs = {func.__name__: signature(func) for func in score_funcs
-                       if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog}
+        event_funcs = {
+            func.__name__: signature(func) for func in score_funcs
+            if is_any_score_flag_on(func, ScoreFlag.EVENTLOG)
+        }
 
-        indexed_args_counts = {func.__name__: getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
-                               for func in score_funcs
-                               if getattr(func, CONST_INDEXED_ARGS_COUNT, 0)}
+        indexed_args_counts = {
+            func.__name__: getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
+            for func in score_funcs
+            if getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
+        }
 
         for func_name, event in event_funcs.items():
             index_args_count = indexed_args_counts.get(func_name, 0)

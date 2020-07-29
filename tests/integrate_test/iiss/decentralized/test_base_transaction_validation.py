@@ -19,17 +19,17 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException, FatalException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, Revision, \
     ISCORE_EXCHANGE_RATE, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey, \
     PREP_MAIN_AND_SUB_PREPS
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateDoneNotification
-from tests import create_tx_hash, create_block_hash
-from tests.integrate_test import create_timestamp
+from tests import create_tx_hash, create_block_hash, create_timestamp
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -312,7 +312,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
             if group_key not in issue_data:
                 continue
-            expected_score_address = ZERO_SCORE_ADDRESS
+            expected_score_address = SYSTEM_SCORE_ADDRESS
             expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
             expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
@@ -366,7 +366,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
             if group_key not in issue_data:
                 continue
-            expected_score_address = ZERO_SCORE_ADDRESS
+            expected_score_address = SYSTEM_SCORE_ADDRESS
             expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
             expected_data: list = [issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
@@ -510,3 +510,31 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         with self.assertRaises(FatalException):
             self._init_decentralized()
+
+    def test_base_transaction_has_logs_bloom_after_revision_10(self):
+        self._init_decentralized()
+
+        # TEST: Before 'ADD_LOGS_BLOOM_ON_BASE_TX' revision, base transaction should not have logs bloom
+        tx_list = [
+            self._create_dummy_tx()
+        ]
+
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        self._write_precommit_state(prev_block)
+        base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
+
+        expected_logs_bloom = None
+        self.assertEqual(expected_logs_bloom, base_tx_result.logs_bloom)
+
+        # TEST: After 'ADD_LOGS_BLOOM_ON_BASE_TX' revision, base transaction should have logs bloom
+        self.set_revision(Revision.ADD_LOGS_BLOOM_ON_BASE_TX.value)
+        tx_list = [
+            self._create_dummy_tx()
+        ]
+
+        prev_block, hash_list = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        self._write_precommit_state(prev_block)
+        base_tx_result: 'TransactionResult' = self.get_tx_results(hash_list)[0]
+
+        expected_logs_bloom = IconServiceEngine._generate_logs_bloom(base_tx_result.event_logs)
+        self.assertEqual(expected_logs_bloom.value, base_tx_result.logs_bloom.value)

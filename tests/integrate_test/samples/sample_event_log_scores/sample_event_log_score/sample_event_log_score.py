@@ -54,7 +54,7 @@ class SampleEventLogScore(IconScoreBase):
         self._value.set(value)
 
     @external(readonly=True)
-    def call_even_log_in_read_only_method(self) -> str:
+    def call_event_log_in_read_only_method(self) -> str:
         self.NormalEventLog("1", "2", "3")
         return "test"
 

@@ -19,11 +19,12 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus, PenaltyReason
-from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, PREP_MAIN_PREPS, ConfigKey, ICX_IN_LOOP
+from iconservice.prep import PRepMethod
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import EOAAccount
 
@@ -117,7 +118,8 @@ class TestIntegratePrep(TestIISSBase):
                 "penalty": PenaltyReason.NONE.value,
                 "unvalidatedSequenceBlocks": 0,
                 "blockHeight": register_block_height,
-                "txIndex": i
+                "txIndex": i,
+                "nodeAddress": account.address
             }
             self.assertEqual(expected_response, response)
 
@@ -131,7 +133,7 @@ class TestIntegratePrep(TestIISSBase):
         response: dict = self.get_prep_list()
         expected_response: dict = {
             "blockHeight": self._block_height,
-            "startRanking": 0,
+            "startRanking": 1,
             "totalDelegated": 0,
             "totalStake": 0,
             "preps": []
@@ -177,11 +179,16 @@ class TestIntegratePrep(TestIISSBase):
         actual_preps: list = response['preps']
         self.assertEqual(1, len(actual_preps))
 
+        response: dict = self.get_prep_list()
+        actual_preps: list = response['preps']
+        self.assertEqual(prep_count, len(actual_preps))
+
         response: dict = self.get_prep_list(start_ranking=1)
         actual_preps: list = response['preps']
         self.assertEqual(prep_count, len(actual_preps))
 
     def test_preps_and_delegated(self):
+        max_delegations: int = 10
         self.maxDiff = None
         self.update_governance()
 
@@ -215,7 +222,7 @@ class TestIntegratePrep(TestIISSBase):
         # delegation 1 icx user0 ~ 9
         delegations: list = []
         delegation_amount: int = 1 * ICX_IN_LOOP
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegations.append((self._accounts[i], delegation_amount))
         self.set_delegation(from_=self._accounts[0],
                             origin_delegations=delegations)
@@ -228,9 +235,9 @@ class TestIntegratePrep(TestIISSBase):
         actual_list: list = response["preps"]
         self.assertEqual(0, len(actual_list))
 
-        response: dict = self.get_prep_list(end_ranking=IISS_MAX_DELEGATIONS)
+        response: dict = self.get_prep_list(end_ranking=max_delegations)
         preps: list = []
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             address: 'Address' = self._accounts[i].address
             expected_params: dict = self.create_register_prep_params(self._accounts[i])
             preps.append(
@@ -255,7 +262,8 @@ class TestIntegratePrep(TestIISSBase):
                     "email": expected_params["email"],
                     "website": expected_params["website"],
                     "details": expected_params["details"],
-                    "p2pEndpoint": expected_params["p2pEndpoint"]
+                    "p2pEndpoint": expected_params["p2pEndpoint"],
+                    "nodeAddress": address
                 }
             )
 
@@ -308,106 +316,194 @@ class TestIntegratePrep(TestIISSBase):
         self.update_governance()
 
         # set Revision REV_IISS
-        self.set_revision(Revision.IISS.value)
+        revision = Revision.IISS.value
+        self.set_revision(revision)
+
+        # gain 10 icx user0
+        balance: int = 10 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:8],
+                            init_balance=balance)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_name(reg_data)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_email(reg_data)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_website(reg_data)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_country(reg_data)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_city(reg_data)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_details(reg_data)
+        reg_data = deepcopy(prep_register_data)
+        self._validate_p2p_endpoint(reg_data, revision)
+
+    def test_reg_prep_validator_fixed_email_validation(self):
+        self.update_governance()
+
+        # set Revision REV_FIX_EMAIL_REGEX
+        revision = Revision.FIX_EMAIL_VALIDATION.value
+        self.set_revision(revision)
 
         # gain 10 icx user0
         balance: int = 10 * ICX_IN_LOOP
         self.distribute_icx(accounts=self._accounts[:8],
                             init_balance=balance)
 
-        self._validate_name()
-        self._validate_email()
-        self._validate_website()
-        self._validate_country()
-        self._validate_city()
-        self._validate_details()
-        self._validate_p2p_endpoint()
+        reg_data = deepcopy(prep_register_data)
+        self._validate_name(reg_data)
+        reg_data = self.get_prep_data_with_customized_endpoint("a")
+        reg_data[ConstantKeys.EMAIL] = '你好@validexample.com'
+        self._validate_fixed_email(reg_data)
+        reg_data = self.get_prep_data_with_customized_endpoint("b")
+        self._validate_website(reg_data)
+        reg_data = self.get_prep_data_with_customized_endpoint("c")
+        self._validate_country(reg_data)
+        reg_data = self.get_prep_data_with_customized_endpoint("d")
+        self._validate_city(reg_data)
+        reg_data = self.get_prep_data_with_customized_endpoint("e")
+        self._validate_details(reg_data)
+        reg_data = self.get_prep_data_with_customized_endpoint("f")
+        self._validate_p2p_endpoint(reg_data, revision)
 
-    def _validate_name(self):
-        reg_data: dict = deepcopy(prep_register_data)
+    def test_prevent_duplicated_endpoint(self):
+        self.update_governance()
+
+        # set Revision REV_FIX_EMAIL_REGEX
+        revision = Revision.PREVENT_DUPLICATED_ENDPOINT.value
+        self.set_revision(revision)
+
+        # gain 10 icx user0
+        balance: int = 10 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:2],
+                            init_balance=balance)
+
+        # register prep1
+        prep1_data = deepcopy(prep_register_data)
+        tx = self.create_register_prep_tx(self._accounts[0], prep1_data)
+        self.process_confirm_block_tx([tx])
+
+        # fail to register due to duplicated endpoint
+        tx = self.create_register_prep_tx(self._accounts[1], prep1_data)
+        self.process_confirm_block_tx([tx], expected_status=False)
+
+        # success to register prep2
+        prep2_data = deepcopy(prep1_data)
+        prep2_data[ConstantKeys.P2P_ENDPOINT] = "node2.endpoint:7100"
+        tx = self.create_register_prep_tx(self._accounts[1], prep2_data)
+        self.process_confirm_block_tx([tx], expected_status=True)
+
+        # success to set prep
+        prep1_endpoint_ip = "1.2.3.4:7100"
+        prep1_data[ConstantKeys.NAME] = "name2"
+        prep1_data[ConstantKeys.P2P_ENDPOINT] = "1.2.3.4:7100"
+        tx = self.create_set_prep_tx(self._accounts[0], prep1_data)
+        self.process_confirm_block_tx([tx], expected_status=True)
+
+        # fail to setPRep due to duplicated endpoint(used by prep1)
+        prep2_data = deepcopy(prep1_data)
+        prep2_data[ConstantKeys.P2P_ENDPOINT] = prep1_endpoint_ip
+        tx = self.create_set_prep_tx(self._accounts[1], prep2_data)
+        self.process_confirm_block_tx([tx], expected_status=False)
+
+
+    @staticmethod
+    def get_prep_data_with_customized_endpoint(key: str):
+        """Written for revision >= 9 since from revision 9, disallows duplicated endpoint"""
+        reg_data = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.P2P_ENDPOINT] = f"{key}1.example.com:7100"
+        return reg_data
+
+    def _validate_name(self, reg_data: dict):
+        tx = self.create_register_prep_tx(self._accounts[0], reg_data)
+        self.process_confirm_block_tx([tx])
+
         reg_data[ConstantKeys.NAME] = ''
         tx = self.create_register_prep_tx(self._accounts[0], reg_data)
         self.process_confirm_block_tx([tx],
                                       expected_status=False)
 
-        reg_data[ConstantKeys.NAME] = "valid name"
-        tx = self.create_register_prep_tx(self._accounts[0], reg_data)
+    def _validate_email(self, reg_data: dict):
+        reg_data[ConstantKeys.EMAIL] = "valid@validexample.com"
+        tx = self.create_register_prep_tx(self._accounts[1], reg_data)
         self.process_confirm_block_tx([tx])
 
-    def _validate_email(self):
         invalid_email_list = ['', 'invalid email', 'invalid.com', 'invalid@', 'invalid@a', 'invalid@a.',
                               'invalid@.com']
 
         for email in invalid_email_list:
-            reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.EMAIL] = email
             tx = self.create_register_prep_tx(self._accounts[1], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
 
-        reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.EMAIL] = "valid@validexample.com"
+    def _validate_fixed_email(self, reg_data: dict):
         tx = self.create_register_prep_tx(self._accounts[1], reg_data)
         self.process_confirm_block_tx([tx])
+        registered_data = self.get_prep(self._accounts[1])
+        self.assertEqual(reg_data[ConstantKeys.EMAIL], registered_data['email'])
+        invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', f"{'a'*65}@example.com",
+                              f"{'a'*253}@aa", '@invalid', f'{"가"*64}@example.com']
 
-    def _validate_website(self):
+        for email in invalid_email_list:
+            reg_data[ConstantKeys.EMAIL] = email
+            tx = self.create_register_prep_tx(self._accounts[1], reg_data)
+            self.process_confirm_block_tx([tx],
+                                          expected_status=False)
+
+    def _validate_website(self, reg_data: dict):
+        tx = self.create_register_prep_tx(self._accounts[2], reg_data)
+        self.process_confirm_block_tx([tx])
+
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
                                 'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."]
 
+        reg_data: dict = deepcopy(prep_register_data)
         for website in invalid_website_list:
-            reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.WEBSITE] = website
             tx = self.create_register_prep_tx(self._accounts[2], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
 
-        reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.WEBSITE] = "https://validurl.com"
-        tx = self.create_register_prep_tx(self._accounts[2], reg_data)
+    # TODO
+    def _validate_country(self, reg_data: dict):
+        pass
+
+    # TODO
+    def _validate_city(self, reg_data: dict):
+        pass
+
+    def _validate_details(self, reg_data: dict):
+        tx = self.create_register_prep_tx(self._accounts[5], reg_data)
         self.process_confirm_block_tx([tx])
 
-    # TODO
-    def _validate_country(self):
-        pass
-
-    # TODO
-    def _validate_city(self):
-        pass
-
-    def _validate_details(self):
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
                                 'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."]
 
+        reg_data: dict = deepcopy(prep_register_data)
         for website in invalid_website_list:
-            reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.WEBSITE] = website
             tx = self.create_register_prep_tx(self._accounts[5], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
 
-        reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.WEBSITE] = "https://validurl.com/json"
-        tx = self.create_register_prep_tx(self._accounts[5], reg_data)
+    def _validate_p2p_endpoint(self, reg_data: dict, revision: int):
+        tx = self.create_register_prep_tx(self._accounts[6], reg_data)
         self.process_confirm_block_tx([tx])
 
-    def _validate_p2p_endpoint(self):
+        if revision >= Revision.PREVENT_DUPLICATED_ENDPOINT.value:
+            tx = self.create_register_prep_tx(self._accounts[6], reg_data)
+            self.process_confirm_block_tx([tx], expected_status=False)
+
         invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
                                 'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."
                                                                                     "https://target.asdf:7100"]
 
         for website in invalid_website_list:
-            reg_data: dict = deepcopy(prep_register_data)
             reg_data[ConstantKeys.P2P_ENDPOINT] = website
             tx = self.create_register_prep_tx(self._accounts[6], reg_data)
             self.process_confirm_block_tx([tx],
                                           expected_status=False)
-
-        validate_endpoint = "20.20.7.8:8000"
-
-        reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.P2P_ENDPOINT] = validate_endpoint
-        tx = self.create_register_prep_tx(self._accounts[6], reg_data)
-        self.process_confirm_block_tx([tx])
 
     def test_prep_stake(self):
         """Test P-Rep stake management
@@ -509,3 +605,31 @@ class TestIntegratePrep(TestIISSBase):
 
             prep: dict = self.get_prep(prep["address"])
             self.assertEqual(10 * ICX_IN_LOOP, prep["stake"])
+
+    def test_prep_query_via_icx_sendtransaction(self):
+        self.init_decentralized(clear=False)
+        query = {
+            PRepMethod.GET_PREP: {"address": str(self._accounts[0].address)},
+            PRepMethod.GET_MAIN_PREPS: {},
+            PRepMethod.GET_SUB_PREPS: {},
+            PRepMethod.GET_PREPS: {"startRanking": "0x1", "endRanking": "0x2"},
+            PRepMethod.GET_PREP_TERM: {},
+            PRepMethod.GET_INACTIVE_PREPS: {},
+        }
+
+        # TEST : query via icx_sendTransaction (revision < ALLOW_INVOKE_SYSTEM_SCORE_READONLY)
+        for method, param in query.items():
+            self.check_query_via_icx_sendtransaction(method, param, False)
+
+        # TEST : query via icx_sendTransaction (revision >= ALLOW_INVOKE_SYSTEM_SCORE_READONLY)
+        self.set_revision(Revision.SYSTEM_SCORE_ENABLED.value, with_np=True)
+        for method, param in query.items():
+            self.check_query_via_icx_sendtransaction(method, param, True)
+        return
+
+    def check_query_via_icx_sendtransaction(self, method: str, params: dict, expected_status: bool):
+        tx = self.create_score_call_tx(from_=self._admin,
+                                       to_=SYSTEM_SCORE_ADDRESS,
+                                       func_name=method,
+                                       params=params)
+        return self.process_confirm_block_tx([tx], expected_status=expected_status)

@@ -16,7 +16,7 @@
 
 import os
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, \
     IISS_DB
@@ -213,7 +213,6 @@ class TestRCDatabase(TestIISSBase):
         expected_bp_block_height: int = expected_gv_block_height + 1
         self.assertIsNotNone(rc_db.get(Header.PREFIX))
         for rc_data in rc_db.iterator():
-            print(rc_data)
             if rc_data[0][:2] == Header.PREFIX:
                 hd: 'Header' = Header.from_bytes(rc_data[1])
                 expected_block_height = self._block_height
@@ -354,7 +353,7 @@ class TestRCDatabase(TestIISSBase):
 
         # unregister prep on start term period
         tx: dict = self.create_score_call_tx(from_=main_preps_address[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="unregisterPRep",
                                              params={},
                                              value=0)
@@ -398,7 +397,7 @@ class TestRCDatabase(TestIISSBase):
             if rc_data[0][:2] == PRepsData.PREFIX:
                 preps: 'PRepsData' = PRepsData.from_bytes(rc_data[0], rc_data[1])
                 self.assertEqual(expected_prep_block, preps.block_height)
-                prep_addresses: list = [del_info.address for del_info in preps.prep_list]
+                prep_addresses: list = [delegation_info.address for delegation_info in preps.prep_list]
                 if expected_gv_block == expected_prep_block:
                     # In case of term change
                     expected_prep_address = main_preps_address
@@ -426,7 +425,7 @@ class TestRCDatabase(TestIISSBase):
         # unregister on term
         self.make_blocks(self._block_height + 4)
         tx: dict = self.create_score_call_tx(from_=main_preps_address[1],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="unregisterPRep",
                                              params={},
                                              value=0)
@@ -454,3 +453,121 @@ class TestRCDatabase(TestIISSBase):
                 diff_cnt: int = 0
                 self.assertEqual(diff_cnt, len(set(expected_prep_address) ^ set(prep_addresses)))
                 expected_prep_block += 6
+
+    def test_bp_on_the_start_term(self):
+        # Success case: Put valid bp info incase of below case
+        # 1. at th start block of term
+        # 2. invoke 2 blocks on the same block height
+        # 3. commit the first invoked block
+        # 4. committed block has different validator set compared to second block
+        # Should record the first validator set on the iiss db
+        main_preps_address = [main_prep_account.address for main_prep_account in self._accounts[:PREP_MAIN_PREPS]]
+        rc_data_path: str = os.path.join(self._state_db_root_path, IISS_DB)
+
+        self.update_governance()
+
+        # ################## term 0 start #####################
+        self.set_revision(Revision.IISS.value)
+        self.make_blocks(self._block_height + 1)
+        last_iiss_db: str = self.get_last_rc_db_data(rc_data_path)
+
+        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        # Minimum_delegate_amount is 0.02 * total_supply
+        minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
+        init_balance: int = minimum_delegate_amount_for_decentralization * 2
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        self.distribute_icx(accounts=self._accounts[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS],
+                            init_balance=init_balance)
+
+        # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        stake_amount: int = minimum_delegate_amount_for_decentralization
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_stake_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                value=stake_amount)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=10 * ICX_IN_LOOP)
+
+        # register PRep
+        tx_list: list = []
+        for account in self._accounts[:PREP_MAIN_PREPS]:
+            tx: dict = self.create_register_prep_tx(from_=account, value=0)
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + i],
+                                                     origin_delegations=[
+                                                         (
+                                                             self._accounts[i],
+                                                             minimum_delegate_amount_for_decentralization
+                                                         )
+                                                     ])
+            tx_list.append(tx)
+        self.process_confirm_block_tx(tx_list)
+
+        block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
+                                                                prev_block_validators=main_preps_address[1:])
+        # ################## term 0 End #####################
+        # ################## term 1 Start (decentralization) #####################
+        self.make_blocks(self._block_height + 1,
+                         prev_block_generator=main_preps_address[0],
+                         prev_block_validators=main_preps_address[1:])
+
+        self.set_revision(Revision.DECENTRALIZATION.value)
+        expected_hd_block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
+                                                                            prev_block_validators=main_preps_address[
+                                                                                                  1:])
+        # ################## term 1 End #####################
+        # ################## term 2 Start #####################
+        self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
+                                            prev_block_validators=main_preps_address[1:])
+        # make 2 different blocks which have the same block height
+        tx1 = self.create_transfer_icx_tx(self._admin, self._genesis, 0)
+        tx2 = self.create_transfer_icx_tx(self._admin, self._genesis, 1)
+        # Invoke block_1
+        validator_1 = [main_preps_address[1]]
+        block_1, hash_list_1 = self.make_and_req_block([tx1],
+                                                       prev_block_generator=main_preps_address[0],
+                                                       prev_block_validators=validator_1)
+        # Invoke block_2
+        validator_2 = [main_preps_address[2]]
+        block_2, hash_list_2 = self.make_and_req_block([tx2],
+                                                       prev_block_generator=main_preps_address[0],
+                                                       prev_block_validators=validator_2)
+
+        assert block_1.height == block_2.height
+        assert block_1.hash != block_2.hash
+        assert block_1.prev_hash == block_2.prev_hash
+
+        # Commit block_1
+        self._write_precommit_state(block_1)
+
+        # Check the latest iiss db and current db
+        last_iiss_db: str = self.get_last_rc_db_data(rc_data_path)
+        iiss_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, last_iiss_db))
+
+        calc_end_block: int = block_1.height - 1
+        for rc_data in iiss_db.iterator():
+            if rc_data[0][:2] == BlockProduceInfoData.PREFIX and \
+                    int.from_bytes(rc_data[0][2:], 'big') == calc_end_block:
+                bp = BlockProduceInfoData.from_bytes(rc_data[0], rc_data[1])
+                self.assertEqual(validator_1, bp.block_validator_list)
+                self.assertNotEqual(validator_2, bp.block_validator_list)
+
+        current_db = KeyValueDatabase.from_path(os.path.join(rc_data_path, RewardCalcStorage.CURRENT_IISS_DB_NAME))
+        for rc_data in current_db.iterator():
+            if rc_data[0][:2] == GovernanceVariable.PREFIX:
+                gv: 'GovernanceVariable' = GovernanceVariable.from_bytes(rc_data[0], rc_data[1])
+                self.assertEqual(calc_end_block, gv.block_height)
+            if rc_data[0][:2] == BlockProduceInfoData.PREFIX:
+                raise AssertionError
+
+        iiss_db.close()

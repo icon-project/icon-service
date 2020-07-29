@@ -19,7 +19,7 @@
 
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ConfigKey, ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
@@ -87,7 +87,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
                       score_name: str,
                       value: int,
                       expected_status: bool = True,
-                      to_: Optional['Address'] = ZERO_SCORE_ADDRESS,
+                      to_: Optional['Address'] = SYSTEM_SCORE_ADDRESS,
                       data: bytes = None) -> List['TransactionResult']:
         return self.deploy_score(score_root="sample_deploy_scores",
                                  score_name=score_name,

@@ -23,7 +23,7 @@ from unittest.mock import Mock
 import pytest
 
 from iconservice.base.address import Address
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import ConfigKey, PRepGrade
 from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.base.exception import ScoreNotFoundException
@@ -169,7 +169,7 @@ class TestRollback(TestIISSBase):
         tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                                score_name="install/sample_score",
                                                from_=sender_address,
-                                               to_=ZERO_SCORE_ADDRESS,
+                                               to_=SYSTEM_SCORE_ADDRESS,
                                                step_limit=deploy_step_limit)
         tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])
 
@@ -202,7 +202,7 @@ class TestRollback(TestIISSBase):
         tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                                score_name="install/sample_score",
                                                from_=sender_address,
-                                               to_=ZERO_SCORE_ADDRESS,
+                                               to_=SYSTEM_SCORE_ADDRESS,
                                                step_limit=deploy_step_limit)
         tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])
 
@@ -239,7 +239,7 @@ class TestRollback(TestIISSBase):
         tx: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                                score_name="install/sample_score",
                                                from_=sender_address,
-                                               to_=ZERO_SCORE_ADDRESS,
+                                               to_=SYSTEM_SCORE_ADDRESS,
                                                deploy_params=deploy_params,
                                                step_limit=deploy_step_limit)
         tx_results: List['TransactionResult'] = self.process_confirm_block(tx_list=[tx])

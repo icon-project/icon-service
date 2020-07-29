@@ -40,7 +40,7 @@ class ParamType(IntEnum):
     ISE_GET_STATUS = 305
 
     WRITE_PRECOMMIT = 400
-    REMOVE_PRECOMMIT = 500
+    # REMOVE_PRECOMMIT = 500
     ROLLBACK = 501
 
     VALIDATE_TRANSACTION = 600
@@ -178,6 +178,7 @@ class ConstantKeys:
     END_RANKING = "endRanking"
     IREP = "irep"
     IREP_BLOCK_HEIGHT = "irepUpdateBlockHeight"
+    NODE_ADDRESS = "nodeAddress"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -324,8 +325,6 @@ type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES
 }
 
-type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
-
 type_convert_templates[ParamType.ROLLBACK] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
     ConstantKeys.BLOCK_HASH: ValueType.BYTES
@@ -351,12 +350,12 @@ type_convert_templates[ParamType.IISS_GET_STAKE] = {
     ConstantKeys.ADDRESS: ValueType.ADDRESS
 }
 
-type_convert_templates[ParamType.IISS_SET_DELEGATION] = {
-    ConstantKeys.DELEGATIONS: [{
+type_convert_templates[ParamType.IISS_SET_DELEGATION] = [
+    {
         ConstantKeys.ADDRESS: ValueType.ADDRESS,
         ConstantKeys.VALUE: ValueType.INT
-    }]
-}
+    }
+]
 
 type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
@@ -371,7 +370,8 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
-    ConstantKeys.P2P_ENDPOINT: ValueType.STRING
+    ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
+    ConstantKeys.NODE_ADDRESS: ValueType.ADDRESS,
 }
 
 type_convert_templates[ParamType.IISS_SET_PREP] = {
@@ -382,6 +382,7 @@ type_convert_templates[ParamType.IISS_SET_PREP] = {
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
     ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
+    ConstantKeys.NODE_ADDRESS: ValueType.ADDRESS
 }
 
 type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]

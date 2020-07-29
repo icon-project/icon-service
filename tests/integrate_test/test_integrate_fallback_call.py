@@ -19,7 +19,7 @@
 
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
@@ -124,11 +124,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_pass",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_transfer",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -152,11 +152,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_pass",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_send",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -181,11 +181,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_no_payable",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_transfer",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -221,11 +221,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_no_payable",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_transfer",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -257,11 +257,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_no_payable",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_send",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -293,11 +293,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_revert",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_transfer",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -329,11 +329,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_revert",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_send",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -365,11 +365,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_score_revert",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_send_fail",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -404,11 +404,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_send_A",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                                 score_name="sample_link_score_send_B",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
         score_addr1: 'Address' = tx_results[0].score_address
@@ -518,6 +518,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
                                                                   score_name="sample_payable_external",
                                                                   from_=self._accounts[0])
+        print(tx_results[0])
         score_addr: 'Address' = tx_results[0].score_address
 
         self.score_call(from_=self._accounts[0],

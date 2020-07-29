@@ -17,6 +17,7 @@
 """IconServiceEngine testcase
 """
 import copy
+import json
 from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
@@ -24,18 +25,18 @@ from unittest.mock import Mock
 from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, RCCalculateResult
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, RCCalculateResult, Revision
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
 from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
 from tests import create_address, create_tx_hash, create_block_hash
-from tests.integrate_test import root_clear, create_timestamp, get_score_path
+from tests import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -57,6 +58,7 @@ class TestIntegrateBase(TestCase):
         cls._score_root_path = '.score'
         cls._state_db_root_path = '.statedb'
         cls._iiss_db_root_path = '.iissdb'
+        cls._precommit_log_path = 'precommit'
 
         cls._test_sample_root = "samples"
         cls._signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
@@ -72,7 +74,7 @@ class TestIntegrateBase(TestCase):
         cls._tx_results: dict = {}
 
     def setUp(self):
-        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
 
         self._block_height = -1
         self._prev_block_hash = None
@@ -83,7 +85,6 @@ class TestIntegrateBase(TestCase):
         config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
         config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
                                                 ConfigKey.SERVICE_FEE: False,
-                                                ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                                                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
         config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                             ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
@@ -127,7 +128,7 @@ class TestIntegrateBase(TestCase):
 
     def tearDown(self):
         self.icon_service_engine.close()
-        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
 
     def _make_init_config(self) -> dict:
         return {}
@@ -171,11 +172,14 @@ class TestIntegrateBase(TestCase):
             block,
             [tx]
         )
-        self.icon_service_engine.commit(block.height, block.hash, None)
+        self.icon_service_engine.commit(block.height, block.hash, block.hash)
         self._block_height += 1
         self._prev_block_hash = block_hash
 
         return invoke_response
+
+    def get_last_block(self) -> 'Block':
+        return self.icon_service_engine._precommit_data_manager.last_block
 
     def get_tx_results(self, hash_list: List[bytes]):
         tx_results: List['TransactionResult'] = []
@@ -210,13 +214,43 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context = IconScoreContext(IconScoreContextType.DIRECT)
-
+        context._inv_container = context.engine.inv.inv_container
+        context._term = context.engine.prep.term
         is_block_editable = False
-        self.icon_service_engine._set_revision_to_context(context)
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
+        tx_results, state_root_hash, added_transactions, next_preps = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            prev_block_votes=prev_block_votes,
+                                            is_block_editable=is_block_editable)
+
+        self.add_tx_result(tx_results)
+        return block, self.get_hash_list_from_tx_list(tx_list)
+
+    def make_and_req_block_for_2_depth_invocation(
+            self,
+            tx_list: list,
+            prev_block: 'Block',
+            prev_block_generator: Optional['Address'] = None,
+            prev_block_validators: Optional[List['Address']] = None,
+            prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
+    ) -> Tuple['Block', List[bytes]]:
+        block_height: int = prev_block.height + 1
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, prev_block.hash, 0)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+
+        is_block_editable = False
+        if context.is_decentralized():
+            is_block_editable = True
+
+        tx_results, state_root_hash, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -244,13 +278,13 @@ class TestIntegrateBase(TestCase):
             block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
-
+        context._inv_container = context.engine.inv.inv_container
+        context._term = context.engine.prep.term
         is_block_editable = False
-        self.icon_service_engine._set_revision_to_context(context)
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, main_prep_as_dict = \
+        tx_results, state_root_hash, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -258,7 +292,7 @@ class TestIntegrateBase(TestCase):
                                             prev_block_votes=prev_block_votes,
                                             is_block_editable=is_block_editable)
 
-        return block, tx_results, state_root_hash, added_transactions, main_prep_as_dict
+        return block, tx_results, state_root_hash, added_transactions, next_preps
 
     def _make_and_req_block_for_issue_test(self,
                                            tx_list: list,
@@ -275,7 +309,7 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, cumulative_fee)
 
-        tx_results, _, added_transactions, main_prep_as_dict = \
+        tx_results, _, added_transactions, next_preps = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -287,17 +321,17 @@ class TestIntegrateBase(TestCase):
 
         return block, self.get_hash_list_from_tx_list(tx_list)
 
-    def _write_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.commit(block.height, block.hash, None)
+    def _write_precommit_state(self, block: 'Block'):
+        self.icon_service_engine.commit(block.height, block.hash, block.hash)
         self._block_height += 1
         assert block.height == self._block_height
         self._prev_block_hash = block.hash
 
-    def _remove_precommit_state(self, block: 'Block') -> None:
-        """Revoke to commit the precommit data to db
-
-        """
-        self.icon_service_engine.remove_precommit_state(block.height, block.hash)
+    def _write_precommit_state_in_leader(self, block_height: int, old_block_hash: bytes, new_block_hash: bytes):
+        self.icon_service_engine.commit(block_height, old_block_hash, new_block_hash)
+        self._block_height += 1
+        assert block_height == self._block_height
+        self._prev_block_hash = new_block_hash
 
     def rollback(self, block_height: int = -1, block_hash: Optional[bytes] = None):
         """Rollback the current state to the old one indicated by a given block
@@ -350,15 +384,21 @@ class TestIntegrateBase(TestCase):
                                  prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
                                  block_height: int = None) -> List['TransactionResult']:
 
+        org_tx_list = copy.deepcopy(tx_list)
+
         prev_block, hash_list = self.make_and_req_block(tx_list,
                                                         block_height,
                                                         prev_block_generator,
                                                         prev_block_validators,
                                                         prev_block_votes)
         self._write_precommit_state(prev_block)
+
+        # do not check status of added TX
+        check_tx_results = self.get_tx_results(self.get_hash_list_from_tx_list(org_tx_list))
+        for tx_result in check_tx_results:
+            self.assertEqual(int(expected_status), tx_result.status, tx_result)
+
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
-        for tx_result in tx_results:
-            self.assertEqual(int(expected_status), tx_result.status)
         return tx_results
 
     def process_confirm_block(self,
@@ -527,7 +567,8 @@ class TestIntegrateBase(TestCase):
                           from_: Union['EOAAccount', 'Address', None],
                           to_: Union['EOAAccount', 'Address', 'MalformedAddress'],
                           data: bytes = None,
-                          value: int = 0) -> dict:
+                          value: int = 0,
+                          disable_pre_validate: bool = False) -> dict:
 
         addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
         addr_to: Optional['Address', 'MalformedAddress'] = self._convert_address_from_address_type(to_)
@@ -610,17 +651,14 @@ class TestIntegrateBase(TestCase):
                                     title: str,
                                     description: str,
                                     type_: int,
-                                    value: Union[str, int, 'Address'],
+                                    value: dict,
                                     step_limit: int = DEFAULT_BIG_STEP_LIMIT) -> dict:
-        text = '{"address":"%s"}' % value
-        json_data: bytes = text.encode("utf-8")
-
         method = "registerProposal"
         score_params = {
             "title": title,
             "description": description,
             "type": hex(type_),
-            "value": bytes_to_hex(json_data)
+            "value": "0x" + bytes.hex(json.dumps(value).encode())
         }
 
         return self.create_score_call_tx(from_=from_,
@@ -664,13 +702,27 @@ class TestIntegrateBase(TestCase):
 
     def update_governance(self,
                           version: str = "latest_version",
-                          expected_status: bool = True) -> List['TransactionResult']:
+                          expected_status: bool = True,
+                          root_path: str = "sample_builtin") -> List['TransactionResult']:
 
-        tx = self.create_deploy_score_tx("sample_builtin",
+        tx = self.create_deploy_score_tx(root_path,
                                          f"{version}/governance",
                                          self._admin,
                                          GOVERNANCE_SCORE_ADDRESS)
         return self.process_confirm_block_tx([tx], expected_status)
+
+    def update_governance_for_audit(self,
+                                    version: str = "latest_version",
+                                    expected_status: bool = True,
+                                    root_path: str = "sample_builtin") -> List['TransactionResult']:
+
+        tx = self.create_deploy_score_tx(root_path,
+                                         f"{version}/governance",
+                                         self._admin,
+                                         GOVERNANCE_SCORE_ADDRESS)
+        ret = self.process_confirm_block_tx([tx], expected_status)
+        self.accept_score(ret[0].tx_hash)
+        return ret
 
     def transfer_icx(self,
                      from_: Union['EOAAccount', 'Address', None],
@@ -695,7 +747,7 @@ class TestIntegrateBase(TestCase):
                      deploy_params: dict = None,
                      step_limit: int = DEFAULT_DEPLOY_STEP_LIMIT,
                      expected_status: bool = True,
-                     to_: Union['EOAAccount', 'Address'] = ZERO_SCORE_ADDRESS,
+                     to_: Union['EOAAccount', 'Address'] = SYSTEM_SCORE_ADDRESS,
                      data: bytes = None) -> List['TransactionResult']:
 
         tx = self.create_deploy_score_tx(score_root=score_root,
@@ -726,13 +778,38 @@ class TestIntegrateBase(TestCase):
 
     def set_revision(self,
                      revision: int,
-                     expected_status: bool = True) -> List['TransactionResult']:
+                     expected_status: bool = True,
+                     with_np: bool = False) -> List['TransactionResult']:
+        response = self.get_revision()
+        if not with_np:
+            # update revision value only
+            self.score_call(from_=self._admin,
+                            to_=GOVERNANCE_SCORE_ADDRESS,
+                            func_name="setRevision",
+                            params={"code": hex(revision), "name": f"1.1.{revision}"},
+                            expected_status=expected_status)
+        else:
+            # update latest governance SCORE (1.1.0 for revision 9 now)
+            self.update_governance(version="1_1_0",
+                                   expected_status=True,
+                                   root_path="sample_builtin_for_tests")
 
-        return self.score_call(from_=self._admin,
-                               to_=GOVERNANCE_SCORE_ADDRESS,
-                               func_name="setRevision",
-                               params={"code": hex(revision), "name": f"1.1.{revision}"},
-                               expected_status=expected_status)
+            # update revision via network proposal
+            tx_result: 'TransactionResult' = self.register_proposal(
+                from_=self._accounts[0],
+                title=f"set revision {revision}",
+                description=f"set revision {revision}",
+                type_=1,
+                value={"code": hex(revision), "name": f"test {revision}"})
+            np_id = tx_result.tx_hash
+
+            tx_list = []
+            for prep in self._accounts[1:22]:
+                tx_list.append(self.create_vote_proposal_tx(prep, np_id, 1))
+            self.process_confirm_block_tx(tx_list=tx_list)
+
+        response = self.get_revision()
+        self.assertEqual(revision, response.get("code", 0), response)
 
     def accept_score(self,
                      tx_hash: Union[bytes, str],
@@ -811,7 +888,7 @@ class TestIntegrateBase(TestCase):
                           title: str,
                           description: str,
                           type_: int,
-                          value: Union[str, int, 'Address'],
+                          value: dict,
                           expected_status: bool = True) -> 'TransactionResult':
         tx: dict = self.create_register_proposal_tx(from_, title, description, type_, value)
 
@@ -894,6 +971,32 @@ class TestIntegrateBase(TestCase):
         }
         return self._query(query_request)
 
+    def get_revision(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getRevision",
+                "params": {}
+            }
+        }
+        return self._query(query_request)
+
+    def get_network_proposal(self, id_: str) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getProposal",
+                "params": {"id": bytes_to_hex(id_, "0x")}
+            }
+        }
+        return self._query(query_request)
+
     @classmethod
     def create_eoa_account(cls) -> 'EOAAccount':
         return EOAAccount(KeyWallet.create())
@@ -912,7 +1015,7 @@ class EOAAccount:
 
     @property
     def public_key(self) -> bytes:
-        return self._wallet.bytes_public_key
+        return self._wallet.public_key
 
     @property
     def address(self) -> 'Address':

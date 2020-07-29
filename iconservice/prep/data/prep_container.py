@@ -17,7 +17,6 @@
 from typing import List, Optional
 
 from iconcommons import Logger
-
 from .prep import PRep, PRepStatus
 from .sorted_list import SortedList
 from ... import utils
@@ -81,6 +80,7 @@ class PRepContainer(object):
             if not prep.is_frozen():
                 prep.freeze()
 
+        self._flags = PRepContainerFlag.NONE
         self._is_frozen: bool = True
 
     def add(self, prep: 'PRep'):

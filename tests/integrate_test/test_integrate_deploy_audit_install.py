@@ -20,7 +20,7 @@
 import unittest
 from typing import TYPE_CHECKING, List, Optional
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ConfigKey, ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
@@ -58,7 +58,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
                       score_name: str,
                       value: int,
                       expected_status: bool = True,
-                      to_: Optional['Address'] = ZERO_SCORE_ADDRESS,
+                      to_: Optional['Address'] = SYSTEM_SCORE_ADDRESS,
                       data: bytes = None) -> List['TransactionResult']:
         return self.deploy_score(score_root="sample_deploy_scores",
                                  score_name=score_name,
@@ -72,7 +72,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         return self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                            score_name="install/sample_score",
                                            from_=self._accounts[0],
-                                           to_=ZERO_SCORE_ADDRESS,
+                                           to_=SYSTEM_SCORE_ADDRESS,
                                            timestamp_us=timestamp,
                                            deploy_params={'value': hex(value * ICX_IN_LOOP)})
 
@@ -151,8 +151,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.accept_score(tx_hash=tx_hash1,
                                                                   warning_message=expected_warning_message,
                                                                   expected_status=False)
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "acceptScore() got an unexpected keyword argument 'warning'")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
     @unittest.skip('This issue (IS-243) has been cancelled.')
     def test_accept_score_with_warning_message(self):

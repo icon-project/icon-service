@@ -16,19 +16,22 @@
 
 from typing import TYPE_CHECKING, Tuple, List
 
-from iconservice.database.db import MetaContextDatabase, ContextDatabase
 from ..base.ComponentBase import StorageBase
-from ..base.address import Address
+from ..database.db import MetaContextDatabase, ContextDatabase
+from ..prep.prep_address_converter import PRepAddressConverter
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..base.address import Address
 
 
 class Storage(StorageBase):
     _KEY_LAST_CALC_INFO = b'last_calc_info'
     _KEY_LAST_TERM_INFO = b'last_term_info'
     _KEY_LAST_MAIN_PREPS = b'last_main_preps'
+
+    _KEY_PREV_NODE_ADDRESS_MAPPER = b'prev_node_address_mapper'
 
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(MetaContextDatabase(db.key_value_db))
@@ -79,3 +82,13 @@ class Storage(StorageBase):
         data: list = MsgPackForDB.loads(value)
         _version = data[0]
         return data[1]
+
+    def put_prep_address_converter(self,
+                                   context: 'IconScoreContext',
+                                   prep_address_converter: 'PRepAddressConverter'):
+        value: bytes = prep_address_converter.to_bytes()
+        self._db.put(context, self._KEY_PREV_NODE_ADDRESS_MAPPER, value)
+
+    def get_prep_address_converter(self, context: 'IconScoreContext') -> 'PRepAddressConverter':
+        value: bytes = self._db.get(context, self._KEY_PREV_NODE_ADDRESS_MAPPER)
+        return PRepAddressConverter.from_bytes(value)

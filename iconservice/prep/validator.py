@@ -19,12 +19,13 @@ import iso3166
 
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
-    PERCENTAGE_FOR_BETA_2
+from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP_PERCENTAGE, IISS_MONTH, \
+    PERCENTAGE_FOR_BETA_2, Revision
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from .data import PRep, Term
+    from ..base.address import Address
 
 scheme_pattern = r'^(http:\/\/|https:\/\/)'
 path_pattern = r'(\/\S*)?$'
@@ -37,9 +38,14 @@ ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
 WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
 WEBSITE_IP_PATTERN = re.compile(f'{scheme_pattern}{ip_regex}{port_regex}{path_pattern}$')
 EMAIL_PATTERN = re.compile(email_regex)
+EMAIL_LOCAL_PART_MAX = 64
+EMAIL_MAX = 254
 
 
-def validate_prep_data(data: dict, set_prep: bool = False):
+def validate_prep_data(context: 'IconScoreContext',
+                       prep_address: 'Address',
+                       tx_data: dict,
+                       set_prep: bool = False):
     if not set_prep:
         fields_to_validate = (
             ConstantKeys.NAME,
@@ -48,29 +54,42 @@ def validate_prep_data(data: dict, set_prep: bool = False):
             ConstantKeys.EMAIL,
             ConstantKeys.WEBSITE,
             ConstantKeys.DETAILS,
-            ConstantKeys.P2P_ENDPOINT
+            ConstantKeys.P2P_ENDPOINT,
         )
 
         for key in fields_to_validate:
-            if key not in data:
+            if key not in tx_data:
                 raise InvalidParamsException(f'"{key}" not found')
-            elif len(data[key].strip()) < 1:
-                raise InvalidParamsException("Can not set empty data")
+            elif isinstance(tx_data[key], str) and len(tx_data[key].strip()) < 1:
+                raise InvalidParamsException("Empty data not allowed")
 
-    for key in data:
-        if len(data[key].strip()) < 1:
-            raise InvalidParamsException("Can not set empty data")
+    for key, value in tx_data.items():
+        if value is None:
+            continue
+        if isinstance(value, str) and len(value.strip()) < 1:
+            raise InvalidParamsException("Empty data not allowed")
         if key == ConstantKeys.P2P_ENDPOINT:
-            _validate_p2p_endpoint(data[key])
+            _validate_p2p_endpoint(context, value)
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
-            _validate_uri(data[key])
+            _validate_uri(value)
         elif key == ConstantKeys.EMAIL:
-            _validate_email(data[key])
+            _validate_email(context.revision, value)
         elif key == ConstantKeys.COUNTRY:
-            _validate_country(data[key])
+            _validate_country(value)
+
+    # node address validate
+    is_update_node_address: bool = \
+        ConstantKeys.NODE_ADDRESS in tx_data and tx_data[ConstantKeys.NODE_ADDRESS] is not None
+    if set_prep and not is_update_node_address:
+        # non changed skip
+        return
+
+    # register_prep or is_update_node_address is True
+    node_address: 'Address' = tx_data[ConstantKeys.NODE_ADDRESS] if is_update_node_address else prep_address
+    context.prep_address_converter.validate_node_address(node_address)
 
 
-def _validate_p2p_endpoint(p2p_endpoint: str):
+def _validate_p2p_endpoint(context: "IconScoreContext", p2p_endpoint: str):
     network_locate_info = p2p_endpoint.split(":")
 
     if len(network_locate_info) != 2:
@@ -78,11 +97,13 @@ def _validate_p2p_endpoint(p2p_endpoint: str):
 
     _validate_port(network_locate_info[1], ConstantKeys.P2P_ENDPOINT)
 
-    if ENDPOINT_IP_PATTERN.match(p2p_endpoint):
-        return
-
-    if not ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower()):
+    if not (ENDPOINT_IP_PATTERN.match(p2p_endpoint) or ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower())):
         raise InvalidParamsException("Invalid endpoint format")
+
+    if context.revision >= Revision.PREVENT_DUPLICATED_ENDPOINT.value:
+        for active_prep in context.preps:
+            if active_prep.p2p_endpoint == p2p_endpoint and context.tx.origin != active_prep.address:
+                raise InvalidParamsException("Duplicated endpoint")
 
 
 def _validate_uri(uri: str):
@@ -105,9 +126,17 @@ def _validate_port(port: str, validating_field: str):
         raise InvalidParamsException(f"Invalid {validating_field} format. Port out of range: {port}")
 
 
-def _validate_email(email: str):
-    if not EMAIL_PATTERN.match(email):
-        raise InvalidParamsException("Invalid email format")
+def _validate_email(revision: int, email: str):
+    error_msg = "Invalid email format"
+    if revision < Revision.FIX_EMAIL_VALIDATION.value:
+        if not EMAIL_PATTERN.match(email):
+            raise InvalidParamsException(error_msg)
+    else:
+        encoded_email = email.encode('utf-8')
+        at_index = encoded_email.rfind(b'@')
+        email_length = len(encoded_email)
+        if not (1 <= at_index <= EMAIL_LOCAL_PART_MAX and at_index + 1 < email_length <= EMAIL_MAX):
+            raise InvalidParamsException(error_msg)
 
 
 def _validate_country(country_code: str):
@@ -125,6 +154,16 @@ def validate_irep(context: 'IconScoreContext', irep: int, prep: 'PRep'):
                    main_prep_count=context.main_prep_count)
 
 
+def validate_np_irep(context: 'IconScoreContext', irep: int):
+    term: 'Term' = context.engine.prep.term
+    _validate_irep(irep=irep,
+                   prev_irep=term.irep,
+                   prev_irep_block_height=0,
+                   term_start_block_height=1,
+                   term_total_supply=term.total_supply,
+                   main_prep_count=context.main_prep_count)
+
+
 def _validate_irep(irep: int,
                    prev_irep: int,
                    prev_irep_block_height: int,
@@ -133,14 +172,16 @@ def _validate_irep(irep: int,
                    main_prep_count: int):
 
     """
-    (irep * IISS_MONTH) * (1 / IISS_ANNUAL_BLOCK) * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2) * IISS_ANNUAL_BLOCK <=
-    total_supply * IISS_MAX_IREP_PERCENTAGE / 100
+    beta1 + beta2 <= total_supply * IISS_MAX_IREP_PERCENTAGE / 100
+    = (1/2 * irep * MAIN_PREP_COUNT + 1/2 * irep * PERCENTAGE_FOR_BETA_2) * IISS_MONTH
+    = irep * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2) * IISS_MONTH / 2
+    <= total_supply * IISS_MAX_IREP_PERCENTAGE / 100
 
-    irep <= total_supply * IISS_MAX_IREP_PERCENTAGE / (600 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2)
+    irep <= total_supply * IISS_MAX_IREP_PERCENTAGE / (IISS_MONTH / 2 * 100 * (MAIN_PREP_COUNT + PERCENTAGE_FOR_BETA_2)
     """
 
     if prev_irep_block_height >= term_start_block_height:
-        raise InvalidRequestException("Irep can be changed only once during a term")
+        raise InvalidRequestException("I-Rep can be changed only once during a term")
 
     min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)  # 80% of previous irep
 
@@ -151,4 +192,4 @@ def _validate_irep(irep: int,
     max_irep: int = min(prev_irep * 12 // 10, maximum_calculated_irep)  # 120% of previous irep
 
     if not min_irep <= irep <= max_irep:
-        raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
+        raise InvalidParamsException(f"I-Rep({irep}) out of range: {min_irep:,} ~ {max_irep:,}")

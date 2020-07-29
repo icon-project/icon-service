@@ -19,11 +19,13 @@
 from typing import TYPE_CHECKING, List, Tuple, Dict, Union, Optional
 
 from iconservice.base.address import Address
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ConfigKey, Revision, PREP_MAIN_PREPS, \
     PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iiss import IISSMethod
+from iconservice.prep import PRepMethod
 from iconservice.prep.data import Term
 from iconservice.utils import icx_to_loop
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
@@ -120,8 +122,8 @@ class TestIISSBase(TestIntegrateBase):
                             from_: Union['EOAAccount', 'Address'],
                             value: int) -> dict:
         return self.create_score_call_tx(from_,
-                                         to_=ZERO_SCORE_ADDRESS,
-                                         func_name="setStake",
+                                         to_=SYSTEM_SCORE_ADDRESS,
+                                         func_name=IISSMethod.SET_STAKE,
                                          params={"value": hex(value)})
 
     def create_set_delegation_tx(self,
@@ -129,8 +131,8 @@ class TestIISSBase(TestIntegrateBase):
                                  origin_delegations: List[Tuple[Union['EOAAccount', 'Address'], int]]) -> dict:
         delegations: List[Dict[str, str]] = self.create_delegation_params(origin_delegations)
         return self.create_score_call_tx(from_=from_,
-                                         to_=ZERO_SCORE_ADDRESS,
-                                         func_name='setDelegation',
+                                         to_=SYSTEM_SCORE_ADDRESS,
+                                         func_name=IISSMethod.SET_DELEGATION,
                                          params={"delegations": delegations})
 
     @classmethod
@@ -150,8 +152,8 @@ class TestIISSBase(TestIntegrateBase):
             reg_data: dict = self.create_register_prep_params(from_)
 
         return self.create_score_call_tx(from_=from_,
-                                         to_=ZERO_SCORE_ADDRESS,
-                                         func_name="registerPRep",
+                                         to_=SYSTEM_SCORE_ADDRESS,
+                                         func_name=PRepMethod.REGISTER,
                                          params=reg_data,
                                          value=value)
 
@@ -177,8 +179,8 @@ class TestIISSBase(TestIntegrateBase):
         if set_data is None:
             set_data: dict = {}
         return self.create_score_call_tx(from_=from_,
-                                         to_=ZERO_SCORE_ADDRESS,
-                                         func_name="setPRep",
+                                         to_=SYSTEM_SCORE_ADDRESS,
+                                         func_name=PRepMethod.SET_PREP,
                                          params=set_data)
 
     def create_set_governance_variables(self,
@@ -192,33 +194,33 @@ class TestIISSBase(TestIntegrateBase):
         """
         return self.create_score_call_tx(
             from_=from_,
-            to_=ZERO_SCORE_ADDRESS,
-            func_name="setGovernanceVariables",
+            to_=SYSTEM_SCORE_ADDRESS,
+            func_name=PRepMethod.SET_GOVERNANCE_VARIABLES,
             params={"irep": hex(irep)}
         )
 
     def create_unregister_prep_tx(self,
                                   from_: 'EOAAccount') -> dict:
         return self.create_score_call_tx(from_=from_,
-                                         to_=ZERO_SCORE_ADDRESS,
-                                         func_name="unregisterPRep",
+                                         to_=SYSTEM_SCORE_ADDRESS,
+                                         func_name=PRepMethod.UNREGISTER,
                                          params={})
 
     def create_claim_tx(self,
                         from_: Union['EOAAccount', 'Address']) -> dict:
         return self.create_score_call_tx(from_=from_,
-                                         to_=ZERO_SCORE_ADDRESS,
-                                         func_name="claimIScore",
+                                         to_=SYSTEM_SCORE_ADDRESS,
+                                         func_name=IISSMethod.CLAIM_ISCORE,
                                          params={})
 
     def get_prep_term(self) -> dict:
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRepTerm"
+                "method": PRepMethod.GET_PREP_TERM
             }
         }
         return self._query(query_request)
@@ -227,10 +229,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getMainPReps",
+                "method": PRepMethod.GET_MAIN_PREPS,
                 "params": {}
             }
         }
@@ -240,10 +242,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getSubPReps",
+                "method": PRepMethod.GET_SUB_PREPS,
                 "params": {}
             }
         }
@@ -261,10 +263,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPReps",
+                "method": PRepMethod.GET_PREPS,
                 "params": params
             }
         }
@@ -277,10 +279,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRep",
+                "method": PRepMethod.GET_PREP,
                 "params": {"address": str(address)}
             }
         }
@@ -293,10 +295,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getStake",
+                "method": IISSMethod.GET_STAKE,
                 "params": {"address": str(address)}
             }
         }
@@ -306,10 +308,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "estimateUnstakeLockPeriod"
+                "method": IISSMethod.ESTIMATE_UNLOCK_PERIOD,
             }
 
         }
@@ -322,10 +324,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getDelegation",
+                "method": IISSMethod.GET_DELEGATION,
                 "params": {"address": str(address)}
             }
         }
@@ -338,10 +340,10 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "queryIScore",
+                "method": IISSMethod.QUERY_ISCORE,
                 "params": {"address": str(address)}
             }
         }
@@ -351,7 +353,7 @@ class TestIISSBase(TestIntegrateBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
                 "method": "getIISSInfo",
@@ -456,7 +458,12 @@ class TestIISSBase(TestIntegrateBase):
                                              prev_block_generator=prev_block_generator,
                                              prev_block_validators=prev_block_validators)
 
-    def init_decentralized(self):
+    def init_decentralized(self, network_proposal: bool = False, clear: bool = True):
+        """
+        :param network_proposal: update governance score to enable network proposal
+        :param clear: clear stake, delegation and balance of self._accounts
+        :return:
+        """
         # decentralized
         self.update_governance()
 
@@ -518,8 +525,9 @@ class TestIISSBase(TestIntegrateBase):
         # set Revision REV_IISS (decentralization)
         self.set_revision(Revision.DECENTRALIZATION.value)
 
-        # Update governance SCORE-1.0.0 to support network proposal
-        self.update_governance("1_0_0", True)
+        if network_proposal:
+            # Update governance SCORE-1.0.0 to support network proposal
+            self.update_governance("1_0_0", True)
 
         # make blocks to start decentralization
         self.make_blocks_to_end_calculation()
@@ -539,6 +547,9 @@ class TestIISSBase(TestIntegrateBase):
             "totalDelegated": expected_total_delegated
         }
         self.assertEqual(expected_response, response)
+
+        if not clear:
+            return
 
         # delegate to PRep 0
         tx_list: list = []

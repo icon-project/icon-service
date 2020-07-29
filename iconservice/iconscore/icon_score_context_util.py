@@ -17,15 +17,17 @@
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from .icon_score_class_loader import IconScoreClassLoader
+from iconservice.score_loader.icon_score_class_loader import IconScoreClassLoader
 from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
 from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
-from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
+from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
-from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState
+from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState, BUILTIN_SCORE_IMPORT_WHITE_LIST
+from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -42,8 +44,6 @@ class IconScoreContextUtil(object):
     def is_score_active(context: 'IconScoreContext', score_address: 'Address') -> bool:
         if not score_address.is_contract:
             return False
-        if score_address == ZERO_SCORE_ADDRESS:
-            return True
 
         deploy_info: 'IconScoreDeployInfo' = \
             context.storage.deploy.get_deploy_info(context, score_address)
@@ -153,19 +153,13 @@ class IconScoreContextUtil(object):
 
         score_deploy_path: str = get_score_deploy_path(context.score_root_path, address, tx_hash)
         score_package_name: str = get_package_name_by_address_and_tx_hash(address, tx_hash)
-        import_whitelist: dict = IconScoreContextUtil._get_import_whitelist(context)
+        import_whitelist: dict = context.inv_container.import_white_list
+
+        # add import white list for builtin SCORE
+        if is_builtin_score(str(address)):
+            import_whitelist.update(BUILTIN_SCORE_IMPORT_WHITE_LIST)
 
         ScorePackageValidator.execute(import_whitelist, score_deploy_path, score_package_name)
-
-    @staticmethod
-    def _get_import_whitelist(context: 'IconScoreContext') -> dict:
-        governance_score =\
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        if hasattr(governance_score, 'import_white_list_cache'):
-            return governance_score.import_white_list_cache
-
-        return {"iconservice": ['*']}
 
     @staticmethod
     def validate_score_blacklist(context: 'IconScoreContext', score_address: 'Address') -> None:
@@ -176,53 +170,23 @@ class IconScoreContextUtil(object):
         """
         if not score_address.is_contract:
             return
-        if score_address == ZERO_SCORE_ADDRESS:
+        if score_address == SYSTEM_SCORE_ADDRESS:
             return
 
-        # Gets the governance SCORE
-        governance_score =\
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        if governance_score is not None and governance_score.isInScoreBlackList(score_address):
+        if score_address in context.inv_container.score_black_list:
             raise AccessDeniedException(f'SCORE in blacklist: {score_address}')
 
     @staticmethod
-    def validate_deployer(context: 'IconScoreContext', deployer: 'Address') -> None:
-        """Check if a given deployer is allowed to deploy a SCORE
-
-        :param context:
-        :param deployer: EOA address to deploy a SCORE
-        """
-        if not IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
-            return
-
-        # Gets the governance SCORE
-        governance_score =\
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        if not governance_score.isDeployer(deployer):
-            raise AccessDeniedException(f'Invalid deployer: no permission (address: {deployer})')
-
-    @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:
-        service_flag = IconScoreContextUtil._get_service_flag(context)
+        if context.inv_container:
+            service_flag = context.inv_container.service_config
+        else:
+            service_flag = context.icon_service_flag
         return IconScoreContextUtil._is_flag_on(service_flag, flag)
 
     @staticmethod
     def _is_flag_on(src_flag: int, dst_flag: int) -> bool:
         return src_flag & dst_flag == dst_flag
-
-    @staticmethod
-    def _get_service_flag(context: 'IconScoreContext') -> int:
-        governance_score = \
-            IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
-
-        service_config = context.icon_service_flag
-        try:
-            service_config = governance_score.service_config
-        except AttributeError:
-            pass
-        return service_config
 
     @staticmethod
     def get_tx_hashes_by_score_address(context: 'IconScoreContext',

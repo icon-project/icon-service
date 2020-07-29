@@ -17,7 +17,7 @@
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
 from iconservice.icon_constant import IconScoreContextType, Revision
-from iconservice.iconscore.icon_score_context import ContextContainer
+from .context.context import ContextContainer
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
 from ..utils import int_to_bytes, bytes_to_int

@@ -17,10 +17,10 @@ from typing import Tuple, Any, Union
 
 import msgpack
 
-from ..base.address import Address, AddressPrefix
+from . import int_to_bytes, bytes_to_int
+from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import CHARSET_ENCODING
-from . import int_to_bytes, bytes_to_int
 
 
 class TypeTag(IntEnum):
@@ -130,8 +130,8 @@ class MsgPackForIpc(object):
 
     @classmethod
     def dumps(cls, data: Any) -> bytes:
-        return msgpack.dumps(data)
+        return msgpack.dumps(data, use_bin_type=False)
 
     @classmethod
     def loads(cls, data: bytes) -> list:
-        return msgpack.loads(data)
+        return msgpack.loads(data, raw=True, strict_map_key=False)

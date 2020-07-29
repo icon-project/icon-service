@@ -10,6 +10,7 @@ The key class is `IconScoreBase`. You can start writing a SCORE from it.
     classes.arraydb
     classes.dictdb
     classes.iconscorebase
+    classes.interfacescore
     classes.db
     classes.icx
     classes.transaction

@@ -16,10 +16,9 @@
 """Test for icon_score_base.py and icon_score_base2.py"""
 from unittest.mock import Mock
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import MethodNotFoundException, ServiceNotReadyException, FatalException
-from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP, IconScoreContextType
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icon_constant import Revision, ConfigKey, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -166,7 +165,7 @@ class TestIISS(TestIISSBase):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
                 "method": "invalid",

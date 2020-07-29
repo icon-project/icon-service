@@ -14,5 +14,5 @@
 # limitations under the License.
 
 from .prep import PRep
-from .term import Term, PRepSnapshot
 from .prep_container import PRepContainer
+from .term import Term, PRepSnapshot

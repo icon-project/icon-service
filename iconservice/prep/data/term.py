@@ -19,7 +19,6 @@ import copy
 from typing import TYPE_CHECKING, List, Iterable, Optional, Dict
 
 from iconcommons.logger import Logger
-
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...icon_constant import PRepStatus, PenaltyReason, TermFlag
@@ -93,8 +92,9 @@ class Term(object):
     def is_dirty(self):
         return utils.is_any_flag_on(self._flags, TermFlag.ALL)
 
-    def on_main_prep_p2p_endpoint_updated(self):
-        self._flags |= TermFlag.MAIN_PREP_P2P_ENDPOINT
+    def on_main_prep_changed(self, flag: 'TermFlag'):
+        self._check_access_permission()
+        self._flags |= flag
 
     def is_frozen(self) -> bool:
         return self._is_frozen
@@ -124,6 +124,11 @@ class Term(object):
             f"root_hash={bytes_to_hex(self._merkle_root_hash)}"
 
     def __contains__(self, address: 'Address') -> bool:
+        """Check whether the given address is an elected P-Rep
+
+        :param address: P-Rep address
+        :return: True(elected P-Rep), False(non-elected P-Rep)
+        """
         return address in self._preps_dict
 
     def __len__(self) -> int:
@@ -192,15 +197,6 @@ class Term(object):
         """Total amount of delegation which all active P-Reps got when this term is started
         """
         return self._total_delegated
-
-    # @total_delegated.setter
-    # def total_delegated(self, value: int):
-    #     """Called on PRepEngine._on_term_updated()
-    #
-    #     :param value:
-    #     :return:
-    #     """
-    #     self._total_delegated = value
 
     @property
     def total_elected_prep_delegated(self) -> int:
@@ -399,7 +395,9 @@ class Term(object):
             RootHashGenerator.generate_root_hash(values=_gen(self._main_preps), do_hash=True)
 
     @classmethod
-    def from_list(cls, data: List, total_elected_prep_delegated_from_rc: int) -> 'Term':
+    def from_list(cls, data: List,
+                  block_height: int,
+                  total_elected_prep_delegated_from_rc: int) -> 'Term':
         assert data[0] == cls._VERSION
         sequence: int = data[1]
         start_block_height: int = data[2]
@@ -427,9 +425,11 @@ class Term(object):
 
         term._total_elected_prep_delegated = total_elected_prep_delegated
 
-        if total_elected_prep_delegated_from_rc <= 0:
+        if block_height == start_block_height - 1 or total_elected_prep_delegated_from_rc <= 0:
             # In the case of the first term (prevote -> decentralization),
             # total_elected_prep_delegated_from_rc can be 0.
+            # and
+            # fix IS-965 Sync fails on block height 10491442 when sync by using a master branch
             total_elected_prep_delegated_from_rc = total_elected_prep_delegated
         term._total_elected_prep_delegated_snapshot = total_elected_prep_delegated_from_rc
 

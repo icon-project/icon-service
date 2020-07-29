@@ -17,24 +17,42 @@
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from functools import partial, wraps
-from inspect import isfunction, getmembers, signature, Parameter
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple
+from inspect import isfunction, signature, Parameter
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
-from .icon_score_api_generator import ScoreApiGenerator
+from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
-from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
-    ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
-from .icon_score_context import ContextGetter, IconScoreContextType
+from .icon_score_constant import (
+    CONST_INDEXED_ARGS_COUNT,
+    FORMAT_IS_NOT_FUNCTION_OBJECT,
+    ScoreFlag,
+    FORMAT_DECORATOR_DUPLICATED,
+    FORMAT_IS_NOT_DERIVED_OF_OBJECT,
+    STR_FALLBACK,
+    CONST_CLASS_API,
+    CONST_CLASS_ELEMENT_METADATAS,
+    BaseType,
+    T,
+)
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
 from .internal_call import InternalCall
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from .typing.definition import get_score_api
+from .typing.element import (
+    ScoreElementMetadataContainer,
+    ScoreElementMetadata,
+    FunctionMetadata,
+    set_score_flag_on,
+    is_any_score_flag_on,
+)
+from .typing.element import create_score_element_metadatas
+from ..base.address import Address
+from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision, IconScoreContextType
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -47,20 +65,19 @@ INDEXED_ARGS_LIMIT = 3
 
 def interface(func):
     """
-    A decorator for the functions of interface SCORE.
+    A decorator for the functions of InterfaceScore.
 
-    Declaring this decorator to the function can invoke
-    the same form of the function of the external SCORE.
+    If other SCORE has the function whose signature is the same as defined with @interface decorator,
+    the function can be invoked via InterfaceScore class instance
     """
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
         raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Interface:
+    if is_any_score_flag_on(func, ScoreFlag.INTERFACE):
         raise InvalidInterfaceException(FORMAT_DECORATOR_DUPLICATED.format('interface', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Interface
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    set_score_flag_on(func, ScoreFlag.INTERFACE)
 
     @wraps(func)
     def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
@@ -68,14 +85,15 @@ def interface(func):
             raise InvalidInstanceException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
-        context = calling_obj.context
+        context = ContextContainer._get_context()
         addr_to = calling_obj.addr_to
+        amount = calling_obj.value
         addr_from: 'Address' = context.current_address
 
         if addr_to is None:
             raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')
 
-        return InternalCall.other_external_call(context, addr_from, addr_to, 0, func_name, args, kwargs)
+        return InternalCall.other_external_call(context, addr_from, addr_to, amount, func_name, args, kwargs)
 
     return __wrapper
 
@@ -113,13 +131,11 @@ def eventlog(func=None, *, indexed=0):
     if len(parameters) - 1 < indexed:
         raise InvalidEventLogException("Index exceeds the number of parameters")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
+    if is_any_score_flag_on(func, ScoreFlag.EVENTLOG):
         raise InvalidEventLogException(FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    set_score_flag_on(func, ScoreFlag.EVENTLOG)
     setattr(func, CONST_INDEXED_ARGS_COUNT, indexed)
-
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
@@ -250,11 +266,13 @@ def external(func=None, *, readonly=False):
     if func_name == STR_FALLBACK:
         raise InvalidExternalException(f"{func_name} cannot be declared as external")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External:
+    if is_any_score_flag_on(func, ScoreFlag.EXTERNAL):
         raise InvalidExternalException(FORMAT_DECORATOR_DUPLICATED.format('external', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.External | int(readonly)
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    score_flag = ScoreFlag.EXTERNAL
+    if readonly:
+        score_flag |= ScoreFlag.READONLY
+    set_score_flag_on(func, score_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: Any, *args, **kwargs):
@@ -279,11 +297,16 @@ def payable(func):
     if not isfunction(func):
         raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable:
+    if is_any_score_flag_on(func, ScoreFlag.PAYABLE):
         raise InvalidPayableException(FORMAT_DECORATOR_DUPLICATED.format('payable', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Payable
-    setattr(func, CONST_BIT_FLAG, bit_flag)
+    flag = ScoreFlag.PAYABLE
+    if func_name == STR_FALLBACK:
+        # If a function has payable decorator and its name is "fallback",
+        # then it is a fallback function
+        flag |= ScoreFlag.FALLBACK
+
+    set_score_flag_on(func, flag)
 
     @wraps(func)
     def __wrapper(calling_obj: Any, *args, **kwargs):
@@ -311,35 +334,18 @@ class IconScoreObject(ABC):
 class IconScoreBaseMeta(ABCMeta):
 
     def __new__(mcs, name, bases, namespace, **kwargs):
-        if IconScoreObject in bases or name == "IconSystemScoreBase":
-            return super().__new__(mcs, name, bases, namespace, **kwargs)
-
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        if IconScoreObject in bases or name == "IconSystemScoreBase":
+            return cls
 
         if not isinstance(namespace, dict):
             raise InvalidParamsException('namespace is not dict!')
 
-        custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
-                        if not key.startswith('__')]
+        elements: Mapping[str, ScoreElementMetadata] = create_score_element_metadatas(cls)
+        setattr(cls, CONST_CLASS_ELEMENT_METADATAS, elements)
 
-        external_funcs = {func.__name__: signature(func) for func in custom_funcs
-                          if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External}
-        payable_funcs = [func for func in custom_funcs
-                         if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable]
-
-        readonly_payables = [func for func in payable_funcs
-                             if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
-
-        if bool(readonly_payables):
-            raise IllegalFormatException(f"Payable method cannot be readonly")
-
-        if external_funcs:
-            setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
-        if payable_funcs:
-            payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
-            setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
-
-        api_list = ScoreApiGenerator.generate(custom_funcs)
+        api_list = get_score_api(elements.values())
         setattr(cls, CONST_CLASS_API, api_list)
 
         return cls
@@ -380,7 +386,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__owner = IconScoreContextUtil.get_owner(self._context, self.__address)
         self.__icx = None
 
-        if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
+        elements: ScoreElementMetadataContainer = self.__get_score_element_metadatas()
+        if elements.externals == 0:
             raise InvalidExternalException('There is no external method in the SCORE')
 
         self.__db.set_observer(self.__create_db_observer())
@@ -410,8 +417,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not found: {type(self).__name__}.{func_name}")
 
     @classmethod
-    def __get_attr_dict(cls, attr: str) -> dict:
-        return getattr(cls, attr, {})
+    def __get_score_element_metadatas(cls) -> ScoreElementMetadataContainer:
+        return getattr(cls, CONST_CLASS_ELEMENT_METADATAS)
 
     def __create_db_observer(self) -> 'DatabaseObserver':
         return DatabaseObserver(
@@ -449,17 +456,19 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f"Method not payable: {type(self).__name__}.{func_name}")
 
     def __is_external_method(self, func_name) -> bool:
-        return func_name in self.__get_attr_dict(CONST_CLASS_EXTERNALS)
+        elements = self.__get_score_element_metadatas()
+        func: FunctionMetadata = elements.get(func_name)
+        return isinstance(func, FunctionMetadata) and func.is_external
 
     def __is_payable_method(self, func_name) -> bool:
-        return func_name in self.__get_attr_dict(CONST_CLASS_PAYABLES)
+        elements = self.__get_score_element_metadatas()
+        func: FunctionMetadata = elements.get(func_name)
+        return isinstance(func, FunctionMetadata) and func.is_payable
 
     def __is_func_readonly(self, func_name: str) -> bool:
-        if not self.__is_external_method(func_name):
-            return False
-
-        func = getattr(self, func_name)
-        return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
+        elements = self.__get_score_element_metadatas()
+        func: FunctionMetadata = elements.get(func_name)
+        return isinstance(func, FunctionMetadata) and func.is_readonly
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -638,11 +647,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         :param addr_to: :class:`.Address` the address of another SCORE
         :param func_name: function name of another SCORE
-        :param kw_dict: Arguments of the external function
-        :param amount: ICX value to enclose with. in loop.
+        :param kw_dict: arguments of the external function
+        :param amount: amount of ICX to transfer in loop
         :return: returning value of the external function
         """
-        warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
         return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
 
     @staticmethod

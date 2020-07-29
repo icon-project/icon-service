@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import unittest
 from typing import TYPE_CHECKING, List
 
@@ -23,7 +24,7 @@ from iconservice.fee import FeeEngine
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, Revision, ICX_IN_LOOP
 from iconservice.icon_service_engine import IconServiceEngine
-from tests.integrate_test import root_clear
+from tests import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ MIN_DEPOSIT_TERM = FeeEngine._MIN_DEPOSIT_TERM
 
 class TestIntegrateFeeSharing(TestIntegrateBase):
     def setUp(self):
-        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
 
         self._block_height = -1
         self._prev_block_hash = None
@@ -49,7 +50,6 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin.address)})
         config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
                                                 ConfigKey.SERVICE_FEE: True,
-                                                ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                                                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
         config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                             ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})

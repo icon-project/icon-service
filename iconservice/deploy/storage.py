@@ -147,6 +147,13 @@ class IconScoreDeployInfo(object):
         self.current_tx_hash = current_tx_hash
         self.next_tx_hash = next_tx_hash
 
+    def __str__(self):
+        return f"score_address={self.score_address}, " \
+               f"owner={self.owner}, " \
+               f"state={self.deploy_state}, " \
+               f"current_tx_hash={self.current_tx_hash}, " \
+               f"next_tx_hash={self.next_tx_hash}"
+
     @property
     def score_address(self):
         return self._score_address
@@ -268,8 +275,9 @@ class Storage(StorageBase):
     def get_deploy_info(self, context: Optional['IconScoreContext'], score_address: 'Address') \
             -> Optional['IconScoreDeployInfo']:
 
-        data: bytes = self._db.get(context, self._create_db_key(
-            self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_address.to_bytes()))
+        key: bytes = self._create_db_key(
+            self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_address.to_bytes())
+        data: bytes = self._db.get(context, key)
         if data is None:
             return None
 

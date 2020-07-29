@@ -17,7 +17,9 @@
 """IconScoreEngine testcase
 """
 from typing import TYPE_CHECKING, List
+from unittest.mock import patch
 
+from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -129,7 +131,8 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
-        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
+        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"],
+                         actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -174,7 +177,8 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
-        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
+        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"],
+                         actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -219,7 +223,8 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_response['stake'], actual_response['stake'])
         self.assertEqual(expected_response['unstake'], actual_response['unstake'])
         self.assertIn('unstakeBlockHeight', actual_response)
-        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"], actual_response["remainingBlocks"])
+        self.assertEqual(estimate_unstake_lock_period_response["unstakeLockPeriod"],
+                         actual_response["remainingBlocks"])
 
         # get balance
         remain_balance: int = balance - total_stake
@@ -371,3 +376,233 @@ class TestIISSStake(TestIISSBase):
         response: dict = self.get_delegation(self._accounts[0])
         voting_power: int = response['votingPower']
         self.assertFalse(voting_power < 0)
+
+    @patch("iconservice.icx.stake_part.UNSTAKE_SLOT_MAX", 10)
+    def test_multiple_unstake(self):
+        # in integrate tests unstaking period is about 20 so that patch UNSTAKE_SLOT_MAX to 10
+        unstake_slot_max = 10
+        self.update_governance()
+
+        # set Revision REV_MULTIPLE_UNSTAKE
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
+
+        # gain 1000 icx
+        balance: int = unstake_slot_max * 2 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
+
+        # set stake
+        stake: int = unstake_slot_max * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
+                                                               value=stake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - stake - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+
+        # unstake 10
+        unstake_list = []
+        unstake = stake // unstake_slot_max // 2
+        for i in range(unstake_slot_max):
+            total_unstake = unstake * (i + 1)
+            tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+            fee = tx_results[0].step_used * tx_results[0].step_price
+            expected_balance: int = balance - fee
+            response: int = self.get_balance(self._accounts[0])
+            self.assertEqual(expected_balance, response)
+            balance = expected_balance
+            unstake_list.append(unstake)
+
+        response: dict = self.get_stake(self._accounts[0])
+        for i in range(unstake_slot_max):
+            unstake_response = response["unstakes"][i]["unstake"]
+            self.assertEqual(unstake_list[i], unstake_response)
+
+        # increase unstake in last slot
+        total_unstake = sum(unstake_list) + ICX_IN_LOOP
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        last_slot_block_height = response["unstakes"][unstake_slot_max-1]["unstakeBlockHeight"]
+        original_unstake = unstake_list.pop()
+        unstake_list.append(original_unstake + ICX_IN_LOOP)
+        last_slot_block_height2 = response["unstakes"][unstake_slot_max-1]["unstakeBlockHeight"]
+        for i in range(len(unstake_list)):
+            self.assertEqual(unstake_list[i], response["unstakes"][i]["unstake"])
+        # unstakeBlockHeight in last slot will be updated
+        self.assertGreaterEqual(last_slot_block_height2, last_slot_block_height)
+
+        # decrease slots
+        total_unstake = sum(unstake_list[:3])
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        response: dict = self.get_stake(self._accounts[0])
+        expected_unstakes = [unstake, unstake, unstake]
+        for i in range(len(expected_unstakes)):
+            self.assertEqual(expected_unstakes[i], response["unstakes"][i]["unstake"])
+
+    def test_migrate_unstake_data(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(Revision.IISS.value)
+
+        # gain 1000 icx
+        balance: int = 1000 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
+
+        # set stake
+        stake: int = 100 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
+                                                               value=stake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - stake - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+
+        # unstake 10
+        unstake = 10 * ICX_IN_LOOP
+        total_unstake = unstake
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        unstake_info = response
+        unstake_block_height = unstake_info["unstakeBlockHeight"]
+
+        # unstake 10 again and unstakeBlockHeight will be changed in rev IISS
+        unstake = 10 * ICX_IN_LOOP
+        total_unstake = unstake
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        unstake_info = response
+        unstake_block_height2 = unstake_info["unstakeBlockHeight"]
+        self.assertGreaterEqual(unstake_block_height2, unstake_block_height)
+
+        # set Revision REV_MULTIPLE_UNSTAKE
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
+
+        # unstake 10 again and unstakeBlockHeight will not be changed
+        unstake = 10 * ICX_IN_LOOP
+        total_unstake = unstake
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        unstake_info = response["unstakes"][0]
+        unstake_block_height3 = unstake_info["unstakeBlockHeight"]
+        self.assertEqual(unstake_block_height2, unstake_block_height3)
+
+        # unstake 20 to add more entry to unstake list
+        unstake = 20 * ICX_IN_LOOP
+        total_unstake = unstake
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        response: dict = self.get_stake(self._accounts[0])
+        self.assertEqual(2, len(response['unstakes']))
+        for unstake_info in response["unstakes"]:
+            self.assertEqual(10 * ICX_IN_LOOP, unstake_info['unstake'])
+
+    def test_update_unstake_block_height(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        self.set_revision(Revision.IISS.value)
+
+        # gain 1000 icx
+        balance: int = 1000 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
+
+        # set stake
+        stake: int = 100 * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
+                                                               value=stake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - stake - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+
+        # unstake 10
+        unstake = 10 * ICX_IN_LOOP
+        total_unstake = unstake
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-total_unstake)
+        fee2 = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee2
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        self.assertEqual(response["unstake"], unstake)
+
+        # set stake 120 icx and unstake info will be removed
+        new_stake = 120 * ICX_IN_LOOP
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=new_stake)
+        fee2 = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee2 - (new_stake - stake)
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        self.assertNotIn("unstakes", response)
+
+        # set Revision REV_MULTIPLE_UNSTAKE
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
+
+        # unstake 10
+        unstake = 10 * ICX_IN_LOOP
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=new_stake-unstake)
+        fee2 = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee2
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        balance = expected_balance
+        response: dict = self.get_stake(self._accounts[0])
+        self.assertEqual(response["unstakes"][0]["unstake"], unstake)
+
+        # set stake 140 icx and unstake info will be removed
+        new_stake2 = 140 * ICX_IN_LOOP
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=new_stake2)
+        fee2 = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - fee2 - (new_stake2 - new_stake)
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(expected_balance, response)
+        response: dict = self.get_stake(self._accounts[0])
+        self.assertNotIn("unstakes", response)
+
+    def test_stake_with_value_should_raise_exception(self):
+        self.update_governance()
+        self.set_revision(Revision.IISS.value)
+        balance: int = 10 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=balance)
+
+        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                             to_=SYSTEM_SCORE_ADDRESS,
+                                             func_name='setStake',
+                                             params={"value": hex(8 * ICX_IN_LOOP)},
+                                             value=5)
+
+        return self.process_confirm_block_tx([tx], expected_status=False)

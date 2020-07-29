@@ -14,7 +14,6 @@
 
 from typing import TYPE_CHECKING, Optional, Iterable
 
-from iconcommons import Logger
 from .data import Term
 from .data.prep import PRep
 from ..base.ComponentBase import StorageBase
@@ -102,4 +101,6 @@ class Storage(StorageBase):
             total_elected_prep_delegated_snapshot: int = \
                 context.storage.rc.get_total_elected_prep_delegated_snapshot()
             data: list = MsgPackForDB.loads(value)
-            return Term.from_list(data, total_elected_prep_delegated_snapshot)
+            return Term.from_list(data,
+                                  context.block.height,
+                                  total_elected_prep_delegated_snapshot)

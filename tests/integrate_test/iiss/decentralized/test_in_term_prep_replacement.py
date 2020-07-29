@@ -116,7 +116,7 @@ class TestPreps(TestIISSBase):
 
     def setUp(self):
         super().setUp()
-        self.init_decentralized()
+        self.init_decentralized(network_proposal=True)
 
         # get main prep
         response: dict = self.get_main_prep_list()
@@ -371,7 +371,7 @@ class TestPreps(TestIISSBase):
             title="P-Rep Disqualification",
             description="the P-Rep is malicious",
             type_=ProposalType.PREP_DISQUALIFICATION.value,
-            value=account_on_disqualification.address)
+            value={"address": str(account_on_disqualification.address)})
         assert tx_result.status == TransactionResult.SUCCESS
         assert len(main_preps_7) == main_prep_count
 

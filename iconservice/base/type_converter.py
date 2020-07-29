@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from copy import deepcopy
 from typing import Union, Any, get_type_hints
 
@@ -29,7 +30,7 @@ score_base_support_type = (int, str, bytes, bool, Address)
 
 class TypeConverter:
     @staticmethod
-    def convert(params: dict, param_type: ParamType) -> Any:
+    def convert(params: Union[list, dict], param_type: ParamType) -> Any:
         if param_type is None:
             return params
 
@@ -229,6 +230,15 @@ class TypeConverter:
             raise InvalidParamsException(f'TypeConvert Exception bytes value :{value}, type: {type(value)}')
 
     @staticmethod
+    def get_default_args(func):
+        signature = inspect.signature(func)
+        return {
+            k: v.default
+            for k, v in signature.parameters.items()
+            if v.default is not inspect.Parameter.empty
+        }
+
+    @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
         # in python 3.7, get_type_hints method return _GenericAlias type object
         # (when parameter has 'NoneType' as a default)
@@ -239,18 +249,66 @@ class TypeConverter:
         return hints
 
     @staticmethod
-    def convert_data_params(annotation_params: dict, kw_params: dict) -> None:
-        for key, param in annotation_params.items():
-            if key == 'self' or key == 'cls':
+    def convert_data_params(annotations: dict, kw_params: dict) -> None:
+        for param_name, param_type in annotations.items():
+            if param_name == "self" or param_name == "cls":
                 continue
 
-            kw_param = kw_params.get(key)
+            kw_param = kw_params.get(param_name)
             if kw_param is None:
                 continue
 
-            param = get_main_type_from_annotations_type(param)
-            kw_param = TypeConverter._convert_data_value(param, kw_param)
-            kw_params[key] = kw_param
+            param_type = get_main_type_from_annotations_type(param_type)
+            kw_param = TypeConverter._convert_data_value(param_type, kw_param)
+            kw_params[param_name] = kw_param
+
+    @staticmethod
+    def adjust_params_to_method(func: callable, kw_params: dict, remove_invalid_param: bool = False):
+        hints = TypeConverter.make_annotations_from_method(func)
+        default_args = TypeConverter.get_default_args(func)
+
+        # check user input argument name is valid
+        invalid_keys = []
+        for key in kw_params.keys():
+            try:
+                _type = hints[key]
+            except KeyError:
+                invalid_keys.append(key)
+
+        if len(invalid_keys) > 0:
+            if remove_invalid_param:
+                for key in invalid_keys:
+                    del kw_params[key]
+                if len(kw_params) == 0:
+                    # input invalid params only
+                    raise InvalidParamsException(f"There is no valid parameters")
+            else:
+                raise InvalidParamsException(f"Invalid parameters '{invalid_keys}'")
+
+        # check required argument is exist in user input
+        for param_name, param_type in hints.items():
+            if param_name == "self" or param_name == "cls":
+                continue
+
+            try:
+                param = kw_params[param_name]
+            except KeyError:
+                # has no input for this parameter
+                try:
+                    default_args[param_name]
+                except KeyError:
+                    # has no default value
+                    raise InvalidParamsException(f"There is no '{param_name}' parameter")
+                # has default value. pass type converting
+                continue
+
+            # all type can have None value
+            if param is None:
+                continue
+
+            param_type = get_main_type_from_annotations_type(param_type)
+            param = TypeConverter._convert_data_value(param_type, param)
+            kw_params[param_name] = param
 
     @staticmethod
     def _convert_data_value(annotation_type: type, param: Any) -> Any:

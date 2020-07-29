@@ -19,7 +19,7 @@
 
 from typing import TYPE_CHECKING, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IconServiceFlag
 from tests import raise_exception_start_tag, raise_exception_end_tag
@@ -220,7 +220,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx1: dict = self.create_deploy_score_tx(score_root="sample_scores",
                                                 score_name="sample_score_using_import_os",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
         tx2: dict = self.create_score_call_tx(from_=self._admin,
                                               to_=GOVERNANCE_SCORE_ADDRESS,
                                               func_name="addImportWhiteList",
@@ -228,7 +228,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx3: dict = self.create_deploy_score_tx(score_root="sample_scores",
                                                 score_name="sample_score_using_import_os",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         raise_exception_start_tag("sample_apply_score_import_white_list")
         prev_block, hash_list = self.make_and_req_block([tx1, tx2, tx3])
@@ -251,7 +251,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx2: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                                 score_name="import_test/import_multiply",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         self.process_confirm_block_tx([tx1, tx2])
 
@@ -264,7 +264,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx2: dict = self.create_deploy_score_tx(score_root="sample_deploy_scores",
                                                 score_name="import_test/import_normal",
                                                 from_=self._accounts[0],
-                                                to_=ZERO_SCORE_ADDRESS)
+                                                to_=SYSTEM_SCORE_ADDRESS)
 
         self.process_confirm_block_tx([tx1, tx2])
 
@@ -297,13 +297,14 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/import_builtin',
             'import_test/import_builtin2',
             'import_test/import_builtin3',
-            'import_test/import_package'
+            'import_test/import_package',
+            'import_test/import_system_score_package',
         ]
 
         tx_list = [self.create_deploy_score_tx(score_root='sample_deploy_scores',
                                                score_name=deploy_name,
                                                from_=self._accounts[0],
-                                               to_=ZERO_SCORE_ADDRESS)
+                                               to_=SYSTEM_SCORE_ADDRESS)
                    for deploy_name in deploy_list]
 
         raise_exception_start_tag("sample_deploy_invalid_score")

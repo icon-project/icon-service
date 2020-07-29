@@ -16,6 +16,7 @@
 
 import argparse
 import asyncio
+import copy
 import os
 import subprocess
 import sys
@@ -24,24 +25,26 @@ from typing import TYPE_CHECKING
 
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
+
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
+from .__version__ import __version__
 
 if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
 
-ICON_SERVICE_CLI = 'IconServiceCli'
+_TAG = "CLI"
 
 
 class ExitCode(IntEnum):
     SUCCEEDED = 0
-    COMMAND_IS_WRONG = 1
+    INVALID_COMMAND = 1
 
 
 def main():
     parser = argparse.ArgumentParser(prog='icon_service_cli.py', usage=f"""
     ==========================
-    iconservice
+    iconservice {__version__}
     ==========================
     iconservice commands:
         start : iconservice start
@@ -83,18 +86,18 @@ def main():
 
     if len(args.command) < 1:
         parser.print_help()
-        sys.exit(ExitCode.COMMAND_IS_WRONG.value)
+        sys.exit(ExitCode.INVALID_COMMAND.value)
 
     conf_path = args.config
 
     if conf_path is not None:
         if not IconConfig.valid_conf_path(conf_path):
             print(f'invalid config file : {conf_path}')
-            sys.exit(ExitCode.COMMAND_IS_WRONG.value)
+            sys.exit(ExitCode.INVALID_COMMAND.value)
     if conf_path is None:
         conf_path = str()
 
-    conf = IconConfig(conf_path, default_icon_config)
+    conf = IconConfig(conf_path, copy.deepcopy(default_icon_config))
     conf.load()
     conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
@@ -106,14 +109,14 @@ def main():
         result = _stop(conf)
     else:
         parser.print_help()
-        result = ExitCode.COMMAND_IS_WRONG.value
+        result = ExitCode.INVALID_COMMAND.value
     sys.exit(result)
 
 
 def _start(conf: 'IconConfig') -> int:
     if not _check_if_process_running(conf):
         _start_process(conf)
-    Logger.info(f'start_command done!', ICON_SERVICE_CLI)
+    Logger.info(f'start_command done!', _TAG)
     return ExitCode.SUCCEEDED
 
 
@@ -125,7 +128,7 @@ def _stop(conf: 'IconConfig') -> int:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(__stop())
 
-    Logger.info(f'stop_command done!', ICON_SERVICE_CLI)
+    Logger.info(f'stop_command done!', _TAG)
     return ExitCode.SUCCEEDED
 
 
@@ -163,7 +166,7 @@ async def stop_process(conf: 'IconConfig'):
     icon_score_queue_name = _make_icon_score_queue_name(conf[ConfigKey.CHANNEL], conf[ConfigKey.AMQP_KEY])
     stub = await _create_icon_score_stub(conf[ConfigKey.AMQP_TARGET], icon_score_queue_name)
     await stub.async_task().close()
-    Logger.info(f'stop_process_icon_service!', ICON_SERVICE_CLI)
+    Logger.info(f'stop_process_icon_service!', _TAG)
 
 
 def _check_if_process_running(conf: 'IconConfig') -> bool:

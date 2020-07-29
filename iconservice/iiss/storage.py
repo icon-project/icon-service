@@ -14,8 +14,8 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import FatalException
 from ..base.ComponentBase import StorageBase
+from ..base.exception import FatalException
 from ..icon_constant import IISS_MAX_REWARD_RATE, ConfigKey
 from ..utils.msgpack_for_db import MsgPackForDB
 
@@ -164,6 +164,9 @@ class RewardRate:
         # todo: if eep, dapp is added, eep_rate, dapp rate is added as a member variable
         self.reward_prep: Optional[int] = reward_prep
 
+    def __str__(self):
+        return f"reward_prep={self.reward_prep}"
+
     @classmethod
     def from_bytes(cls, buf: bytes) -> 'RewardRate':
         data: list = MsgPackForDB.loads(buf)
@@ -194,6 +197,13 @@ class IISSMetaData:
         self.reward_point: int = reward_point
         self.lock_min: int = lock_min
         self.lock_max: int = lock_max
+
+    def __str__(self):
+        return f"reward_min={self.reward_min}, " \
+               f"reward_max={self.reward_max}, " \
+               f"reward_point={self.reward_point}, " \
+               f"lock_min={self.lock_min}, " \
+               f"lock_max={self.lock_max}"
 
     @classmethod
     def from_bytes(cls, buf: bytes) -> 'IISSMetaData':

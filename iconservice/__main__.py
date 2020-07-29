@@ -17,8 +17,8 @@
 
 
 import sys
-from .icon_service_cli import main
 
+from .icon_service_cli import main
 
 if __name__ == "__main__":
     try:

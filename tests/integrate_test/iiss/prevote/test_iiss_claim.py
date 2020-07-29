@@ -21,9 +21,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 class TestIISSClaim(TestIISSBase):
     def test_iiss_claim(self):
+        max_delegations: int = 10
         self.update_governance()
 
         # set Revision REV_IISS
@@ -53,7 +54,7 @@ class TestIISSClaim(TestIISSBase):
         total_delegating: int = 0
         delegations: list = []
         start_index: int = 0
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegation_info: tuple = \
                 (
                     self._accounts[start_index + i],
@@ -77,7 +78,7 @@ class TestIISSClaim(TestIISSBase):
         # claim iscore
         tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
         self.assertEqual(1, len(tx_results[0].event_logs))
-        self.assertEqual(ZERO_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
         self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
         self.assertEqual([iscore, icx], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_called()
@@ -117,15 +118,25 @@ class TestIISSClaim(TestIISSBase):
         # claim iscore
         tx_results: List['TransactionResult'] = self.claim_iscore(self._accounts[0])
         self.assertEqual(1, len(tx_results[0].event_logs))
-        self.assertEqual(ZERO_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, tx_results[0].event_logs[0].score_address)
         self.assertEqual(['IScoreClaimed(int,int)'], tx_results[0].event_logs[0].indexed)
         self.assertEqual([icx, iscore], tx_results[0].event_logs[0].data)
         RewardCalcProxy.commit_claim.assert_not_called()
 
+        # TEST: claim iscore with value should fail
+        expected_status = False
+        tx = self.create_score_call_tx(from_=self._accounts[0],
+                                       to_=SYSTEM_SCORE_ADDRESS,
+                                       func_name="claimIScore",
+                                       params={},
+                                       value=5)
+
+        self.process_confirm_block_tx([tx], expected_status=expected_status)
+
     def _query_iscore_with_invalid_params(self):
         params = {
             "version": self._version,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": SYSTEM_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
                 "method": "queryIScore"
@@ -133,6 +144,7 @@ class TestIISSClaim(TestIISSBase):
         }
 
         # query iscore without an address
+        # with pytest.raises(InvalidParamsException):
         with pytest.raises(InvalidParamsException):
             self.icon_service_engine.query("icx_call", params)
 

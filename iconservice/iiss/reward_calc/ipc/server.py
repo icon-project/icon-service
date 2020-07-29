@@ -18,7 +18,6 @@ from asyncio import StreamReader, StreamWriter
 from typing import Optional
 
 from iconcommons import Logger
-
 from .message import MessageType, Request
 from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker
@@ -108,7 +107,8 @@ class IPCServer(object):
                 await writer.drain()
 
             except asyncio.CancelledError:
-                pass
+                # task got cancel request. stop service
+                break
             except BaseException as e:
                 Logger.warning(tag=_TAG, msg=str(e))
 
@@ -134,7 +134,8 @@ class IPCServer(object):
                     self._queue.message_handler(response)
 
             except asyncio.CancelledError:
-                pass
+                # task got cancel request. stop service
+                break
             except BaseException as e:
                 Logger.warning(tag=_TAG, msg=str(e))
 

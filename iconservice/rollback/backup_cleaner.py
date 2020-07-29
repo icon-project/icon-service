@@ -19,7 +19,6 @@ import os
 import re
 
 from iconcommons.logger import Logger
-
 from . import get_backup_filename
 from ..icon_constant import BACKUP_LOG_TAG, BACKUP_FILES
 

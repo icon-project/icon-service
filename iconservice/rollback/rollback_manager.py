@@ -18,7 +18,6 @@ import shutil
 from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 from iconcommons.logger import Logger
-
 from .backup_manager import get_backup_filename
 from ..base.exception import InvalidParamsException, InternalServiceErrorException
 from ..database.db import KeyValueDatabase
@@ -162,7 +161,7 @@ class RollbackManager(object):
             # Remove a new current_db
             shutil.rmtree(dst_path, ignore_errors=True)
             # Rename iiss_rc_db_{BH} to current_db
-            os.rename(src_path, dst_path)
+            shutil.move(src_path, dst_path)
 
         Logger.debug(tag=TAG, msg="_rename_iiss_db_to_current_db() end")
 

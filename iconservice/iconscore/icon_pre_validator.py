@@ -16,8 +16,10 @@
 
 from typing import TYPE_CHECKING, Any
 
+from iconcommons.logger import Logger
+
 from .icon_score_step import get_input_data_size
-from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
 from ..utils import is_lowercase_hex_string
@@ -25,6 +27,9 @@ from ..utils import is_lowercase_hex_string
 if TYPE_CHECKING:
     from ..deploy.storage import IconScoreDeployInfo
     from .icon_score_context import IconScoreContext
+
+
+TAG = "PV"
 
 
 class IconPreValidator:
@@ -272,7 +277,8 @@ class IconPreValidator:
         if 'action' not in data:
             raise InvalidRequestException('Action not found')
 
-    def _validate_new_score_address_on_deploy_transaction(self, context: 'IconScoreContext', params: dict):
+    @classmethod
+    def _validate_new_score_address_on_deploy_transaction(cls, context: 'IconScoreContext', params: dict):
         """Check if a newly generated score address is available
         Assume that data_type is 'deploy'
 
@@ -281,7 +287,7 @@ class IconPreValidator:
         """
 
         to: 'Address' = params['to']
-        if to != ZERO_SCORE_ADDRESS:
+        if to != SYSTEM_SCORE_ADDRESS:
             return
 
         try:
@@ -308,21 +314,26 @@ class IconPreValidator:
         except BaseException as e:
             raise e
 
-    def _check_balance(self, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
+    @classmethod
+    def _check_balance(cls, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
         balance = context.engine.icx.get_balance(context, from_)
 
         if balance < value + fee:
-            raise OutOfBalanceException(
-                f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
+            msg = f"Out of balance: from={from_} balance={balance} value={value} fee={fee}"
+            if balance == 0:
+                Logger.info(tag=TAG, msg=f"{msg} {context.block}")
+
+            raise OutOfBalanceException(msg)
 
     def _is_inactive_score(self, context: 'IconScoreContext', address: 'Address') -> bool:
         is_contract = address.is_contract
-        is_zero_score_address = address == ZERO_SCORE_ADDRESS
+        is_zero_score_address = address == SYSTEM_SCORE_ADDRESS
         is_score_active = self._is_score_active(context, address)
         _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
         return _is_inactive_score
 
-    def _is_score_active(self, context: 'IconScoreContext', address: 'Address') -> bool:
+    @classmethod
+    def _is_score_active(cls, context: 'IconScoreContext', address: 'Address') -> bool:
         deploy_info: 'IconScoreDeployInfo' = context.storage.deploy.get_deploy_info(context, address)
 
         if deploy_info is None:

@@ -13,9 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from typing import TYPE_CHECKING, List
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice import SYSTEM_SCORE_ADDRESS, Address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -40,7 +41,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         tx = self.create_deploy_score_tx(score_root="sample_scores",
                                          score_name="sample_db_returns",
                                          from_=self._accounts[0],
-                                         to_=ZERO_SCORE_ADDRESS,
+                                         to_=SYSTEM_SCORE_ADDRESS,
                                          deploy_params={"value": str(self._accounts[1].address),
                                                         "value1": str(self._accounts[1].address)},
                                          pre_validation_enabled=pre_validation_enabled)

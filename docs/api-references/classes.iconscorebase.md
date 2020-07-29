@@ -8,7 +8,7 @@ IconScoreBase
         on_install, 
         on_update, 
         fallback, 
-        call, 
+        call,
         create_interface_score, 
         now, 
         msg, 

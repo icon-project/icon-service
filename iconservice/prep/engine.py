@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
@@ -22,19 +23,23 @@ from .data.prep_container import PRepContainer
 from .penalty_imposer import PenaltyImposer
 from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
-from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, MethodNotFoundException, ServiceNotReadyException
-from ..base.type_converter import TypeConverter, ParamType
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS
+from ..base.exception import (
+    AccessDeniedException, InvalidParamsException, MethodNotFoundException, ServiceNotReadyException,
+    InvalidRequestException
+)
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MAX_DELEGATIONS, Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
-    PenaltyReason, TermFlag
 from ..icon_constant import PRepGrade, PRepResultState, PRepStatus, ROLLBACK_LOG_TAG
+from ..icon_constant import Revision, IISS_MIN_IREP, PREP_PENALTY_SIGNATURE, \
+    PenaltyReason, TermFlag, IconScoreContextType
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
+from ..iconscore.icon_score_step import StepType
 from ..icx.icx_account import Account
 from ..icx.storage import Intent
-from ..iiss import IISSEngineListener
+from ..iiss.listener import EngineListener as IISSEngineListener
 from ..iiss.reward_calc import RewardCalcDataCreator
+from ..prep.prep_address_converter import PRepAddressConverter
 
 if TYPE_CHECKING:
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
@@ -42,6 +47,19 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
 
 _TAG = "PREP"
+
+
+class Method:
+    REGISTER = 'registerPRep'
+    UNREGISTER = 'unregisterPRep'
+    SET_PREP = 'setPRep'
+    SET_GOVERNANCE_VARIABLES = 'setGovernanceVariables'
+    GET_PREP = 'getPRep'
+    GET_MAIN_PREPS = 'getMainPReps'
+    GET_SUB_PREPS = 'getSubPReps'
+    GET_PREPS = 'getPReps'
+    GET_PREP_TERM = 'getPRepTerm'
+    GET_INACTIVE_PREPS = 'getInactivePReps'
 
 
 class Engine(EngineBase, IISSEngineListener):
@@ -52,31 +70,55 @@ class Engine(EngineBase, IISSEngineListener):
     * Handles P-Rep related JSON-RPC API requests
     """
 
+    INVOKE_METHOD_TABLE = [
+        Method.REGISTER,
+        Method.UNREGISTER,
+        Method.SET_PREP,
+        Method.SET_GOVERNANCE_VARIABLES,
+    ]
+    QUERY_METHOD_TABLE = [
+        Method.GET_PREP,
+        Method.GET_MAIN_PREPS,
+        Method.GET_SUB_PREPS,
+        Method.GET_PREPS,
+        Method.GET_PREP_TERM,
+        Method.GET_INACTIVE_PREPS,
+    ]
+    METHOD_TABLE = INVOKE_METHOD_TABLE + QUERY_METHOD_TABLE
+
     def __init__(self):
         super().__init__()
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() start")
 
         self._invoke_handlers: dict = {
-            "registerPRep": self.handle_register_prep,
-            "setPRep": self.handle_set_prep,
-            "setGovernanceVariables": self.handle_set_governance_variables,
-            "unregisterPRep": self.handle_unregister_prep
+            Method.REGISTER: self.handle_register_prep,
+            Method.UNREGISTER: self.handle_unregister_prep,
+            Method.SET_PREP: self.handle_set_prep,
+            Method.SET_GOVERNANCE_VARIABLES: self.handle_set_governance_variables,
+            Method.GET_PREP: self.handle_get_prep,
+            Method.GET_MAIN_PREPS: self.handle_get_main_preps,
+            Method.GET_SUB_PREPS: self.handle_get_sub_preps,
+            Method.GET_PREPS: self.handle_get_preps,
+            Method.GET_PREP_TERM: self.handle_get_prep_term,
+            Method.GET_INACTIVE_PREPS: self.handle_get_inactive_preps
         }
 
         self._query_handler: dict = {
-            "getPRep": self.handle_get_prep,
-            "getMainPReps": self.handle_get_main_preps,
-            "getSubPReps": self.handle_get_sub_preps,
-            "getPReps": self.handle_get_preps,
-            "getPRepTerm": self.handle_get_prep_term,
-            "getInactivePReps": self.handle_get_inactive_preps
+            Method.GET_PREP: self.handle_get_prep,
+            Method.GET_MAIN_PREPS: self.handle_get_main_preps,
+            Method.GET_SUB_PREPS: self.handle_get_sub_preps,
+            Method.GET_PREPS: self.handle_get_preps,
+            Method.GET_PREP_TERM: self.handle_get_prep_term,
+            Method.GET_INACTIVE_PREPS: self.handle_get_inactive_preps
         }
 
-        self.preps = PRepContainer()
+        self.preps: 'PRepContainer' = PRepContainer()
         # self.term should be None before decentralization
         self.term: Optional['Term'] = None
         self._initial_irep: Optional[int] = None
         self._penalty_imposer: Optional['PenaltyImposer'] = None
+
+        self.prep_address_converter: 'PRepAddressConverter' = None
 
         Logger.debug(tag=_TAG, msg="PRepEngine.__init__() end")
 
@@ -93,8 +135,10 @@ class Engine(EngineBase, IISSEngineListener):
                                    low_productivity_penalty_threshold,
                                    block_validation_penalty_threshold)
 
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
+
         self.preps = self._load_preps(context)
-        self.term = context.storage.prep.get_term(context)
+        self.term = self._load_term(context)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
@@ -114,8 +158,7 @@ class Engine(EngineBase, IISSEngineListener):
                                                low_productivity_penalty_threshold,
                                                block_validation_penalty_threshold)
 
-    @classmethod
-    def _load_preps(cls, context: 'IconScoreContext') -> 'PRepContainer':
+    def _load_preps(self, context: 'IconScoreContext') -> 'PRepContainer':
         """Load preps from state db
 
         :return: new prep container instance
@@ -124,6 +167,10 @@ class Engine(EngineBase, IISSEngineListener):
         preps = PRepContainer()
 
         for prep in context.storage.prep.get_prep_iterator():
+
+            if prep.status == PRepStatus.ACTIVE:
+                self.prep_address_converter.add_node_address(node=prep.node_address, prep=prep.address)
+
             account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
 
             prep.stake = account.stake
@@ -134,22 +181,42 @@ class Engine(EngineBase, IISSEngineListener):
         preps.freeze()
         return preps
 
+    @classmethod
+    def _load_term(cls, context: 'IconScoreContext') -> Optional['Term']:
+        term = context.storage.prep.get_term(context)
+        if term:
+            term.freeze()
+
+        return term
+
     def close(self):
         IconScoreContext.engine.iiss.remove_listener(self)
 
-    def invoke(self, context: 'IconScoreContext', data: dict):
-        method: str = data['method']
-        params: dict = data.get('params', {})
+    @classmethod
+    def check_method(cls, method: str) -> bool:
+        return method in cls.METHOD_TABLE
 
+    @classmethod
+    def check_invoke_method(cls, method: str) -> bool:
+        return method in cls.INVOKE_METHOD_TABLE
+
+    @classmethod
+    def check_query_method(cls, method: str) -> bool:
+        return method in cls.QUERY_METHOD_TABLE
+
+    def invoke(self, context: 'IconScoreContext', method: str, params: dict):
+        if context.revision < Revision.IISS.value:
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            raise InvalidParamsException(f"Method Not Found: {method}")
         handler: callable = self._invoke_handlers[method]
-        handler(context, params)
+        handler(context, **params)
 
-    def query(self, context: 'IconScoreContext', data: dict) -> Any:
-        method: str = data['method']
-        params: dict = data.get('params', {})
-
+    def query(self, context: 'IconScoreContext', method: str, params: dict) -> Any:
+        if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and \
+                context.type == IconScoreContextType.INVOKE:
+            raise InvalidRequestException(f"Do not call readonly method '{method}' with 'icx_sendTransaction'")
         handler: callable = self._query_handler[method]
-        ret = handler(context, params)
+        ret = handler(context, **params)
         return ret
 
     def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
@@ -169,6 +236,8 @@ class Engine(EngineBase, IISSEngineListener):
         if precommit_data.term is not None:
             self.term: 'Term' = precommit_data.term
 
+        self.prep_address_converter: 'PRepAddressConverter' = precommit_data.prep_address_converter
+
     def rollback(self, context: 'IconScoreContext', _block_height: int, _block_hash: bytes):
         """After rollback is called, the state of prep_engine is reverted to that of a given block
 
@@ -179,8 +248,11 @@ class Engine(EngineBase, IISSEngineListener):
         """
         Logger.info(tag=ROLLBACK_LOG_TAG, msg="rollback() start")
 
+        self.prep_address_converter: 'PRepAddressConverter' = context.storage.meta.get_prep_address_converter(context)
+
         self.preps = self._load_preps(context)
-        self.term = context.storage.prep.get_term(context)
+        self.term = self._load_term(context)
+
         Logger.info(tag=ROLLBACK_LOG_TAG, msg=f"rollback() end: {self.term}")
 
     def on_block_invoked(
@@ -200,18 +272,18 @@ class Engine(EngineBase, IISSEngineListener):
 
         if is_decentralization_started or self._is_term_ended(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
-            main_prep_as_dict, new_term = self._on_term_ended(context)
+            next_preps, new_term = self._on_term_ended(context)
         elif context.is_decentralized():
             # In-term P-Rep replacement
-            main_prep_as_dict, new_term = self._on_term_updated(context)
+            next_preps, new_term = self._on_term_updated(context)
         else:
-            main_prep_as_dict, new_term = None, None
+            next_preps, new_term = None, None
 
         if new_term:
             self._update_prep_grades(context, context.preps, self.term, new_term)
             context.storage.prep.put_term(context, new_term)
 
-        return main_prep_as_dict, new_term
+        return next_preps, new_term
 
     def _is_term_ended(self, context: 'IconScoreContext') -> bool:
         if self.term is None:
@@ -241,12 +313,15 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Create a term with context.preps whose grades are up-to-date
         new_term: 'Term' = self._create_next_term(context, self.term)
-        main_preps_as_dict: dict = \
-            self._get_updated_main_preps(context, new_term, PRepResultState.NORMAL)
+        next_preps: dict = self._get_updated_main_preps(
+            context=context,
+            term=new_term,
+            state=PRepResultState.NORMAL
+        )
 
         Logger.debug(tag=_TAG, msg=f"{new_term}")
 
-        return main_preps_as_dict, new_term
+        return next_preps, new_term
 
     @classmethod
     def _put_last_term_info(cls, context: 'IconScoreContext', term: 'Term'):
@@ -292,13 +367,18 @@ class Engine(EngineBase, IISSEngineListener):
         if not new_term.is_dirty():
             return None, None
 
-        if bool(new_term.flags & (TermFlag.MAIN_PREPS | TermFlag.MAIN_PREP_P2P_ENDPOINT)):
-            main_preps_as_dict = \
-                self._get_updated_main_preps(context, new_term, PRepResultState.IN_TERM_UPDATED)
+        if bool(new_term.flags & (TermFlag.MAIN_PREPS |
+                                  TermFlag.MAIN_PREP_P2P_ENDPOINT |
+                                  TermFlag.MAIN_PREP_NODE_ADDRESS)):
+            next_preps = self._get_updated_main_preps(
+                context=context,
+                term=new_term,
+                state=PRepResultState.IN_TERM_UPDATED
+            )
         else:
-            main_preps_as_dict = None
+            next_preps = None
 
-        return main_preps_as_dict, new_term
+        return next_preps, new_term
 
     @classmethod
     def _update_prep_grades(cls,
@@ -375,19 +455,17 @@ class Engine(EngineBase, IISSEngineListener):
 
         context.update_dirty_prep_batch()
 
-    def handle_register_prep(
-            self, context: 'IconScoreContext', params: dict):
+    def handle_register_prep(self, context: 'IconScoreContext', **kwargs):
         """Register a P-Rep
 
         Roles
         * Update preps in context
         * Update stateDB
         * Update rcDB
-
-        :param context: 
-        :param params:
-        :return: 
         """
+        if context.msg.sender.is_contract:
+            raise AccessDeniedException(f"SCORE is not allowed.")
+
         icx_storage: 'IcxStorage' = context.storage.icx
 
         address: 'Address' = context.tx.origin
@@ -401,14 +479,18 @@ class Engine(EngineBase, IISSEngineListener):
                                          f"Registration Fee Must be {context.storage.prep.prep_registration_fee} "
                                          f"not {value}")
 
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
-        validate_prep_data(ret_params)
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            self._remove_node_address_from_params(params=kwargs)
+
+        validate_prep_data(context=context,
+                           prep_address=address,
+                           tx_data=kwargs)
 
         account: 'Account' = icx_storage.get_account(context, address, Intent.STAKE | Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
         # prep.irep is set to IISS_MIN_IREP by default
-        dirty_prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
+        dirty_prep = PRep.from_dict(address, kwargs, context.block.height, context.tx.index)
         dirty_prep.stake = account.stake
         dirty_prep.delegated = account.delegated_amount
 
@@ -430,11 +512,20 @@ class Engine(EngineBase, IISSEngineListener):
         # EventLog
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="PRepRegistered(Address)",
             arguments=[address],
             indexed_args_count=0
         )
+
+    @classmethod
+    def _remove_node_address_from_params(cls, params: dict):
+        """Just for backward compatibility with the previous version
+
+        :param params: parameters of registerPRep or setPRep
+        """
+        if ConstantKeys.NODE_ADDRESS in params:
+            del params[ConstantKeys.NODE_ADDRESS]
 
     @classmethod
     def _put_reg_prep_in_rc_db(cls, context: 'IconScoreContext', address: 'Address'):
@@ -461,14 +552,14 @@ class Engine(EngineBase, IISSEngineListener):
 
         :return:
         """
-        prep_as_dict: Optional[dict] = \
+        updated_main_preps: Optional[dict] = \
             cls.get_main_preps_in_dict(context, term)
 
-        if prep_as_dict:
-            prep_as_dict['irep'] = term.irep
-            prep_as_dict['state'] = state.value
+        if updated_main_preps:
+            updated_main_preps['irep'] = term.irep
+            updated_main_preps['state'] = state.value
 
-        return prep_as_dict
+        return updated_main_preps
 
     @classmethod
     def get_main_preps_in_dict(cls,
@@ -484,7 +575,7 @@ class Engine(EngineBase, IISSEngineListener):
         for prep_snapshot in term.main_preps:
             prep: 'PRep' = context.get_prep(prep_snapshot.address)
             preps_as_list.append({
-                ConstantKeys.PREP_ID: prep.address,
+                ConstantKeys.PREP_ID: prep.node_address,
                 ConstantKeys.P2P_ENDPOINT: prep.p2p_endpoint
             })
 
@@ -512,7 +603,10 @@ class Engine(EngineBase, IISSEngineListener):
             assert start_block_height == prev_term.end_block_height + 1
 
         # The current P-Rep term is over. Prepare the next P-Rep term
-        irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+        if context.revision < Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value:
+            irep: int = cls._calculate_weighted_average_of_irep(new_preps[:context.main_prep_count])
+        else:
+            irep: int = context.inv_container.irep
 
         term = Term(
             sequence,
@@ -538,16 +632,11 @@ class Engine(EngineBase, IISSEngineListener):
 
         return total_weighted_irep // total_delegated if total_delegated > 0 else IISS_MIN_IREP
 
-    def handle_get_prep(self, _context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_prep(self, context: 'IconScoreContext', address: 'Address') -> dict:
         """Returns the details of a P-Rep including information on registration, delegation and statistics
 
-        :param _context:
-        :param params:
         :return: the response for getPRep JSON-RPC request
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-
         prep: 'PRep' = self.preps.get_by_address(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
@@ -556,52 +645,78 @@ class Engine(EngineBase, IISSEngineListener):
         return response
 
     @classmethod
-    def handle_set_prep(cls, context: 'IconScoreContext', params: dict):
+    def handle_set_prep(cls, context: 'IconScoreContext', **kwargs):
         """Update a P-Rep registration information
 
         :param context:
-        :param params:
+        :param kwargs:
         :return:
         """
+        if context.msg.sender.is_contract:
+            raise AccessDeniedException(f"SCORE is not allowed.")
+
         address: 'Address' = context.tx.origin
 
         dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
+        params: dict = deepcopy(kwargs)
 
-        validate_prep_data(kwargs, True)
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            cls._remove_node_address_from_params(params=params)
 
-        if ConstantKeys.P2P_ENDPOINT in kwargs:
-            p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]
-            del kwargs[ConstantKeys.P2P_ENDPOINT]
-            kwargs["p2p_endpoint"] = p2p_endpoint
+        validate_prep_data(context=context,
+                           prep_address=address,
+                           tx_data=params,
+                           set_prep=True)
+
+        if ConstantKeys.P2P_ENDPOINT in params:
+            p2p_endpoint: str = params[ConstantKeys.P2P_ENDPOINT]
+            del params[ConstantKeys.P2P_ENDPOINT]
+            params["p2p_endpoint"] = p2p_endpoint
+
+        if ConstantKeys.NODE_ADDRESS in params:
+            node_address: 'Address' = params[ConstantKeys.NODE_ADDRESS]
+            del params[ConstantKeys.NODE_ADDRESS]
+            params["node_address"] = node_address
 
         # EventLog
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="PRepSet(Address)",
             arguments=[address],
             indexed_args_count=0
         )
 
+        cls._validate_node_key_back_compatibillity_below_rev_9(context, kwargs)
         # Update registration info
-        dirty_prep.set(**kwargs)
+        dirty_prep.set(**params)
+
         context.put_dirty_prep(dirty_prep)
 
-    def handle_set_governance_variables(self,
-                                        context: 'IconScoreContext',
-                                        params: dict):
-        """Handles setGovernanceVariables JSON-RPC API request
+    @classmethod
+    def _validate_node_key_back_compatibillity_below_rev_9(cls, context: 'IconScoreContext', data: dict):
+        if context.revision < Revision.DIVIDE_NODE_ADDRESS.value:
+            if ConstantKeys.NODE_ADDRESS in data and \
+                    data[ConstantKeys.NODE_ADDRESS] is not None:
+                # For Backward compatibility
+                raise TypeError("nodeAddress not Allowed")
 
-        :param context:
-        :param params:
-        :return:
+
+    def handle_set_governance_variables(self, context: 'IconScoreContext', irep: int):
+        """Handles setGovernanceVariables JSON-RPC API request
         """
+        if context.msg.sender.is_contract:
+            raise AccessDeniedException(f"SCORE is not allowed.")
+
         # This API is available after IISS decentralization is enabled.
         if context.revision < Revision.DECENTRALIZATION.value or self.term.sequence < 0:
+            raise MethodNotFoundException("setGovernanceVariables is disabled")
+
+        # This API is disabled after SET_IREP_VIA_NETWORK_PROPOSAL
+        if context.revision >= Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value:
             raise MethodNotFoundException("setGovernanceVariables is disabled")
 
         address: 'Address' = context.tx.origin
@@ -610,16 +725,13 @@ class Engine(EngineBase, IISSEngineListener):
         if dirty_prep is None:
             raise InvalidParamsException(f"P-Rep not found: {address}")
 
-        kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
-
         # Update incentive rep
-        irep: int = kwargs["irep"]
         validate_irep(context, irep, dirty_prep)
 
         # EventLog
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="GovernanceVariablesSet(Address,int)",
             arguments=[address, irep],
             indexed_args_count=1
@@ -630,13 +742,15 @@ class Engine(EngineBase, IISSEngineListener):
         dirty_prep.set_irep(irep, context.block.height)
         context.put_dirty_prep(dirty_prep)
 
-    def handle_unregister_prep(self, context: 'IconScoreContext', _params: dict):
+    def handle_unregister_prep(self, context: 'IconScoreContext'):
         """Unregister a P-Rep
 
         :param context:
-        :param _params:
         :return:
         """
+        if context.msg.sender.is_contract:
+            raise AccessDeniedException(f"SCORE is not allowed.")
+
         address: 'Address' = context.tx.origin
 
         dirty_prep: Optional['PRep'] = context.get_prep(address, mutable=True)
@@ -656,7 +770,7 @@ class Engine(EngineBase, IISSEngineListener):
         # EventLog
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="PRepUnregistered(Address)",
             arguments=[address],
             indexed_args_count=0
@@ -707,7 +821,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature=PREP_PENALTY_SIGNATURE,
             arguments=[
                 dirty_prep.address,
@@ -742,12 +856,8 @@ class Engine(EngineBase, IISSEngineListener):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
-    def handle_get_main_preps(self, _context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_main_preps(self, _context: 'IconScoreContext') -> dict:
         """Returns main P-Rep list in the current term
-
-        :param _context:
-        :param _params:
-        :return:
         """
         total_delegated = 0 if self.term is None else self.term.total_delegated
         prep_list: list = []
@@ -765,12 +875,8 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_sub_preps(self, _context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_sub_preps(self, _context: 'IconScoreContext') -> dict:
         """Returns sub P-Rep list in the present term
-
-        :param _context:
-        :param _params:
-        :return:
         """
         total_delegated: int = 0 if self.term is None else self.term.total_delegated
         prep_list: list = []
@@ -789,50 +895,43 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_preps(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_preps(self,
+                         context: "IconScoreContext",
+                         startRanking: Optional[int],
+                         endRanking: Optional[int]) -> dict:
         """
-        Returns P-Reps ranging in ranking from start_ranking to end_ranking
+        Returns P-Reps ranging in ranking from startRanking to endRanking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
-
-        :param context:
-        :param params:
-        :return:
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_LIST)
-
         preps: 'PRepContainer' = self.preps
-        start_ranking: int = 0
+        prep_count: int = preps.size(active_prep_only=True)
         prep_list: list = []
 
-        prep_count: int = preps.size(active_prep_only=True)
+        if startRanking is None:
+            startRanking = 1
+        if endRanking is None:
+            endRanking = prep_count
 
         if prep_count > 0:
-            start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
-            end_ranking: int = min(ret_params.get(ConstantKeys.END_RANKING, prep_count), prep_count)
-
-            if not 1 <= start_ranking <= end_ranking:
+            if not 1 <= startRanking <= endRanking:
                 raise InvalidParamsException(
-                    f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
+                    f"Invalid ranking: startRanking({startRanking}), endRanking({endRanking})")
 
-            for i in range(start_ranking - 1, end_ranking):
+            for i in range(startRanking - 1, endRanking):
                 prep: 'PRep' = preps.get_by_index(i)
                 prep_list.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
-            "startRanking": start_ranking,
+            "startRanking": startRanking,
             "totalDelegated": preps.total_delegated,
             "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
         }
 
-    def handle_get_prep_term(self, context: 'IconScoreContext', _params: dict) -> dict:
+    def handle_get_prep_term(self, context: 'IconScoreContext') -> dict:
         """Provides the information on the current term
-
-        :param context:
-        :param _params:
-        :return:
         """
         if self.term is None:
             raise ServiceNotReadyException("Term is not ready")
@@ -866,12 +965,8 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": preps_data
         }
 
-    def handle_get_inactive_preps(self, context: 'IconScoreContext', _param: dict) -> dict:
+    def handle_get_inactive_preps(self, context: 'IconScoreContext') -> dict:
         """Returns inactive P-Reps which is unregistered or receiving prep disqualification or low productivity penalty.
-
-        :param context: IconScoreContext
-        :param _param: None
-        :return: inactive preps
         """
         sorted_inactive_preps: List['PRep'] = \
             sorted(self.preps.get_inactive_preps(), key=lambda node: node.order())
@@ -912,8 +1007,8 @@ class Engine(EngineBase, IISSEngineListener):
         if context.revision <= Revision.DECENTRALIZATION.value:
             # Although the following statement has a bug,
             # preserve it for state compatibility
-            # IISS_MAX_DELEGATIONS * 2 + 1 is correct
-            assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
+            # max delegations (i.e. 10) * 2 + 1 is correct
+            assert 0 <= len(updated_accounts) <= context.engine.iiss.get_max_delegations_by_revision(context) * 2
 
         for account in updated_accounts:
             assert isinstance(account, Account)

@@ -15,19 +15,18 @@
 # limitations under the License.
 
 import os
+import shutil
 from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, List, Set
 
 from iconcommons import Logger
-
-from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType
+from ..reward_calc.msg_data import Header, TxData, PRepsData, TxType, make_block_produce_info_key
 from ...base.exception import DatabaseException, InternalServiceErrorException
 from ...database.db import KeyValueDatabase
 from ...icon_constant import (
     DATA_BYTE_ORDER, Revision, RC_DATA_VERSION_TABLE, RC_DB_VERSION_0,
     IISS_LOG_TAG, ROLLBACK_LOG_TAG
 )
-from ...iconscore.icon_score_context import IconScoreContext
 from ...iiss.reward_calc.data_creator import DataCreator
 from ...utils import bytes_to_hex
 from ...utils.msgpack_for_db import MsgPackForDB
@@ -36,6 +35,7 @@ if TYPE_CHECKING:
     from ...base.address import Address
     from ...database.wal import IissWAL
     from ..reward_calc.msg_data import Data, DelegationInfo
+    from ...iconscore.icon_score_context import IconScoreContext
 
 
 RewardCalcDBInfo = namedtuple('RewardCalcDBInfo', ['path', 'block_height'])
@@ -80,7 +80,7 @@ class Storage(object):
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: int = -1
 
-    def open(self, context: IconScoreContext, path: str):
+    def open(self, context: 'IconScoreContext', path: str):
         revision: int = context.revision
 
         if not os.path.exists(path):
@@ -230,7 +230,7 @@ class Storage(object):
     @staticmethod
     def _rename_db(old_db_path: str, new_db_path: str):
         if os.path.exists(old_db_path) and not os.path.exists(new_db_path):
-            os.rename(old_db_path, new_db_path)
+            shutil.move(old_db_path, new_db_path)
             Logger.info(tag=IISS_LOG_TAG, msg=f"Rename db: {old_db_path} -> {new_db_path}")
         else:
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
@@ -249,8 +249,6 @@ class Storage(object):
         assert block_height > 0
 
         self._db.close()
-        # Process compaction before send the RC DB to reward calculator
-        self.process_db_compaction(os.path.join(self._path, self.CURRENT_IISS_DB_NAME))
 
         standby_db_path: str = self.rename_current_db_to_standby_db(self._path, block_height)
         self._db = self.create_current_db(self._path)
@@ -258,7 +256,42 @@ class Storage(object):
         return RewardCalcDBInfo(standby_db_path, block_height)
 
     @classmethod
-    def process_db_compaction(cls, path: str):
+    def finalize_iiss_db(cls,
+                         prev_end_bh: int,
+                         current_db: 'KeyValueDatabase',
+                         prev_db_path: str):
+        """
+        Finalize iiss db before sending to reward calculator (i.e. RC). Process is below
+            1. Move last Block produce data to previous iiss_db which is to be sent to RC
+            2. db compaction
+
+        :param prev_end_bh: end block height of previous term
+        :param current_db: newly created db
+        :param prev_db_path: iiss_db path which is to be finalized and sent to RC (must has been closed)
+        :return:
+        """
+        bp_key: bytes = make_block_produce_info_key(prev_end_bh)
+        prev_db: 'KeyValueDatabase' = KeyValueDatabase.from_path(prev_db_path)
+        cls._move_data_from_current_db_to_prev_db(bp_key,
+                                                  current_db,
+                                                  prev_db)
+        prev_db.close()
+        cls._process_db_compaction(prev_db_path)
+
+    @classmethod
+    def _move_data_from_current_db_to_prev_db(cls,
+                                              key: bytes,
+                                              current_db: 'KeyValueDatabase',
+                                              prev_db: 'KeyValueDatabase'):
+        value: Optional[bytes] = current_db.get(key)
+        if value is None:
+            return
+
+        current_db.delete(key)
+        prev_db.put(key, value)
+
+    @classmethod
+    def _process_db_compaction(cls, path: str):
         """
         There is compatibility issue between C++ levelDB and go levelDB.
         To solve it, should make DB being compacted before reading (from RC).
@@ -366,7 +399,7 @@ class IissDBNameRefactor(object):
         dst_path: str = os.path.join(rc_data_path, new_name)
 
         try:
-            os.rename(src_path, dst_path)
+            shutil.move(src_path, dst_path)
             Logger.info(tag=IISS_LOG_TAG, msg=f"Renaming iiss_db_name succeeded: old={old_name} new={new_name}")
         except BaseException as e:
             Logger.error(tag=IISS_LOG_TAG,

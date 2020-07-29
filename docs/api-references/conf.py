@@ -52,7 +52,7 @@ autodoc_mock_imports = [
     "plyvel",
     "earlgrey",
     "iconcommons",
-    "secp256k1",
+    "coincurve",
 ]
 
 

@@ -15,33 +15,33 @@
 # limitations under the License.
 
 import time
-from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
 
+from iconservice.iiss.listener import EngineListener as IISSEngineListener
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
-from ..base.address import ZERO_SCORE_ADDRESS
+from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import (
     InvalidParamsException, InvalidRequestException,
     OutOfBalanceException, FatalException, InternalServiceErrorException
 )
-from ..base.type_converter import TypeConverter
-from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision
+from ..icon_constant import ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
+    IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
+    RevisionChangedFlag
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
+from ..iconscore.icon_score_step import StepType
+from ..iconscore.system_score import Delegation
 from ..icx import Intent
 from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
 from ..iiss.reward_calc.storage import get_rc_version
-from ..precommit_data_manager import PrecommitFlag
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -58,14 +58,14 @@ _TAG = IISS_LOG_TAG
 QUERY_CALCULATE_REPEAT_COUNT = 3
 
 
-class EngineListener(metaclass=ABCMeta):
-    @abstractmethod
-    def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
-        pass
-
-    @abstractmethod
-    def on_set_delegation(self, context: 'IconScoreContext', delegated_accounts: List['Account']):
-        pass
+class Method:
+    SET_STAKE = 'setStake'
+    GET_STAKE = 'getStake'
+    SET_DELEGATION = 'setDelegation'
+    GET_DELEGATION = 'getDelegation'
+    CLAIM_ISCORE = 'claimIScore'
+    QUERY_ISCORE = 'queryIScore'
+    ESTIMATE_UNLOCK_PERIOD = 'estimateUnstakeLockPeriod'
 
 
 class Engine(EngineBase):
@@ -74,45 +74,63 @@ class Engine(EngineBase):
     """
     TAG = "IISS"
 
+    INVOKE_METHOD_TABLE = [
+        Method.SET_STAKE,
+        Method.SET_DELEGATION,
+        Method.CLAIM_ISCORE,
+    ]
+    QUERY_METHOD_TABLE = [
+        Method.GET_STAKE,
+        Method.GET_DELEGATION,
+        Method.QUERY_ISCORE,
+        Method.ESTIMATE_UNLOCK_PERIOD,
+    ]
+    METHOD_TABLE = INVOKE_METHOD_TABLE + QUERY_METHOD_TABLE
+
     def __init__(self):
         super().__init__()
 
         self._invoke_handlers: dict = {
-            'setStake': self.handle_set_stake,
-            'setDelegation': self.handle_set_delegation,
-            'claimIScore': self.handle_claim_iscore
+            Method.SET_STAKE: self.handle_set_stake,
+            Method.SET_DELEGATION: self.handle_set_delegation,
+            Method.CLAIM_ISCORE: self.handle_claim_iscore,
+            Method.GET_STAKE: self.handle_get_stake,
+            Method.GET_DELEGATION: self.handle_get_delegation,
+            Method.QUERY_ISCORE: self.handle_query_iscore,
+            Method.ESTIMATE_UNLOCK_PERIOD: self.handle_estimate_unstake_lock_period,
         }
 
         self._query_handler: dict = {
-            'getStake': self.handle_get_stake,
-            'getDelegation': self.handle_get_delegation,
-            'queryIScore': self.handle_query_iscore,
-            'estimateUnstakeLockPeriod': self.handle_estimate_unstake_lock_period
+            Method.GET_STAKE: self.handle_get_stake,
+            Method.GET_DELEGATION: self.handle_get_delegation,
+            Method.QUERY_ISCORE: self.handle_query_iscore,
+            Method.ESTIMATE_UNLOCK_PERIOD: self.handle_estimate_unstake_lock_period,
         }
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
-        self._listeners: List['EngineListener'] = []
+        self._listeners: List['IISSEngineListener'] = []
 
     def open(self, context: 'IconScoreContext',
-             log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
+             log_dir: str, data_path: str, socket_path: str, ipc_timeout: int,
+             icon_rc_path: str, icon_rc_monitor: bool):
         """
-
         :param context:
         :param log_dir:
         :param data_path:
         :param socket_path:
         :param ipc_timeout:
         :param icon_rc_path: ex) "/usr/local/bin"
+        :param icon_rc_monitor: Boolean which determines Opening RC monitor channel
         :return:
         """
-        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path)
+        self._init_reward_calc_proxy(log_dir, data_path, socket_path, ipc_timeout, icon_rc_path, icon_rc_monitor)
 
-    def add_listener(self, listener: 'EngineListener'):
-        assert isinstance(listener, EngineListener)
+    def add_listener(self, listener: 'IISSEngineListener'):
+        assert isinstance(listener, IISSEngineListener)
         self._listeners.append(listener)
 
-    def remove_listener(self, listener: 'EngineListener'):
-        assert isinstance(listener, EngineListener)
+    def remove_listener(self, listener: 'IISSEngineListener'):
+        assert isinstance(listener, IISSEngineListener)
         self._listeners.remove(listener)
 
     @staticmethod
@@ -209,12 +227,16 @@ class Engine(EngineBase):
         IconScoreContext.storage.rc.put_calc_response_from_rc(cb_data.iscore, cb_data.block_height, cb_data.state_hash)
         Logger.info(tag=_TAG, msg=f"calculate done callback called with {cb_data}")
 
-    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int, icon_rc_path: str):
+    def _init_reward_calc_proxy(self, log_dir: str, data_path: str, socket_path: str, ipc_timeout: int,
+                                icon_rc_path: str, icon_rc_monitor: bool):
         self._reward_calc_proxy = RewardCalcProxy(calc_done_callback=self.calculate_done_callback,
                                                   ready_callback=self.ready_callback,
                                                   ipc_timeout=ipc_timeout,
                                                   icon_rc_path=icon_rc_path)
-        self._reward_calc_proxy.open(log_dir=log_dir, sock_path=socket_path, iiss_db_path=data_path)
+        self._reward_calc_proxy.open(log_dir=log_dir,
+                                     sock_path=socket_path,
+                                     iiss_db_path=data_path,
+                                     icon_rc_monitor=icon_rc_monitor)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):
@@ -228,33 +250,48 @@ class Engine(EngineBase):
     def close(self):
         self._close_reward_calc_proxy()
 
-    def invoke(self, context: 'IconScoreContext', data: dict) -> None:
-        method: str = data['method']
-        params: dict = data.get('params', {})
+    @classmethod
+    def check_method(cls, method: str) -> bool:
+        return method in cls.METHOD_TABLE
+
+    @classmethod
+    def check_invoke_method(cls, method: str) -> bool:
+        return method in cls.INVOKE_METHOD_TABLE
+
+    @classmethod
+    def check_query_method(cls, method: str) -> bool:
+        return method in cls.QUERY_METHOD_TABLE
+
+    def invoke(self, context: 'IconScoreContext', method: str, params: dict):
+        if context.revision < Revision.IISS.value:
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            raise InvalidParamsException(f"Method Not Found: {method}")
 
         handler: callable = self._invoke_handlers[method]
-        handler(context, params)
+        handler(context, **params)
 
-    def query(self, context: 'IconScoreContext', data: dict) -> Any:
-        method: str = data['method']
-        params: dict = data.get('params', {})
-
+    def query(self, context: 'IconScoreContext', method: str, params: dict) -> Any:
+        if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and \
+                context.type == IconScoreContextType.INVOKE:
+            raise InvalidRequestException(f"Do not call readonly method '{method}' with 'icx_sendTransaction'")
         handler: callable = self._query_handler[method]
-        ret = handler(context, params)
+        ret = handler(context, **params)
         return ret
 
-    def handle_set_stake(self, context: 'IconScoreContext', params: dict):
+    def handle_set_stake(self, context: 'IconScoreContext', value: int):
+        if not isinstance(value, int) or value < 0:
+            raise InvalidParamsException(
+                "Failed to stake: value is not int type or value < 0"
+            )
 
-        address: 'Address' = context.tx.origin
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_STAKE)
-        stake: int = ret_params[ConstantKeys.VALUE]
+        address: 'Address' = context.msg.sender
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         total_stake: int = context.storage.iiss.get_total_stake(context)
 
-        if not isinstance(stake, int) or stake < 0:
-            raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
+        if value < 0:
+            raise InvalidParamsException('Failed to stake: value < 0')
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
-        self._check_from_can_stake(context, stake, account)
+        self._check_from_can_stake(context, value, account)
 
         unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
                                                                        context.storage.iiss.lock_max,
@@ -263,7 +300,7 @@ class Engine(EngineBase):
                                                                        context.total_supply)
         # subtract account's staked amount from the total stake
         total_stake -= account.stake
-        account.set_stake(stake, unstake_lock_period)
+        account.set_stake(value, unstake_lock_period, context.revision)
         # add account's newly set staked amount from the total stake
         total_stake += account.stake
         context.storage.icx.put_account(context, account)
@@ -277,11 +314,15 @@ class Engine(EngineBase):
                               context: 'IconScoreContext',
                               stake: int,
                               account: 'Account'):
-        fee: int = context.step_counter.step_price * context.step_counter.step_used
+        fee: int = 0
+        # SCORE can stake via SCORE inter-call
+        # fee must be charged to TX sender
+        if account.address == context.tx.origin:
+            fee = context.step_counter.step_price * context.step_counter.step_used
 
         if account.balance + account.total_stake < stake + fee:
             raise OutOfBalanceException(
-                f'Out of balance: balance({account.balance}) + total_stake({account.total_stake})'
+                f'Out of balance({account.address}): balance({account.balance}) + total_stake({account.total_stake})'
                 f' < stake({stake}) + fee({fee})')
 
         if stake < account.delegations_amount:
@@ -303,33 +344,40 @@ class Engine(EngineBase):
         second_operand: float = (stake_percentage - (rpoint / IISS_MAX_REWARD_RATE)) ** 2
         return int(first_operand * second_operand) + lmin
 
-    def handle_get_stake(self, context: 'IconScoreContext', params: dict) -> dict:
-
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_STAKE)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-        return self._get_stake(context, address)
-
-    @classmethod
-    def _get_stake(cls, context: 'IconScoreContext', address: 'Address') -> dict:
-
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
+    @staticmethod
+    def handle_get_stake(context: 'IconScoreContext', address: "Address") -> dict:
+        account: "Account" = context.storage.icx.get_account(
+            context, address, Intent.STAKE
+        )
 
         stake: int = account.stake
         unstake: int = account.unstake
         unstake_block_height: int = account.unstake_block_height
+        unstakes_info: Optional[List[Tuple[int, int]]] = account.unstakes_info
 
         data = {
             "stake": stake
         }
 
-        if unstake_block_height:
-            data["unstake"] = unstake
-            data["unstakeBlockHeight"] = unstake_block_height
-            data["remainingBlocks"] = unstake_block_height - context.block.height
+        if context.revision < Revision.MULTIPLE_UNSTAKE.value:
+            if unstake_block_height:
+                data["unstake"] = unstake
+                data["unstakeBlockHeight"] = unstake_block_height
+                data["remainingBlocks"] = unstake_block_height - context.block.height
 
+        elif context.revision >= Revision.MULTIPLE_UNSTAKE.value:
+            if unstakes_info:
+                data["unstakes"] = [
+                    {
+                        "unstake": unstakes_data[0],
+                        "unstakeBlockHeight": unstakes_data[1],
+                        "remainingBlocks": unstakes_data[1] - context.block.height
+                     }
+                    for unstakes_data in unstakes_info
+                ]
         return data
 
-    def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext', _params: dict):
+    def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext'):
         total_stake: int = context.storage.iiss.get_total_stake(context)
         unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
                                                                        context.storage.iiss.lock_max,
@@ -340,19 +388,16 @@ class Engine(EngineBase):
             "unstakeLockPeriod": unstake_lock_period
         }
 
-    def handle_set_delegation(self, context: 'IconScoreContext', params: dict):
+    def handle_set_delegation(self, context: 'IconScoreContext', delegations: List[Delegation]):
         """Handles setDelegation JSON-RPC API request
-
-        :param context:
-        :param params:
-        :return:
         """
-        sender: 'Address' = context.tx.origin
+        # SCORE can stake via SCORE inter-call
+        sender: 'Address' = context.msg.sender
         cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
 
         # Convert setDelegation params
         total_delegating, new_delegations = \
-            self._convert_params_of_set_delegation(params)
+            self._convert_params_of_set_delegation(context, delegations)
 
         # Check whether voting power is enough to delegate
         self._check_voting_power_is_enough(context, sender, total_delegating, cached_accounts)
@@ -374,35 +419,42 @@ class Engine(EngineBase):
             listener.on_set_delegation(context, updated_accounts)
 
     @classmethod
+    def get_max_delegations_by_revision(cls, context: 'IconScoreContext') -> int:
+        if context.revision >= Revision.CHANGE_MAX_DELEGATIONS_TO_100.value:
+            max_delegations: int = 100
+        else:
+            # Initial max delegations
+            max_delegations: int = 10
+        return max_delegations
+
+    @classmethod
+    def _check_delegation_count(cls,
+                                context: 'IconScoreContext',
+                                delegations: List):
+        assert isinstance(delegations, list)
+
+        if len(delegations) > cls.get_max_delegations_by_revision(context):
+            raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
+
+    @classmethod
     def _convert_params_of_set_delegation(cls,
-                                          params: dict) -> Tuple[int, List[Tuple['Address', int]]]:
+                                          context: 'IconScoreContext',
+                                          delegations: Optional[List[Delegation]]
+                                          ) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
-        [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
-        [("hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", 1000000000000000000), ...]
+        [{"address": Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), "value", 1234}, ...] ->
+        [(Address(hxe7af5fcfd8dfc67530a01a0e403882687528dfcb), 1234), ...]
 
-        :param params: params of setDelegation JSON-RPC API request
+        :param delegations: delegations of setDelegation JSON-RPC API request
         :return: total_delegating, (address, delegated)
         """
-
-        if len(params) == 1:
-            delegations: Optional[List[Dict[str, str]]] = params[ConstantKeys.DELEGATIONS]
-        elif len(params) == 0:
-            delegations = None
-        else:
-            raise InvalidParamsException(f"Invalid params: {params}")
-
         assert delegations is None or isinstance(delegations, list)
 
         if delegations is None or len(delegations) == 0:
             return 0, []
 
-        if len(delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException(f"Delegations out of range: {len(delegations)}")
-
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
-        delegations: List[Dict[str, Union['Address', int]]] = \
-            ret_params[ConstantKeys.DELEGATIONS]
+        cls._check_delegation_count(context, delegations)
 
         total_delegating: int = 0
         converted_delegations: List[Tuple['Address', int]] = []
@@ -518,6 +570,8 @@ class Engine(EngineBase):
         :param cached_accounts:
         :return: updated account list
         """
+        cls._check_delegation_count(context, delegations)
+
         icx_storage: 'IcxStorage' = context.storage.icx
 
         sender_account: 'Account' = cached_accounts[sender][0]
@@ -557,24 +611,9 @@ class Engine(EngineBase):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, context.block.height, delegation_tx)
         context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
 
-    def handle_get_delegation(self,
-                              context: 'IconScoreContext',
-                              params: dict) -> dict:
+    def handle_get_delegation(self, context: 'IconScoreContext', address: 'Address') -> dict:
         """Handles getDelegation JSON-RPC API request
-
-        :param context:
-        :param params:
-        :return:
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_DELEGATION)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-        return self._get_delegation(context, address)
-
-    @classmethod
-    def _get_delegation(cls,
-                        context: 'IconScoreContext',
-                        address: 'Address') -> dict:
-
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         delegation_list: list = []
         for address, value in account.delegations:
@@ -600,32 +639,21 @@ class Engine(EngineBase):
         """
         return iscore // ISCORE_EXCHANGE_RATE
 
-    def handle_claim_iscore(self,
-                            context: 'IconScoreContext',
-                            _params: dict):
+    def handle_claim_iscore(self, context: 'IconScoreContext'):
         """Handles claimIScore JSON-RPC request
-
-        :param context:
-        :param _params:
-        :return:
         """
-        Logger.debug(tag=_TAG, msg=f"handle_claim_iscore() start")
-
         iscore, block_height = self._claim_iscore(context)
 
         if iscore > 0:
             self._commit_claim(context, iscore)
-        else:
-            Logger.info(tag=_TAG, msg="I-Score is zero")
 
         EventLogEmitter.emit_event_log(
             context,
-            score_address=ZERO_SCORE_ADDRESS,
+            score_address=SYSTEM_SCORE_ADDRESS,
             event_signature="IScoreClaimed(int,int)",
             arguments=[iscore, self._iscore_to_icx(iscore)],
             indexed_args_count=0
         )
-        Logger.debug(tag=_TAG, msg="handle_claim_iscore() end")
 
     @staticmethod
     def _check_claim_tx(context: 'IconScoreContext') -> bool:
@@ -674,12 +702,7 @@ class Engine(EngineBase):
         finally:
             self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash, tx.index, tx.hash)
 
-    def handle_query_iscore(self,
-                            _context: 'IconScoreContext',
-                            params: dict) -> dict:
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)
-        address: 'Address' = ret_params.get(ConstantKeys.ADDRESS)
-
+    def handle_query_iscore(self, context: 'IconScoreContext', address: 'Address') -> dict:
         if not isinstance(address, Address):
             raise InvalidParamsException(f"Invalid address: {address}")
 
@@ -699,7 +722,6 @@ class Engine(EngineBase):
                   term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
                   prev_block_votes: Optional[List[Tuple['Address', int]]],
-                  flag: 'PrecommitFlag',
                   rc_db_revision: int) -> Optional[bytes]:
         """Called on IconServiceEngine._after_transaction_process()
 
@@ -707,16 +729,15 @@ class Engine(EngineBase):
         :param term:
         :param prev_block_generator:
         :param prev_block_votes:
-        :param flag:
         :param rc_db_revision:
         :return: rc_state_hash
         """
         version: int = get_rc_version(rc_db_revision)
 
         rc_state_hash: Optional[bytes] = None
-        if self._is_iiss_calc(flag):
+        if self._is_iiss_calc(context.revision_changed_flag):
             self._update_state_db_on_end_calc(context)
-            if bool(flag & PrecommitFlag.GENESIS_IISS_CALC):
+            if bool(context.revision_changed_flag & RevisionChangedFlag.GENESIS_IISS_CALC):
                 self._put_header_to_rc_db(context, context.revision, 0, is_genesis_iiss=True)
 
             # get rc_state_hash in calc done response.
@@ -731,7 +752,7 @@ class Engine(EngineBase):
         if not context.is_decentralized():
             return rc_state_hash
 
-        if start != context.block.height:
+        if not context.is_the_first_block_on_decentralization():
             self.put_block_produce_info_to_rc_db(context,
                                                  context.rc_block_batch,
                                                  prev_block_generator,
@@ -762,8 +783,8 @@ class Engine(EngineBase):
 
     @classmethod
     def _is_iiss_calc(cls,
-                      flag: 'PrecommitFlag') -> bool:
-        return bool(flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC))
+                      flag: 'RevisionChangedFlag') -> bool:
+        return bool(flag & (RevisionChangedFlag.GENESIS_IISS_CALC | RevisionChangedFlag.IISS_CALC))
 
     @classmethod
     def _check_update_calc_period(cls,
@@ -862,11 +883,11 @@ class Engine(EngineBase):
         :param prev_block_votes:
         :return:
         """
-        assert context.is_decentralized()
+        assert context.is_decentralized() and not context.is_the_first_block_on_decentralization()
         if prev_block_generator is None or prev_block_votes is None:
             return
 
-        Logger.debug(f"put_block_produce_info_for_rc", "iiss")
+        # Logger.debug(f"put_block_produce_info_for_rc", "IISS")
         prev_block_height: int = context.block.height - 1
         data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(prev_block_height,
                                                                                             prev_block_generator,

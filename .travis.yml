@@ -1,19 +1,21 @@
 language: python
 python:
-  - "3.6"
+  - "3.7"
 
 branches:
   only:
   - master
   - develop
-  - /^release-.*$/
+  - /^release[/-].*$/
 
 install:
   - go get github.com/icon-project/rewardcalculator/cmd/icon_rc
-  - pip install -r requirements.txt
+  - virtualenv venv
+  - source venv/bin/activate
+  - pip install -e .[test]
 
 script:
-  - python setup.py test
+  - python -m pytest -ra
 
 deploy:
   provider: pypi

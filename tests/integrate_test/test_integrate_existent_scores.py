@@ -21,12 +21,12 @@ import time
 from typing import TYPE_CHECKING, Union, List, Optional
 
 from iconcommons import IconConfig
-from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice import SYSTEM_SCORE_ADDRESS, Address
 from iconservice.base.address import generate_score_address, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, BUILTIN_SCORE_ADDRESS_MAPPER
 from iconservice.icon_service_engine import IconServiceEngine
-from tests.integrate_test import root_clear
+from tests import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
     # override setUp method for making directory before begin tests.
     def setUp(self):
-        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
         self._block_height = -1
         self._prev_block_hash = None
 
@@ -56,7 +56,6 @@ class TestIntegrateExistentScores(TestIntegrateBase):
     def _setUp(self):
         self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
                                                      ConfigKey.SERVICE_FEE: False,
-                                                     ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                                                      ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
@@ -135,7 +134,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_no_python",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -143,7 +142,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_no_external_func",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -151,7 +150,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_no_scorebase",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -159,7 +158,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_on_install_error",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)
 
@@ -167,6 +166,6 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._deploy_score(score_root="sample_deploy_scores",
                            score_name="install/test_score_with_korean_comment",
                            from_=self._accounts[0],
-                           to_=ZERO_SCORE_ADDRESS,
+                           to_=SYSTEM_SCORE_ADDRESS,
                            deploy_params=sample_score_params,
                            expected_status=False)

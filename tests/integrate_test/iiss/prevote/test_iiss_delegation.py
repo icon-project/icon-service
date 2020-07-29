@@ -18,9 +18,9 @@
 """
 from typing import List, Dict
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, Revision, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -28,6 +28,7 @@ from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 class TestIISSDelegate(TestIISSBase):
 
     def test_delegations_with_duplicated_addresses(self):
+        max_delegations: int = 10
         self.update_governance()
 
         # set Revision REV_IISS
@@ -46,7 +47,7 @@ class TestIISSDelegate(TestIISSBase):
         # delegate 1 icx to the same addr1 10 times in one request
         delegations: list = []
         delegation_amount: int = 1 * ICX_IN_LOOP
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegation_info: tuple = \
                 (
                     self._accounts[1],
@@ -68,6 +69,7 @@ class TestIISSDelegate(TestIISSBase):
         self.assertEqual(0, total_delegated)
 
     def test_delegation(self):
+        max_delegations: int = 10
         self.update_governance()
 
         # set Revision REV_IISS
@@ -88,7 +90,7 @@ class TestIISSDelegate(TestIISSBase):
         total_delegating: int = 0
         delegations: list = []
         start_index: int = 0
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
             delegation_info: tuple = \
                 (
                     self._accounts[start_index + i],
@@ -112,7 +114,48 @@ class TestIISSDelegate(TestIISSBase):
         total_delegating: int = 0
         delegations: list = []
         start_index: int = 10
-        for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(max_delegations):
+            delegation_info: tuple = \
+                (
+                    self._accounts[start_index + i],
+                    delegation_amount
+                )
+            delegations.append(delegation_info)
+            total_delegating += delegation_amount
+
+        self.set_delegation(from_=self._accounts[0],
+                            origin_delegations=delegations)
+
+        # get delegation
+        response: dict = self.get_delegation(self._accounts[0])
+        expected_response: list = [{"address": account.address,
+                                    "value": value} for (account, value) in delegations]
+        self.assertEqual(expected_response, response["delegations"])
+        self.assertEqual(total_delegating, response["totalDelegated"])
+
+    def test_delegation_after_rev_9(self):
+        max_delegations: int = 100
+        self.init_decentralized()
+
+        # set Revision CHANGE_MAX_DELEGATIONS_TO_100
+        self.set_revision(Revision.CHANGE_MAX_DELEGATIONS_TO_100.value)
+
+        # gain 1000 icx
+        balance: int = 1_000 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1],
+                            init_balance=balance)
+
+        # stake 100 icx
+        stake: int = 100 * ICX_IN_LOOP
+        self.set_stake(from_=self._accounts[0],
+                       value=stake)
+
+        # set delegation 1 icx addr0 ~ addr99
+        delegation_amount: int = 1 * ICX_IN_LOOP
+        total_delegating: int = 0
+        delegations: list = []
+        start_index: int = 0
+        for i in range(max_delegations):
             delegation_info: tuple = \
                 (
                     self._accounts[start_index + i],
@@ -147,20 +190,22 @@ class TestIISSDelegate(TestIISSBase):
         self.set_stake(from_=self._accounts[0],
                        value=stake)
 
-        # set delegation 1
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={"invalid": delegations})
         self.process_confirm_block_tx([tx], expected_status=False)
 
-        # set delegation 2
+        # checkout update revision
+        self.set_revision(Revision.SCORE_FUNC_PARAMS_CHECK.value)
+        self.process_confirm_block_tx([tx], expected_status=False)
+
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={
                                                  "delegations": delegations,
@@ -172,7 +217,7 @@ class TestIISSDelegate(TestIISSBase):
         delegations: list = [(self._accounts[0], 1)]
         delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={
                                                  "delegations1": delegations,
@@ -180,10 +225,18 @@ class TestIISSDelegate(TestIISSBase):
                                              })
         self.process_confirm_block_tx([tx], expected_status=False)
 
-        # set delegation 3
+        # TEST: set delegation None
         tx: dict = self.create_score_call_tx(from_=self._accounts[0],
-                                             to_=ZERO_SCORE_ADDRESS,
+                                             to_=SYSTEM_SCORE_ADDRESS,
                                              func_name="setDelegation",
                                              params={})
         self.process_confirm_block_tx([tx])
+
+        # TEST: set delegation with value should raise exception
+        tx: dict = self.create_score_call_tx(from_=self._accounts[0],
+                                             to_=SYSTEM_SCORE_ADDRESS,
+                                             func_name="setDelegation",
+                                             params={},
+                                             value=5)
+        self.process_confirm_block_tx([tx], expected_status=False)
 

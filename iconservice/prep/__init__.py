@@ -13,4 +13,5 @@
 # limitations under the License.
 
 from .engine import Engine as PRepEngine
+from .engine import Method as PRepMethod
 from .storage import Storage as PRepStorage

@@ -15,11 +15,16 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, Any, Dict
 
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.exception import AccessDeniedException, IconServiceBaseException
+from ..base.exception import AccessDeniedException, IconServiceBaseException,\
+    InvalidParamsException, InvalidRequestException
+from ..icon_constant import IconNetworkValueType, Revision
+from ..inv.container import ValueConverter as INVConverter
+from ..inv.data.value import Value
 from ..iconscore.icon_score_base import IconScoreBase
+from ..prep.validator import validate_np_irep
 from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
@@ -71,6 +76,39 @@ class IconSystemScoreBase(IconScoreBase):
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
+    def migrate_icon_network_value(self, data: Dict['IconNetworkValueType', Any]):
+        converted_data: list = []
+        for type_, value in data.items():
+            converted_data.append(INVConverter.convert_for_icon_service(type_, value))
+        self._context.inv_container.migrate(converted_data)
+        self._context.storage.inv.migrate(self._context, converted_data)
+
+    def validate_irep(self, irep: int):
+        if self._context.revision < Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value:
+            raise InvalidRequestException(f"Can't register I-Rep proposal. Revision must be larger than "
+                                          f"{Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value - 1}")
+
+        validate_np_irep(self._context, irep)
+
+    @classmethod
+    def _check_inv_type(cls, type_: 'IconNetworkValueType'):
+        if type_ not in IconNetworkValueType:
+            raise InvalidParamsException(f"Invalid INV type: {type_}")
+
+    def get_icon_network_value(self, type_: 'IconNetworkValueType') -> Any:
+        self._check_inv_type(type_)
+
+        value: Any = self._context.inv_container.get_by_type(type_)
+        converted_value: Any = INVConverter.convert_for_governance(type_, value)
+        return converted_value
+
+    def set_icon_network_value(self, type_: 'IconNetworkValueType', value: Any):
+        self._check_inv_type(type_)
+
+        converted_value: 'Value' = INVConverter.convert_for_icon_service(type_, value)
+        self._context.inv_container.set_inv_to_tx_batch(converted_value)
+        self._context.storage.inv.put_value(self._context, converted_value)
+
     def disqualify_prep(self, address: 'Address') -> Tuple[bool, str]:
         success: bool = True
         reason: str = ""
@@ -81,3 +119,14 @@ class IconSystemScoreBase(IconScoreBase):
             reason = str(e)
         finally:
             return success, reason
+
+    def apply_revision_change(self, revision):
+        # CAUTION
+        # Please follow the instructions below to apply the change. revision may not be set sequentially
+        #   1. add an 'if' statement for every revision and compare revision with '>=' operator
+        #   2. Check if the change has already been applied and apply the change
+
+        if revision >= Revision.SET_IREP_VIA_NETWORK_PROPOSAL.value:
+            # I-Rep is managed by INV. copy Term.irep to INV.irep
+            if self.get_icon_network_value(IconNetworkValueType.IREP) is None:
+                self.set_icon_network_value(IconNetworkValueType.IREP, self._context.term.irep)

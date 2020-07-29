@@ -17,7 +17,7 @@ from copy import deepcopy
 from math import ceil
 from typing import TYPE_CHECKING, Any, List
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, DEFAULT_BIG_STEP_LIMIT
 
@@ -131,7 +131,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx = self.create_deploy_score_tx(score_root="sample_fallback_call_scores",
                                          score_name="sample_score_pass",
                                          from_=self._accounts[0],
-                                         to_=ZERO_SCORE_ADDRESS)
+                                         to_=SYSTEM_SCORE_ADDRESS)
         prev_block, hash_list = self.make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
@@ -173,7 +173,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
                                                                   score_name="sample_score_to_eoa",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         self.score_call(from_=self._accounts[0],
@@ -225,7 +225,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx = self.create_deploy_score_tx(score_root="get_api",
                                          score_name="get_api1",
                                          from_=self._accounts[0],
-                                         to_=ZERO_SCORE_ADDRESS)
+                                         to_=SYSTEM_SCORE_ADDRESS)
         prev_block, hash_list = self.make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
@@ -240,7 +240,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx = self.create_deploy_score_tx(score_root="get_api",
                                          score_name="get_api1",
                                          from_=self._accounts[0],
-                                         to_=ZERO_SCORE_ADDRESS)
+                                         to_=SYSTEM_SCORE_ADDRESS)
         prev_block, hash_list = self.make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         tx_results: List['TransactionResult'] = self.get_tx_results(hash_list)
@@ -280,7 +280,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_deploy_scores",
                                                                   score_name="install/sample_score",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS,
+                                                                  to_=SYSTEM_SCORE_ADDRESS,
                                                                   deploy_params={"value": hex(value1)})
         score_addr1 = tx_results[0].score_address
 
@@ -316,7 +316,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_fallback_call_scores",
                                                                   score_name="sample_score_pass",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         tx = self.create_message_tx(from_=self._admin,
@@ -337,7 +337,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx_results: List['TransactionResult'] = self.deploy_score(score_root="sample_scores",
                                                                   score_name="minus_step",
                                                                   from_=self._accounts[0],
-                                                                  to_=ZERO_SCORE_ADDRESS)
+                                                                  to_=SYSTEM_SCORE_ADDRESS)
         score_addr1 = tx_results[0].score_address
 
         tx = self.create_score_call_tx(from_=self._accounts[0],
@@ -441,7 +441,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
             'params': {
                 'version': 3,
                 'from': self._genesis,
-                'to': ZERO_SCORE_ADDRESS,
+                'to': SYSTEM_SCORE_ADDRESS,
                 'stepLimit': 1_000_000_000_000,
                 'timestamp': 1541753667870296,
                 'nonce': 0,

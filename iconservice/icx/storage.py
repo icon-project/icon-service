@@ -26,8 +26,8 @@ from .icx_account import Account
 from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
-from ..base.block import Block, EMPTY_BLOCK
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG
+from ..base.block import Block, NULL_BLOCK
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, IconScoreContextType
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ class Storage(StorageBase):
         """
         super().__init__(db)
         self._db = db
-        self._last_block = EMPTY_BLOCK
+        self._last_block = NULL_BLOCK
         self._genesis: Optional['Address'] = None
         self._fee_treasury: Optional['Address'] = None
 
@@ -177,7 +177,7 @@ class Storage(StorageBase):
         """
 
         coin_part: 'CoinPart' = CoinPart(coin_part_type)
-        account: 'Account' = Account(address, context.block.height, coin_part=coin_part)
+        account: 'Account' = Account(address, context.block.height, context.revision, coin_part=coin_part)
         account.deposit(int(amount))
         if not account.coin_part.is_dirty():
             account.coin_part.set_dirty(True)
@@ -278,7 +278,7 @@ class Storage(StorageBase):
         if AccountPartFlag.DELEGATION in part_flags:
             delegation_part: 'DelegationPart' = self._get_part(context, DelegationPart, address)
 
-        return Account(address, context.block.height,
+        return Account(address, context.block.height, context.revision,
                        coin_part=coin_part,
                        stake_part=stake_part,
                        delegation_part=delegation_part)
@@ -297,6 +297,9 @@ class Storage(StorageBase):
         key: bytes = part_class.make_key(address)
         value: bytes = self._db.get(context, key)
 
+        if value is None and part_class is CoinPart:
+            Logger.info(tag="PV", msg=f"No CoinPart: {address} {context.block}")
+
         return part_class.from_bytes(value) if value else part_class()
 
     def put_account(self,
@@ -314,7 +317,7 @@ class Storage(StorageBase):
             if part and part.is_dirty():
                 key: bytes = part.make_key(account.address)
 
-                if isinstance(part, CoinPart):
+                if isinstance(part, CoinPart) or isinstance(part, StakePart):
                     value: bytes = part.to_bytes(context.revision)
                 else:
                     value: bytes = part.to_bytes()

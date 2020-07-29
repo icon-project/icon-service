@@ -13,14 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from enum import unique, IntEnum
 from struct import Struct
 from typing import Optional
 
 from .exception import InvalidParamsException
 from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, Revision
-from ..utils.msgpack_for_db import MsgPackForDB
 from ..utils import bytes_to_hex
+from ..utils.msgpack_for_db import MsgPackForDB
 
 
 @unique
@@ -46,7 +47,7 @@ class Block(object):
 
     def __init__(self,
                  block_height: int,
-                 block_hash: bytes,
+                 block_hash: Optional[bytes],
                  timestamp: int,
                  prev_hash: Optional[bytes],
                  cumulative_fee: int = 0) -> None:
@@ -66,22 +67,35 @@ class Block(object):
         # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
 
+    def to_dict(self, casing: Optional[callable] = None) -> dict:
+        """
+        Returns properties as `dict`
+        :return: a dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                key = key[1:]
+            new_dict[casing(key) if casing else key] = value
+
+        return new_dict
+
     def __str__(self) -> str:
         return f"Block(height={self._height}, " \
-                f"hash={bytes_to_hex(self._hash)}, " \
-                f"prev_hash={bytes_to_hex(self._prev_hash)}, " \
-                f"timestamp={self._timestamp}, " \
-                f"cumulative_fee={self.cumulative_fee})"
+               f"hash={bytes_to_hex(self._hash)}, " \
+               f"prev_hash={bytes_to_hex(self._prev_hash)}, " \
+               f"timestamp={self._timestamp}, " \
+               f"cumulative_fee={self.cumulative_fee})"
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __eq__(self, other):
         return isinstance(other, Block) \
-            and self._height == other._height \
-            and self._timestamp == other._timestamp \
-            and self._prev_hash == other._prev_hash \
-            and self.cumulative_fee == other.cumulative_fee
+               and self._height == other._height \
+               and self._timestamp == other._timestamp \
+               and self._prev_hash == other._prev_hash \
+               and self.cumulative_fee == other.cumulative_fee
 
     @property
     def height(self) -> int:
@@ -210,4 +224,4 @@ class Block(object):
 
 
 # This predefined block is used to fix context.block.height access error before genesis block is synchronized.
-EMPTY_BLOCK = Block(block_height=-1, block_hash=bytes(64), timestamp=0, prev_hash=None)
+NULL_BLOCK = Block(block_height=-1, block_hash=None, timestamp=0, prev_hash=None)
