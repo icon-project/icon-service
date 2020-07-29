@@ -9,7 +9,6 @@
 import os
 import sys
 
-# from recommonmark.parser import CommonMarkParser
 # -- Path setup --------------------------------------------------------------
 from recommonmark.transform import AutoStructify
 
@@ -22,11 +21,12 @@ project = 'ICONService API References'
 copyright = '2019, ICON Foundation'
 author = 'ICON Foundation'
 
-version = os.environ.get('VERSION')
-if version is None:
-    with open(os.path.join('../..', 'VERSION')) as version_file:
-        version = version_file.read().strip()
+about = {}
+path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../iconservice/__version__.py')
+with open(path, 'r', encoding='utf-8') as f:
+    exec(f.read(), about)
 
+version = about["__version__"]
 release = ''
 
 
