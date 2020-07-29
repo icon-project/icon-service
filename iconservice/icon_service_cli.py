@@ -28,6 +28,7 @@ from iconcommons.logger import Logger
 
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
+from .__version__ import __version__
 
 if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
@@ -43,7 +44,7 @@ class ExitCode(IntEnum):
 def main():
     parser = argparse.ArgumentParser(prog='icon_service_cli.py', usage=f"""
     ==========================
-    iconservice
+    iconservice {__version__}
     ==========================
     iconservice commands:
         start : iconservice start
