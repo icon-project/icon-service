@@ -100,7 +100,7 @@ class TestStakePart(unittest.TestCase):
         unstakes_info = [unstake_info1, unstake_info2, unstake_info3, unstake_info4, unstake_info5]
         part = StakePart(stake=stake, unstakes_info=unstakes_info)
         part.set_complete(True)
-        part.normalize(block_height, Revision.IISS.value)
+        part.normalize(block_height, Revision.MULTIPLE_UNSTAKE.value)
         self.assertEqual(stake, part.stake)
         self.assertEqual(0, part.unstake)
         self.assertEqual(0, part.unstake_block_height)
