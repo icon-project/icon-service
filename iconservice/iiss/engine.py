@@ -367,7 +367,7 @@ class Engine(EngineBase):
 
         elif context.revision >= Revision.MULTIPLE_UNSTAKE.value:
             if unstakes_info:
-                data["unstakeList"] = [
+                data["unstakes"] = [
                     {
                         "unstake": unstakes_data[0],
                         "unstakeBlockHeight": unstakes_data[1],
