@@ -123,8 +123,11 @@ class StakePart(BasePart):
             if len(self._unstakes_info) == UNSTAKE_SLOT_MAX:
                 old_value_pair = self._unstakes_info.pop()
                 increment_unstake += old_value_pair[0]
-            new_value_index = self.find_index_highest_in_lower_height(block_height)
-            self._unstakes_info.insert(new_value_index + 1, [increment_unstake, block_height])
+                unstake_block_height = max(old_value_pair[1], block_height)
+                self._unstakes_info.append([increment_unstake, unstake_block_height])
+            else:
+                new_value_index = self.get_unstake_slot_index(block_height)
+                self._unstakes_info.insert(new_value_index, [increment_unstake, block_height])
 
         self._stake = total_stake - new_total_unstake
         self.set_dirty(True)
@@ -145,7 +148,7 @@ class StakePart(BasePart):
                 self._unstakes_info = self.unstakes_info[:index + 1]
                 old_value_pair = self._unstakes_info.pop()
                 new_value_pair = \
-                    [(total_unstake - accumulated_unstake + old_value_pair[0]) - amount, old_value_pair[1]]
+                    [(new_total_unstake - accumulated_unstake + old_value_pair[0]), old_value_pair[1]]
                 self._unstakes_info.append(new_value_pair)
                 return
 
@@ -163,25 +166,26 @@ class StakePart(BasePart):
         unstake: int = 0
         state: 'BasePartState' = BasePartState.COMPLETE
 
-        if revision >= Revision.MULTIPLE_UNSTAKE.value and self._unstake_block_height:
-            self._unstakes_info.append([self._unstake, self._unstake_block_height])
-            self._unstake = 0
-            self._unstake_block_height = 0
+        if revision >= Revision.MULTIPLE_UNSTAKE.value:
+            if self._unstake_block_height:
+                self._unstakes_info.append([self._unstake, self._unstake_block_height])
+                self._unstake = 0
+                self._unstake_block_height = 0
 
-        if self._unstakes_info:
-            total_unstake = self._total_unstake()
-            self._unstakes_info = [info for info in self._unstakes_info if info[1] >= block_height]
-            new_total_unstake = self._total_unstake()
-            if total_unstake > new_total_unstake:
+            if len(self._unstakes_info) and self._unstakes_info[0][1] < block_height:
+                total_unstake = self._total_unstake()
+                self._unstakes_info = [info for info in self._unstakes_info if info[1] >= block_height]
+                new_total_unstake = self._total_unstake()
                 state |= BasePartState.DIRTY
                 unstake = total_unstake - new_total_unstake
 
-        if 0 < self._unstake_block_height < block_height:
-            unstake: int = self._unstake
-            self._unstake = 0
-            self._unstake_block_height: int = 0
+        else:
+            if 0 < self._unstake_block_height < block_height:
+                unstake: int = self._unstake
+                self._unstake = 0
+                self._unstake_block_height: int = 0
 
-            state |= BasePartState.DIRTY
+                state |= BasePartState.DIRTY
 
         self.toggle_state(state, True)
 
@@ -250,20 +254,8 @@ class StakePart(BasePart):
 
         return not self.__eq__(other)
 
-    def find_index_highest_in_lower_height(self, block_height: int):
-        low: int = 0
-        high: int = len(self._unstakes_info) - 1
-        if high == -1:
-            return 0
-        elif high == 0:
-            return 0 if block_height < self._unstakes_info[high][1] else 1
-        while low < high:
-            mid = (high + low) // 2
-            if self._unstakes_info[mid][1] <= block_height < self._unstakes_info[mid + 1][1]:
-                return mid
-            elif self._unstakes_info[mid][1] > block_height:
-                high = mid - 1
-            elif self._unstakes_info[mid][1] <= block_height:
-                low = mid + 1
-
-        return low
+    def get_unstake_slot_index(self, block_height: int):
+        for index in range(len(self.unstakes_info)):
+            if block_height <= self.unstakes_info[index][1]:
+                return index
+        return len(self.unstakes_info)
