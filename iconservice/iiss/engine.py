@@ -359,24 +359,22 @@ class Engine(EngineBase):
             "stake": stake
         }
 
-        if unstake_block_height:
-            unstakes_list = []
-            unstake_data = {
-                "unstake": unstake,
-                "unstakeBlockHeight": unstake_block_height,
-                "remainingBlocks": unstake_block_height - context.block.height
-            }
-            unstakes_list.append(unstake_data)
-            data["unstakeList"] = unstakes_list
+        if context.revision < Revision.MULTIPLE_UNSTAKE.value:
+            if unstake_block_height:
+                data["unstake"] = unstake
+                data["unstakeBlockHeight"] = unstake_block_height
+                data["remainingBlocks"] = unstake_block_height - context.block.height
 
-        if unstakes_info:
-            data["unstakeList"] = [
-                {"unstake": unstakes_data[0],
-                 "unstakeBlockHeight": unstakes_data[1],
-                 "remainingBlocks": unstakes_data[1] - context.block.height
-                 }
-                for unstakes_data in unstakes_info
-            ]
+        elif context.revision >= Revision.MULTIPLE_UNSTAKE.value:
+            if unstakes_info:
+                data["unstakeList"] = [
+                    {
+                        "unstake": unstakes_data[0],
+                        "unstakeBlockHeight": unstakes_data[1],
+                        "remainingBlocks": unstakes_data[1] - context.block.height
+                     }
+                    for unstakes_data in unstakes_info
+                ]
         return data
 
     def handle_estimate_unstake_lock_period(self, context: 'IconScoreContext'):
