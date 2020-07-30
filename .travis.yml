@@ -7,7 +7,9 @@ branches:
   only:
   - master
   - develop
-  - /^release[/-].*$/
+  - /^(release|hotfix)[/-].*$/
+  - /^([0-9]+)(\.[0-9]+){1,2}((a|b|c|rc)?[0-9]*)?(\.?(post|dev)[0-9]*)?/
+  - deploy-test
 
 install:
   - go get github.com/icon-project/rewardcalculator/cmd/icon_rc
@@ -26,7 +28,8 @@ deploy:
     password: $PYPI_PW
     on:
       tags: true
-      branch: master
+      all_branches: true
+      condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}$
   - provider: pypi
     edge: true
     server: https://test.pypi.org/legacy/
@@ -36,7 +39,8 @@ deploy:
     skip_existing: true
     on:
       tags: true
-      branch: release[-/]*
+      all_branches: true
+      condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}((a|b|c|rc)+[0-9]*)+(\.?(post|dev)[0-9]*)?
   - provider: pypi
     edge: true
     server: https://test.pypi.org/legacy/
@@ -45,11 +49,14 @@ deploy:
     password: $PYPI_PW
     skip_existing: true
     on:
+      # tags: true
+      # all_branches: true
+      # condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}((a|b|c|rc)+[0-9]*)+(\.?(post|dev)[0-9]*)?
       branch: deploy-test
 
 notifications:
   slack:
     rooms:
-      - secure: eZ6TSqpRgkYeEZ4aXQAlGq85e0JXx3jgLk01pCNNI8KFcZbi7WtznDqnVwtfV0MVtDsRKwDe7xqg8NiqQM2WXIK0CYqVDQO1LzcTlhSJBqpj6jfpKjfATsNJ55bVx4paBDuTrU2WNBcsVNxH2s3vGej+46aF3/I4HYPtHJmOtToeeHHXNAzHVf7kubGvM+wpIKOpuM5Oz5Rg5iqynadM1NsO6p+F1BnfvXdPiGwB0/27n8zOD7SB91h2WQEnr3wL2+fFdl5hmY12XI/hn3+7MCB/AosNeJkiymIy/tXhaZa4MW3tBZQXyeNHX9OX7pNEh1t9D+fT7DfM6qM9TFP4qLPfQBc4OYzHJN4FmO/VBkOszIHYsQc3rureR+0eY+1XpjWxnZA+beyQhNLM/+4P53UB6UaKiB45E4VD0MtrCzCN0Rom7dIOZC16ae5Br4Uad9mWErLuztN4GktkK5Fz4zTx0Z4dQqBDRjI+axm55Dg1Vwyc8M8tNnGuCE3P4sBdC9NcRX8ILEmEViBDoRw3E3mXQ729bIyamf/qTKhmFsYM9WdKPraqIvcj+2fKQInAIgByJS0tniBCZrtK4gw3eFvQZNC+mhy6FmJgsQzPNZP1Qj2iRCunK1H6DGgEWR+5LQLg3fYFKgjJhHbHNvQIl9bn37/gRV/PAVTuX6RM+oM=
+      - secure: gKVeRcXlQHJ/L/j1jiYNr2QOyQWUa+iw6RIEl0VJHFYFet0lQhGBkqKqnonQlmR9z+6P3/s1eWX15ZFwQYgtvwX+4ch03j1rop8n1inLbyA4IAfCThWn0IjKcFf6SsEI54tB/XC099uX3TwPKlLD1fxlawxwxbN0RCKx/vCVIcDDcPQmg9ICkiU0LO14rAsnUrtZua6gKgFAevppURwD1n7GEz2oc/kXG/aLKBOqJuIpeaS5FYpV2uuPevlOs5geyRsA5TiJuldCqfzXbDNL+TAR9NUlBym7RuJL763Q3ywPMziwaWV/u0EHEQfcCjP7ifdPNgriwwvJqQ0VU1RkPNuYDuY/QEEcSelGS0yD6onPfh8ggJIyPxNJgoZbYwN/+KzJHd1hpCC4xc2xIJo3lF9DOODJ+pL36CRBlluKJDYXWsBaksGd3LSrmTbfSHsSAU53QmWIMSQ8XzL1dp6Vjoksz22mBLUL5J967ZwodLJVTOhZc0t9KMZ+8EryBDFHjuLvvUrXfVHDMKrqh4xBCrsLXptokAx8Yv0ehTt0hHCdzMe7Q0bOopa4/p8BV7CZB+8aG6J+5K04w7tJbC6QhFUgOEpLkngI5VU8Q+nFfc92Ucu3iUeSmJVuidoDN7TKebdo/qn0TheD8+LSjiY+TA+lq1MQATj3HkS0L1R1b1Q=
     on_success: change
     on_failure: always # default: always
