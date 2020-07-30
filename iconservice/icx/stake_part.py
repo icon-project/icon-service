@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Optional, List
 
 from .base_part import BasePart, BasePartState
 from ..base.exception import InvalidParamsException
-from ..icon_constant import Revision, UNSTAKE_SLOT_MAX
+from ..icon_constant import Revision
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -112,7 +112,7 @@ class StakePart(BasePart):
 
         self.set_dirty(True)
 
-    def set_unstakes_info(self, block_height: int, new_total_unstake: int):
+    def set_unstakes_info(self, block_height: int, new_total_unstake: int, slot_max: int):
         total_stake = self.total_stake
 
         if new_total_unstake < self.total_unstake:
@@ -120,7 +120,7 @@ class StakePart(BasePart):
 
         elif self.total_unstake < new_total_unstake:
             increment_unstake = new_total_unstake - self.total_unstake
-            if len(self._unstakes_info) == UNSTAKE_SLOT_MAX:
+            if len(self._unstakes_info) == slot_max:
                 old_value_pair = self._unstakes_info.pop()
                 increment_unstake += old_value_pair[0]
                 unstake_block_height = max(old_value_pair[1], block_height)
@@ -255,7 +255,10 @@ class StakePart(BasePart):
         return not self.__eq__(other)
 
     def get_unstake_slot_index(self, block_height: int):
-        for index in range(len(self.unstakes_info)):
-            if block_height <= self.unstakes_info[index][1]:
-                return index
-        return len(self.unstakes_info)
+        length = len(self._unstakes_info)
+        unstakes_info = self._unstakes_info
+        for index in range(length):
+            reverse_index = length - 1 - index
+            if block_height > unstakes_info[reverse_index][1]:
+                return reverse_index + 1
+        return 0
