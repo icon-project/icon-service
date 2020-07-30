@@ -45,6 +45,10 @@ class SystemScore(IconScoreBase):
     def IScoreClaimed(self, iscore: int, icx: int):
         pass
 
+    @eventlog(indexed=1)
+    def IScoreClaimedV2(self, address: Address, iscore: int, icx: int):
+        pass
+
     @eventlog
     def PRepRegistered(self, address: Address):
         pass
