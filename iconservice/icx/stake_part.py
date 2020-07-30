@@ -173,16 +173,16 @@ class StakePart(BasePart):
                 self._unstake_block_height = 0
 
             size = len(self._unstakes_info)
-            for _ in range(size):
+            for i in range(size):
                 info = self._unstakes_info[0]
                 if info[1] >= block_height:
+                    if i > 0:
+                        state |= BasePartState.DIRTY
                     break
 
+                # Remove unstatke_info of which lock period is already expired
                 self._unstakes_info.pop(0)
                 unstake += info[0]
-
-            if len(self._unstakes_info) != size:
-                state |= BasePartState.DIRTY
 
         else:
             if 0 < self._unstake_block_height < block_height:
