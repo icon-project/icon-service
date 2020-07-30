@@ -172,12 +172,17 @@ class StakePart(BasePart):
                 self._unstake = 0
                 self._unstake_block_height = 0
 
-            if len(self._unstakes_info) and self._unstakes_info[0][1] < block_height:
-                total_unstake = self._total_unstake()
-                self._unstakes_info = [info for info in self._unstakes_info if info[1] >= block_height]
-                new_total_unstake = self._total_unstake()
+            size = len(self._unstakes_info)
+            for _ in range(size):
+                info = self._unstakes_info[0]
+                if info[1] >= block_height:
+                    break
+
+                self._unstakes_info.pop(0)
+                unstake += info[0]
+
+            if len(self._unstakes_info) != size:
                 state |= BasePartState.DIRTY
-                unstake = total_unstake - new_total_unstake
 
         else:
             if 0 < self._unstake_block_height < block_height:
