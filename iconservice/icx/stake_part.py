@@ -259,6 +259,6 @@ class StakePart(BasePart):
         unstakes_info = self._unstakes_info
         for index in range(length):
             reverse_index = length - 1 - index
-            if block_height > unstakes_info[reverse_index][1]:
+            if block_height >= unstakes_info[reverse_index][1]:
                 return reverse_index + 1
         return 0
