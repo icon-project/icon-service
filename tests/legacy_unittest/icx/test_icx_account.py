@@ -21,12 +21,12 @@ from unittest.mock import Mock
 
 from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
-from iconservice.icon_constant import Revision, UNSTAKE_SLOT_MAX
-from iconservice.icx.icx_account import Account
+from iconservice.icon_constant import Revision
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.coin_part import CoinPart
-from iconservice.icx.stake_part import StakePart
 from iconservice.icx.delegation_part import DelegationPart
-
+from iconservice.icx.icx_account import Account
+from iconservice.icx.stake_part import StakePart
 from tests import create_address
 
 
@@ -96,6 +96,7 @@ class TestAccount(unittest.TestCase):
 
     def test_account_for_stake(self):
         address: 'Address' = create_address()
+        context: 'IconScoreContext' = IconScoreContext()
 
         coin_part: 'CoinPart' = CoinPart()
         stake_part: 'StakePart' = StakePart()
@@ -108,7 +109,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake1
 
-        account.set_stake(stake1, 0, Revision.IISS.value)
+        account.set_stake(context, stake1, 0)
 
         self.assertEqual(stake1, account.stake)
         self.assertEqual(0, account.unstake)
@@ -119,7 +120,7 @@ class TestAccount(unittest.TestCase):
         block_height = 10
         unstake = stake1 - stake2
         remain_balance = balance - stake1
-        account.set_stake(stake2, block_height, Revision.IISS.value)
+        account.set_stake(context, stake2, block_height)
 
         self.assertEqual(stake2, account.stake)
         self.assertEqual(unstake, account.unstake)
@@ -133,6 +134,10 @@ class TestAccount(unittest.TestCase):
 
     def test_account_for_stake_rev_multiple_unstake1(self):
         address: 'Address' = create_address()
+        context: 'IconScoreContext' = Mock(spec=IconScoreContext)
+        unstake_slot_max = 10
+        context.configure_mock(unstake_slot_max=unstake_slot_max)
+        context.configure_mock(revision=Revision.MULTIPLE_UNSTAKE.value)
 
         coin_part: 'CoinPart' = CoinPart()
         stake_part: 'StakePart' = StakePart()
@@ -145,7 +150,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake1
 
-        account.set_stake(stake1, 0, Revision.MULTIPLE_UNSTAKE.value)
+        account.set_stake(context, stake1, 0)
 
         self.assertEqual(stake1, account.stake)
         self.assertEqual(0, account.unstake)
@@ -156,7 +161,7 @@ class TestAccount(unittest.TestCase):
         block_height = 10
         unstake = stake1 - stake2
         remain_balance = balance - stake1
-        account.set_stake(stake2, block_height, Revision.MULTIPLE_UNSTAKE.value)
+        account.set_stake(context, stake2, block_height)
         expected_unstake_info = [[unstake, block_height]]
 
         self.assertEqual(stake2, account.stake)
@@ -167,7 +172,7 @@ class TestAccount(unittest.TestCase):
 
         stake3 = 600
         block_height = 15
-        account.set_stake(stake3, block_height, Revision.MULTIPLE_UNSTAKE.value)
+        account.set_stake(context, stake3, block_height)
         expected_unstake_info = []
         expected_balance = 400
 
@@ -175,8 +180,12 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(expected_unstake_info, account.unstakes_info)
         self.assertEqual(expected_balance, account.balance)
 
-    def test_account_for_unstake_max_slot_case_1(self):
+    def test_account_for_unstake_slot_max_case_1(self):
         address: 'Address' = create_address()
+        context: 'IconScoreContext' = Mock(spec=IconScoreContext)
+        unstake_slot_max = 10
+        context.configure_mock(unstake_slot_max=unstake_slot_max)
+        context.configure_mock(revision=Revision.MULTIPLE_UNSTAKE.value)
 
         coin_part: 'CoinPart' = CoinPart()
         stake_part: 'StakePart' = StakePart()
@@ -189,7 +198,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake
 
-        account.set_stake(stake, 0, Revision.MULTIPLE_UNSTAKE.value)
+        account.set_stake(context, stake, 0)
 
         self.assertEqual(stake, account.stake)
         self.assertEqual(0, account.unstake)
@@ -199,18 +208,18 @@ class TestAccount(unittest.TestCase):
         unstake = 1
         total_unstake = 0
         expected_unstake_info = []
-        for i in range(UNSTAKE_SLOT_MAX):
-            expected_unstake_info.append([unstake, UNSTAKE_SLOT_MAX + i])
+        for i in range(unstake_slot_max):
+            expected_unstake_info.append([unstake, unstake_slot_max + i])
             stake -= unstake
             total_unstake += unstake
-            account.set_stake(account.stake - unstake, UNSTAKE_SLOT_MAX + i, Revision.MULTIPLE_UNSTAKE.value)
+            account.set_stake(context, account.stake - unstake, unstake_slot_max + i)
             self.assertEqual(stake, account.stake)
             self.assertEqual(total_unstake, account.stake_part.total_unstake)
             self.assertEqual(remain_balance, account.balance)
             self.assertEqual(expected_unstake_info, account.unstakes_info)
         last_unstake = 100
-        account.set_stake(account.stake - last_unstake, UNSTAKE_SLOT_MAX + 2, Revision.MULTIPLE_UNSTAKE.value)
-        expected_unstake_info[-1] = [101, UNSTAKE_SLOT_MAX*2 - 1]
+        account.set_stake(context, account.stake - last_unstake, unstake_slot_max + 2)
+        expected_unstake_info[-1] = [101, unstake_slot_max*2 - 1]
         self.assertEqual(expected_unstake_info, account.unstakes_info)
 
     def test_account_for_delegation(self):

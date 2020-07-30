@@ -300,7 +300,7 @@ class Engine(EngineBase):
                                                                        context.total_supply)
         # subtract account's staked amount from the total stake
         total_stake -= account.stake
-        account.set_stake(value, unstake_lock_period, context.revision)
+        account.set_stake(context, value, unstake_lock_period)
         # add account's newly set staked amount from the total stake
         total_stake += account.stake
         context.storage.icx.put_account(context, account)

@@ -32,7 +32,7 @@ from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     TermFlag, PRepStatus,
-    Revision, PRepFlag, RevisionChangedFlag)
+    Revision, PRepFlag, RevisionChangedFlag, UNSTAKE_SLOT_MAX)
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -68,6 +68,7 @@ class IconScoreContext(ABC):
     precommitdata_log_flag = False
     step_trace_flag: bool = False
     log_level: str = None
+    unstake_slot_max: int = UNSTAKE_SLOT_MAX
 
     """Contains the useful information to process user's JSON-RPC request
     """

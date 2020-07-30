@@ -178,6 +178,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.step_trace_flag = conf[ConfigKey.STEP_TRACE_FLAG]
         IconScoreContext.log_level = conf[ConfigKey.LOG][ConfigKey.LOG_LEVEL]
         IconScoreContext.precommitdata_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
+        IconScoreContext.unstake_slot_max = conf[ConfigKey.UNSTAKE_SLOT_MAX]
         self._init_component_context()
 
         # Recover incomplete state on wal and rollback process
