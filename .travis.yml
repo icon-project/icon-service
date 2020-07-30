@@ -1,4 +1,5 @@
 language: python
+dist: bionic
 python:
   - "3.7"
 
@@ -18,9 +19,37 @@ script:
   - python -m pytest -ra
 
 deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  user: iconfoundation
-  password: $PYPI_PW
-  on:
-    branch: master
+  - provider: pypi
+    edge: true
+    distributions: sdist bdist_wheel
+    user: $PYPI_USER
+    password: $PYPI_PW
+    on:
+      tags: true
+      branch: master
+  - provider: pypi
+    edge: true
+    server: https://test.pypi.org/legacy/
+    distributions: sdist bdist_wheel
+    user: $PYPI_USER
+    password: $PYPI_PW
+    skip_existing: true
+    on:
+      tags: true
+      branch: release[-/]*
+  - provider: pypi
+    edge: true
+    server: https://test.pypi.org/legacy/
+    distributions: sdist bdist_wheel
+    user: $PYPI_USER
+    password: $PYPI_PW
+    skip_existing: true
+    on:
+      branch: deploy-test
+
+notifications:
+  slack:
+    rooms:
+      - secure: eZ6TSqpRgkYeEZ4aXQAlGq85e0JXx3jgLk01pCNNI8KFcZbi7WtznDqnVwtfV0MVtDsRKwDe7xqg8NiqQM2WXIK0CYqVDQO1LzcTlhSJBqpj6jfpKjfATsNJ55bVx4paBDuTrU2WNBcsVNxH2s3vGej+46aF3/I4HYPtHJmOtToeeHHXNAzHVf7kubGvM+wpIKOpuM5Oz5Rg5iqynadM1NsO6p+F1BnfvXdPiGwB0/27n8zOD7SB91h2WQEnr3wL2+fFdl5hmY12XI/hn3+7MCB/AosNeJkiymIy/tXhaZa4MW3tBZQXyeNHX9OX7pNEh1t9D+fT7DfM6qM9TFP4qLPfQBc4OYzHJN4FmO/VBkOszIHYsQc3rureR+0eY+1XpjWxnZA+beyQhNLM/+4P53UB6UaKiB45E4VD0MtrCzCN0Rom7dIOZC16ae5Br4Uad9mWErLuztN4GktkK5Fz4zTx0Z4dQqBDRjI+axm55Dg1Vwyc8M8tNnGuCE3P4sBdC9NcRX8ILEmEViBDoRw3E3mXQ729bIyamf/qTKhmFsYM9WdKPraqIvcj+2fKQInAIgByJS0tniBCZrtK4gw3eFvQZNC+mhy6FmJgsQzPNZP1Qj2iRCunK1H6DGgEWR+5LQLg3fYFKgjJhHbHNvQIl9bn37/gRV/PAVTuX6RM+oM=
+    on_success: change
+    on_failure: always # default: always
