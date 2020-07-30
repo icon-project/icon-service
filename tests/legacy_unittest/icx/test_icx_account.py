@@ -96,6 +96,7 @@ class TestAccount(unittest.TestCase):
 
     def test_account_for_stake(self):
         address: 'Address' = create_address()
+        context: 'IconScoreContext' = IconScoreContext()
 
         coin_part: 'CoinPart' = CoinPart()
         stake_part: 'StakePart' = StakePart()
@@ -108,7 +109,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake1
 
-        account.set_stake(stake1, 0, Revision.IISS.value)
+        account.set_stake(context, stake1, 0)
 
         self.assertEqual(stake1, account.stake)
         self.assertEqual(0, account.unstake)
@@ -119,7 +120,7 @@ class TestAccount(unittest.TestCase):
         block_height = 10
         unstake = stake1 - stake2
         remain_balance = balance - stake1
-        account.set_stake(stake2, block_height, IconScoreContext())
+        account.set_stake(context, stake2, block_height)
 
         self.assertEqual(stake2, account.stake)
         self.assertEqual(unstake, account.unstake)
@@ -149,7 +150,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake1
 
-        account.set_stake(stake1, 0, context)
+        account.set_stake(context, stake1, 0)
 
         self.assertEqual(stake1, account.stake)
         self.assertEqual(0, account.unstake)
@@ -160,7 +161,7 @@ class TestAccount(unittest.TestCase):
         block_height = 10
         unstake = stake1 - stake2
         remain_balance = balance - stake1
-        account.set_stake(stake2, block_height, context)
+        account.set_stake(context, stake2, block_height)
         expected_unstake_info = [[unstake, block_height]]
 
         self.assertEqual(stake2, account.stake)
@@ -171,7 +172,7 @@ class TestAccount(unittest.TestCase):
 
         stake3 = 600
         block_height = 15
-        account.set_stake(stake3, block_height, context)
+        account.set_stake(context, stake3, block_height)
         expected_unstake_info = []
         expected_balance = 400
 
@@ -197,7 +198,7 @@ class TestAccount(unittest.TestCase):
         unstake_block_height = 0
         remain_balance = balance - stake
 
-        account.set_stake(stake, 0, context)
+        account.set_stake(context, stake, 0)
 
         self.assertEqual(stake, account.stake)
         self.assertEqual(0, account.unstake)
@@ -211,13 +212,13 @@ class TestAccount(unittest.TestCase):
             expected_unstake_info.append([unstake, unstake_slot_max + i])
             stake -= unstake
             total_unstake += unstake
-            account.set_stake(account.stake - unstake, unstake_slot_max + i, context)
+            account.set_stake(context, account.stake - unstake, unstake_slot_max + i)
             self.assertEqual(stake, account.stake)
             self.assertEqual(total_unstake, account.stake_part.total_unstake)
             self.assertEqual(remain_balance, account.balance)
             self.assertEqual(expected_unstake_info, account.unstakes_info)
         last_unstake = 100
-        account.set_stake(account.stake - last_unstake, unstake_slot_max + 2, context)
+        account.set_stake(context, account.stake - last_unstake, unstake_slot_max + 2)
         expected_unstake_info[-1] = [101, unstake_slot_max*2 - 1]
         self.assertEqual(expected_unstake_info, account.unstakes_info)
 

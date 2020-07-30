@@ -255,10 +255,9 @@ class StakePart(BasePart):
         return not self.__eq__(other)
 
     def get_unstake_slot_index(self, block_height: int):
-        length = len(self._unstakes_info)
         unstakes_info = self._unstakes_info
-        for index in range(length):
-            reverse_index = length - 1 - index
-            if block_height >= unstakes_info[reverse_index][1]:
-                return reverse_index + 1
+        length = len(unstakes_info)
+        for index in reversed(range(length)):
+            if block_height >= unstakes_info[index][1]:
+                return index + 1
         return 0
