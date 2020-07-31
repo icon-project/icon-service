@@ -17,9 +17,11 @@
 import copy
 import random
 import unittest
+from unittest.mock import Mock
 
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
-from iconservice.icon_constant import Revision, UNSTAKE_SLOT_MAX
+from iconservice.icon_constant import Revision
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.base_part import BasePartState
 from iconservice.icx.stake_part import StakePart
 from tests import create_address
@@ -130,6 +132,11 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(block_height, stake_part.unstake_block_height)
 
     def test_set_unstakes_info(self):
+        context: 'IconScoreContext' = Mock(spec=IconScoreContext)
+        unstake_slot_max = 10
+        context.configure_mock(unstake_slot_max=unstake_slot_max)
+        context.configure_mock(revision=Revision.MULTIPLE_UNSTAKE.value)
+
         stake = 500
         unstake = 0
         unstake_block_height = 0
@@ -143,12 +150,12 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(unstake_block_height, stake_part.unstake_block_height)
 
         # test adding unstakes
-        unstakes_info = [[random.randint(10, 100), index + 1] for index in range(UNSTAKE_SLOT_MAX)]
+        unstakes_info = [[random.randint(10, 100), index + 1] for index in range(unstake_slot_max)]
 
         for i in range(len(unstakes_info)):
             unstake = sum(map(lambda info: info[0], unstakes_info[:i+1]))
             remain_stake = stake - unstake
-            stake_part.set_unstakes_info(unstakes_info[i][1], unstake)
+            stake_part.set_unstakes_info(unstakes_info[i][1], unstake, context.unstake_slot_max)
             self.assertEqual(remain_stake, stake_part.stake)
             self.assertEqual(0, stake_part.unstake)
             self.assertEqual(0, stake_part.unstake_block_height)
@@ -157,8 +164,8 @@ class TestStakePart(unittest.TestCase):
         # test reducing last unstake
         decrement = 1
         unstake -= decrement
-        block_height = UNSTAKE_SLOT_MAX + 100
-        stake_part.set_unstakes_info(block_height, unstake)
+        block_height = unstake_slot_max + 100
+        stake_part.set_unstakes_info(block_height, unstake, context.unstake_slot_max)
         expected_unstakes_info = copy.deepcopy(unstakes_info)
         expected_unstakes_info[-1][0] -= decrement
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
@@ -167,17 +174,18 @@ class TestStakePart(unittest.TestCase):
         # test increase last unstake
         increment = 1
         unstake += increment
-        block_height = UNSTAKE_SLOT_MAX + 1
-        stake_part.set_unstakes_info(block_height, unstake)
+        block_height = unstake_slot_max + 1
+        stake_part.set_unstakes_info(block_height, unstake, context.unstake_slot_max)
         expected_unstakes_info[-1][0] += increment
         expected_unstakes_info[-1][1] = block_height
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
         self.assertEqual(stake_part.unstakes_info[-1][1], block_height)
 
         # test reduce unstake slot
-        unstake = sum(map(lambda info: info[0], unstakes_info[:10]))
-        stake_part.set_unstakes_info(UNSTAKE_SLOT_MAX, unstake)
-        expected_unstakes_info = expected_unstakes_info[:10]
+        reduced_slot = context.unstake_slot_max - 2
+        unstake = sum(map(lambda info: info[0], unstakes_info[:reduced_slot]))
+        stake_part.set_unstakes_info(unstake_slot_max, unstake, context.unstake_slot_max)
+        expected_unstakes_info = expected_unstakes_info[:reduced_slot]
         self.assertEqual(expected_unstakes_info, stake_part.unstakes_info)
 
     def test_stake_part_make_key(self):

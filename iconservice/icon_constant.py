@@ -217,6 +217,8 @@ class ConfigKey:
     # Block invoke timeout in second
     BLOCK_INVOKE_TIMEOUT = "blockInvokeTimeout"
 
+    UNSTAKE_SLOT_MAX = "unstakeSlotMax"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1

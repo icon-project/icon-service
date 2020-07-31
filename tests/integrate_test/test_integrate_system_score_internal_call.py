@@ -160,7 +160,7 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
                                     params={})
         event_log = tx_result[0].event_logs[0]
         self.assertEqual([iscore, icx], event_log.data)
-        self.assertEqual(["IScoreClaimed(int,int)"], event_log.indexed)
+        self.assertEqual(["IScoreClaimedV2(Address,int,int)", self.score_addr], event_log.indexed)
         self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
 
     def test_system_score_intercall_getIISSInfo(self):

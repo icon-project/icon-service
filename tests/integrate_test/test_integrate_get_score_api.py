@@ -451,6 +451,15 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 ],
             },
             {
+                "type": "eventlog",
+                "name": "IScoreClaimedV2",
+                "inputs": [
+                    {"name": "address", "type": "Address", "indexed": True},
+                    {"name": "iscore", "type": "int"},
+                    {"name": "icx", "type": "int"},
+                ],
+            },
+            {
                 "type": "function",
                 "name": "queryIScore",
                 "inputs": [{"name": "address", "type": "Address"}],

@@ -1,4 +1,5 @@
 language: python
+dist: bionic
 python:
   - "3.7"
 
@@ -6,7 +7,9 @@ branches:
   only:
   - master
   - develop
-  - /^release[/-].*$/
+  - /^(release|hotfix)[/-].*$/
+  - /^(\d+)(\.\d+){1,2}((a|b|rc)?\d*)?(\.?(post|dev)\d*)?/
+  - deploy-test
 
 install:
   - go get github.com/icon-project/rewardcalculator/cmd/icon_rc
@@ -18,9 +21,30 @@ script:
   - python -m pytest -ra
 
 deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  user: iconfoundation
-  password: $PYPI_PW
-  on:
-    branch: master
+  - provider: pypi
+    edge: true
+    distributions: sdist bdist_wheel
+    user: $PYPI_USER
+    password: $PYPI_PW
+    on:
+      tags: true
+      all_branches: true
+      condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}$
+  - provider: pypi
+    edge: true
+    server: https://test.pypi.org/legacy/
+    distributions: sdist bdist_wheel
+    user: $PYPI_USER
+    password: $PYPI_PW
+    skip_existing: true
+    on:
+      tags: true
+      all_branches: true
+      condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}((a|b|rc)+[0-9]*)+(\.?(post|dev)[0-9]*)?
+
+notifications:
+  slack:
+    rooms:
+      - secure: gKVeRcXlQHJ/L/j1jiYNr2QOyQWUa+iw6RIEl0VJHFYFet0lQhGBkqKqnonQlmR9z+6P3/s1eWX15ZFwQYgtvwX+4ch03j1rop8n1inLbyA4IAfCThWn0IjKcFf6SsEI54tB/XC099uX3TwPKlLD1fxlawxwxbN0RCKx/vCVIcDDcPQmg9ICkiU0LO14rAsnUrtZua6gKgFAevppURwD1n7GEz2oc/kXG/aLKBOqJuIpeaS5FYpV2uuPevlOs5geyRsA5TiJuldCqfzXbDNL+TAR9NUlBym7RuJL763Q3ywPMziwaWV/u0EHEQfcCjP7ifdPNgriwwvJqQ0VU1RkPNuYDuY/QEEcSelGS0yD6onPfh8ggJIyPxNJgoZbYwN/+KzJHd1hpCC4xc2xIJo3lF9DOODJ+pL36CRBlluKJDYXWsBaksGd3LSrmTbfSHsSAU53QmWIMSQ8XzL1dp6Vjoksz22mBLUL5J967ZwodLJVTOhZc0t9KMZ+8EryBDFHjuLvvUrXfVHDMKrqh4xBCrsLXptokAx8Yv0ehTt0hHCdzMe7Q0bOopa4/p8BV7CZB+8aG6J+5K04w7tJbC6QhFUgOEpLkngI5VU8Q+nFfc92Ucu3iUeSmJVuidoDN7TKebdo/qn0TheD8+LSjiY+TA+lq1MQATj3HkS0L1R1b1Q=
+    on_success: change
+    on_failure: always

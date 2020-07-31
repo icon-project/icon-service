@@ -377,7 +377,7 @@ class TestIISSStake(TestIISSBase):
         voting_power: int = response['votingPower']
         self.assertFalse(voting_power < 0)
 
-    @patch("iconservice.icx.stake_part.UNSTAKE_SLOT_MAX", 10)
+    @patch("iconservice.iconscore.icon_score_context.IconScoreContext.unstake_slot_max", 10)
     def test_multiple_unstake(self):
         # in integrate tests unstaking period is about 20 so that patch UNSTAKE_SLOT_MAX to 10
         unstake_slot_max = 10

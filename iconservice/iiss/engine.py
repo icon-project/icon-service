@@ -300,7 +300,7 @@ class Engine(EngineBase):
                                                                        context.total_supply)
         # subtract account's staked amount from the total stake
         total_stake -= account.stake
-        account.set_stake(value, unstake_lock_period, context.revision)
+        account.set_stake(context, value, unstake_lock_period)
         # add account's newly set staked amount from the total stake
         total_stake += account.stake
         context.storage.icx.put_account(context, account)
@@ -314,11 +314,11 @@ class Engine(EngineBase):
                               context: 'IconScoreContext',
                               stake: int,
                               account: 'Account'):
-        fee: int = 0
-        # SCORE can stake via SCORE inter-call
-        # fee must be charged to TX sender
-        if account.address == context.tx.origin:
+        if context.revision < Revision.SYSTEM_SCORE_ENABLED.value:
             fee = context.step_counter.step_price * context.step_counter.step_used
+        else:
+            # IconServiceEngine will check fee
+            fee = 0
 
         if account.balance + account.total_stake < stake + fee:
             raise OutOfBalanceException(
@@ -642,18 +642,28 @@ class Engine(EngineBase):
     def handle_claim_iscore(self, context: 'IconScoreContext'):
         """Handles claimIScore JSON-RPC request
         """
-        iscore, block_height = self._claim_iscore(context)
+        address: Address = context.msg.sender
+        iscore, block_height = self._claim_iscore(context, address)
 
         if iscore > 0:
-            self._commit_claim(context, iscore)
+            self._commit_claim(context, iscore, address)
 
-        EventLogEmitter.emit_event_log(
-            context,
-            score_address=SYSTEM_SCORE_ADDRESS,
-            event_signature="IScoreClaimed(int,int)",
-            arguments=[iscore, self._iscore_to_icx(iscore)],
-            indexed_args_count=0
-        )
+        if context.revision < Revision.SYSTEM_SCORE_ENABLED.value:
+            EventLogEmitter.emit_event_log(
+                context,
+                score_address=SYSTEM_SCORE_ADDRESS,
+                event_signature="IScoreClaimed(int,int)",
+                arguments=[iscore, self._iscore_to_icx(iscore)],
+                indexed_args_count=0
+            )
+        else:
+            EventLogEmitter.emit_event_log(
+                context,
+                score_address=SYSTEM_SCORE_ADDRESS,
+                event_signature="IScoreClaimedV2(Address,int,int)",
+                arguments=[address, iscore, self._iscore_to_icx(iscore)],
+                indexed_args_count=1
+            )
 
     @staticmethod
     def _check_claim_tx(context: 'IconScoreContext') -> bool:
@@ -663,8 +673,7 @@ class Engine(EngineBase):
         else:
             return True
 
-    def _claim_iscore(self, context: 'IconScoreContext') -> (int, int):
-        address: 'Address' = context.tx.origin
+    def _claim_iscore(self, context: 'IconScoreContext', address: Address) -> (int, int):
         block: 'Block' = context.block
         tx: 'Transaction' = context.tx
 
@@ -677,8 +686,7 @@ class Engine(EngineBase):
 
         return iscore, block_height
 
-    def _commit_claim(self, context: 'IconScoreContext', iscore: int):
-        address: 'Address' = context.tx.origin
+    def _commit_claim(self, context: 'IconScoreContext', iscore: int, address: Address):
         block: 'Block' = context.block
         tx: 'Transaction' = context.tx
         success = True
