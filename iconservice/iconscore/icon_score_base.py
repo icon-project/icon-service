@@ -33,6 +33,7 @@ from .icon_score_constant import (
     CONST_CLASS_ELEMENT_METADATAS,
     BaseType,
     T,
+    icxunit,
 )
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
@@ -63,13 +64,16 @@ if TYPE_CHECKING:
 INDEXED_ARGS_LIMIT = 3
 
 
-def interface(func):
+def interface(func=None, *, payable=False):
     """
     A decorator for the functions of InterfaceScore.
 
     If other SCORE has the function whose signature is the same as defined with @interface decorator,
     the function can be invoked via InterfaceScore class instance
     """
+    if func is None:
+        return partial(interface, payable=payable)
+
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
         raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
@@ -79,6 +83,13 @@ def interface(func):
 
     set_score_flag_on(func, ScoreFlag.INTERFACE)
 
+    if payable:
+        sig = signature(func)
+        p = sig.parameters
+        var_name, var_type = next(reversed(p.items()))
+        if var_type.annotation is not icxunit.Loop:
+            raise IllegalFormatException(f"Need icxunit.Loop argument in {func_name} in {cls_name} if payable")
+
     @wraps(func)
     def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
@@ -87,8 +98,19 @@ def interface(func):
 
         context = ContextContainer._get_context()
         addr_to = calling_obj.addr_to
-        amount = calling_obj.value
         addr_from: 'Address' = context.current_address
+
+        if payable:
+            icx_unit: Optional['icxunit.Loop'] = kwargs.get(var_name)
+            if icx_unit:
+                amount = icx_unit
+                del kwargs[var_name]
+            else:
+                icx_unit: 'icxunit.Loop' = args[-1]
+                amount = icx_unit
+                args = tuple(args[:-1])
+        else:
+            amount = 0
 
         if addr_to is None:
             raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')
