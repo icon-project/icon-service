@@ -25,7 +25,5 @@ class SampleScore(IconScoreBase):
 
     @external
     @payable
-    def first_order_with_icx(self, value: int):
+    def func_no_params_with_icx(self):
         pass
-
-

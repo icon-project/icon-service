@@ -2,14 +2,14 @@ from iconservice import *
 
 
 class SampleInterface(InterfaceScore):
-    @interface
+    @interface(payable=True)
     def func_params_int_with_icx(self, value: int, amount: icxunit.Loop): pass
 
-    @interface
+    @interface(payable=True)
     def func_params_str_with_icx(self, value: str, amount: icxunit.Loop): pass
 
-    @interface
-    def first_order_with_icx(self, amount: icxunit.Loop, invalid_value: int): pass
+    @interface(payable=True)
+    def func_no_params_with_icx(self, amount: icxunit.Loop): pass
 
 
 class SampleLinkScore(IconScoreBase):
@@ -42,12 +42,9 @@ class SampleLinkScore(IconScoreBase):
         test_interface.func_params_str_with_icx(value=value, amount=icxunit.Loop(amount))
 
     @external
-    def test_first_order_with_icx(self, value: int, amount: int):
+    def test_func_no_params_with_icx(self, amount: int):
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
-        test_interface.first_order_with_icx(
-            value=value,
-            amount=icxunit.Loop(amount)
-        )
+        test_interface.func_no_params_with_icx(amount=icxunit.Loop(amount))
 
     @payable
     def fallback(self) -> None:

@@ -307,14 +307,22 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self.assertTrue(tx_results[0].failure.message.startswith("Method not payable"))
 
     def test_invalid_interface_score(self):
-        tx: dict = self.create_deploy_score_tx(
+        tx1: dict = self.create_deploy_score_tx(
             score_root="invalid_interface_score",
             score_name="sample_invalid_score",
             from_=self._accounts[0],
             to_=SYSTEM_SCORE_ADDRESS
         )
-        self.process_confirm_block_tx([tx], expected_status=False)
 
+        tx2: dict = self.create_deploy_score_tx(
+            score_root="invalid_interface_score",
+            score_name="sample_invalid_link_score",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS
+        )
+        self.process_confirm_block_tx([tx1, tx2], expected_status=False)
+
+    def test_interface_score_with_icx(self):
         tx1: dict = self.create_deploy_score_tx(
             score_root="invalid_interface_score",
             score_name="sample_score",
@@ -353,14 +361,36 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         )
         self.assertTrue(tx_results[0].failure.message.startswith("Out of balance"))
 
-        # increase balance of score_addr2
-        self.transfer_icx(self._admin, score_addr2, value)
-        balance: int = self.get_balance(score_addr2)
-        self.assertEqual(value, balance)
+        test_list: list = [
+            {
+                "func_name": "test_func_params_int_with_icx",
+                "params": {"value": hex(value), "amount": hex(amount)}
+            },
+            {
+                "func_name": "test_func_params_int_with_icx",
+                "params": {"value": str(value), "amount": hex(amount)}
+            },
+            {
+                "func_name": "test_func_no_params_with_icx",
+                "params": {"amount": hex(amount)}
+            }
+        ]
 
-        self.score_call(
-            from_=self._accounts[0],
-            to_=score_addr2,
-            func_name="test_func_params_int_with_icx",
-            params={"value": hex(value), "amount": hex(amount)}
-        )
+        expected_amount: int = 0
+
+        for test in test_list:
+            # increase balance of score_addr2
+            self.transfer_icx(self._admin, score_addr2, amount)
+            balance: int = self.get_balance(score_addr2)
+            self.assertEqual(amount, balance)
+
+            self.score_call(
+                from_=self._accounts[0],
+                to_=score_addr2,
+                func_name=test["func_name"],
+                params=test["params"]
+            )
+
+            expected_amount += amount
+            balance: int = self.get_balance(score_addr1)
+            self.assertEqual(expected_amount, balance)
