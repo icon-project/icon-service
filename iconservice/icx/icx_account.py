@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from .delegation_part import DelegationPart
     from .stake_part import StakePart
     from ..base.address import Address
+    from ..iconscore.icon_score_context import IconScoreContext
 
 
 class Account(object):
@@ -145,7 +146,7 @@ class Account(object):
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
-    def set_stake(self, value: int, unstake_lock_period: int, revision: int):
+    def set_stake(self, context: "IconScoreContext", value: int, unstake_lock_period: int):
         if self.coin_part is None or self.stake_part is None:
             raise InvalidParamsException('Failed to stake: InvalidAccount')
 
@@ -168,10 +169,11 @@ class Account(object):
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
             self.coin_part.toggle_has_unstake(True)
-            if revision >= Revision.MULTIPLE_UNSTAKE.value:
-                self.stake_part.set_unstakes_info(unlock_block_height, self.total_stake - value)
+            if context.revision >= Revision.MULTIPLE_UNSTAKE.value:
+                self.stake_part.set_unstakes_info(unlock_block_height,
+                                                  -offset, context.unstake_slot_max)
             else:
-                self.stake_part.set_unstake(unlock_block_height,  self.total_stake - value)
+                self.stake_part.set_unstake(unlock_block_height,  -offset)
 
     def update_delegated_amount(self, offset: int):
         if self.delegation_part is None:

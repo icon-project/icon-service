@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import shutil
 from copy import deepcopy
 from enum import IntEnum
-from typing import TYPE_CHECKING, List, Any, Optional, Tuple, Dict, Union
 
+import os
+import shutil
 from iconcommons.logger import Logger
+from typing import TYPE_CHECKING, List, Optional, Tuple, Dict, Union, Any
 
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
@@ -178,6 +178,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.step_trace_flag = conf[ConfigKey.STEP_TRACE_FLAG]
         IconScoreContext.log_level = conf[ConfigKey.LOG][ConfigKey.LOG_LEVEL]
         IconScoreContext.precommitdata_log_flag = conf[ConfigKey.PRECOMMIT_DATA_LOG_FLAG]
+        IconScoreContext.unstake_slot_max = conf[ConfigKey.UNSTAKE_SLOT_MAX]
         self._init_component_context()
 
         # Recover incomplete state on wal and rollback process
@@ -213,6 +214,8 @@ class IconServiceEngine(ContextContainer):
                                   Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
 
         context.engine.inv.load_inv_container(context)
+
+        self._set_block_invoke_timeout(conf)
 
         self._set_block_invoke_timeout(conf)
 
