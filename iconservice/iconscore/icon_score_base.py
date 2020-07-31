@@ -20,6 +20,7 @@ from functools import partial, wraps
 from inspect import isfunction, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
+from . import icxunit
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import (
@@ -63,13 +64,16 @@ if TYPE_CHECKING:
 INDEXED_ARGS_LIMIT = 3
 
 
-def interface(func):
+def interface(func=None, *, payable=False):
     """
     A decorator for the functions of InterfaceScore.
 
     If other SCORE has the function whose signature is the same as defined with @interface decorator,
     the function can be invoked via InterfaceScore class instance
     """
+    if func is None:
+        return partial(interface, payable=payable)
+
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
         raise IllegalFormatException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
@@ -79,6 +83,27 @@ def interface(func):
 
     set_score_flag_on(func, ScoreFlag.INTERFACE)
 
+    sig = signature(func)
+    params = sig.parameters
+
+    it = reversed(params.items())
+    if payable:
+        try:
+            var_name, var_type = next(it)
+            if var_type.annotation is not icxunit.Loop:
+                raise StopIteration
+
+            default_value = var_type.default
+            if not (default_value is Parameter.empty or
+                    isinstance(default_value, icxunit.Loop)):
+                raise IllegalFormatException(f"Default value should be icxunit.Loop: {str(func.__qualname__)}")
+        except StopIteration:
+            raise IllegalFormatException(f"Last argument should be icxunit.Loop: {str(func.__qualname__)}")
+
+    for _, var_type in it:
+        if var_type.annotation is icxunit.Loop:
+            raise IllegalFormatException(f"icxunit.Loop is not allowed: {str(func.__qualname__)}")
+
     @wraps(func)
     def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
@@ -87,8 +112,27 @@ def interface(func):
 
         context = ContextContainer._get_context()
         addr_to = calling_obj.addr_to
-        amount = calling_obj.value
         addr_from: 'Address' = context.current_address
+
+        if payable:
+            unit: Optional['icxunit.Loop'] = kwargs.get(var_name)
+            if unit:
+                amount = int(unit)
+                del kwargs[var_name]
+            else:
+                if args:
+                    unit: 'icxunit.Loop' = args[-1]
+                    if isinstance(unit, icxunit.Loop):
+                        amount = int(unit)
+                        args = tuple(args[:-1])
+                    else:
+                        raise InvalidParamsException(f"{type(unit)} is not icxunit.Loop")
+                else:
+                    if default_value is Parameter.empty:
+                        raise InvalidParamsException(f"{var_name} is not found")
+                    amount = int(default_value)
+        else:
+            amount = 0
 
         if addr_to is None:
             raise InvalidInterfaceException('Cannot create an interface SCORE with a None address')

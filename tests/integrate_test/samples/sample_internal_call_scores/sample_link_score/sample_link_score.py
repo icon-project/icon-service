@@ -11,11 +11,11 @@ class SampleInterface(InterfaceScore):
     @interface
     def get_db(self) -> IconScoreDatabase: pass
 
-    @interface
-    def fallback_via_internal_call(self) -> None: pass
+    @interface(payable=True)
+    def fallback_via_internal_call(self, value: icxunit.Loop) -> None: pass
 
-    @interface
-    def fallback_via_not_payable_internal_call(self) -> None: pass
+    @interface(payable=True)
+    def fallback_via_not_payable_internal_call(self, value: icxunit.Loop) -> None: pass
 
 
 class SampleLinkScore(IconScoreBase):
@@ -70,22 +70,12 @@ class SampleLinkScore(IconScoreBase):
     @external(readonly=False)
     def transfer_icx_to_other_score(self, value: int) -> None:
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
-        test_interface.value = value
-        test_interface.fallback_via_internal_call()
-
-    @external(readonly=False)
-    @payable
-    def transfer_icx_to_other_score_twice(self, value: int) -> None:
-        test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
-        test_interface.value = value
-        test_interface.fallback_via_internal_call()
-        test_interface.fallback_via_internal_call()
+        test_interface.fallback_via_internal_call(icxunit.Loop(value))
 
     @external(readonly=False)
     def transfer_icx_to_other_score_fail(self, value: int) -> None:
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
-        test_interface.value = value
-        test_interface.fallback_via_not_payable_internal_call()
+        test_interface.fallback_via_not_payable_internal_call(value=icxunit.Loop(value))
 
     @external(readonly=False)
     @payable
