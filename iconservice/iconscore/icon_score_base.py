@@ -117,17 +117,17 @@ def interface(func=None, *, payable=False):
         if payable:
             icx_unit: Optional['icxunit.Loop'] = kwargs.get(var_name)
             if icx_unit:
-                amount = icx_unit
+                amount = int(icx_unit)
                 del kwargs[var_name]
             else:
                 if args:
                     icx_unit: 'icxunit.Loop' = args[-1]
-                    amount = icx_unit
+                    amount = int(icx_unit)
                     args = tuple(args[:-1])
                 else:
                     if default_value is Parameter.empty:
                         raise InvalidParamsException(f"{var_name} is not found")
-                    amount = default_value
+                    amount = int(default_value)
         else:
             amount = 0
 

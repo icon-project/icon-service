@@ -9,6 +9,9 @@ class SampleInterface(InterfaceScore):
     def func_params_str_with_icx(self, value: str, amount: icxunit.Loop): pass
 
     @interface(payable=True)
+    def func_no_params_with_icx(self, amount: icxunit.Loop): pass
+
+    @interface(payable=True)
     def func_no_params_with_icx_default(self, amount: icxunit.Loop = icxunit.Loop(2 * 10**18)): pass
 
 
