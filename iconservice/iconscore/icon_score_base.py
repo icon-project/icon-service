@@ -83,11 +83,20 @@ def interface(func=None, *, payable=False):
 
     set_score_flag_on(func, ScoreFlag.INTERFACE)
 
+    sig = signature(func)
+    params = sig.parameters
+
+    it = reversed(params.items())
     if payable:
-        sig = signature(func)
-        p = sig.parameters
-        var_name, var_type = next(reversed(p.items()))
-        if var_type.annotation is not icxunit.Loop:
+        try:
+            var_name, var_type = next(it)
+            if var_type.annotation is not icxunit.Loop:
+                raise StopIteration
+        except StopIteration:
+            raise IllegalFormatException(f"Need icxunit.Loop argument in {func_name} in {cls_name} if payable")
+
+    for _, var_type in it:
+        if var_type.annotation is icxunit.Loop:
             raise IllegalFormatException(f"Need icxunit.Loop argument in {func_name} in {cls_name} if payable")
 
     @wraps(func)

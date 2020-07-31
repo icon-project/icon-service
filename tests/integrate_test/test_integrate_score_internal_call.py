@@ -307,20 +307,26 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self.assertTrue(tx_results[0].failure.message.startswith("Method not payable"))
 
     def test_invalid_interface_score(self):
-        tx1: dict = self.create_deploy_score_tx(
-            score_root="invalid_interface_score",
-            score_name="sample_invalid_score",
-            from_=self._accounts[0],
-            to_=SYSTEM_SCORE_ADDRESS
-        )
 
-        tx2: dict = self.create_deploy_score_tx(
-            score_root="invalid_interface_score",
-            score_name="sample_invalid_link_score",
-            from_=self._accounts[0],
-            to_=SYSTEM_SCORE_ADDRESS
-        )
-        self.process_confirm_block_tx([tx1, tx2], expected_status=False)
+        score_list = [
+            "sample_invalid_score",
+            "sample_invalid_link_score1",
+            "sample_invalid_link_score2",
+            "sample_invalid_link_score3",
+            "sample_invalid_link_score4",
+            "sample_invalid_link_score5",
+            "sample_invalid_link_score6",
+            "sample_invalid_link_score7",
+        ]
+
+        for score in score_list:
+            tx: dict = self.create_deploy_score_tx(
+                score_root="invalid_interface_score",
+                score_name=score,
+                from_=self._accounts[0],
+                to_=SYSTEM_SCORE_ADDRESS
+            )
+            self.process_confirm_block_tx([tx], expected_status=False)
 
     def test_interface_score_with_icx(self):
         tx1: dict = self.create_deploy_score_tx(
