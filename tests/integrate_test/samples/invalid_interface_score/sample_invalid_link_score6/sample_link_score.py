@@ -4,7 +4,7 @@ from iconservice import *
 class SampleInterface(InterfaceScore):
     @classmethod
     @interface
-    def first_order_with_icx(cls, value1: icxunit.Loop): pass
+    def func(cls, value1: icxunit.Loop): pass
 
 
 class SampleLinkScore(IconScoreBase):

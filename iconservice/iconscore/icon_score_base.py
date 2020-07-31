@@ -20,6 +20,7 @@ from functools import partial, wraps
 from inspect import isfunction, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
+from . import icxunit
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import (
@@ -33,7 +34,6 @@ from .icon_score_constant import (
     CONST_CLASS_ELEMENT_METADATAS,
     BaseType,
     T,
-    icxunit,
 )
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter

@@ -3,7 +3,7 @@ from iconservice import *
 
 class SampleInterface(InterfaceScore):
     @interface
-    def first_order_with_icx(self, value1: icxunit.Loop): pass
+    def func(self, value1: icxunit.Loop): pass
 
 
 class SampleLinkScore(IconScoreBase):

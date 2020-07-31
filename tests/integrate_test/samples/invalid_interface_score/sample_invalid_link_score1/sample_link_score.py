@@ -3,7 +3,7 @@ from iconservice import *
 
 class SampleInterface(InterfaceScore):
     @interface(payable=True)
-    def first_order_with_icx(self, amount: icxunit.Loop, invalid_value: int): pass
+    def func(self, amount: icxunit.Loop, invalid_value: int): pass
 
 
 class SampleLinkScore(IconScoreBase):

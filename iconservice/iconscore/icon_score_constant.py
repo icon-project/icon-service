@@ -60,8 +60,3 @@ class ScoreFlag(Flag):
     INTERFACE = 0x10000
 
     ALL = 0xFFFFFF
-
-
-class icxunit:
-    class Loop(int):
-        pass

@@ -31,7 +31,7 @@ from .iconscore.icon_score_base2 import (
     create_address_with_key, create_interface_score
 )
 
-from .iconscore.icon_score_constant import icxunit
+from .iconscore import icxunit
 
 from .iconscore.icon_system_score_base import IconSystemScoreBase
 from .iconscore.system_score import InterfaceSystemScore

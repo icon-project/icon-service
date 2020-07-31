@@ -328,6 +328,57 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
             )
             self.process_confirm_block_tx([tx], expected_status=False)
 
+    def test_invalid_interface_score_with_icx(self):
+        tx1: dict = self.create_deploy_score_tx(
+            score_root="invalid_interface_score",
+            score_name="sample_score",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS
+        )
+
+        tx2: dict = self.create_deploy_score_tx(
+            score_root="invalid_interface_score",
+            score_name="sample_link_score",
+            from_=self._accounts[0],
+            to_=SYSTEM_SCORE_ADDRESS
+        )
+
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx([tx1, tx2])
+        score_addr1: 'Address' = tx_results[0].score_address
+        score_addr2: 'Address' = tx_results[1].score_address
+
+        # callee SCORE = score_addr1
+        self.score_call(
+            from_=self._accounts[0],
+            to_=score_addr2,
+            func_name="add_score_func",
+            params={"score_addr": str(score_addr1)}
+        )
+
+        value = 1
+        amount = 2 * ICX_IN_LOOP
+
+        test_list: list = [
+            {
+                "func_name": "test_func_params_int_with_icx",
+                "params": {"value": hex(value), "amount": hex(-amount)}
+            }
+        ]
+
+        for test in test_list:
+            # increase balance of score_addr2
+            self.transfer_icx(self._admin, score_addr2, amount)
+            balance: int = self.get_balance(score_addr2)
+            self.assertEqual(amount, balance)
+
+            self.score_call(
+                from_=self._accounts[0],
+                to_=score_addr2,
+                func_name=test["func_name"],
+                params=test["params"],
+                expected_status=False
+            )
+
     def test_interface_score_with_icx(self):
         tx1: dict = self.create_deploy_score_tx(
             score_root="invalid_interface_score",
