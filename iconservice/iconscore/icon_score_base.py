@@ -93,7 +93,7 @@ def interface(func=None, *, payable=False):
             if var_type.annotation is not icxunit.Loop:
                 raise StopIteration
 
-            default_value = params[var_name].default
+            default_value = var_type.default
             if not (default_value is Parameter.empty or
                     isinstance(default_value, icxunit.Loop)):
                 raise IllegalFormatException(f"Default value should be icxunit.Loop: {str(func.__qualname__)}")
@@ -115,15 +115,18 @@ def interface(func=None, *, payable=False):
         addr_from: 'Address' = context.current_address
 
         if payable:
-            icx_unit: Optional['icxunit.Loop'] = kwargs.get(var_name)
-            if icx_unit:
-                amount = int(icx_unit)
+            unit: Optional['icxunit.Loop'] = kwargs.get(var_name)
+            if unit:
+                amount = int(unit)
                 del kwargs[var_name]
             else:
                 if args:
-                    icx_unit: 'icxunit.Loop' = args[-1]
-                    amount = int(icx_unit)
-                    args = tuple(args[:-1])
+                    unit: 'icxunit.Loop' = args[-1]
+                    if isinstance(unit, icxunit.Loop):
+                        amount = int(unit)
+                        args = tuple(args[:-1])
+                    else:
+                        raise InvalidParamsException(f"{type(unit)} is not icxunit.Loop")
                 else:
                     if default_value is Parameter.empty:
                         raise InvalidParamsException(f"{var_name} is not found")
