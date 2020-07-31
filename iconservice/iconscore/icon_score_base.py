@@ -92,12 +92,17 @@ def interface(func=None, *, payable=False):
             var_name, var_type = next(it)
             if var_type.annotation is not icxunit.Loop:
                 raise StopIteration
+
+            default_value = params[var_name].default
+            if not (default_value is Parameter.empty or
+                    isinstance(default_value, icxunit.Loop)):
+                raise IllegalFormatException(f"Default value should be icxunit.Loop: {str(func.__qualname__)}")
         except StopIteration:
-            raise IllegalFormatException(f"Need icxunit.Loop argument in {func_name} in {cls_name} if payable")
+            raise IllegalFormatException(f"Last argument should be icxunit.Loop: {str(func.__qualname__)}")
 
     for _, var_type in it:
         if var_type.annotation is icxunit.Loop:
-            raise IllegalFormatException(f"Need icxunit.Loop argument in {func_name} in {cls_name} if payable")
+            raise IllegalFormatException(f"icxunit.Loop is not allowed: {str(func.__qualname__)}")
 
     @wraps(func)
     def __wrapper(calling_obj: "InterfaceScore", *args, **kwargs):
@@ -115,9 +120,14 @@ def interface(func=None, *, payable=False):
                 amount = icx_unit
                 del kwargs[var_name]
             else:
-                icx_unit: 'icxunit.Loop' = args[-1]
-                amount = icx_unit
-                args = tuple(args[:-1])
+                if args:
+                    icx_unit: 'icxunit.Loop' = args[-1]
+                    amount = icx_unit
+                    args = tuple(args[:-1])
+                else:
+                    if default_value is Parameter.empty:
+                        raise InvalidParamsException(f"{var_name} is not found")
+                    amount = default_value
         else:
             amount = 0
 

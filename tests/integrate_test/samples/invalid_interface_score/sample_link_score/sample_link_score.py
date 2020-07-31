@@ -9,7 +9,7 @@ class SampleInterface(InterfaceScore):
     def func_params_str_with_icx(self, value: str, amount: icxunit.Loop): pass
 
     @interface(payable=True)
-    def func_no_params_with_icx(self, amount: icxunit.Loop): pass
+    def func_no_params_with_icx_default(self, amount: icxunit.Loop = icxunit.Loop(2 * 10**18)): pass
 
 
 class SampleLinkScore(IconScoreBase):
@@ -45,6 +45,11 @@ class SampleLinkScore(IconScoreBase):
     def test_func_no_params_with_icx(self, amount: int):
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
         test_interface.func_no_params_with_icx(amount=icxunit.Loop(amount))
+
+    @external
+    def test_func_no_params_with_icx_default(self):
+        test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
+        test_interface.func_no_params_with_icx_default()
 
     @payable
     def fallback(self) -> None:

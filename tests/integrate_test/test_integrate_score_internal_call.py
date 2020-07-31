@@ -317,6 +317,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
             "sample_invalid_link_score5",
             "sample_invalid_link_score6",
             "sample_invalid_link_score7",
+            "sample_invalid_link_score8",
         ]
 
         for score in score_list:
@@ -430,6 +431,10 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
             {
                 "func_name": "test_func_no_params_with_icx",
                 "params": {"amount": hex(amount)}
+            },
+            {
+                "func_name": "test_func_no_params_with_icx_default",
+                "params": {}
             }
         ]
 

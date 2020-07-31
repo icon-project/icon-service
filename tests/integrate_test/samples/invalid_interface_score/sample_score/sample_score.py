@@ -27,3 +27,8 @@ class SampleScore(IconScoreBase):
     @payable
     def func_no_params_with_icx(self):
         pass
+
+    @external
+    @payable
+    def func_no_params_with_icx_default(self):
+        pass
