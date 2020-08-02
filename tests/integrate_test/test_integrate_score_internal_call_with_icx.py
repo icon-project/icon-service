@@ -66,13 +66,6 @@ class TestIntegrateScoreInternalCallWithIcx(TestIntegrateBase):
         sender = self._admin
         callee, caller = self._deploy_sample_scores()
 
-        self.score_call(
-            from_=sender,
-            to_=caller,
-            func_name="setCallee",
-            params={"address": str(callee)}
-        )
-
         call_info = (
             ("setBool", "getBool", True),
             ("setBytes", "getBytes", b"hello"),

@@ -6,31 +6,16 @@ class CalleeInterface(InterfaceScore):
     def setBool(self, value: bool): pass
 
     @interface
-    def getBool(self) -> bool: pass
-
-    @interface
     def setBytes(self, value: bool): pass
-
-    @interface
-    def getBytes(self) -> bytes: pass
 
     @interface
     def setInt(self, value: int): pass
 
     @interface
-    def getInt(self) -> int: pass
-
-    @interface
     def setStr(self, value: str): pass
 
     @interface
-    def getStr(self) -> str: pass
-
-    @interface
     def setAddress(self, value: Address): pass
-
-    @interface
-    def getAddress(self) -> Address: pass
 
     @interface
     def func_payable(self): pass
