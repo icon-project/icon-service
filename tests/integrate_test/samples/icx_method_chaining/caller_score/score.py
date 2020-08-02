@@ -52,7 +52,7 @@ class Score(IconScoreBase):
         super().on_update()
 
     @external
-    def setAddress(self, address: Address):
+    def setCallee(self, address: Address):
         self._address.set(address)
 
     @payable
@@ -88,8 +88,13 @@ class Score(IconScoreBase):
     @payable
     @external
     def func_payable(self):
+        self._call_method_of_callee(self.msg.value)
+
+    def _call_method_of_callee(self, value: int):
         callee = self._get_callee()
-        callee.icx(self.msg.value).func_payable()
+        callee.icx(value).func_payable()
+        callee.func_payable()
+        callee.icx(0).func_payable()
 
     @payable
     @external
