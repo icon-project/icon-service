@@ -116,7 +116,7 @@ class TestIntegrateScoreInternalCallWithIcx(TestIntegrateBase):
             from_=sender,
             to_=caller,
             value=amount,
-            func_name="func_non_payable",
+            func_name="func_with_non_payable_internal_call",
             expected_status=False
         )
 
@@ -139,7 +139,7 @@ class TestIntegrateScoreInternalCallWithIcx(TestIntegrateBase):
             from_=sender,
             to_=caller,
             value=amount,
-            func_name="func_payable",
+            func_name="func_with_payable_internal_call",
             expected_status=True
         )
 
@@ -149,3 +149,68 @@ class TestIntegrateScoreInternalCallWithIcx(TestIntegrateBase):
         assert self.get_balance(sender) == before_sender_balance - fee - amount
         assert self.get_balance(callee) == before_callee_balance + amount
         assert self.get_balance(caller) == before_caller_balance
+
+    def test_non_payable_func_with_negative_icx_internal_call(self):
+        sender = self._admin
+        callee, caller = self._deploy_sample_scores()
+
+        self.transfer_icx(from_=sender, to_=caller, value=100)
+
+        tx_results = self.score_call(
+            from_=sender,
+            to_=caller,
+            value=0,
+            func_name="non_payable_func_with_icx_internal_call",
+            params={"value": base_object_to_str(-77)},
+            expected_status=False
+        )
+
+        tx_result = tx_results[0]
+        assert tx_result.failure.code == ExceptionCode.INVALID_PARAMETER
+
+    def test_non_payable_func_with_positive_icx_internal_call(self):
+        sender = self._admin
+        callee, caller = self._deploy_sample_scores()
+        self.transfer_icx(from_=sender, to_=caller, value=1000)
+
+        amount = random.randint(1, 499)
+        before_sender_balance: int = self.get_balance(sender)
+        before_caller_balance: int = self.get_balance(caller)
+        before_callee_balance: int = self.get_balance(callee)
+
+        # Caller will call a method of callee with amount icx
+        tx_results = self.score_call(
+            from_=sender,
+            to_=caller,
+            value=0,
+            func_name="non_payable_func_with_icx_internal_call",
+            params={"value": base_object_to_str(amount)},
+            expected_status=True
+        )
+
+        tx_result = tx_results[0]
+        fee: int = tx_result.step_price * tx_result.step_used
+
+        assert self.get_balance(sender) == before_sender_balance - fee
+        assert self.get_balance(caller) == before_caller_balance - amount
+        assert self.get_balance(callee) == before_callee_balance + amount
+
+    def test_fallback_with_icx_internal_call(self):
+        sender = self._admin
+        callee, caller = self._deploy_sample_scores()
+
+        value = 500
+        half_value = value // 2
+        before_sender_balance: int = self.get_balance(sender)
+        before_caller_balance: int = self.get_balance(caller)
+        before_callee_balance: int = self.get_balance(callee)
+
+        # Caller passes a half of icx which it gets from fallback() to callee
+        tx_results = self.transfer_icx(from_=sender, to_=caller, value=value)
+
+        tx_result = tx_results[0]
+        fee: int = tx_result.step_price * tx_result.step_used
+
+        assert self.get_balance(sender) == before_sender_balance - fee - value
+        assert self.get_balance(caller) == before_caller_balance + half_value
+        assert self.get_balance(callee) == before_callee_balance + half_value

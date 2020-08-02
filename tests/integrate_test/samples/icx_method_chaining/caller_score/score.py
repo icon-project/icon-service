@@ -87,7 +87,7 @@ class Score(IconScoreBase):
 
     @payable
     @external
-    def func_payable(self):
+    def func_with_payable_internal_call(self):
         self._call_method_of_callee(self.msg.value)
 
     def _call_method_of_callee(self, value: int):
@@ -98,9 +98,14 @@ class Score(IconScoreBase):
 
     @payable
     @external
-    def func_non_payable(self):
+    def func_with_non_payable_internal_call(self):
         callee = self._get_callee()
         callee.icx(self.msg.value).func_non_payable()
+
+    @external
+    def non_payable_func_with_icx_internal_call(self, value: int):
+        callee = self._get_callee()
+        callee.icx(value).func_payable()
 
     def _get_callee(self) -> CalleeInterface:
         address = self._address.get()
@@ -108,4 +113,5 @@ class Score(IconScoreBase):
 
     @payable
     def fallback(self) -> None:
-        pass
+        callee = self._get_callee()
+        callee.icx(self.msg.value // 2).func_payable()
