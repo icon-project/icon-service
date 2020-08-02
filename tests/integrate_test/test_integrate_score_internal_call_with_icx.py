@@ -188,6 +188,37 @@ class TestIntegrateScoreInternalCallWithIcx(TestIntegrateBase):
         assert self.get_balance(caller) == before_caller_balance - amount
         assert self.get_balance(callee) == before_callee_balance + amount
 
+    def test_non_payable_func_with_out_of_balance_internal_call(self):
+        sender = self._admin
+        callee, caller = self._deploy_sample_scores()
+        self.transfer_icx(from_=sender, to_=caller, value=1000)
+
+        amount = 2000
+        before_sender_balance: int = self.get_balance(sender)
+        before_caller_balance: int = self.get_balance(caller)
+        before_callee_balance: int = self.get_balance(callee)
+
+        # Caller will try to call a method of callee with icx
+        # which is larger than caller owns
+        # So this tx should occur out of balance exception
+        tx_results = self.score_call(
+            from_=sender,
+            to_=caller,
+            value=0,
+            func_name="non_payable_func_with_icx_internal_call",
+            params={"value": base_object_to_str(amount)},
+            expected_status=False
+        )
+
+        tx_result = tx_results[0]
+        assert tx_result.failure.code == ExceptionCode.OUT_OF_BALANCE
+
+        fee: int = tx_result.step_price * tx_result.step_used
+
+        assert self.get_balance(sender) == before_sender_balance - fee
+        assert self.get_balance(caller) == before_caller_balance
+        assert self.get_balance(callee) == before_callee_balance
+
     def test_fallback_with_icx_internal_call(self):
         sender = self._admin
         callee, caller = self._deploy_sample_scores()
