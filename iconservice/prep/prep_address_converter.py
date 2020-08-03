@@ -103,6 +103,7 @@ class PRepAddressConverter:
 
     def get_prep_address_from_node_address(self,
                                            node_address: 'Address') -> 'Address':
-
-        return self._prev_node_address_mapper.get(node_address,
-                                                  self._node_address_mapper.get(node_address, node_address))
+        ret: 'Address' = self._node_address_mapper.get(node_address)
+        if ret is None:
+            ret = self._prev_node_address_mapper.get(node_address, node_address)
+        return ret
