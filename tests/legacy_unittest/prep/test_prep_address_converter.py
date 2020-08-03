@@ -46,7 +46,7 @@ class TestPRepAddressConverter(unittest.TestCase):
         address = self.converter.get_prep_address_from_node_address(node_address)
         assert address == prep_address
 
-        self.converter.delete_node_address(node_address)
+        self.converter._delete_node_address(node_address)
         address = self.converter.get_prep_address_from_node_address(node_address)
         assert address == node_address
         assert address != prep_address
@@ -81,6 +81,32 @@ class TestPRepAddressConverter(unittest.TestCase):
         assert len(converter._prev_node_address_mapper) == 1
         assert len(converter._node_address_mapper) == 1
 
+    # def test_delete_node_address(self):
+    #     converter = self.converter
+    #     node_address = self.node_addresses[0]
+    #     prep_address = self.prep_addresses[0]
+    # 
+    #     # Confirm that 2 addresses are different
+    #     assert node_address != prep_address
+    #
+    #     # Check whether old_node_address is not added to converter
+    #     address = self.converter.get_prep_address_from_node_address(old_node_address)
+    #     assert address == old_node_address
+    #
+    #     # Add old_node_address
+    #     converter.add_node_address(old_node_address, prep_address)
+    #     address = self.converter.get_prep_address_from_node_address(old_node_address)
+    #     assert address == prep_address
+    #
+    #     # Replace old_node_address with a new node_address
+    #     converter.replace_node_address(new_node_address, prep_address, old_node_address)
+    #     assert prep_address == converter.get_prep_address_from_node_address(old_node_address)
+    #     assert prep_address == converter.get_prep_address_from_node_address(new_node_address)
+    #     assert old_node_address in converter._prev_node_address_mapper
+    #     assert new_node_address in converter._node_address_mapper
+    #     assert len(converter._prev_node_address_mapper) == 1
+    #     assert len(converter._node_address_mapper) == 1
+
     def test_copy(self):
         converter = self.converter
         old_node_address = self.node_addresses[0]
@@ -106,7 +132,7 @@ class TestPRepAddressConverter(unittest.TestCase):
         assert id(new_converter._prev_node_address_mapper) != id(converter._prev_node_address_mapper)
         assert id(new_converter._node_address_mapper) != id(converter._node_address_mapper)
 
-        new_converter.delete_node_address(new_node_address)
+        new_converter._delete_node_address(new_node_address)
         assert new_node_address == new_converter.get_prep_address_from_node_address(new_node_address)
         assert prep_address == converter.get_prep_address_from_node_address(new_node_address)
 

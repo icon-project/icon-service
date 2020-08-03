@@ -54,11 +54,15 @@ class PenaltyImposer(object):
 
         if self._check_block_validation_penalty(prep):
             Logger.info(f"PenaltyImposer statistics({PenaltyReason.BLOCK_VALIDATION}): "
+                        f"prep: {prep.address} "
+                        f"node_address: {prep.node_address} "
                         f"prep_total_blocks: {prep.total_blocks} "
                         f"prep_block_validation_proportion: {prep.block_validation_proportion}")
             reason = PenaltyReason.BLOCK_VALIDATION
         if self._check_low_productivity_penalty(prep):
             Logger.info(f"PenaltyImposer statistics({PenaltyReason.LOW_PRODUCTIVITY}): "
+                        f"prep: {prep.address} "
+                        f"node_address: {prep.node_address} "
                         f"prep_total_blocks: {prep.total_blocks} "
                         f"prep_unvalidated_sequence_blocks: {prep.unvalidated_sequence_blocks}")
             reason = PenaltyReason.LOW_PRODUCTIVITY
