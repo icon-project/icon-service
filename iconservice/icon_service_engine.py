@@ -776,7 +776,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        assert isinstance(dirty_prep, PRep)
+        assert isinstance(dirty_prep, PRep), f"dirty_prep: {address}"
 
         dirty_prep.last_generate_block_height = context.block.height - 1
         context.put_dirty_prep(dirty_prep)

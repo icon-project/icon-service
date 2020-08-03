@@ -475,7 +475,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         ret: Dict[str, Union[str, int, bytes, 'Address']] = self.get_prep(prep_a)
         assert ret["nodeAddress"] == prep_a.address
 
-    def test_change_node_prep(self):
+    def test_change_node_prep1(self):
         # 1 block
         # PRepA a ---- z
         # penalty PRepA (low productivity)
@@ -523,6 +523,58 @@ class TestPRepNodeAddressDivision(TestIISSBase):
                                       prev_block_generator=self._accounts[1].address,
                                       prev_block_votes=votes)
 
+        # assert Error!
+        with self.assertRaises(AssertionError) as e:
+            self.make_blocks(
+                to=self._block_height + 1,
+                prev_block_generator=self._accounts[1].address,
+                prev_block_votes=votes)
+
+        self.assertEqual(e.exception.args[0], f"dirty_prep: {node_address}")
+
         IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PREV_PENALTY_GRACE_PERIOD
         IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
             PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+    def test_change_node_prep2(self):
+        # 1 block
+        # PRepA a ---- z
+        # unreg PRepA
+
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
+
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        # PRepA: 0
+        # PRepB: 1
+        prep_a: 'EOAAccount' = self._accounts[0]
+        node_address: 'Address' = create_address()
+
+        tx_list: list = [
+            self.create_set_prep_tx(
+                from_=prep_a,
+                set_data={
+                    "nodeAddress": str(node_address)
+                }
+            )
+        ]
+
+        self.process_confirm_block_tx(tx_list)
+
+        self.unregister_prep(prep_a)
+
+        votes = [[node_address, False]] + \
+                [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        tx_results = self.make_blocks(to=self._block_height + 1,
+                                      prev_block_generator=self._accounts[1].address,
+                                      prev_block_votes=votes)
+
+        # assert Error!
+        with self.assertRaises(AssertionError) as e:
+            self.make_blocks(
+                to=self._block_height + 1,
+                prev_block_generator=self._accounts[1].address,
+                prev_block_votes=votes)
+
+        self.assertEqual(e.exception.args[0], f"dirty_prep: {node_address}")
