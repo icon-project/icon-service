@@ -53,6 +53,7 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
         A Python init function. Invoked when the contract call create_interface_score()
         """
         self.__addr_to = addr_to
+        self.__icx = 0
 
     @property
     def addr_to(self) -> 'Address':
@@ -62,6 +63,19 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
         :return: :class:`.Address` SCORE address
         """
         return self.__addr_to
+
+    def icx(self, value: int):
+        if not (isinstance(value, int) and value >= 0):
+            raise InvalidParamsException(f"Invalid icx: {value}")
+
+        self.__icx = value
+        return self
+
+    def __get_icx(self) -> int:
+        return self.__icx
+
+    def __reset_icx(self):
+        self.__icx = 0
 
 
 class Block(object):
@@ -377,4 +391,3 @@ def create_interface_score(addr_to: 'Address',
         if interface_cls is InterfaceScore:
             raise InvalidInstanceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to)
-
