@@ -95,10 +95,14 @@ class TestPRepAddressConverter(unittest.TestCase):
 
         # Add old_node_address
         converter.add_node_address(node_address, prep_address)
+        address = self.converter.get_prep_address_from_node_address(node_address)
+        assert address == prep_address
 
         converter.delete_node_address(node_address, prep_address)
         address = converter.get_prep_address_from_node_address(node_address)
         assert address == prep_address
+        assert node_address in converter._prev_node_address_mapper
+        assert node_address not in converter._node_address_mapper
         assert len(converter._prev_node_address_mapper) == 1
         assert len(converter._node_address_mapper) == 0
 
