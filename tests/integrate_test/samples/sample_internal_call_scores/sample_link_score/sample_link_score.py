@@ -11,10 +11,10 @@ class SampleInterface(InterfaceScore):
     @interface
     def get_db(self) -> IconScoreDatabase: pass
 
-    @interface(payable=True)
+    @interface
     def fallback_via_internal_call(self) -> None: pass
 
-    @interface(payable=True)
+    @interface
     def fallback_via_not_payable_internal_call(self) -> None: pass
 
 

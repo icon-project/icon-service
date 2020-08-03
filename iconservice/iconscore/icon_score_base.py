@@ -64,15 +64,13 @@ if TYPE_CHECKING:
 INDEXED_ARGS_LIMIT = 3
 
 
-def interface(func=None, *, payable=False):
+def interface(func):
     """
     A decorator for the functions of InterfaceScore.
 
     If other SCORE has the function whose signature is the same as defined with @interface decorator,
     the function can be invoked via InterfaceScore class instance
     """
-    if func is None:
-        return partial(interface, payable=payable)
 
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
