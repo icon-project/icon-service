@@ -719,8 +719,8 @@ class IconServiceEngine(ContextContainer):
                                                                            prev_block_generator,
                                                                            prev_block_votes,
                                                                            rc_db_revision)
-        context.update_batch()
         context.storage.meta.put_prep_address_converter(context, context.prep_address_converter)
+        context.update_batch()
 
         if next_preps is not None:
             Logger.info(tag="TERM", msg=f"{next_preps}")
