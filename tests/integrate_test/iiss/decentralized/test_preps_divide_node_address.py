@@ -150,10 +150,10 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         prev_block_generator = self._accounts[0].address
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[],
-                                                                                   prev_block_generator=prev_block_generator,
-                                                                                   prev_block_validators=None,
-                                                                                   prev_block_votes=prev_block_votes,
-                                                                                   block=None)
+                                                                            prev_block_generator=prev_block_generator,
+                                                                            prev_block_validators=None,
+                                                                            prev_block_votes=prev_block_votes,
+                                                                            block=None)
         self.assertEqual(tx_results[0].status, True)
         self.assertEqual(next_preps, None)
 
@@ -169,10 +169,10 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx],
-                                                                                   prev_block_generator=prev_block_generator,
-                                                                                   prev_block_validators=None,
-                                                                                   prev_block_votes=prev_block_votes,
-                                                                                   block=None)
+                                                                            prev_block_generator=prev_block_generator,
+                                                                            prev_block_validators=None,
+                                                                            prev_block_votes=prev_block_votes,
+                                                                            block=None)
         self.assertEqual(tx_results[0].status, True)
         self.assertEqual(next_preps["preps"][0]["id"], dummy_node2)
         self._write_precommit_state(block)
@@ -207,10 +207,10 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         prev_block_generator = self._accounts[0].address
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[],
-                                                                                   prev_block_generator=prev_block_generator,
-                                                                                   prev_block_validators=None,
-                                                                                   prev_block_votes=prev_block_votes,
-                                                                                   block=None)
+                                                                            prev_block_generator=prev_block_generator,
+                                                                            prev_block_validators=None,
+                                                                            prev_block_votes=prev_block_votes,
+                                                                            block=None)
         self.assertEqual(tx_results[0].status, True)
         self.assertEqual(next_preps, None)
 
@@ -226,10 +226,10 @@ class TestPRepNodeAddressDivision(TestIISSBase):
 
         prev_block_votes = [(x.address, True) for x in self._accounts[1:PREP_MAIN_PREPS]]
         block, tx_results, _, _, next_preps = self.debug_make_and_req_block(tx_list=[tx],
-                                                                                   prev_block_generator=prev_block_generator,
-                                                                                   prev_block_validators=None,
-                                                                                   prev_block_votes=prev_block_votes,
-                                                                                   block=None)
+                                                                            prev_block_generator=prev_block_generator,
+                                                                            prev_block_validators=None,
+                                                                            prev_block_votes=prev_block_votes,
+                                                                            block=None)
         self.assertEqual(tx_results[0].status, True)
         self.assertEqual(next_preps["preps"][1]["id"], dummy_node2)
         self._write_precommit_state(block)
@@ -474,3 +474,107 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         # After calling write_precommit_state()
         ret: Dict[str, Union[str, int, bytes, 'Address']] = self.get_prep(prep_a)
         assert ret["nodeAddress"] == prep_a.address
+
+    def test_change_node_prep1(self):
+        # 1 block
+        # PRepA a ---- z
+        # penalty PRepA (low productivity)
+
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
+
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        # PRepA: 0
+        # PRepB: 1
+        prep_a: 'EOAAccount' = self._accounts[0]
+        node_address: 'Address' = create_address()
+
+        tx_list: list = [
+            self.create_set_prep_tx(
+                from_=prep_a,
+                set_data={
+                    "nodeAddress": str(node_address)
+                }
+            )
+        ]
+
+        self.process_confirm_block_tx(
+            tx_list,
+            prev_block_generator=None,
+            prev_block_validators=None
+        )
+
+        PREV_PENALTY_GRACE_PERIOD = IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period
+        PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD = \
+            IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold
+
+        PENALTY_GRACE_PERIOD = 0
+        # enable low productivity
+        LOW_PRODUCTIVITY_PENALTY_THRESHOLD = 1
+
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PENALTY_GRACE_PERIOD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
+            LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+        votes = [[node_address, False]] + \
+                [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        tx_results = self.make_blocks(to=self._block_height + 2,
+                                      prev_block_generator=self._accounts[1].address,
+                                      prev_block_votes=votes)
+
+        # assert Error!
+        with self.assertRaises(AssertionError) as e:
+            self.make_blocks(
+                to=self._block_height + 1,
+                prev_block_generator=self._accounts[1].address,
+                prev_block_votes=votes)
+
+        self.assertEqual(e.exception.args[0], f"dirty_prep: {node_address}")
+
+        IconScoreContext.engine.prep._penalty_imposer._penalty_grace_period = PREV_PENALTY_GRACE_PERIOD
+        IconScoreContext.engine.prep._penalty_imposer._low_productivity_penalty_threshold = \
+            PREV_LOW_PRODUCTIVITY_PENALTY_THRESHOLD
+
+    def test_change_node_prep2(self):
+        # 1 block
+        # PRepA a ---- z
+        # unreg PRepA
+
+        self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
+
+        self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
+                            init_balance=1 * ICX_IN_LOOP)
+
+        # PRepA: 0
+        # PRepB: 1
+        prep_a: 'EOAAccount' = self._accounts[0]
+        node_address: 'Address' = create_address()
+
+        tx_list: list = [
+            self.create_set_prep_tx(
+                from_=prep_a,
+                set_data={
+                    "nodeAddress": str(node_address)
+                }
+            )
+        ]
+
+        self.process_confirm_block_tx(tx_list)
+
+        self.unregister_prep(prep_a)
+
+        votes = [[node_address, False]] + \
+                [[account.address, True] for account in self._accounts[2:PREP_MAIN_PREPS]]
+        tx_results = self.make_blocks(to=self._block_height + 1,
+                                      prev_block_generator=self._accounts[1].address,
+                                      prev_block_votes=votes)
+
+        # assert Error!
+        with self.assertRaises(AssertionError) as e:
+            self.make_blocks(
+                to=self._block_height + 1,
+                prev_block_generator=self._accounts[1].address,
+                prev_block_votes=votes)
+
+        self.assertEqual(e.exception.args[0], f"dirty_prep: {node_address}")

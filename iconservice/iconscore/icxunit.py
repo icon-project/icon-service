@@ -1,3 +1,0 @@
-
-class Loop(int):
-    pass

@@ -242,7 +242,8 @@ class IconScoreContext(ABC):
                                                               prev_node=old_prep.node_address)
         elif dirty_prep.status != PRepStatus.ACTIVE:
             # unregisterPRep or disqualified by productivity penalty
-            self._prep_address_converter.delete_node_address(node=dirty_prep.node_address)
+            self._prep_address_converter.delete_node_address(node=dirty_prep.node_address,
+                                                             prep=dirty_prep.address)
 
     def _update_term(self, dirty_prep: 'PRep'):
         """Update term info with dirty_prep
