@@ -2,3 +2,5 @@ sphinx>=1.8
 sphinx_rtd_theme
 recommonmark>=0.5
 msgpack
+iso3166~=1.0.1
+typing_extensions~=3.7.4.2
