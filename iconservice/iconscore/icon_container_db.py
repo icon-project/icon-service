@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Any, Union, TYPE_CHECKING
+from typing import Optional, Any, Union, TYPE_CHECKING, List
 
 from .container_db.utils import Utils
 from .context.context import ContextContainer
@@ -24,7 +24,8 @@ from ..database.score_db.utils import (
     ARRAY_DB_ID,
     VAR_DB_ID,
     K, V,
-    KeyElement
+    KeyElement,
+    KeyElementState
 )
 from ..icon_constant import IconScoreContextType, Revision
 
@@ -32,16 +33,40 @@ if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase, IconScoreSubDatabase
 
 
-def make_encoded_key_element(
-        key: K,
-        legacy_key: bytes = None,
-        is_append_container_id: bool = False
+def make_constructor_key_element(
+        keys: List[K],
+        container_id: bytes,
 ) -> 'KeyElement':
-    key: bytes = Utils.encode_key(key)
+    return _make_encoded_key_element_in_container_db(
+        keys=keys,
+        container_id=container_id,
+        state=KeyElementState.IS_CONTAINER | KeyElementState.IS_CONSTRUCTOR
+    )
+
+
+def make_key_element(
+        keys: List[K],
+        container_id: bytes,
+) -> 'KeyElement':
+    return _make_encoded_key_element_in_container_db(
+        keys=keys,
+        container_id=container_id,
+        state=KeyElementState.IS_CONTAINER
+    )
+
+
+def _make_encoded_key_element_in_container_db(
+        keys: List[K],
+        container_id: bytes,
+        state: 'KeyElementState'
+) -> 'KeyElement':
+    tmp_keys: List[bytes] = []
+    for key in keys:
+        tmp_keys.append(Utils.encode_key(key))
     return KeyElement(
-        key=key,
-        legacy_key=legacy_key,
-        is_append_container_id=is_append_container_id
+        keys=tmp_keys,
+        container_id=container_id,
+        state=state
     )
 
 
@@ -65,9 +90,9 @@ class DictDB:
         self.__value_type: type = value_type
         self.__depth: int = depth
 
-        key: 'KeyElement' = make_encoded_key_element(
-            key=key,
-            is_append_container_id=True
+        key: 'KeyElement' = make_constructor_key_element(
+            keys=[key],
+            container_id=DICT_DB_ID,
         )
         self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
 
@@ -78,16 +103,22 @@ class DictDB:
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        key: 'KeyElement' = make_encoded_key_element(key=key)
-        self._db.delete(key=key, container_id=DICT_DB_ID)
+        key: 'KeyElement' = make_key_element(
+            keys=[key],
+            container_id=DICT_DB_ID,
+        )
+        self._db.delete(key=key)
 
     def __setitem__(self, key: K, value: V):
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        key: 'KeyElement' = make_encoded_key_element(key=key)
+        key: 'KeyElement' = make_key_element(
+            keys=[key],
+            container_id=DICT_DB_ID,
+        )
         value: bytes = Utils.encode_value(value)
-        self._db.put(key=key, value=value, container_id=DICT_DB_ID)
+        self._db.put(key=key, value=value)
 
     def __getitem__(self, key: K) -> Any:
         if not self._is_leaf:
@@ -98,16 +129,22 @@ class DictDB:
                 depth=self.__depth - 1
             )
 
-        key: 'KeyElement' = make_encoded_key_element(key=key)
-        value: bytes = self._db.get(key=key, container_id=DICT_DB_ID)
+        key: 'KeyElement' = make_key_element(
+            keys=[key],
+            container_id=DICT_DB_ID,
+        )
+        value: bytes = self._db.get(key=key)
         return Utils.decode_object(value, self.__value_type)
 
     def __delitem__(self, key: K):
         self._remove(key)
 
     def __contains__(self, key: K) -> bool:
-        key: 'KeyElement' = make_encoded_key_element(key=key)
-        value: bytes = self._db.get(key=key, container_id=DICT_DB_ID)
+        key: 'KeyElement' = make_key_element(
+            keys=[key],
+            container_id=DICT_DB_ID,
+        )
+        value: bytes = self._db.get(key=key)
         return value is not None
 
     def __iter__(self):
@@ -137,8 +174,11 @@ class ArrayDB:
         self.__value_type = value_type
         self.__depth = depth
 
-        key_element: 'KeyElement' = make_encoded_key_element(key=key, is_append_container_id=True)
-        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key_element)
+        key: 'KeyElement' = make_constructor_key_element(
+            keys=[key],
+            container_id=ARRAY_DB_ID,
+        )
+        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
         self.__legacy_size: int = self.__get_size_from_db()
 
     @property
@@ -189,29 +229,39 @@ class ArrayDB:
         index: int = size - 1
         last_val = self._get(self._db, self.__get_size(), index, self.__value_type)
 
-        key: 'KeyElement' = make_encoded_key_element(key=index)
+        key: 'KeyElement' = make_key_element(
+            keys=[index],
+            container_id=ARRAY_DB_ID,
+        )
         self._db.delete(key)
         self.__set_size(index)
         return last_val
 
     def __get_size_from_db(self) -> int:
         key: 'KeyElement' = self._get_size_key()
-        value: bytes = self._db.get(key=key, container_id=ARRAY_DB_ID)
+        value: bytes = self._db.get(key=key)
         return Utils.decode_object(value, int)
 
     def __set_size(self, size: int):
         self.__legacy_size: int = size
         key: 'KeyElement' = self._get_size_key()
         value: bytes = Utils.encode_value(size)
-        self._db.put(key=key, value=value, container_id=ARRAY_DB_ID)
+        self._db.put(key=key, value=value)
 
     def __put(self, index: int, value: V):
-        key: 'KeyElement' = make_encoded_key_element(index)
+        key: 'KeyElement' = make_key_element(
+            keys=[index],
+            container_id=ARRAY_DB_ID,
+        )
         value = Utils.encode_value(value)
-        self._db.put(key=key, value=value, container_id=ARRAY_DB_ID)
+        self._db.put(key=key, value=value)
 
     def __iter__(self):
-        return self._get_generator(self._db, self.__get_size(), self.__value_type)
+        return self._get_generator(
+            db=self._db,
+            size=self.__get_size(),
+            value_type=self.__value_type
+        )
 
     def __len__(self):
         return self.__get_size()
@@ -264,8 +314,11 @@ class ArrayDB:
             index += size
 
         if 0 <= index < size:
-            key: 'KeyElement' = make_encoded_key_element(key=index)
-            value: bytes = db.get(key=key, container_id=ARRAY_DB_ID)
+            key: 'KeyElement' = make_key_element(
+                keys=[index],
+                container_id=ARRAY_DB_ID,
+            )
+            value: bytes = db.get(key=key)
             return Utils.decode_object(value, value_type)
         raise InvalidParamsException('ArrayDB out of index')
 
@@ -281,7 +334,10 @@ class ArrayDB:
 
     @classmethod
     def _get_size_key(cls) -> 'KeyElement':
-        return make_encoded_key_element(key=b'', legacy_key=b'size')
+        return make_key_element(
+            keys=[b'', b'size'],
+            container_id=ARRAY_DB_ID,
+        )
 
     def __get_size(self) -> int:
         if self.__is_defective_revision():
@@ -328,7 +384,6 @@ class VarDB:
         self._db.put(
             key=key,
             value=value,
-            container_id=VAR_DB_ID
         )
 
     def get(self) -> Optional[V]:
@@ -340,7 +395,6 @@ class VarDB:
         key: 'KeyElement' = self._get_key()
         value: bytes = self._db.get(
             key=key,
-            container_id=VAR_DB_ID
         )
 
         return Utils.decode_object(value, self.__value_type)
@@ -352,8 +406,10 @@ class VarDB:
         key: 'KeyElement' = self._get_key()
         self._db.delete(
             key=key,
-            container_id=VAR_DB_ID
         )
 
     def _get_key(self) -> 'KeyElement':
-        return make_encoded_key_element(key=self.__key, is_append_container_id=True)
+        return make_constructor_key_element(
+            keys=[self.__key],
+            container_id=VAR_DB_ID,
+        )

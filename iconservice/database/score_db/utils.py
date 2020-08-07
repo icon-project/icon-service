@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+import enum
+from typing import TypeVar, List
 
 from iconservice import Address
 
@@ -26,52 +27,58 @@ DICT_DB_ID = b'\x01'
 VAR_DB_ID = b'\x02'
 
 
+class KeyElementState(enum.Flag):
+    NONE = 0
+    IS_CONSTRUCTOR = 1
+    IS_CONTAINER = 2
+
+
 class KeyElement:
     def __init__(
             self,
-            key: bytes,
-            legacy_key: bytes = None,
-            is_append_container_id: bool = False
+            keys: List[bytes],
+            container_id: bytes,
+            state: 'KeyElementState' = KeyElementState.NONE
     ):
         """
 
-        :param key:
-        :param legacy_key: for arrayDB size branch logic
-        :param is_append_container_id: for dictDB depth bug
+        :param keys:
+        :param container_id:
+        :param state:
         """
 
-        self._key: bytes = key
-        self._is_append_container_id: bool = is_append_container_id
+        self._keys: List[bytes] = keys
+        self._container_id: bytes = container_id
+        self._state: 'KeyElementState' = state
 
-        if legacy_key:
-            self._legacy_key: bytes = legacy_key
+    @property
+    def container_id(self) -> bytes:
+        return self._container_id
+
+    def to_bytes(self, is_legacy: bool) -> List[bytes]:
+        if is_legacy:
+            if self._state == KeyElementState.IS_CONSTRUCTOR | KeyElementState.IS_CONTAINER:
+                return [self._container_id, self._keys[0]]
+            elif self._container_id == ARRAY_DB_ID and len(self._keys) == 2:
+                return [self._keys[1]]
+            else:
+                return [self._keys[0]]
         else:
-            self._legacy_key: bytes = key
-
-    def __bytes__(self) -> bytes:
-        return self.rlp_encode_bytes(self._key)
-
-    @property
-    def legacy_key(self) -> bytes:
-        return self._legacy_key
-
-    @property
-    def is_append_container_id(self) -> bool:
-        return self._is_append_container_id
+            return [self._rlp_encode_bytes(self._keys[0])]
 
     @classmethod
-    def rlp_encode_bytes(cls, b: bytes) -> bytes:
+    def _rlp_encode_bytes(cls, b: bytes) -> bytes:
         blen = len(b)
         if blen == 1 and b[0] < 0x80:
             return b
         elif blen <= 55:
             return bytes([blen + 0x80]) + b
-        len_bytes = cls.rlp_get_bytes(blen)
+        len_bytes = cls._rlp_get_bytes(blen)
         return bytes([len(len_bytes) + 0x80 + 55]) + len_bytes + b
 
     @classmethod
-    def rlp_get_bytes(cls, x: int) -> bytes:
+    def _rlp_get_bytes(cls, x: int) -> bytes:
         if x == 0:
             return b''
         else:
-            return cls.rlp_get_bytes(int(x / 256)) + bytes([x % 256])
+            return cls._rlp_get_bytes(int(x / 256)) + bytes([x % 256])

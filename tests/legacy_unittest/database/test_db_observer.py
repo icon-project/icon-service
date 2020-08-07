@@ -111,7 +111,7 @@ def test_database_observer_v2(context, score_db, database_observer):
     expected_key = b''.join((
         score_db.address.to_bytes(),
         DICT_DB_ID,
-        KeyElement.rlp_encode_bytes(key)
+        KeyElement._rlp_encode_bytes(key)
     ))
 
     assert expected_key == args[1]

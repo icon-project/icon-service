@@ -401,14 +401,12 @@ class IconScoreDatabase(ContextGetter):
 
     def get(
             self,
-            key: Union[List['KeyElement'], 'KeyElement', bytes],
-            container_id: bytes = DICT_DB_ID
+            key: Union[List['KeyElement'], 'KeyElement', bytes]
     ) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
-        :param container_id: default DICT_DB_ID
         :return: value for the specified key, or None if not found
 
         ****** WORNING ******
@@ -419,42 +417,38 @@ class IconScoreDatabase(ContextGetter):
         key_elements: List['KeyElement'] = self._make_key_elements(key=key)
 
         if self._is_v2:
-            final_key: bytes = self._make_final_key(
-                key_elements=key_elements,
-                container_id=container_id
+            converted_key: bytes = self._convert_to_bytes(
+                key_elements=key_elements
             )
-            value: Optional[bytes] = self._context_db.get(self._context, final_key)
+            value: Optional[bytes] = self._context_db.get(self._context, converted_key)
             if value is None:
-                legacy_final_key: bytes = self._make_final_key(
+                legacy_key: bytes = self._convert_to_bytes(
                     key_elements=key_elements,
-                    container_id=container_id,
                     is_legacy=True
                 )
-                value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
+                value: Optional[bytes] = self._context_db.get(self._context, legacy_key)
         else:
-            final_key: bytes = self._make_final_key(
+            converted_key: bytes = self._convert_to_bytes(
                 key_elements=key_elements,
-                container_id=container_id,
                 is_legacy=True
             )
-            value: Optional[bytes] = self._context_db.get(self._context, final_key)
+            value: Optional[bytes] = self._context_db.get(self._context, converted_key)
 
         if self._observer:
-            observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
+            observer_key: bytes = converted_key if self._is_v2 else key
             self._observer.on_get(self._context, observer_key, value)
         return value
 
     def put(
             self,
             key: Union[List['KeyElement'], 'KeyElement', bytes],
-            value: bytes, container_id: bytes = DICT_DB_ID
+            value: bytes
     ):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
-        :param container_id: default DICT_DB_ID
 
         ****** WORNING ******
             In v2, the previous value is not actually removed.
@@ -466,48 +460,43 @@ class IconScoreDatabase(ContextGetter):
         key_elements: List['KeyElement'] = self._make_key_elements(key=key)
 
         if self._is_v2:
-            final_key: bytes = self._make_final_key(
+            converted_key: bytes = self._convert_to_bytes(
                 key_elements=key_elements,
-                container_id=container_id
             )
         else:
-            final_key: bytes = self._make_final_key(
+            converted_key: bytes = self._convert_to_bytes(
                 key_elements=key_elements,
-                container_id=container_id,
                 is_legacy=True
             )
 
         if self._observer:
             if self._is_v2:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+                old_value: Optional[bytes] = self._context_db.get(self._context, converted_key)
                 if old_value is None:
-                    legacy_final_key: bytes = self._make_final_key(
+                    legacy_key: bytes = self._convert_to_bytes(
                         key_elements=key_elements,
-                        container_id=container_id,
                         is_legacy=True
                     )
-                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
+                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_key)
             else:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+                old_value: Optional[bytes] = self._context_db.get(self._context, converted_key)
 
-            observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
+            observer_key: bytes = converted_key if self._is_v2 else key
             if value:
                 self._observer.on_put(self._context, observer_key, old_value, value)
             elif old_value:
                 # If new value is None, then deletes the field
                 self._observer.on_delete(self._context, observer_key, old_value)
-        self._context_db.put(self._context, final_key, value)
+        self._context_db.put(self._context, converted_key, value)
 
     def delete(
             self,
             key: Union[List['KeyElement'], 'KeyElement', bytes],
-            container_id: bytes = DICT_DB_ID
     ):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
-        :param container_id: default DICT_DB_ID
 
         ****** WORNING ******
             In v2, the previous value is not actually removed.
@@ -518,52 +507,47 @@ class IconScoreDatabase(ContextGetter):
         key_elements: List['KeyElement'] = self._make_key_elements(key=key)
 
         if self._is_v2:
-            final_key: bytes = self._make_final_key(
+            converted_key: bytes = self._convert_to_bytes(
                 key_elements=key_elements,
-                container_id=container_id
             )
         else:
-            final_key: bytes = self._make_final_key(
+            converted_key: bytes = self._convert_to_bytes(
                 key_elements=key_elements,
-                container_id=container_id,
                 is_legacy=True
             )
 
         if self._observer:
             if self._is_v2:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+                old_value: Optional[bytes] = self._context_db.get(self._context, converted_key)
                 if old_value is None:
-                    legacy_final_key: bytes = self._make_final_key(
+                    legacy_key: bytes = self._convert_to_bytes(
                         key_elements=key_elements,
-                        container_id=container_id,
                         is_legacy=True
                     )
-                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_final_key)
+                    old_value: Optional[bytes] = self._context_db.get(self._context, legacy_key)
             else:
-                old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
+                old_value: Optional[bytes] = self._context_db.get(self._context, converted_key)
 
             # If old value is None, won't fire the callback
             if old_value:
-                observer_key: bytes = self._get_observer_key(key=key, final_key=final_key)
+                observer_key: bytes = converted_key if self._is_v2 else key
                 self._observer.on_delete(self._context, observer_key, old_value)
-        self._context_db.delete(self._context, final_key)
+        self._context_db.delete(self._context, converted_key)
 
     def get_sub_db(
             self,
-            prefix: Union['KeyElement', bytes]
+            prefix: Union['KeyElement', bytes],
     ) -> 'IconScoreSubDatabase':
         if not prefix:
             raise InvalidParamsException(
                 'Invalid params: '
                 'prefix is None in IconScoreDatabase.get_sub_db()')
 
-        if isinstance(prefix, bytes):
-            prefix: 'KeyElement' = KeyElement(key=prefix)
-
+        key: List['KeyElement'] = self._make_key_elements(key=prefix)
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self,
-            key_elements=[prefix]
+            key_elements=key
         )
 
     def close(self):
@@ -581,57 +565,17 @@ class IconScoreDatabase(ContextGetter):
                 f"{self._context.current_address}, "
                 f"{self.address}")
 
-    def _get_observer_key(self, key: bytes, final_key: bytes) -> bytes:
-        if not self._is_v2:
-            return key
-        else:
-            return final_key
-
-    def _make_final_key(
+    def _convert_to_bytes(
             self,
             key_elements: List['KeyElement'],
-            container_id: bytes,
             is_legacy: bool = False
     ) -> bytes:
-        bytes_list: List[bytes] = self.__convert_bytes_list(
-            key_elements=key_elements,
-            container_id=container_id,
-            is_legacy=is_legacy
-        )
-
-        bytes_list: List[bytes] = [container_id] + bytes_list if not is_legacy else bytes_list
+        bytes_list = [] if is_legacy else [key_elements[-1].container_id]
+        for ke in key_elements:
+            v: List[bytes] = ke.to_bytes(is_legacy=is_legacy)
+            bytes_list.extend(v)
         separator: bytes = b'|' if is_legacy else b''
-
-        return self.__concat_keys(bytes_list, separator)
-
-    def __concat_keys(self, keys: List[bytes], separator: bytes) -> bytes:
-        """All key is hashed and stored
-        to StateDB to avoid key conflicts among SCOREs
-
-        :params keys: key passed by SCORE
-        :return: key bytes
-        """
-        return separator.join([self._prefix] + keys)
-
-    @classmethod
-    def __convert_bytes_list(
-            cls,
-            key_elements: List['KeyElement'],
-            container_id: bytes,
-            is_legacy: bool = False
-    ) -> List[bytes]:
-        new_keys: List[bytes] = []
-        for v in key_elements:
-            if isinstance(v, KeyElement):
-                if not is_legacy:
-                    new_keys.append(bytes(v))
-                else:
-                    if v.is_append_container_id:
-                        new_keys.append(container_id)
-                    new_keys.append(v.legacy_key)
-            else:
-                raise InvalidParamsException("Unsupported key")
-        return new_keys
+        return separator.join([self._prefix] + bytes_list)
 
     @classmethod
     def _make_key_elements(
@@ -639,7 +583,7 @@ class IconScoreDatabase(ContextGetter):
             key: Union[List['KeyElement'], 'KeyElement', bytes]
     ) -> List['KeyElement']:
         if isinstance(key, bytes):
-            return [KeyElement(key=key)]
+            return [KeyElement(keys=[key], container_id=DICT_DB_ID)]
         elif isinstance(key, KeyElement):
             return [key]
         elif isinstance(key, list):
@@ -667,38 +611,34 @@ class IconScoreSubDatabase:
     def get(
             self,
             key: Union['KeyElement', bytes],
-            container_id: bytes = DICT_DB_ID
     ) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
-        :param container_id:
         :return: value for the specified key, or None if not found
         """
         key_elements: List['KeyElement'] = self._combine_key_with_key_elements(key)
-        return self._score_db.get(key=key_elements, container_id=container_id)
+        return self._score_db.get(key=key_elements)
 
-    def put(self, key: Union['KeyElement', bytes], value: bytes, container_id: bytes = DICT_DB_ID):
+    def put(self, key: Union['KeyElement', bytes], value: bytes):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
-        :param container_id:
         """
         key_elements: List['KeyElement'] = self._combine_key_with_key_elements(key)
-        self._score_db.put(key=key_elements, value=value, container_id=container_id)
+        self._score_db.put(key=key_elements, value=value)
 
-    def delete(self, key: Union['KeyElement', bytes], container_id: bytes = DICT_DB_ID):
+    def delete(self, key: Union['KeyElement', bytes]):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
-        :param container_id:
         """
         key_elements: List['KeyElement'] = self._combine_key_with_key_elements(key)
-        self._score_db.delete(key=key_elements, container_id=container_id)
+        self._score_db.delete(key=key_elements)
 
     def get_sub_db(
             self,
@@ -721,7 +661,7 @@ class IconScoreSubDatabase:
 
     def _combine_key_with_key_elements(self, key: Union['KeyElement', bytes]) -> List['KeyElement']:
         if isinstance(key, bytes):
-            return self._key_elements + [KeyElement(key=key)]
+            return self._key_elements + [KeyElement(keys=[key], container_id=DICT_DB_ID)]
         elif isinstance(key, KeyElement):
             return self._key_elements + [key]
         else:

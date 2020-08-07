@@ -377,11 +377,11 @@ class TestIconContainerDB:
         expected_key = b''.join((
             score_db.address.to_bytes(),
             DICT_DB_ID,
-            KeyElement.rlp_encode_bytes(name.encode()),
-            KeyElement.rlp_encode_bytes('aaaa'.encode()),
-            KeyElement.rlp_encode_bytes('bbbb'.encode()),
-            KeyElement.rlp_encode_bytes('cccc'.encode()),
-            KeyElement.rlp_encode_bytes('dddd'.encode())
+            KeyElement._rlp_encode_bytes(name.encode()),
+            KeyElement._rlp_encode_bytes('aaaa'.encode()),
+            KeyElement._rlp_encode_bytes('bbbb'.encode()),
+            KeyElement._rlp_encode_bytes('cccc'.encode()),
+            KeyElement._rlp_encode_bytes('dddd'.encode())
         ))
         args, _ = score_db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
@@ -439,8 +439,8 @@ class TestIconContainerDB:
         expected_key = b''.join((
             score_db.address.to_bytes(),
             ARRAY_DB_ID,
-            KeyElement.rlp_encode_bytes(name.encode()),
-            KeyElement.rlp_encode_bytes(int_to_bytes(size))
+            KeyElement._rlp_encode_bytes(name.encode()),
+            KeyElement._rlp_encode_bytes(int_to_bytes(size))
         ))
         args, _ = score_db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
@@ -448,8 +448,8 @@ class TestIconContainerDB:
         expected_key = b''.join((
             score_db.address.to_bytes(),
             ARRAY_DB_ID,
-            KeyElement.rlp_encode_bytes(name.encode()),
-            KeyElement.rlp_encode_bytes(b''),
+            KeyElement._rlp_encode_bytes(name.encode()),
+            KeyElement._rlp_encode_bytes(b''),
         ))
         args, _ = score_db._context_db.put.call_args_list[1]
         assert expected_key == args[1]
@@ -485,7 +485,7 @@ class TestIconContainerDB:
         expected_key = b''.join((
             score_db.address.to_bytes(),
             VAR_DB_ID,
-            KeyElement.rlp_encode_bytes(name.encode())
+            KeyElement._rlp_encode_bytes(name.encode())
         ))
         args, _ = score_db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
@@ -528,8 +528,8 @@ class TestIconContainerDB:
         expected_key = b''.join((
             score_db.address.to_bytes(),
             VAR_DB_ID,
-            KeyElement.rlp_encode_bytes(sub_prefix),
-            KeyElement.rlp_encode_bytes(name.encode())
+            KeyElement._rlp_encode_bytes(sub_prefix),
+            KeyElement._rlp_encode_bytes(name.encode())
         ))
         args, _ = score_db._context_db.put.call_args_list[0]
         assert args[1] == expected_key
