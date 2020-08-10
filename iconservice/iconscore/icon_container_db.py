@@ -19,6 +19,7 @@ from typing import Optional, Any, Union, TYPE_CHECKING, List
 from .container_db.utils import Utils
 from .context.context import ContextContainer
 from ..base.exception import InvalidContainerAccessException, InvalidParamsException
+from ..database.db import IconScoreSubDatabase
 from ..database.score_db.utils import (
     DICT_DB_ID,
     ARRAY_DB_ID,
@@ -30,44 +31,45 @@ from ..database.score_db.utils import (
 from ..icon_constant import IconScoreContextType, Revision
 
 if TYPE_CHECKING:
-    from ..database.db import IconScoreDatabase, IconScoreSubDatabase
+    from .container_db.score_db import ScoreDatabase, ScoreSubDatabase
+    from ..database.db import IconScoreDatabase
 
 
-def make_constructor_key_element(
+def make_constructor_key_elements(
         keys: List[K],
         container_id: bytes,
-) -> 'KeyElement':
-    return _make_encoded_key_element_in_container_db(
+) -> List['KeyElement']:
+    return _make_encoded_key_elements_in_container_db(
         keys=keys,
         container_id=container_id,
         state=KeyElementState.IS_CONTAINER | KeyElementState.IS_CONSTRUCTOR
     )
 
 
-def make_key_element(
+def make_key_elements(
         keys: List[K],
         container_id: bytes,
-) -> 'KeyElement':
-    return _make_encoded_key_element_in_container_db(
+) -> List['KeyElement']:
+    return _make_encoded_key_elements_in_container_db(
         keys=keys,
         container_id=container_id,
         state=KeyElementState.IS_CONTAINER
     )
 
 
-def _make_encoded_key_element_in_container_db(
+def _make_encoded_key_elements_in_container_db(
         keys: List[K],
         container_id: bytes,
         state: 'KeyElementState'
-) -> 'KeyElement':
+) -> List['KeyElement']:
     tmp_keys: List[bytes] = []
     for key in keys:
         tmp_keys.append(Utils.encode_key(key))
-    return KeyElement(
+    return [KeyElement(
         keys=tmp_keys,
         container_id=container_id,
         state=state
-    )
+    )]
 
 
 class DictDB:
@@ -83,18 +85,21 @@ class DictDB:
     def __init__(
             self,
             key: K,
-            db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
+            db: Union['ScoreDatabase', 'ScoreSubDatabase', 'IconScoreSubDatabase'],
             value_type: type,
             depth: int = 1,
     ):
         self.__value_type: type = value_type
         self.__depth: int = depth
 
-        key: 'KeyElement' = make_constructor_key_element(
+        keys: List['KeyElement'] = make_constructor_key_elements(
             keys=[key],
             container_id=DICT_DB_ID,
         )
-        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
+        if isinstance(db, IconScoreSubDatabase):
+            self._db: 'IconScoreSubDatabase' = db.get_sub_db(keys=keys)
+        else:
+            self._db: 'IconScoreSubDatabase' = db._db.get_sub_db(keys=keys)
 
     def remove(self, key: K):
         self._remove(key)
@@ -103,22 +108,22 @@ class DictDB:
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        key: 'KeyElement' = make_key_element(
+        keys: List['KeyElement'] = make_key_elements(
             keys=[key],
             container_id=DICT_DB_ID,
         )
-        self._db.delete(key=key)
+        self._db.delete(keys=keys)
 
     def __setitem__(self, key: K, value: V):
         if not self._is_leaf:
             raise InvalidContainerAccessException('DictDB depth is not leaf')
 
-        key: 'KeyElement' = make_key_element(
+        keys: List['KeyElement'] = make_key_elements(
             keys=[key],
             container_id=DICT_DB_ID,
         )
         value: bytes = Utils.encode_value(value)
-        self._db.put(key=key, value=value)
+        self._db.put(keys=keys, value=value)
 
     def __getitem__(self, key: K) -> Any:
         if not self._is_leaf:
@@ -129,22 +134,22 @@ class DictDB:
                 depth=self.__depth - 1
             )
 
-        key: 'KeyElement' = make_key_element(
+        keys: List['KeyElement'] = make_key_elements(
             keys=[key],
             container_id=DICT_DB_ID,
         )
-        value: bytes = self._db.get(key=key)
+        value: bytes = self._db.get(keys=keys)
         return Utils.decode_object(value, self.__value_type)
 
     def __delitem__(self, key: K):
         self._remove(key)
 
     def __contains__(self, key: K) -> bool:
-        key: 'KeyElement' = make_key_element(
+        keys: List['KeyElement'] = make_key_elements(
             keys=[key],
             container_id=DICT_DB_ID,
         )
-        value: bytes = self._db.get(key=key)
+        value: bytes = self._db.get(keys=keys)
         return value is not None
 
     def __iter__(self):
@@ -167,18 +172,21 @@ class ArrayDB:
     def __init__(
             self,
             key: K,
-            db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
+            db: Union['ScoreDatabase', 'ScoreSubDatabase', 'IconScoreSubDatabase'],
             value_type: type,
             depth: int = 1
     ):
         self.__value_type = value_type
         self.__depth = depth
 
-        key: 'KeyElement' = make_constructor_key_element(
+        keys: List['KeyElement'] = make_constructor_key_elements(
             keys=[key],
             container_id=ARRAY_DB_ID,
         )
-        self._db: 'IconScoreSubDatabase' = db.get_sub_db(key)
+        if isinstance(db, IconScoreSubDatabase):
+            self._db: 'IconScoreSubDatabase' = db.get_sub_db(keys=keys)
+        else:
+            self._db: 'IconScoreSubDatabase' = db._db.get_sub_db(keys=keys)
         self.__legacy_size: int = self.__get_size_from_db()
 
     @property
@@ -214,7 +222,12 @@ class ArrayDB:
                 depth=self.__depth - 1
             )
 
-        return self._get(self._db, self.__get_size(), index, self.__value_type)
+        return self._get(
+            db=self._db,
+            size=self.__get_size(),
+            index=index,
+            value_type=self.__value_type
+        )
 
     def pop(self) -> Optional[V]:
         """
@@ -227,34 +240,39 @@ class ArrayDB:
             return None
 
         index: int = size - 1
-        last_val = self._get(self._db, self.__get_size(), index, self.__value_type)
+        last_val = self._get(
+            db=self._db,
+            size=self.__get_size(),
+            index=index,
+            value_type=self.__value_type
+        )
 
-        key: 'KeyElement' = make_key_element(
+        keys: List['KeyElement'] = make_key_elements(
             keys=[index],
             container_id=ARRAY_DB_ID,
         )
-        self._db.delete(key)
+        self._db.delete(keys=keys)
         self.__set_size(index)
         return last_val
 
     def __get_size_from_db(self) -> int:
-        key: 'KeyElement' = self._get_size_key()
-        value: bytes = self._db.get(key=key)
+        keys: List['KeyElement'] = self._get_size_key()
+        value: bytes = self._db.get(keys=keys)
         return Utils.decode_object(value, int)
 
     def __set_size(self, size: int):
         self.__legacy_size: int = size
-        key: 'KeyElement' = self._get_size_key()
+        keys: List['KeyElement'] = self._get_size_key()
         value: bytes = Utils.encode_value(size)
-        self._db.put(key=key, value=value)
+        self._db.put(keys=keys, value=value)
 
     def __put(self, index: int, value: V):
-        key: 'KeyElement' = make_key_element(
+        keys: List['KeyElement'] = make_key_elements(
             keys=[index],
             container_id=ARRAY_DB_ID,
         )
         value = Utils.encode_value(value)
-        self._db.put(key=key, value=value)
+        self._db.put(keys=keys, value=value)
 
     def __iter__(self):
         return self._get_generator(
@@ -289,7 +307,12 @@ class ArrayDB:
                 value_type=self.__value_type,
                 depth=self.__depth - 1
             )
-        return self._get(self._db, self.__get_size(), index, self.__value_type)
+        return self._get(
+            db=self._db,
+            size=self.__get_size(),
+            index=index,
+            value_type=self.__value_type
+        )
 
     def __contains__(self, item: V):
         for e in self:
@@ -300,7 +323,7 @@ class ArrayDB:
     @classmethod
     def _get(
             cls,
-            db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
+            db: 'IconScoreSubDatabase',
             size: int,
             index: int,
             value_type: type
@@ -314,18 +337,18 @@ class ArrayDB:
             index += size
 
         if 0 <= index < size:
-            key: 'KeyElement' = make_key_element(
+            keys: List['KeyElement'] = make_key_elements(
                 keys=[index],
                 container_id=ARRAY_DB_ID,
             )
-            value: bytes = db.get(key=key)
+            value: bytes = db.get(keys=keys)
             return Utils.decode_object(value, value_type)
         raise InvalidParamsException('ArrayDB out of index')
 
     @classmethod
     def _get_generator(
             cls,
-            db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
+            db: 'IconScoreSubDatabase',
             size: int,
             value_type: type
     ):
@@ -333,8 +356,8 @@ class ArrayDB:
             yield cls._get(db, size, index, value_type)
 
     @classmethod
-    def _get_size_key(cls) -> 'KeyElement':
-        return make_key_element(
+    def _get_size_key(cls) -> List['KeyElement']:
+        return make_key_elements(
             keys=[b'', b'size'],
             container_id=ARRAY_DB_ID,
         )
@@ -364,14 +387,18 @@ class VarDB:
     def __init__(
             self,
             var_key: K,
-            db: Union['IconScoreDatabase', 'IconScoreSubDatabase'],
+            db: Union['ScoreDatabase', 'ScoreSubDatabase', 'IconScoreSubDatabase'],
             value_type: type
     ):
         # Use var_key as a db prefix in the case of VarDB
 
         self.__key = var_key
         self.__value_type = value_type
-        self._db: Union['IconScoreDatabase', 'IconScoreSubDatabase'] = db
+
+        if isinstance(db, IconScoreSubDatabase):
+            self._db: 'IconScoreSubDatabase' = db
+        else:
+            self._db: Union['IconScoreDatabase', 'IconScoreSubDatabase'] = db._db
 
     def set(self, value: V):
         """
@@ -379,10 +406,10 @@ class VarDB:
 
         :param value: a value to be set
         """
-        key: 'KeyElement' = self._get_key()
-        value: bytes = Utils.encode_value(value)
+        keys: List['KeyElement'] = self._get_keys()
+        value: bytes = Utils.encode_value(value=value)
         self._db.put(
-            key=key,
+            keys=keys,
             value=value,
         )
 
@@ -392,9 +419,9 @@ class VarDB:
 
         :return: value of the var db
         """
-        key: 'KeyElement' = self._get_key()
+        keys: List['KeyElement'] = self._get_keys()
         value: bytes = self._db.get(
-            key=key,
+            keys=keys,
         )
 
         return Utils.decode_object(value, self.__value_type)
@@ -403,13 +430,13 @@ class VarDB:
         """
         Deletes the value
         """
-        key: 'KeyElement' = self._get_key()
+        keys: List['KeyElement'] = self._get_keys()
         self._db.delete(
-            key=key,
+            keys=keys,
         )
 
-    def _get_key(self) -> 'KeyElement':
-        return make_constructor_key_element(
+    def _get_keys(self) -> List['KeyElement']:
+        return make_constructor_key_elements(
             keys=[self.__key],
             container_id=VAR_DB_ID,
         )

@@ -42,7 +42,7 @@ class KeyElement:
     ):
         """
 
-        :param keys:
+        :param keys: contain with legacy key
         :param container_id:
         :param state:
         """

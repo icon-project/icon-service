@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING
 
+from .container_db.score_db import ScoreDatabase
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import Revision
@@ -71,13 +72,11 @@ class IconScoreInfo(object):
         if revision <= Revision.TWO.value or is_builtin_score(str(self.address)):
             if self._score is None:
                 self._score = self.create_score()
-
             return self._score
-
         return self.create_score()
 
     def create_score(self) -> 'IconScoreBase':
-        return self._score_class(self._score_db)
+        return self._score_class(ScoreDatabase(self._score_db))
 
 
 class IconScoreMapperObject(dict):

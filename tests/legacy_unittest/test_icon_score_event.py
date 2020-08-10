@@ -34,12 +34,15 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import int_to_bytes, ContextEngine, ContextStorage
 from iconservice.utils import to_camel_case
+from iconservice.iconscore.container_db.score_db import ScoreDatabase
 
 
 class TestEventlog(unittest.TestCase):
     def setUp(self):
         address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
-        db = Mock(spec=IconScoreDatabase)
+        icon_score_db = Mock(spec=IconScoreDatabase)
+        db = Mock(spec=ScoreDatabase)
+        db.attach_mock(icon_score_db, '_db')
         db.attach_mock(address, 'address')
         context = IconScoreContext()
         traces = Mock(spec=list)
@@ -352,7 +355,7 @@ class TestEventlog(unittest.TestCase):
 
 class EventlogScore(IconScoreBase):
 
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: 'ScoreDatabase') -> None:
         super().__init__(db)
 
     def on_install(self) -> None:

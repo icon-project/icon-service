@@ -18,7 +18,7 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 
-from iconservice import Address
+from iconservice import Address, ScoreDatabase
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import InvalidParamsException
 from iconservice.database.db import IconScoreDatabase
@@ -36,7 +36,7 @@ def score_db(context_db):
     patch.object(IconScoreDatabase, '_is_v2', new_callable=PropertyMock)
     db = IconScoreDatabase(create_address(), context_db)
     type(db)._is_v2 = PropertyMock(return_value=False)
-    return db
+    return ScoreDatabase(db)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -331,9 +331,9 @@ class TestIconContainerDB:
         value = 1
         test_dict = DictDB(name, score_db, value_type=int, depth=depth)
 
-        score_db._context_db.put = mock.Mock()
-        score_db._context_db.get = mock.Mock(return_value=int_to_bytes(value))
-        score_db._context_db.delete = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
+        score_db._db._context_db.get = mock.Mock(return_value=int_to_bytes(value))
+        score_db._db._context_db.delete = mock.Mock()
 
         test_dict['aaaa']['bbbb']['cccc']['dddd'] = value
 
@@ -349,28 +349,28 @@ class TestIconContainerDB:
             'cccc'.encode(),
             'dddd'.encode()
         ))
-        args, _ = score_db._context_db.put.call_args
+        args, _ = score_db._db._context_db.put.call_args
         assert expected_key == args[1]
 
         ret = test_dict['aaaa']['bbbb']['cccc']['dddd']
-        args, _ = score_db._context_db.get.call_args
+        args, _ = score_db._db._context_db.get.call_args
         assert expected_key == args[1]
 
         del test_dict['aaaa']['bbbb']['cccc']['dddd']
-        args, _ = score_db._context_db.get.call_args
+        args, _ = score_db._db._context_db.get.call_args
         assert expected_key == args[1]
 
     def test_dict_db_check_prefix_v2(self, score_db):
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         name = 'test_dict'
         depth = 4
         value = 1
         test_dict = DictDB(name, score_db, value_type=int, depth=depth)
 
-        score_db._context_db.put = mock.Mock()
-        score_db._context_db.get = mock.Mock(return_value=int_to_bytes(value))
-        score_db._context_db.delete = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
+        score_db._db._context_db.get = mock.Mock(return_value=int_to_bytes(value))
+        score_db._db._context_db.delete = mock.Mock()
 
         test_dict['aaaa']['bbbb']['cccc']['dddd'] = 1
 
@@ -383,15 +383,15 @@ class TestIconContainerDB:
             KeyElement._rlp_encode_bytes('cccc'.encode()),
             KeyElement._rlp_encode_bytes('dddd'.encode())
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
         ret = test_dict['aaaa']['bbbb']['cccc']['dddd']
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
         del test_dict['aaaa']['bbbb']['cccc']['dddd']
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
     def test_array_db_check_prefix_v1(self, score_db):
@@ -401,7 +401,7 @@ class TestIconContainerDB:
         size = 0
         test_array = ArrayDB(name, score_db, value_type=int, depth=depth)
 
-        score_db._context_db.put = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
 
         test_array.put(value)
 
@@ -411,7 +411,7 @@ class TestIconContainerDB:
             name.encode(),
             int_to_bytes(size)
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
         expected_key = b'|'.join((
@@ -420,11 +420,11 @@ class TestIconContainerDB:
             name.encode(),
             b'size'
         ))
-        args, _ = score_db._context_db.put.call_args_list[1]
+        args, _ = score_db._db._context_db.put.call_args_list[1]
         assert expected_key == args[1]
 
     def test_array_db_check_prefix_v2(self, score_db):
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         name = 'test_array'
         depth = 1
@@ -432,7 +432,7 @@ class TestIconContainerDB:
         size = 0
         test_array = ArrayDB(name, score_db, value_type=int, depth=depth)
 
-        score_db._context_db.put = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
 
         test_array.put(value)
 
@@ -442,7 +442,7 @@ class TestIconContainerDB:
             KeyElement._rlp_encode_bytes(name.encode()),
             KeyElement._rlp_encode_bytes(int_to_bytes(size))
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
         expected_key = b''.join((
@@ -451,7 +451,7 @@ class TestIconContainerDB:
             KeyElement._rlp_encode_bytes(name.encode()),
             KeyElement._rlp_encode_bytes(b''),
         ))
-        args, _ = score_db._context_db.put.call_args_list[1]
+        args, _ = score_db._db._context_db.put.call_args_list[1]
         assert expected_key == args[1]
 
     def test_var_db_check_prefix_v1(self, score_db):
@@ -459,7 +459,7 @@ class TestIconContainerDB:
         value = 1
         test_var = VarDB(name, score_db, value_type=int)
 
-        score_db._context_db.put = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
 
         test_var.set(value)
 
@@ -468,17 +468,17 @@ class TestIconContainerDB:
             VAR_DB_ID,
             name.encode()
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
     def test_var_db_check_prefix_v2(self, score_db):
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         name = 'test_var'
         value = 1
         test_var = VarDB(name, score_db, value_type=int)
 
-        score_db._context_db.put = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
 
         test_var.set(value)
 
@@ -487,7 +487,7 @@ class TestIconContainerDB:
             VAR_DB_ID,
             KeyElement._rlp_encode_bytes(name.encode())
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert expected_key == args[1]
 
     def test_sub_var_db_check_prefix_v1(self, score_db):
@@ -498,7 +498,7 @@ class TestIconContainerDB:
         value = 1
         test_var = VarDB(name, sub_db, value_type=int)
 
-        score_db._context_db.put = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
 
         test_var.set(value)
 
@@ -508,11 +508,11 @@ class TestIconContainerDB:
             VAR_DB_ID,
             name.encode()
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert args[1] == expected_key
 
     def test_sub_var_db_check_prefix_v2(self, score_db):
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         sub_prefix = b'sub'
         sub_db = score_db.get_sub_db(sub_prefix)
@@ -521,7 +521,7 @@ class TestIconContainerDB:
         value = 1
         test_var = VarDB(name, sub_db, value_type=int)
 
-        score_db._context_db.put = mock.Mock()
+        score_db._db._context_db.put = mock.Mock()
 
         test_var.set(value)
 
@@ -531,7 +531,7 @@ class TestIconContainerDB:
             KeyElement._rlp_encode_bytes(sub_prefix),
             KeyElement._rlp_encode_bytes(name.encode())
         ))
-        args, _ = score_db._context_db.put.call_args_list[0]
+        args, _ = score_db._db._context_db.put.call_args_list[0]
         assert args[1] == expected_key
 
     def test_dict_db_migration(self, score_db):
@@ -547,7 +547,7 @@ class TestIconContainerDB:
         test_db[key1][key2][key3][key4] = value
         assert value == test_db[key1][key2][key3][key4]
 
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         test_db = DictDB(name, score_db, value_type=int, depth=depth)
         assert value == test_db[key1][key2][key3][key4]
@@ -560,7 +560,7 @@ class TestIconContainerDB:
         test_db.put(value)
         assert value == test_db[0]
 
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         test_db = ArrayDB(name, score_db, value_type=int)
         assert value == test_db[0]
@@ -573,7 +573,7 @@ class TestIconContainerDB:
         test_db.set(value)
         assert value == test_db.get()
 
-        type(score_db)._is_v2 = PropertyMock(return_value=True)
+        type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
         test_db = VarDB(name, score_db, value_type=int)
         assert value == test_db.get()
@@ -587,7 +587,7 @@ class TestIconContainerDB:
         test_db.set(value)
         assert value == test_db.get()
 
-        type(sub_db)._is_v2 = PropertyMock(return_value=True)
+        type(sub_db._db)._is_v2 = PropertyMock(return_value=True)
 
         test_db = VarDB(name, sub_db, value_type=int)
         assert value == test_db.get()

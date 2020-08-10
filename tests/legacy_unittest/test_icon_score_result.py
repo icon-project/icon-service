@@ -20,6 +20,7 @@ from random import randrange
 from typing import Optional
 from unittest.mock import Mock, patch
 
+from iconservice import ScoreDatabase
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.block import Block
@@ -218,7 +219,7 @@ class TestScoreResult(unittest.TestCase):
             context_db = inner_task._icon_service_engine._icx_context_db
 
             score_address = create_address(AddressPrefix.CONTRACT, b'address')
-            score = SampleScore(IconScoreDatabase(score_address, context_db))
+            score = SampleScore(ScoreDatabase(IconScoreDatabase(score_address, context_db)))
 
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
@@ -257,7 +258,7 @@ class TestScoreResult(unittest.TestCase):
 # noinspection PyPep8Naming
 class SampleScore(IconScoreBase):
 
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: 'ScoreDatabase') -> None:
         super().__init__(db)
 
     def on_install(self) -> None:

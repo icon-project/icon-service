@@ -24,6 +24,7 @@ from iconservice.database.db import ContextDatabase
 from iconservice.database.db import DatabaseObserver
 from iconservice.database.score_db.utils import DICT_DB_ID, KeyElement
 from iconservice.icon_constant import IconScoreContextType
+from iconservice.iconscore.container_db.score_db import ScoreDatabase
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address
@@ -40,7 +41,7 @@ def score_db(context_db, database_observer):
     db = IconScoreDatabase(create_address(), context_db)
     db.set_observer(database_observer)
     type(db)._is_v2 = PropertyMock(return_value=False)
-    return db
+    return ScoreDatabase(db=db)
 
 
 @pytest.fixture(scope="function")
@@ -98,7 +99,7 @@ def test_database_observer_v1(context, score_db, database_observer):
 
 
 def test_database_observer_v2(context, score_db, database_observer):
-    type(score_db)._is_v2 = PropertyMock(return_value=True)
+    type(score_db._db)._is_v2 = PropertyMock(return_value=True)
 
     # PUT
     key: bytes = b"key1"

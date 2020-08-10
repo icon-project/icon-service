@@ -22,6 +22,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from iconservice import ScoreDatabase
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconScoreException, InvalidParamsException
@@ -50,7 +51,7 @@ from tests import raise_exception_start_tag, raise_exception_end_tag, create_add
 def score_db():
     db = Mock(spec=IconScoreDatabase)
     db.address = create_address(AddressPrefix.CONTRACT)
-    return db
+    return ScoreDatabase(db)
 
 
 @pytest.fixture(scope="function")

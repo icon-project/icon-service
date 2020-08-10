@@ -48,7 +48,7 @@ class IconSystemScoreBase(IconScoreBase):
         super().on_update(**kwargs)
 
     @abstractmethod
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: 'ScoreDatabase') -> None:
         super().__init__(db)
         if not util_is_builtin_score(str(self.address)):
             raise AccessDeniedException(f"Not a system SCORE ({self.address})")

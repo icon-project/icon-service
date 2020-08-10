@@ -20,6 +20,7 @@ from functools import partial, wraps
 from inspect import isfunction, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
+from .container_db.score_db import ScoreDatabase
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import (
@@ -378,7 +379,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         super().on_update(**kwargs)
 
     @abstractmethod
-    def __init__(self, db: 'IconScoreDatabase') -> None:
+    def __init__(self, db: 'ScoreDatabase') -> None:
         """
         A Python init function. Invoked when the contract is loaded at each node.
         Do not put state-changing works in here.
@@ -393,7 +394,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if elements.externals == 0:
             raise InvalidExternalException('There is no external method in the SCORE')
 
-        self.__db.set_observer(self.__create_db_observer())
+        db._db.set_observer(self.__create_db_observer())
 
     def fallback(self) -> None:
         """
@@ -583,11 +584,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return Block(self._context.block.height, self._context.block.timestamp)
 
     @property
-    def db(self) -> 'IconScoreDatabase':
+    def db(self) -> 'ScoreDatabase':
         """
         An instance used to access state DB
 
-        :return: :class:`.IconScoreDatabase` db
+        :return: :class:`ScoreDatabase` db
         """
         return self.__db
 

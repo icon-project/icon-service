@@ -17,6 +17,7 @@
 
 import os
 import unittest
+from typing import List
 from unittest import mock
 from unittest.mock import patch
 
@@ -26,6 +27,7 @@ from iconservice.database.batch import BlockBatch, TransactionBatch, Transaction
 from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
+from iconservice.database.score_db.utils import KeyElement, DICT_DB_ID
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
@@ -315,9 +317,10 @@ class TestIconScoreDatabase(unittest.TestCase):
         key = self.address.body
         value = 100
 
-        self.assertIsNone(db.get(key))
+        keys: List['KeyElement'] = [KeyElement(keys=[key], container_id=DICT_DB_ID)]
+        self.assertIsNone(db.get(keys=keys))
 
         context.readonly = False
         context.type = IconScoreContextType.DIRECT
-        db.put(key, value.to_bytes(32, DATA_BYTE_ORDER))
-        self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(key))
+        db.put(keys=keys, value=value.to_bytes(32, DATA_BYTE_ORDER))
+        self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(keys=keys))
