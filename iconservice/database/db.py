@@ -414,26 +414,28 @@ class IconScoreDatabase(ContextGetter):
         *********************
         """
 
+        self._validate_keys(keys=keys)
+
         if self._is_v2:
-            final_key: bytes = self._convert_key_elements_to_bytes(
-                keys=keys
+            final_key: bytes = self._make_final_key(
+                keys=keys,
             )
             value: Optional[bytes] = self._context_db.get(self._context, final_key)
             if value is None:
-                legacy_key: bytes = self._convert_key_elements_to_bytes(
+                legacy_key: bytes = self._make_final_key(
                     keys=keys,
                     is_legacy=True
                 )
                 value: Optional[bytes] = self._context_db.get(self._context, legacy_key)
         else:
-            final_key: bytes = self._convert_key_elements_to_bytes(
+            final_key: bytes = self._make_final_key(
                 keys=keys,
                 is_legacy=True
             )
             value: Optional[bytes] = self._context_db.get(self._context, final_key)
 
         if self._observer:
-            observer_key: bytes = final_key if self._is_v2 else self._to_bytes_for_observer_key(keys=keys)
+            observer_key: bytes = final_key if self._is_v2 else keys[0].to_bytes(is_legacy=True)
             self._observer.on_get(self._context, observer_key, value)
         return value
 
@@ -454,13 +456,14 @@ class IconScoreDatabase(ContextGetter):
         """
 
         self._validate_ownership()
+        self._validate_keys(keys=keys)
 
         if self._is_v2:
-            final_key: bytes = self._convert_key_elements_to_bytes(
+            final_key: bytes = self._make_final_key(
                 keys=keys,
             )
         else:
-            final_key: bytes = self._convert_key_elements_to_bytes(
+            final_key: bytes = self._make_final_key(
                 keys=keys,
                 is_legacy=True
             )
@@ -469,7 +472,7 @@ class IconScoreDatabase(ContextGetter):
             if self._is_v2:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
                 if old_value is None:
-                    legacy_key: bytes = self._convert_key_elements_to_bytes(
+                    legacy_key: bytes = self._make_final_key(
                         keys=keys,
                         is_legacy=True
                     )
@@ -477,7 +480,7 @@ class IconScoreDatabase(ContextGetter):
             else:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
 
-            observer_key: bytes = final_key if self._is_v2 else self._to_bytes_for_observer_key(keys=keys)
+            observer_key: bytes = final_key if self._is_v2 else keys[0].to_bytes(is_legacy=True)
             if value:
                 self._observer.on_put(self._context, observer_key, old_value, value)
             elif old_value:
@@ -499,13 +502,14 @@ class IconScoreDatabase(ContextGetter):
         *********************
         """
         self._validate_ownership()
+        self._validate_keys(keys=keys)
 
         if self._is_v2:
-            final_key: bytes = self._convert_key_elements_to_bytes(
+            final_key: bytes = self._make_final_key(
                 keys=keys,
             )
         else:
-            final_key: bytes = self._convert_key_elements_to_bytes(
+            final_key: bytes = self._make_final_key(
                 keys=keys,
                 is_legacy=True
             )
@@ -514,7 +518,7 @@ class IconScoreDatabase(ContextGetter):
             if self._is_v2:
                 old_value: Optional[bytes] = self._context_db.get(self._context, final_key)
                 if old_value is None:
-                    legacy_key: bytes = self._convert_key_elements_to_bytes(
+                    legacy_key: bytes = self._make_final_key(
                         keys=keys,
                         is_legacy=True
                     )
@@ -524,7 +528,7 @@ class IconScoreDatabase(ContextGetter):
 
             # If old value is None, won't fire the callback
             if old_value:
-                observer_key: bytes = final_key if self._is_v2 else self._to_bytes_for_observer_key(keys=keys)
+                observer_key: bytes = final_key if self._is_v2 else keys[0].to_bytes(is_legacy=True)
                 self._observer.on_delete(self._context, observer_key, old_value)
         self._context_db.delete(self._context, final_key)
 
@@ -532,6 +536,8 @@ class IconScoreDatabase(ContextGetter):
             self,
             keys: List['KeyElement']
     ) -> 'IconScoreSubDatabase':
+        self._validate_keys(keys=keys)
+
         return IconScoreSubDatabase(
             address=self.address,
             score_db=self,
@@ -553,7 +559,7 @@ class IconScoreDatabase(ContextGetter):
                 f"{self._context.current_address}, "
                 f"{self.address}")
 
-    def _convert_key_elements_to_bytes(
+    def _make_final_key(
             self,
             keys: List['KeyElement'],
             is_legacy: bool = False
@@ -566,8 +572,13 @@ class IconScoreDatabase(ContextGetter):
         return separator.join([self._prefix] + bytes_list)
 
     @classmethod
-    def _to_bytes_for_observer_key(cls, keys: List['KeyElement']) -> bytes:
-        return keys[0].to_bytes(is_legacy=True)
+    def _validate_keys(cls, keys: list):
+        if not keys:
+            raise InvalidParamsException("keys is []")
+
+        for key in keys:
+            if not isinstance(key, KeyElement):
+                raise InvalidParamsException(f"key is not KeyElement type: {type(key)}")
 
 
 class IconScoreSubDatabase:
@@ -577,8 +588,7 @@ class IconScoreSubDatabase:
             score_db: 'IconScoreDatabase',
             keys: List['KeyElement']
     ):
-        if not keys:
-            raise InvalidParamsException("Invalid keys is []")
+        self._validate_keys(keys=keys)
 
         self.address: 'Address' = address
         self._score_db: 'IconScoreDatabase' = score_db
@@ -632,3 +642,12 @@ class IconScoreSubDatabase:
 
     def close(self):
         self._score_db.close()
+
+    @classmethod
+    def _validate_keys(cls, keys: list):
+        if not keys:
+            raise InvalidParamsException("keys is []")
+
+        for key in keys:
+            if not isinstance(key, KeyElement):
+                raise InvalidParamsException(f"key is not KeyElement type: {type(key)}")
