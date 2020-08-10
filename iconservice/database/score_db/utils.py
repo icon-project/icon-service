@@ -55,16 +55,18 @@ class KeyElement:
     def container_id(self) -> bytes:
         return self._container_id
 
-    def to_bytes(self, is_legacy: bool) -> List[bytes]:
+    def to_bytes(self, is_legacy: bool) -> bytes:
         if is_legacy:
             if self._state == KeyElementState.IS_CONSTRUCTOR | KeyElementState.IS_CONTAINER:
-                return [self._container_id, self._keys[0]]
+                # 1. Bug DictDB (is appended container_id whenever make sub db in DictDB)
+                return b'|'.join((self._container_id, self._keys[0]))
             elif self._container_id == ARRAY_DB_ID and len(self._keys) == 2:
-                return [self._keys[1]]
+                # 2. Consider array size key
+                return self._keys[1]
             else:
-                return [self._keys[0]]
+                return self._keys[0]
         else:
-            return [self._rlp_encode_bytes(self._keys[0])]
+            return self._rlp_encode_bytes(self._keys[0])
 
     @classmethod
     def _rlp_encode_bytes(cls, b: bytes) -> bytes:

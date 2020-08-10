@@ -560,14 +560,14 @@ class IconScoreDatabase(ContextGetter):
     ) -> bytes:
         bytes_list = [] if is_legacy else [keys[-1].container_id]
         for ke in keys:
-            v: List[bytes] = ke.to_bytes(is_legacy=is_legacy)
-            bytes_list.extend(v)
+            v: bytes = ke.to_bytes(is_legacy=is_legacy)
+            bytes_list.append(v)
         separator: bytes = b'|' if is_legacy else b''
         return separator.join([self._prefix] + bytes_list)
 
     @classmethod
     def _to_bytes_for_observer_key(cls, keys: List['KeyElement']) -> bytes:
-        return keys[0].to_bytes(is_legacy=True)[0]
+        return keys[0].to_bytes(is_legacy=True)
 
 
 class IconScoreSubDatabase:
