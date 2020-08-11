@@ -22,14 +22,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from iconservice import ScoreDatabase
+from iconservice.iconscore.container_db.score_db import IconScoreDatabase
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconScoreException, InvalidParamsException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import TransactionBatch
-from iconservice.database.db import IconScoreDatabase
+from iconservice.database.db import ScoreSubDatabase, ScoreDatabase
 from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.icon_service_engine import IconServiceEngine
@@ -49,9 +49,11 @@ from tests import raise_exception_start_tag, raise_exception_end_tag, create_add
 
 @pytest.fixture(scope="function")
 def score_db():
-    db = Mock(spec=IconScoreDatabase)
-    db.address = create_address(AddressPrefix.CONTRACT)
-    return ScoreDatabase(db)
+    score_db = Mock(spec=ScoreDatabase)
+    sub_score_db = Mock(spec=ScoreSubDatabase)
+    sub_score_db.attach_mock(score_db, "_score_db")
+    sub_score_db.address = create_address(AddressPrefix.CONTRACT)
+    return IconScoreDatabase(db=sub_score_db)
 
 
 @pytest.fixture(scope="function")

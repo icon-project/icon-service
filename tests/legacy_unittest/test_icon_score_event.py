@@ -26,7 +26,7 @@ from iconservice.database.batch import TransactionBatch
 from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
+from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, external
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icon_constant import IconScoreContextType, IconScoreFuncType
@@ -34,15 +34,19 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import int_to_bytes, ContextEngine, ContextStorage
 from iconservice.utils import to_camel_case
-from iconservice.iconscore.container_db.score_db import ScoreDatabase
+from iconservice.database.db import ScoreDatabase, ScoreSubDatabase
+from iconservice.iconscore.container_db.score_db import IconScoreDatabase
 
 
 class TestEventlog(unittest.TestCase):
     def setUp(self):
         address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
-        icon_score_db = Mock(spec=IconScoreDatabase)
-        db = Mock(spec=ScoreDatabase)
-        db.attach_mock(icon_score_db, '_db')
+
+        score_db = Mock(spec=ScoreDatabase)
+        score_sub_db = Mock(spec=ScoreSubDatabase)
+        score_sub_db.attach_mock(score_db, '_score_db')
+        db = Mock(spec=IconScoreDatabase)
+        db.attach_mock(score_sub_db, '_db')
         db.attach_mock(address, 'address')
         context = IconScoreContext()
         traces = Mock(spec=list)
@@ -355,7 +359,7 @@ class TestEventlog(unittest.TestCase):
 
 class EventlogScore(IconScoreBase):
 
-    def __init__(self, db: 'ScoreDatabase') -> None:
+    def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
 
     def on_install(self) -> None:

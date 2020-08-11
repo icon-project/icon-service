@@ -25,7 +25,7 @@ from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue, BlockBatchValue
 from iconservice.database.db import ContextDatabase, MetaContextDatabase
-from iconservice.database.db import IconScoreDatabase
+from iconservice.database.db import ScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.database.score_db.utils import KeyElement, DICT_DB_ID
 from iconservice.icon_constant import DATA_BYTE_ORDER
@@ -296,7 +296,7 @@ class TestIconScoreDatabase(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         context.is_revision_changed = mock.Mock(return_value=False)
         ContextContainer._push_context(context)
-        self.db = IconScoreDatabase(address, context_db=context_db)
+        self.db = ScoreDatabase(address, context_db=context_db)
         ContextContainer._clear_context()
 
         self.address = address

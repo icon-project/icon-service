@@ -24,7 +24,7 @@ from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_pat
 from ..base.address import Address
 from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
-from ..database.db import IconScoreDatabase
+from ..database.db import ScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState, BUILTIN_SCORE_IMPORT_WHITE_LIST
 from ..utils import is_builtin_score
@@ -133,14 +133,14 @@ class IconScoreContextUtil(object):
     @staticmethod
     def create_score_info(
             context: 'IconScoreContext', score_address: 'Address',
-            tx_hash: bytes, score_db: 'IconScoreDatabase' = None) -> 'IconScoreInfo':
+            tx_hash: bytes, score_db: 'ScoreDatabase' = None) -> 'IconScoreInfo':
 
         score_class: type = IconScoreClassLoader.run(
             score_address, tx_hash, context.score_root_path)
 
         if score_db is None:
             context_db = ContextDatabaseFactory.create_by_address(score_address)
-            score_db = IconScoreDatabase(score_address, context_db)
+            score_db = ScoreDatabase(score_address, context_db)
 
         # Cache a new IconScoreInfo instance
         return IconScoreInfo(score_class, score_db, tx_hash)

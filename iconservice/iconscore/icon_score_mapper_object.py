@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from .container_db.score_db import ScoreDatabase
+from ..iconscore.container_db.score_db import IconScoreDatabase
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import Revision
@@ -24,7 +24,7 @@ from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-    from ..database.db import IconScoreDatabase
+    from ..database.db import ScoreDatabase
 
 
 class IconScoreInfo(object):
@@ -33,7 +33,7 @@ class IconScoreInfo(object):
     If this class is not necessary anymore, Remove it
     """
 
-    def __init__(self, score_class: type, score_db: 'IconScoreDatabase', tx_hash: bytes) -> None:
+    def __init__(self, score_class: type, score_db: 'ScoreDatabase', tx_hash: bytes) -> None:
         """Constructor
 
         :param score_class:
@@ -54,7 +54,7 @@ class IconScoreInfo(object):
         return self._score_class
 
     @property
-    def score_db(self) -> 'IconScoreDatabase':
+    def score_db(self) -> 'ScoreDatabase':
         return self._score_db
 
     @property
@@ -76,7 +76,7 @@ class IconScoreInfo(object):
         return self.create_score()
 
     def create_score(self) -> 'IconScoreBase':
-        return self._score_class(ScoreDatabase(self._score_db))
+        return self._score_class(db=IconScoreDatabase(db=self._score_db.get_sub_db()))
 
 
 class IconScoreMapperObject(dict):

@@ -18,13 +18,13 @@ from unittest.mock import Mock, patch, PropertyMock
 
 import pytest
 
-from iconservice import IconScoreDatabase
+from iconservice.database.db import ScoreDatabase
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.database.db import ContextDatabase
 from iconservice.database.db import DatabaseObserver
 from iconservice.database.score_db.utils import DICT_DB_ID, KeyElement
 from iconservice.icon_constant import IconScoreContextType
-from iconservice.iconscore.container_db.score_db import ScoreDatabase
+from iconservice.iconscore.container_db.score_db import IconScoreDatabase
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address
@@ -33,9 +33,9 @@ from tests import create_address
 @pytest.fixture(scope="function")
 def score_db(context_db):
     patch.object(IconScoreDatabase, '_is_v2', new_callable=PropertyMock)
-    db = IconScoreDatabase(create_address(), context_db)
+    db = ScoreDatabase(create_address(), context_db)
     type(db)._is_v2 = PropertyMock(return_value=False)
-    return ScoreDatabase(db=db)
+    return IconScoreDatabase(db=db.get_sub_db())
 
 
 @pytest.fixture(scope="function")

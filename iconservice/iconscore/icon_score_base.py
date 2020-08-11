@@ -20,7 +20,7 @@ from functools import partial, wraps
 from inspect import isfunction, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
-from .container_db.score_db import ScoreDatabase
+from .container_db.score_db import IconScoreDatabase
 from .context.context import ContextGetter, ContextContainer
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import (
@@ -52,7 +52,7 @@ from .typing.element import create_score_element_metadatas
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
-from ..database.db import IconScoreDatabase, DatabaseObserver
+from ..database.db import ScoreDatabase, DatabaseObserver
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision, IconScoreContextType
 from ..utils import get_main_type_from_annotations_type
 
@@ -379,7 +379,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         super().on_update(**kwargs)
 
     @abstractmethod
-    def __init__(self, db: 'ScoreDatabase') -> None:
+    def __init__(self, db: 'IconScoreDatabase') -> None:
         """
         A Python init function. Invoked when the contract is loaded at each node.
         Do not put state-changing works in here.
@@ -394,7 +394,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if elements.externals == 0:
             raise InvalidExternalException('There is no external method in the SCORE')
 
-        db._db.set_observer(self.__create_db_observer())
+        root_db: 'ScoreDatabase' = db._db._score_db
+        root_db.set_observer(self.__create_db_observer())
 
     def fallback(self) -> None:
         """
@@ -584,7 +585,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return Block(self._context.block.height, self._context.block.timestamp)
 
     @property
-    def db(self) -> 'ScoreDatabase':
+    def db(self) -> 'IconScoreDatabase':
         """
         An instance used to access state DB
 

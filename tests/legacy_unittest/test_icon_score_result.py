@@ -20,7 +20,7 @@ from random import randrange
 from typing import Optional
 from unittest.mock import Mock, patch
 
-from iconservice import ScoreDatabase
+from iconservice.database.db import ScoreDatabase
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.block import Block
@@ -29,7 +29,7 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
-from iconservice.database.db import IconScoreDatabase
+from iconservice.iconscore.container_db.score_db import IconScoreDatabase
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -219,7 +219,7 @@ class TestScoreResult(unittest.TestCase):
             context_db = inner_task._icon_service_engine._icx_context_db
 
             score_address = create_address(AddressPrefix.CONTRACT, b'address')
-            score = SampleScore(ScoreDatabase(IconScoreDatabase(score_address, context_db)))
+            score = SampleScore(IconScoreDatabase(ScoreDatabase(score_address, context_db).get_sub_db()))
 
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
@@ -258,7 +258,7 @@ class TestScoreResult(unittest.TestCase):
 # noinspection PyPep8Naming
 class SampleScore(IconScoreBase):
 
-    def __init__(self, db: 'ScoreDatabase') -> None:
+    def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
 
     def on_install(self) -> None:

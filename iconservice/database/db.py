@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, Optional, Tuple, Iterable, List
+from typing import TYPE_CHECKING, Optional, Tuple, Iterable, List, Union
 
 import plyvel
 
@@ -361,7 +361,7 @@ class MetaContextDatabase(ContextDatabase):
         return MetaContextDatabase(db)
 
 
-class IconScoreDatabase(ContextGetter):
+class ScoreDatabase(ContextGetter):
     """It is used in IconScore
 
     IconScore can access its states only through IconScoreDatabase
@@ -532,16 +532,11 @@ class IconScoreDatabase(ContextGetter):
                 self._observer.on_delete(self._context, observer_key, old_value)
         self._context_db.delete(self._context, final_key)
 
-    def get_sub_db(
-            self,
-            keys: List['KeyElement']
-    ) -> 'IconScoreSubDatabase':
-        self._validate_keys(keys=keys)
-
-        return IconScoreSubDatabase(
+    def get_sub_db(self) -> 'ScoreSubDatabase':
+        return ScoreSubDatabase(
             address=self.address,
             score_db=self,
-            keys=keys
+            prefixs=[]
         )
 
     def close(self):
@@ -572,7 +567,7 @@ class IconScoreDatabase(ContextGetter):
         return separator.join([self._prefix] + bytes_list)
 
     @classmethod
-    def _validate_keys(cls, keys: list):
+    def _validate_keys(cls, keys: List[KeyElement]):
         if not keys:
             raise InvalidParamsException("keys is []")
 
@@ -581,73 +576,68 @@ class IconScoreDatabase(ContextGetter):
                 raise InvalidParamsException(f"key is not KeyElement type: {type(key)}")
 
 
-class IconScoreSubDatabase:
+class ScoreSubDatabase:
     def __init__(
             self,
             address: 'Address',
-            score_db: 'IconScoreDatabase',
-            keys: List['KeyElement']
+            score_db: 'ScoreDatabase',
+            prefixs: List['KeyElement']
     ):
-        self._validate_keys(keys=keys)
-
         self.address: 'Address' = address
-        self._score_db: 'IconScoreDatabase' = score_db
-
-        self._keys: List['KeyElement'] = keys
+        self._score_db: Union['ScoreDatabase'] = score_db
+        self._prefixs: List['KeyElement'] = prefixs
 
     def get(
             self,
-            keys: List['KeyElement'],
+            key: 'KeyElement',
     ) -> Optional[bytes]:
         """
         Gets the value for the specified key
 
-        :param keys: key to retrieve
+        :param key: key to retrieve
         :return: value for the specified key, or None if not found
         """
-        return self._score_db.get(keys=self._keys + keys)
+        return self._score_db.get(keys=self._prefixs + [key])
 
-    def put(self, keys: List['KeyElement'], value: bytes):
+    def put(self, key: 'KeyElement', value: bytes):
         """
         Sets a value for the specified key.
 
-        :param keys: key to set
+        :param key: key to set
         :param value: value to set
         """
-        self._score_db.put(keys=self._keys + keys, value=value)
+        self._score_db.put(keys=self._prefixs + [key], value=value)
 
-    def delete(self, keys: List['KeyElement']):
+    def delete(self, key: 'KeyElement'):
         """
         Deletes the key/value pair for the specified key.
 
-        :param keys: key to delete
+        :param key: key to delete
         """
-        self._score_db.delete(keys=self._keys + keys)
+        self._score_db.delete(keys=self._prefixs + [key])
 
     def get_sub_db(
             self,
-            keys: List['KeyElement']
-    ) -> 'IconScoreSubDatabase':
+            key: 'KeyElement'
+    ) -> 'ScoreSubDatabase':
         """
 
-        :param keys:
+        :param key:
         :return:
         """
 
-        return IconScoreSubDatabase(
+        return ScoreSubDatabase(
             address=self.address,
             score_db=self._score_db,
-            keys=self._keys + keys
+            prefixs=self._prefixs + [key]
         )
 
     def close(self):
         self._score_db.close()
 
     @classmethod
-    def _validate_keys(cls, keys: list):
-        if not keys:
-            raise InvalidParamsException("keys is []")
+    def _validate_prefixs(cls, prefixs: List[KeyElement]):
+        for prefix in prefixs:
+            if not isinstance(prefix, KeyElement):
+                raise InvalidParamsException(f"prefixs is not KeyElement type: {type(prefixs)}")
 
-        for key in keys:
-            if not isinstance(key, KeyElement):
-                raise InvalidParamsException(f"key is not KeyElement type: {type(key)}")

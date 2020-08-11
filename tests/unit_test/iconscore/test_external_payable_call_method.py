@@ -22,7 +22,8 @@ from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, MethodNotFoundException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
-from iconservice.database.db import IconScoreDatabase
+from iconservice.iconscore.container_db.score_db import IconScoreDatabase
+from iconservice.database.db import ScoreDatabase
 from iconservice.deploy import DeployEngine
 from iconservice.icon_constant import IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.context.context import ContextContainer

@@ -33,9 +33,6 @@ from .iconscore.icon_score_base2 import (
 
 from .iconscore.icon_system_score_base import IconSystemScoreBase
 from .iconscore.system_score import InterfaceSystemScore
-from .iconscore.container_db.score_db import ScoreDatabase
+from .iconscore.container_db.score_db import IconScoreDatabase
 
 from .__version__ import __version__
-
-# legacy
-from .database.db import IconScoreDatabase
