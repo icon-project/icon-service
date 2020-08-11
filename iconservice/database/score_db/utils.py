@@ -33,6 +33,10 @@ class KeyElementState(enum.Flag):
     IS_CONTAINER = 2
 
 
+class ScoreDBBase:
+    pass
+
+
 class KeyElement:
     def __init__(
             self,

@@ -40,7 +40,7 @@ class TestRCDatabase(TestIISSBase):
     def get_last_rc_db_data(rc_data_path):
         return sorted([dir_name for dir_name in os.listdir(rc_data_path)
                        if dir_name.startswith(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX)],
-                      key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX)+1:]),
+                      key=lambda rc_dir: int(rc_dir[len(RewardCalcStorage.IISS_RC_DB_NAME_PREFIX) + 1:]),
                       reverse=True)[0]
 
     def _check_the_name_of_rc_db(self, actual_rc_db_name: str):
@@ -155,8 +155,10 @@ class TestRCDatabase(TestIISSBase):
 
         self.set_revision(Revision.DECENTRALIZATION.value)
         expected_gv_block_height = expected_hd_block_height
-        expected_hd_block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
-                                                                            prev_block_validators=main_preps_address[1:])
+        expected_hd_block_height: int = self.make_blocks_to_end_calculation(
+            prev_block_generator=main_preps_address[0],
+            prev_block_validators=main_preps_address[1:]
+        )
         # ################## term 1 End #####################
         # ################## term 2 Start #####################
         self.make_blocks(self._block_height + 1,
@@ -199,8 +201,10 @@ class TestRCDatabase(TestIISSBase):
                 raise AssertionError
 
         expected_gv_block_height: int = expected_hd_block_height
-        expected_hd_block_height: int = self.make_blocks_to_end_calculation(prev_block_generator=main_preps_address[0],
-                                                                            prev_block_validators=main_preps_address[1:])
+        expected_hd_block_height: int = self.make_blocks_to_end_calculation(
+            prev_block_generator=main_preps_address[0],
+            prev_block_validators=main_preps_address[1:]
+        )
         # ################## term 2 End #####################
         self.make_blocks(self._block_height + 1,
                          prev_block_generator=main_preps_address[0],

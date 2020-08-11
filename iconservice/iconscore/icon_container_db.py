@@ -16,10 +16,11 @@
 
 from typing import Optional, Any, Union, TYPE_CHECKING, List
 
+from .container_db.score_db import ScoreDatabase, ScoreSubDatabase
 from .container_db.utils import Utils
 from .context.context import ContextContainer
 from ..base.exception import InvalidContainerAccessException, InvalidParamsException
-from ..database.db import IconScoreSubDatabase
+from ..database.db import IconScoreDatabase, IconScoreSubDatabase
 from ..database.score_db.utils import (
     DICT_DB_ID,
     ARRAY_DB_ID,
@@ -31,8 +32,7 @@ from ..database.score_db.utils import (
 from ..icon_constant import IconScoreContextType, Revision
 
 if TYPE_CHECKING:
-    from .container_db.score_db import ScoreDatabase, ScoreSubDatabase
-    from ..database.db import IconScoreDatabase
+    pass
 
 
 def make_constructor_key_elements(
@@ -92,14 +92,10 @@ class DictDB:
         self.__value_type: type = value_type
         self.__depth: int = depth
 
-        keys: List['KeyElement'] = make_constructor_key_elements(
-            keys=[key],
-            container_id=DICT_DB_ID,
+        self._db: 'IconScoreSubDatabase' = self._get_init_db(
+            db=db,
+            key=key
         )
-        if isinstance(db, IconScoreSubDatabase):
-            self._db: 'IconScoreSubDatabase' = db.get_sub_db(keys=keys)
-        else:
-            self._db: 'IconScoreSubDatabase' = db._db.get_sub_db(keys=keys)
 
     def remove(self, key: K):
         self._remove(key)
@@ -159,6 +155,24 @@ class DictDB:
     def _is_leaf(self) -> bool:
         return self.__depth == 1
 
+    @classmethod
+    def _get_init_db(
+            cls,
+            db: Union['ScoreDatabase', 'ScoreSubDatabase', 'IconScoreSubDatabase'],
+            key: K) -> 'IconScoreSubDatabase':
+
+        keys: List['KeyElement'] = make_constructor_key_elements(
+            keys=[key],
+            container_id=DICT_DB_ID,
+        )
+        if isinstance(db, IconScoreSubDatabase):
+            init_db: 'IconScoreSubDatabase' = db.get_sub_db(keys=keys)
+        else:
+            init_db: 'IconScoreSubDatabase' = db._db.get_sub_db(keys=keys)
+        if not isinstance(init_db, IconScoreSubDatabase):
+            raise InvalidParamsException(f"Invalid IconScoreDatabase type: {type(db)}")
+        return init_db
+
 
 class ArrayDB:
     """
@@ -179,14 +193,10 @@ class ArrayDB:
         self.__value_type = value_type
         self.__depth = depth
 
-        keys: List['KeyElement'] = make_constructor_key_elements(
-            keys=[key],
-            container_id=ARRAY_DB_ID,
+        self._db: 'IconScoreSubDatabase' = self._get_init_db(
+            db=db,
+            key=key
         )
-        if isinstance(db, IconScoreSubDatabase):
-            self._db: 'IconScoreSubDatabase' = db.get_sub_db(keys=keys)
-        else:
-            self._db: 'IconScoreSubDatabase' = db._db.get_sub_db(keys=keys)
         self.__legacy_size: int = self.__get_size_from_db()
 
     @property
@@ -374,6 +384,23 @@ class ArrayDB:
         revision = context.revision
         return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
 
+    @classmethod
+    def _get_init_db(
+            cls,
+            db: Union['ScoreDatabase', 'ScoreSubDatabase', 'IconScoreSubDatabase'],
+            key: K) -> 'IconScoreSubDatabase':
+        keys: List['KeyElement'] = make_constructor_key_elements(
+            keys=[key],
+            container_id=ARRAY_DB_ID,
+        )
+        if isinstance(db, IconScoreSubDatabase):
+            init_db: 'IconScoreSubDatabase' = db.get_sub_db(keys=keys)
+        else:
+            init_db: 'IconScoreSubDatabase' = db._db.get_sub_db(keys=keys)
+        if not isinstance(init_db, IconScoreSubDatabase):
+            raise InvalidParamsException(f"Invalid IconScoreDatabase type: {type(db)}")
+        return init_db
+
 
 class VarDB:
     """
@@ -395,10 +422,7 @@ class VarDB:
         self.__key = var_key
         self.__value_type = value_type
 
-        if isinstance(db, IconScoreSubDatabase):
-            self._db: 'IconScoreSubDatabase' = db
-        else:
-            self._db: Union['IconScoreDatabase', 'IconScoreSubDatabase'] = db._db
+        self._db: 'IconScoreDatabase' = self._get_init_db(db)
 
     def set(self, value: V):
         """
@@ -440,3 +464,18 @@ class VarDB:
             keys=[self.__key],
             container_id=VAR_DB_ID,
         )
+
+    @classmethod
+    def _get_init_db(
+            cls,
+            db: Union['ScoreDatabase', 'ScoreSubDatabase', 'IconScoreSubDatabase']
+    ) -> 'IconScoreDatabase':
+
+        if isinstance(db, IconScoreSubDatabase):
+            init_db: 'IconScoreSubDatabase' = db
+        else:
+            init_db: 'IconScoreDatabase' = db._db
+
+        if not isinstance(init_db, (IconScoreDatabase, IconScoreSubDatabase)):
+            raise InvalidParamsException(f"Invalid IconScoreDatabase type: {type(db)}")
+        return init_db

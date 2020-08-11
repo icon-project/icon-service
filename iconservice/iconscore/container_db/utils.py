@@ -7,14 +7,9 @@ from ...utils import int_to_bytes, bytes_to_int
 
 if TYPE_CHECKING:
     from ...database.db import IconScoreDatabase, IconScoreSubDatabase
-    from . import ContainerDBBase
 
 
 class Utils:
-    @classmethod
-    def get_container_id(cls, container: 'ContainerDBBase') -> bytes:
-        return container.get_container_id()
-
     @classmethod
     def encode_key(cls, key: K) -> bytes:
         """Create a key passed to DB
