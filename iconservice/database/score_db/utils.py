@@ -25,12 +25,14 @@ V = TypeVar('V', int, str, Address, bytes, bool)
 ARRAY_DB_ID = b'\x00'
 DICT_DB_ID = b'\x01'
 VAR_DB_ID = b'\x02'
+CUSTOM_DB_ID = b'\x03'
 
 
 class KeyElementState(enum.Flag):
     NONE = 0
     IS_CONSTRUCTOR = 1
     IS_CONTAINER = 2
+    USE_CUSTOM_SUB_DB = 4
 
 
 class ScoreDBBase:
@@ -70,7 +72,11 @@ class KeyElement:
             else:
                 return self._keys[0]
         else:
-            return self._rlp_encode_bytes(self._keys[0])
+            if self._state == KeyElementState.USE_CUSTOM_SUB_DB:
+                # TODO return specific bytes
+                return self._rlp_encode_bytes(CUSTOM_DB_ID) + self._rlp_encode_bytes(self._keys[0])
+            else:
+                return self._rlp_encode_bytes(self._keys[0])
 
     @classmethod
     def _rlp_encode_bytes(cls, b: bytes) -> bytes:

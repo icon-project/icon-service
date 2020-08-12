@@ -22,7 +22,7 @@ from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidParamsException
 from iconservice.database.db import ScoreDatabase
 from iconservice.iconscore.container_db.score_db import IconScoreDatabase
-from iconservice.database.score_db.utils import DICT_DB_ID, KeyElement, ARRAY_DB_ID, VAR_DB_ID
+from iconservice.database.score_db.utils import DICT_DB_ID, KeyElement, ARRAY_DB_ID, VAR_DB_ID, CUSTOM_DB_ID
 from iconservice.iconscore.container_db.utils import Utils as ContainerUtils
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_container_db import DictDB, ArrayDB, VarDB
@@ -552,6 +552,7 @@ class TestIconContainerDB:
         expected_key = b''.join((
             score_db.address.to_bytes(),
             VAR_DB_ID,
+            KeyElement._rlp_encode_bytes(CUSTOM_DB_ID),
             KeyElement._rlp_encode_bytes(sub_prefix),
             KeyElement._rlp_encode_bytes(name.encode())
         ))
@@ -616,4 +617,43 @@ class TestIconContainerDB:
         test_db = VarDB(name, sub_db, value_type=int)
         assert value == test_db.get()
 
+    def test_conplict_container_db(self, score_db):
+        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
+        def _get_context_db(score_db):
+            return score_db._db._score_db._context_db
+        _get_context_db(score_db).put = mock.Mock()
 
+        name: str = "test"
+        depth: int = 4
+
+        test_dict = DictDB(key=name, db=score_db, value_type=int, depth=depth)
+
+        level_keys = [
+            "aaaa",
+            "bbbb",
+            "cccc",
+            "dddd"
+        ]
+        test_dict[level_keys[0]][level_keys[1]][level_keys[2]][level_keys[3]] = 1
+
+        expected_key = b''.join(
+            (
+                score_db.address.to_bytes(),
+                DICT_DB_ID,
+                KeyElement._rlp_encode_bytes(name.encode()),
+                KeyElement._rlp_encode_bytes(level_keys[0].encode()),
+                KeyElement._rlp_encode_bytes(level_keys[1].encode()),
+                KeyElement._rlp_encode_bytes(level_keys[2].encode()),
+                KeyElement._rlp_encode_bytes(level_keys[3].encode())
+            )
+        )
+        args, _ = _get_context_db(score_db).put.call_args_list[0]
+        final_key1 = args[1]
+        assert expected_key == final_key1
+
+        name_db = score_db.get_sub_db(prefix=name.encode())
+        depth_3_dict_db = DictDB(key=level_keys[0], db=name_db, value_type=int, depth=3)
+        depth_3_dict_db[level_keys[1]][level_keys[2]][level_keys[3]] = 2
+        args, _ = _get_context_db(score_db).put.call_args_list[1]
+        final_key2 = args[1]
+        assert expected_key != final_key2

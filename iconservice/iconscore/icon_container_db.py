@@ -123,7 +123,7 @@ class DictDB:
         if not self._is_leaf:
             return DictDB(
                 key=key,
-                db=IconScoreDatabase(db=self._db),
+                db=IconScoreDatabase(db=self._db, is_container_db=True),
                 value_type=self.__value_type,
                 depth=self.__depth - 1
             )
@@ -211,7 +211,7 @@ class ArrayDB:
         if not self._is_leaf:
             return ArrayDB(
                 key=index,
-                db=IconScoreDatabase(db=self._db),
+                db=IconScoreDatabase(db=self._db, is_container_db=True),
                 value_type=self.__value_type,
                 depth=self.__depth - 1
             )
