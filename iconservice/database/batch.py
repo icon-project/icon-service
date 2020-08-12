@@ -35,6 +35,10 @@ class BatchValue:
     def value(self):
         return self._value
 
+    @value.setter
+    def value(self, value: bytes):
+        self._value = value
+
     @property
     def include_state_root_hash(self):
         return self._include_state_root_hash
@@ -81,6 +85,10 @@ class BlockBatchValue(BatchValue):
     @property
     def tx_indexes(self) -> List[int]:
         return copy(self._tx_indexes)
+
+    def update(self, value: bytes, tx_index: int):
+        self._tx_indexes.append(tx_index)
+        self.value = value
 
     def __repr__(self):
         return f'BlockBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_indexes})'
@@ -245,12 +253,13 @@ class BlockBatch(Batch):
         for key, value in tx_batch.items():
             prev_block_batch_value: Optional['BlockBatchValue'] = self.get(key)
             if prev_block_batch_value is not None:
-                tx_indexes: list = prev_block_batch_value.tx_indexes
-                tx_indexes.append(value.tx_index)
+                # tx_indexes: list = prev_block_batch_value.tx_indexes
+                # tx_indexes.append(value.tx_index)
+                prev_block_batch_value.update(value.value, value.tx_index)
             else:
                 tx_indexes: list = [value.tx_index]
-            bbv = BlockBatchValue(value.value, value.include_state_root_hash, tx_indexes)
-            super().__setitem__(key, bbv)
+                bbv = BlockBatchValue(value.value, value.include_state_root_hash, tx_indexes)
+                super().__setitem__(key, bbv)
 
     def update_block_hash(self, block_hash: bytes):
         self.block = Block(block_height=self.block.height,
