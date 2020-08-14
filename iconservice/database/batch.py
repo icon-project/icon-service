@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from copy import copy
+from dataclasses import dataclass
 from typing import Optional, List
 
 from ..base.block import Block
@@ -26,22 +26,11 @@ from ..icx import IcxStorage
 from ..utils import sha3_256, to_camel_case
 
 
+@dataclass
 class BatchValue:
-    def __init__(self, value: Optional[bytes], include_state_root_hash: bool):
-        self._value: bytes = value
-        self._include_state_root_hash: bool = include_state_root_hash
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value: bytes):
-        self._value = value
-
-    @property
-    def include_state_root_hash(self):
-        return self._include_state_root_hash
+    __slots__ = ["value", "include_state_root_hash"]
+    value: bytes
+    include_state_root_hash: bool
 
     def to_dict(self, casing: Optional[callable] = None) -> dict:
         new_dict = {}
@@ -53,20 +42,10 @@ class BatchValue:
         return new_dict
 
 
+@dataclass
 class TransactionBatchValue(BatchValue):
-    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_index: int = -1):
-        super().__init__(value, include_state_root_hash)
-        self._tx_index: int = tx_index
-
-    @property
-    def tx_index(self) -> int:
-        """
-        Transaction index information for debugging
-        index -1 means deploying score or the data being been recorded outside of the transaction
-        :return:
-        """
-        # Fixme: Correct tx index should be set on deploying score (not -1)
-        return self._tx_index
+    __slots__ = ["tx_index"]
+    tx_index: int # index -1 means deploying score or the data being been recorded outside of the transaction
 
     def __repr__(self):
         return f'TransactionBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_index})'
@@ -77,18 +56,10 @@ class TransactionBatchValue(BatchValue):
                self.tx_index == other.tx_index
 
 
+@dataclass
 class BlockBatchValue(BatchValue):
-    def __init__(self, value: Optional[bytes], include_state_root_hash: bool, tx_indexes: List[int]):
-        super().__init__(value, include_state_root_hash)
-        self._tx_indexes: List[int] = tx_indexes
-
-    @property
-    def tx_indexes(self) -> List[int]:
-        return copy(self._tx_indexes)
-
-    def update(self, value: bytes, tx_index: int):
-        self._tx_indexes.append(tx_index)
-        self.value = value
+    __slots__ = ["tx_indexes"]
+    tx_indexes: List[int]
 
     def __repr__(self):
         return f'BlockBatchValue({self.value.hex()}, {self.include_state_root_hash}, {self.tx_indexes})'
@@ -255,7 +226,9 @@ class BlockBatch(Batch):
             if prev_block_batch_value is not None:
                 # tx_indexes: list = prev_block_batch_value.tx_indexes
                 # tx_indexes.append(value.tx_index)
-                prev_block_batch_value.update(value.value, value.tx_index)
+                # prev_block_batch_value.update(value.value, value.tx_index)
+                prev_block_batch_value.value = value.value
+                prev_block_batch_value.tx_indexes.append(value.tx_index)
             else:
                 tx_indexes: list = [value.tx_index]
                 bbv = BlockBatchValue(value.value, value.include_state_root_hash, tx_indexes)
