@@ -81,19 +81,24 @@ class ContainerUtil(object):
         return bytes_key
 
     @classmethod
-    def encode_value(cls, value: V) -> bytes:
-        if isinstance(value, int):
+    def encode_value(cls, value: V, value_type: type) -> bytes:
+
+        if value_type != type(value):
+            raise InvalidParamsException(f'Encoding mismatch: native type={type(value)}, target encoding type={value_type}')
+
+        if value_type == int:
             byte_value = int_to_bytes(value)
-        elif isinstance(value, str):
+        elif value_type == str:
             byte_value = value.encode('utf-8')
-        elif isinstance(value, Address):
+        elif value_type == Address:
             byte_value = value.to_bytes()
-        elif isinstance(value, bool):
+        elif value_type == bool:
             byte_value = int_to_bytes(int(value))
-        elif isinstance(value, bytes):
+        elif value_type == bytes:
             byte_value = value
         else:
-            raise InvalidParamsException(f'Unsupported value type: {type(value)}')
+            raise InvalidParamsException(f'Unsupported value type: {value_type}')
+
         return byte_value
 
     @classmethod
@@ -108,10 +113,12 @@ class ContainerUtil(object):
             obj_value = value.decode()
         elif value_type == Address:
             obj_value = Address.from_bytes(value)
-        if value_type == bool:
+        elif value_type == bool:
             obj_value = bool(bytes_to_int(value))
         elif value_type == bytes:
             obj_value = value
+        else:
+            raise InvalidParamsException(f'Unsupported value type: {value_type}')
         return obj_value
 
     @classmethod
@@ -152,7 +159,7 @@ class ContainerUtil(object):
                 cls.__put_to_db_internal(sub_db, enumerate(value))
             else:
                 db_key = cls.encode_key(key)
-                db_value = cls.encode_value(value)
+                db_value = cls.encode_value(value, type(value))
                 db.put(db_key, db_value)
 
 
@@ -191,7 +198,7 @@ class DictDB(object):
             raise InvalidContainerAccessException('DictDB depth mismatch')
 
         encoded_key: bytes = get_encoded_key(key)
-        encoded_value: bytes = ContainerUtil.encode_value(value)
+        encoded_value: bytes = ContainerUtil.encode_value(value, self.__value_type)
 
         self._db.put(encoded_key, encoded_value)
 
@@ -283,11 +290,11 @@ class ArrayDB(object):
 
     def __set_size(self, size: int) -> None:
         self.__legacy_size = size
-        byte_value = ContainerUtil.encode_value(size)
+        byte_value = ContainerUtil.encode_value(size, type(size))
         self._db.put(self.__SIZE_BYTE_KEY, byte_value)
 
     def __put(self, index: int, value: V) -> None:
-        byte_value = ContainerUtil.encode_value(value)
+        byte_value = ContainerUtil.encode_value(value, self.__value_type)
         self._db.put(get_encoded_key(index), byte_value)
 
     def __iter__(self):
@@ -368,7 +375,7 @@ class VarDB(object):
 
         :param value: a value to be set
         """
-        byte_value = ContainerUtil.encode_value(value)
+        byte_value = ContainerUtil.encode_value(value, self.__value_type)
         self._db.put(self.__var_byte_key, byte_value)
 
     def get(self) -> Optional[V]:
