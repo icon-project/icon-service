@@ -448,8 +448,6 @@ class IconServiceEngine(ContextContainer):
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
-                # Logger.debug(_TAG, f"INVOKE tx: {tx_request}")
-
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
                 if is_block_editable and not self._continue_to_invoke(tx_request, tx_timer):
@@ -479,7 +477,8 @@ class IconServiceEngine(ContextContainer):
                 if context.revision >= Revision.IISS.value:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-                # Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
+                if tx_result.status != TransactionResult.SUCCESS:
+                    Logger.debug(_TAG, f"INVOKE failed\ntx: {tx_request}\nresult: {tx_result}")
 
         if self._check_end_block_height_of_calc(context):
             context.revision_changed_flag |= RevisionChangedFlag.IISS_CALC
