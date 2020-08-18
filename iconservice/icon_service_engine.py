@@ -448,7 +448,7 @@ class IconServiceEngine(ContextContainer):
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
-                Logger.debug(_TAG, f"INVOKE tx: {tx_request}")
+                # Logger.debug(_TAG, f"INVOKE tx: {tx_request}")
 
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
@@ -479,7 +479,7 @@ class IconServiceEngine(ContextContainer):
                 if context.revision >= Revision.IISS.value:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-                Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
+                # Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
 
         if self._check_end_block_height_of_calc(context):
             context.revision_changed_flag |= RevisionChangedFlag.IISS_CALC
@@ -776,7 +776,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        assert isinstance(dirty_prep, PRep), f"dirty_prep: {address}"
+        assert isinstance(dirty_prep, PRep), f"dirty_prep: {prev_block_generator}"
 
         dirty_prep.last_generate_block_height = context.block.height - 1
         context.put_dirty_prep(dirty_prep)
