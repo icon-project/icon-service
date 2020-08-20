@@ -78,7 +78,7 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
 
         .. versionadded:: iconservice-1.7.3
 
-        :param value: number of ICX coins to send (unit: loop)
+        :param value: the number of ICX coins to send (unit: loop)
         :type value: int
         :return: :class:`.InterfaceScore` object
         """
