@@ -65,23 +65,6 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
         return self.__addr_to
 
     def icx(self, value: int):
-        """Set the number of ICX coins to send on inter-call.
-
-        This function can be used when you want to call payable functions of other SCOREs along with ICX coins.
-
-        It is strongly recommended to use icx() in method chaining like the following:
-        ``interface_score.icx(2 * 10 ** 18).func()``
-
-        .. note::
-            The unit of value is not icx but loop.
-            1 icx is 10 ** 18 loop.
-
-        .. versionadded:: iconservice-1.7.3
-
-        :param value: the number of ICX coins to send (unit: loop)
-        :type value: int
-        :return: :class:`.InterfaceScore` object
-        """
         if not (isinstance(value, int) and value >= 0):
             raise InvalidParamsException(f"Invalid icx: {value}")
 

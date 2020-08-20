@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
 
 class Icx(object):
-    """Class for handling ICX coin transfer
-
+    """
+    Class for handling ICX coin transfer
     These functions are intended to be used for SCORE development.
     """
 
@@ -44,7 +44,7 @@ class Icx(object):
         If failed, an exception will be raised
 
         :param addr_to: receiver address
-        :param amount: the amount of icx to transfer (unit: loop)
+        :param amount: the amount of icx to transfer
         """
         InternalCall.other_external_call(self._context, self._address, addr_to, amount, STR_FALLBACK)
 
@@ -53,7 +53,7 @@ class Icx(object):
         transfer the amount of icx to the given 'addr_to'
 
         :param addr_to: receiver address
-        :param amount: the amount of icx to transfer (unit: loop)
+        :param amount: the amount of icx to transfer
         :return: True(success) False(failed)
         """
         try:

@@ -6,5 +6,6 @@ InterfaceScore
     :members: 
         __init__, 
         addr_to,
-        icx
+        value,
+        set_transfer_value
 ```
