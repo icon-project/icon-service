@@ -65,7 +65,7 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
         return self.__addr_to
 
     def icx(self, value: int):
-        """Set the number of ICX coins to send on inter-call
+        """Set the number of ICX coins to send on inter-call.
 
         This function is useful when it is needed to call payable functions provided by other scores with ICX coins.
 
