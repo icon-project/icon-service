@@ -67,7 +67,7 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     def icx(self, value: int):
         """Set the number of ICX coins to send on inter-call.
 
-        This function is useful when it is needed to call payable functions provided by other scores with ICX coins.
+        This function can be used when you want to call payable functions of other SCOREs along with ICX coins.
 
         It is strongly recommended to use icx() in method chaining like the following:
         ``interface_score.icx(2 * 10 ** 18).func()``
