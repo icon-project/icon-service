@@ -135,6 +135,7 @@ class Revision(Enum):
     STRICT_SCORE_DECORATOR_CHECK = 9
 
     LOCK_ADDRESS = 10
+    FIX_UNSTAKE_BUG = 10
 
     LATEST = 9
 
