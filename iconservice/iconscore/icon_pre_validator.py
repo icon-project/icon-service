@@ -239,14 +239,6 @@ class IconPreValidator:
         if 'method' not in data:
             raise InvalidRequestException('Method not found')
 
-        # Prevent setDelegation tx
-        if context.type == IconScoreContextType.QUERY or \
-                (context.type == IconScoreContextType.INVOKE and
-                 context.revision == Revision.LOCK_ADDRESS.value):
-            method: str = data["method"]
-            if to == SYSTEM_SCORE_ADDRESS and method == "setDelegation":
-                raise InvalidRequestException("setDelegation is disabled temporarily")
-
     def _validate_deploy_transaction(self, context: 'IconScoreContext', params: dict):
         to: 'Address' = params['to']
 

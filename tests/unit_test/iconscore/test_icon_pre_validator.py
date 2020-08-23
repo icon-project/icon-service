@@ -147,11 +147,5 @@ class TestTransactionValidator:
             }
         }
 
-        if blocked:
-            with pytest.raises(InvalidRequestException) as execinfo:
-                validator.execute(context, params, step_price, 100_000)
-
-            validator.execute_to_check_out_of_balance(context, params, step_price)
-        else:
-            validator.execute(context, params, step_price, 100_000)
-            validator.execute_to_check_out_of_balance(context, params, step_price)
+        validator.execute(context, params, step_price, 100_000)
+        validator.execute_to_check_out_of_balance(context, params, step_price)
