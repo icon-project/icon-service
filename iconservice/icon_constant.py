@@ -134,6 +134,8 @@ class Revision(Enum):
     FIX_COIN_PART_BYTES_ENCODING = 9
     STRICT_SCORE_DECORATOR_CHECK = 9
 
+    LOCK_ADDRESS = 10
+
     LATEST = 9
 
 
