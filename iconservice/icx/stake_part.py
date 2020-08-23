@@ -44,7 +44,19 @@ class StakePart(BasePart):
     def __str__(self):
         return f"stake={self._stake}, " \
                f"unstake={self._unstake}, " \
-               f"unstake_bh={self._unstake_block_height}"
+               f"unstake_bh={self._unstake_block_height}, " \
+               f"unstakes_info={self._unstakes_info}"
+
+    def to_dict(self, casing: Optional[callable] = None):
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if key == "_states":
+                continue
+            if key.startswith("_"):
+                key = key[1:]
+            new_dict[casing(key) if casing else key] = value
+
+        return new_dict
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
