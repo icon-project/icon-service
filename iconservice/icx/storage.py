@@ -249,13 +249,15 @@ class Storage(StorageBase):
     def get_account(self,
                     context: 'IconScoreContext',
                     address: 'Address',
-                    intent: 'Intent' = Intent.TRANSFER) -> 'Account':
+                    intent: 'Intent' = Intent.TRANSFER,
+                    skip_lock: bool = False) -> 'Account':
 
         """Returns the account indicated by address.
 
         :param context:
         :param address: account address
         :param intent:
+        :param skip_lock:
         :return: (Account)
             If the account indicated by address is not present,
             create a new account.
@@ -270,7 +272,7 @@ class Storage(StorageBase):
         if AccountPartFlag.COIN in part_flags:
             coin_part: 'CoinPart' = self._get_part(context, CoinPart, address)
 
-            if CoinPartFlag.LOCK in coin_part.flags:
+            if not skip_lock and CoinPartFlag.LOCK in coin_part.flags:
                 raise AccessDeniedException(f"Lock Account: {address}")
 
             if CoinPartFlag.HAS_UNSTAKE in coin_part.flags:

@@ -112,7 +112,8 @@ class Engine(EngineBase):
 
         account = context.storage.icx.get_account(
             context=context,
-            address=address
+            address=address,
+            skip_lock=True
         )
         account.coin_part.toggle_lock(on=lock)
         context.storage.icx.put_account(context, account)
