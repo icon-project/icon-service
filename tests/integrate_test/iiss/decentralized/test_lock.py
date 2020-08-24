@@ -88,6 +88,10 @@ class TestLock(TestIISSBase):
             self.set_stake(from_=from_, value=1 * ICX_IN_LOOP)
         self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[0].address}")
 
+        # avoid point delegate passed!
+        delegations: list = [(self._accounts[0], 0)]
+        self.set_delegation(from_=self._admin, origin_delegations=delegations)
+
         # unlock
         self.score_call(
             from_=self._admin,
