@@ -278,10 +278,22 @@ class Storage(StorageBase):
         if AccountPartFlag.DELEGATION in part_flags:
             delegation_part: 'DelegationPart' = self._get_part(context, DelegationPart, address)
 
-        return Account(address, context.block.height, context.revision,
-                       coin_part=coin_part,
-                       stake_part=stake_part,
-                       delegation_part=delegation_part)
+        account = Account(address, context.block.height, context.revision,
+                          coin_part=coin_part,
+                          stake_part=stake_part,
+                          delegation_part=delegation_part)
+        if account.normalize_status != 0 and \
+                context.type in (IconScoreContextType.DIRECT, IconScoreContextType.INVOKE):
+            # unstake flush error
+            key = str(account.address)
+            if key in context.unstake_error:
+                context.unstake_error[key]["error_count"] += 1
+                context.unstake_error[key]["error_amount"] += account.normalize_status
+            else:
+                context.unstake_error[key] = {
+                    "error_count": 1,
+                    "error_amount": account.normalize_status,
+                }
 
     def get_treasury_account(self, context: 'IconScoreContext') -> 'Account':
         """Returns the instance of treasury account

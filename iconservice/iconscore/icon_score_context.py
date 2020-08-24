@@ -114,6 +114,8 @@ class IconScoreContext(ABC):
         self.regulator: Optional['Regulator'] = None
         self.revision_changed_flag: 'RevisionChangedFlag' = RevisionChangedFlag.NONE
 
+        self.unstake_error = {}
+
     @classmethod
     def set_decentralize_trigger(cls, decentralize_trigger: float):
         decentralize_trigger: float = decentralize_trigger

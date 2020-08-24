@@ -39,7 +39,7 @@ class Account(object):
         self._stake_part: 'StakePart' = stake_part
         self._delegation_part: 'DelegationPart' = delegation_part
 
-        self.normalize(revision)
+        self.normalize_status = self.normalize(revision)
 
     @property
     def address(self):
@@ -134,9 +134,9 @@ class Account(object):
 
         self.coin_part.withdraw(value)
 
-    def normalize(self, revision: int):
+    def normalize(self, revision: int) -> int:
         if self.coin_part is None or self.stake_part is None:
-            return
+            return 0
 
         balance: int = self.stake_part.normalize(self._current_block_height, revision)
         if balance > 0:
@@ -145,6 +145,9 @@ class Account(object):
 
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
+            if not self.stake_part.is_dirty():
+                return balance
+        return 0
 
     def set_stake(self, context: "IconScoreContext", value: int, unstake_lock_period: int):
         if self.coin_part is None or self.stake_part is None:

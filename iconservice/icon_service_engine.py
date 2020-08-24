@@ -376,7 +376,7 @@ class IconServiceEngine(ContextContainer):
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
                prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
-               is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
+               is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict], dict]:
 
         """Process transactions in a block sent by loopchain
 
@@ -406,7 +406,8 @@ class IconServiceEngine(ContextContainer):
                 precommit_data.block_result, \
                 precommit_data.state_root_hash, \
                 precommit_data.added_transactions, \
-                precommit_data.next_preps
+                precommit_data.next_preps, \
+                {}
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -523,7 +524,8 @@ class IconServiceEngine(ContextContainer):
             block_result, \
             precommit_data.state_root_hash, \
             precommit_data.added_transactions, \
-            precommit_data.next_preps
+            precommit_data.next_preps, \
+            context.unstake_error
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
