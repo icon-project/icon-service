@@ -19,6 +19,7 @@ from iconservice.iconscore.system import *
 
 from .network_proposal import NetworkProposal, NetworkProposalType, MaliciousScoreType
 
+VERSION = '1.1.1'
 TAG = 'Governance'
 DEBUG = False
 
@@ -144,7 +145,7 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_6()
         if self.is_less_than_target_version('1.1.0'):
             self._migrate_v1_1_0()
-        self._version.set('1.1.0')
+        self._version.set(VERSION)
 
     def on_install(self) -> None:
         pass
@@ -774,7 +775,7 @@ class Governance(IconSystemScoreBase):
 
     @staticmethod
     def _validate_revision_proposal(value: dict) -> bool:
-        code = int(value['code'], 16)
+        code = int(value['code'], 0)
         name = value['name']
 
         return isinstance(code, int) and isinstance(name, str)
@@ -782,7 +783,7 @@ class Governance(IconSystemScoreBase):
     @staticmethod
     def _validate_malicious_score_proposal(value: dict) -> bool:
         address = Address.from_string(value['address'])
-        type_ = int(value['type'], 16)
+        type_ = int(value['type'], 0)
 
         return isinstance(address, Address) \
                and address.is_contract \
@@ -801,13 +802,17 @@ class Governance(IconSystemScoreBase):
 
         return False
 
-    @staticmethod
-    def _validate_step_price_proposal(value: dict) -> bool:
-        step_price = int(value['value'], 16)
+    def _validate_step_price_proposal(self, value: dict) -> bool:
+        step_price = int(value['value'], 0)
+        step_price_org = self.get_icon_network_value(IconNetworkValueType.STEP_PRICE)
+        max_step_price = step_price_org * 125 // 100
+        min_step_price = step_price_org * 75 // 100
+        if not (min_step_price <= step_price <= max_step_price):
+            return False
         return isinstance(step_price, int)
 
     def _validate_irep_proposal(self, value: dict) -> bool:
-        irep = int(value['value'], 16)
+        irep = int(value['value'], 0)
         if not isinstance(irep, int):
             return False
 
@@ -831,7 +836,7 @@ class Governance(IconSystemScoreBase):
             self._set_irep(**value)
 
     def _set_revision(self, code: str, name: str):
-        code = int(code, 16)
+        code = int(code, 0)
         prev_code: int = self.get_icon_network_value(IconNetworkValueType.REVISION_CODE)
         if code < prev_code:
             revert(f"can't decrease code")
@@ -843,7 +848,7 @@ class Governance(IconSystemScoreBase):
 
     def _malicious_score(self, address: str, type: str):
         converted_address = Address.from_string(address)
-        converted_type = int(type, 16)
+        converted_type = int(type, 0)
         if converted_type == MaliciousScoreType.FREEZE:
             self._addToScoreBlackList(converted_address)
         elif converted_type == MaliciousScoreType.UNFREEZE:
@@ -856,13 +861,14 @@ class Governance(IconSystemScoreBase):
         self.PRepDisqualified(address, success, reason)
 
     def _set_step_price(self, value: str):
-        step_price = int(value, 16)
+        step_price = int(value, 0)
+
         if step_price > 0:
             self.set_icon_network_value(IconNetworkValueType.STEP_PRICE, step_price)
             self.StepPriceChanged(step_price)
 
     def _set_irep(self, value: str):
-        irep = int(value, 16)
+        irep = int(value, 0)
         if irep > 0:
             self.set_icon_network_value(IconNetworkValueType.IREP, irep)
             self.IRepChanged(irep)
