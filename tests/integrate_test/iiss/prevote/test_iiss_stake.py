@@ -400,7 +400,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(expected_balance, response)
         balance = expected_balance
 
-        # unstake 10
+        # unstake 10 times
         unstake_list = []
         unstake = stake // unstake_slot_max // 2
         for i in range(unstake_slot_max):
@@ -606,3 +606,128 @@ class TestIISSStake(TestIISSBase):
                                              value=5)
 
         return self.process_confirm_block_tx([tx], expected_status=False)
+
+    @patch("iconservice.iconscore.icon_score_context.IconScoreContext.unstake_slot_max", 10)
+    def test_unstake_bug(self):
+        # in integrate tests unstaking period is about 20 so that patch UNSTAKE_SLOT_MAX to 10
+        unstake_slot_max = 10
+        self.update_governance()
+
+        # set Revision REV_MULTIPLE_UNSTAKE
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
+
+        # gain 1000 icx
+        balance: int = unstake_slot_max * 2 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
+
+        # set stake
+        stake: int = unstake_slot_max * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
+                                                               value=stake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        balance: int = balance - stake - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, response)
+
+        # unstake
+        unstake = stake // unstake_slot_max
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, response)
+
+        response: dict = self.get_stake(self._accounts[0])
+        unstake_response = response["unstakes"][0]["unstake"]
+        self.assertEqual(unstake, unstake_response)
+
+        self.make_blocks(response["unstakes"][0]["unstakeBlockHeight"]+1)
+        delegation_amount: int = 1 * ICX_IN_LOOP
+        delegation_info: list = \
+            [(
+                self._accounts[1],
+                delegation_amount
+            )]
+
+        # setDelegation
+        tx_results: List['TransactionResult'] = self.set_delegation(from_=self._accounts[0],
+                                                                    origin_delegations=delegation_info,
+                                                                    expected_status=True)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+
+        # balance will increase by unstake value
+        balance = balance - fee + unstake
+        actual_balance = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, actual_balance)
+        balance = actual_balance
+
+        tx_results: List['TransactionResult'] = self.set_delegation(from_=self._accounts[0],
+                                                                    origin_delegations=delegation_info,
+                                                                    expected_status=True)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        # balance will increase by unstake value
+        balance = balance - fee + unstake
+        actual_balance = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, actual_balance)
+
+    @patch("iconservice.iconscore.icon_score_context.IconScoreContext.unstake_slot_max", 10)
+    def test_unstake_bug_fixed(self):
+        # in integrate tests unstaking period is about 20 so that patch UNSTAKE_SLOT_MAX to 10
+        unstake_slot_max = 10
+        self.update_governance()
+
+        # set Revision REV_MULTIPLE_UNSTAKE
+        self.set_revision(Revision.FIX_UNSTAKE_BUG.value)
+
+        # gain 1000 icx
+        balance: int = unstake_slot_max * 2 * ICX_IN_LOOP
+        self.distribute_icx(accounts=self._accounts[:1], init_balance=balance)
+
+        # set stake
+        stake: int = unstake_slot_max * ICX_IN_LOOP
+        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0],
+                                                               value=stake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        balance: int = balance - stake - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, response)
+
+        # unstake
+        unstake = stake // unstake_slot_max
+        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=stake-unstake)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        balance: int = balance - fee
+        response: int = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, response)
+
+        response: dict = self.get_stake(self._accounts[0])
+        unstake_response = response["unstakes"][0]["unstake"]
+        self.assertEqual(unstake, unstake_response)
+
+        self.make_blocks(response["unstakes"][0]["unstakeBlockHeight"]+1)
+        delegation_amount: int = 1 * ICX_IN_LOOP
+        delegation_info: list = \
+            [(
+                self._accounts[1],
+                delegation_amount
+            )]
+
+        # setDelegation
+        tx_results: List['TransactionResult'] = self.set_delegation(from_=self._accounts[0],
+                                                                    origin_delegations=delegation_info,
+                                                                    expected_status=True)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        # balance will increase by unstake value
+        balance = balance - fee + unstake
+        actual_balance = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, actual_balance)
+        balance = actual_balance
+
+        tx_results: List['TransactionResult'] = self.set_delegation(from_=self._accounts[0],
+                                                                    origin_delegations=delegation_info,
+                                                                    expected_status=True)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        # balance will not increase by unstake value
+        balance = balance - fee
+        actual_balance = self.get_balance(self._accounts[0])
+        self.assertEqual(balance, actual_balance)

@@ -180,7 +180,7 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(expected_unstake_info, account.unstakes_info)
         self.assertEqual(expected_balance, account.balance)
 
-    def test_account_for_unstake_slot_max_case_1(self):
+    def test_account_for_unstake_slot_max(self):
         address: 'Address' = create_address()
         context: 'IconScoreContext' = Mock(spec=IconScoreContext)
         unstake_slot_max = 10
