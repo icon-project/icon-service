@@ -289,10 +289,12 @@ class Storage(StorageBase):
             if key in context.unstake_error:
                 context.unstake_error[key]["error_count"] += 1
                 context.unstake_error[key]["error_amount"] += account.normalize_status
+                context.unstake_error[key]["transactions"].append(context.tx.hash)
             else:
                 context.unstake_error[key] = {
                     "error_count": 1,
                     "error_amount": account.normalize_status,
+                    "transactions": [context.tx.hash]
                 }
         return account
 
