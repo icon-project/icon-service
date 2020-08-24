@@ -294,6 +294,7 @@ class Storage(StorageBase):
                     "error_count": 1,
                     "error_amount": account.normalize_status,
                 }
+        return account
 
     def get_treasury_account(self, context: 'IconScoreContext') -> 'Account':
         """Returns the instance of treasury account
