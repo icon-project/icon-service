@@ -208,3 +208,7 @@ class IconScoreContextUtil(object):
     @staticmethod
     def get_deploy_info(context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreDeployInfo']:
         return context.storage.deploy.get_deploy_info(context, address)
+
+    @staticmethod
+    def lock_account(context: 'IconScoreContext', address: 'Address', lock: bool):
+        context.engine.icx.lock_account(context=context, address=address, lock=lock)

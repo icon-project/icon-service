@@ -942,3 +942,12 @@ class Governance(IconSystemScoreBase):
 
         success, reason = self.disqualify_prep(address)
         self.PRepDisqualified(address, success, reason)
+
+    @external
+    def lockAccount(self, address: str, lock: bool):
+        if self.msg.sender != self.owner:
+            revert('Invalid sender: not owner')
+
+        address = Address.from_string(address)
+
+        self.lock_account(address=address, lock=lock)

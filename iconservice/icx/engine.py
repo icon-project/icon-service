@@ -97,3 +97,22 @@ class Engine(EngineBase):
             context.storage.icx.put_account(context, to_account)
 
         return True
+
+    def lock_account(
+            self,
+            context: 'IconScoreContext',
+            address: 'Address',
+            lock: bool):
+        """lock user account
+
+        :param context:
+        :param address: account address
+        :param lock: enable/disable lock
+        """
+
+        account = context.storage.icx.get_account(
+            context=context,
+            address=address
+        )
+        account.coin_part.toggle_lock(on=lock)
+        context.storage.icx.put_account(context, account)

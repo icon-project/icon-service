@@ -50,6 +50,7 @@ class CoinPartType(IntEnum):
 class CoinPartFlag(Flag):
     NONE = 0
     HAS_UNSTAKE = 1
+    LOCK = 2
 
 
 class CoinPart(BasePart):
@@ -132,6 +133,13 @@ class CoinPart(BasePart):
 
     def toggle_has_unstake(self, on: bool):
         new_flags = set_flag(self._flags, CoinPartFlag.HAS_UNSTAKE, on)
+
+        if self._flags != new_flags:
+            self._flags = new_flags
+            self.set_dirty(True)
+
+    def toggle_lock(self, on: bool):
+        new_flags = set_flag(self._flags, CoinPartFlag.LOCK, on)
 
         if self._flags != new_flags:
             self._flags = new_flags

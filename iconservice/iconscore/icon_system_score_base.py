@@ -76,6 +76,13 @@ class IconSystemScoreBase(IconScoreBase):
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
+    def lock_account(self, address: 'Address', lock: bool):
+        return IconScoreContextUtil.lock_account(
+            context=self._context,
+            address=address,
+            lock=lock
+        )
+
     def migrate_icon_network_value(self, data: Dict['IconNetworkValueType', Any]):
         converted_data: list = []
         for type_, value in data.items():
