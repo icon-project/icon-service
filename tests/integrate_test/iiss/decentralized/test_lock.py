@@ -34,7 +34,7 @@ class TestLock(TestIISSBase):
 
     def test_lock(self):
         self.update_governance(
-            version="1_1_1",
+            version="1_1_2",
             expected_status=True,
             root_path="sample_builtin_for_tests"
         )

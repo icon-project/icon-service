@@ -790,7 +790,7 @@ class TestIntegrateBase(TestCase):
                             expected_status=expected_status)
         else:
             # update latest governance SCORE (1.1.0 for revision 9 now)
-            self.update_governance(version="1_1_0",
+            self.update_governance(version="1_1_1",
                                    expected_status=True,
                                    root_path="sample_builtin_for_tests")
 

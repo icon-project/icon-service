@@ -324,7 +324,7 @@ class TestINVMigration(TestIISSBase):
         assert self._is_migration_flag_stored_on_state_db() is False
 
     def test_after_migration(self):
-        self.update_governance(version="1_1_0", expected_status=True, root_path="sample_builtin_for_tests")
+        self.update_governance(version="1_1_1", expected_status=True, root_path="sample_builtin_for_tests")
         self.check_inv(is_migrated=True)
 
         assert self._inv_is_stored_on_state_db() is True
@@ -341,7 +341,7 @@ class TestINVMigration(TestIISSBase):
 
         # TEST: When After upgrade GS to version 1.1.0, all INVs should be same between icon-service and governance
         # and all INVs must be stored on stateDB
-        self.update_governance(version="1_1_0", expected_status=True, root_path="sample_builtin_for_tests")
+        self.update_governance(version="1_1_1", expected_status=True, root_path="sample_builtin_for_tests")
         self.check_inv(is_migrated=True)
 
         assert self._inv_is_stored_on_state_db() is True
