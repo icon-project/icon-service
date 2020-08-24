@@ -121,8 +121,8 @@ class Governance(IconSystemScoreBase):
     def NetworkProposalApproved(self, id: bytes):
         pass
 
-    @eventlog(indexed=2)
-    def LockAccount(self, address: 'Address', lock: bool):
+    @eventlog(indexed=1)
+    def AccountLocked(self, address: 'Address', lock: bool):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
@@ -954,12 +954,10 @@ class Governance(IconSystemScoreBase):
         self.PRepDisqualified(address, success, reason)
 
     @external
-    def lockAccount(self, address: str, lock: bool):
+    def lockAccount(self, address: Address, lock: bool):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
-        address = Address.from_string(address)
-        self.lock_account(address=address, lock=lock)
+        self.lock_account(address, lock)
 
-        self.LockAccount(address=address, lock=lock)
-
+        self.AccountLocked(address, lock)

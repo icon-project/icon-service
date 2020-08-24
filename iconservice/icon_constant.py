@@ -137,7 +137,7 @@ class Revision(Enum):
     LOCK_ADDRESS = 10
     FIX_UNSTAKE_BUG = 10
 
-    LATEST = 9
+    LATEST = 10
 
 
 RC_DB_VERSION_0 = 0
