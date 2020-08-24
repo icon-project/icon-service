@@ -779,7 +779,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        assert isinstance(dirty_prep, PRep), f"dirty_prep: {address}"
+        assert isinstance(dirty_prep, PRep), f"dirty_prep: {dirty_prep.address}"
 
         dirty_prep.last_generate_block_height = context.block.height - 1
         context.put_dirty_prep(dirty_prep)
@@ -1208,6 +1208,8 @@ class IconServiceEngine(ContextContainer):
             context.clear_batch()
             context.traces.append(trace)
             context.event_logs.clear()
+            # clear unstake_error
+            context.unstake_error = self._clear_unstake_error(context)
         finally:
             # Revert func_type to IconScoreFuncType.WRITABLE
             # to avoid DatabaseException in self._charge_transaction_fee()
@@ -1231,6 +1233,26 @@ class IconServiceEngine(ContextContainer):
             context.cumulative_step_used += final_step_used
 
         return tx_result
+
+    def _clear_unstake_error(self, context: 'IconScoreContext') -> dict:
+        new_unstake_error = {}
+        tx_hash = context.tx.hash.hex()
+        for k, v in context.unstake_error.items():
+            error_count = 0
+            error_amount = 0
+            transactions = []
+            for tx_value in v["transactions"]:
+                if tx_hash != tx_value[0]:
+                    transactions.append(tx_value)
+                    error_count += 1
+                    error_amount += tx_value[1]
+            if error_count > 0:
+                new_unstake_error[k] = {
+                    "error_count": error_count,
+                    "error_amount": error_amount,
+                    "transactions": transactions
+                }
+        return new_unstake_error
 
     def _handle_estimate_step(self,
                               context: 'IconScoreContext',
