@@ -286,15 +286,16 @@ class Storage(StorageBase):
                 context.type in (IconScoreContextType.DIRECT, IconScoreContextType.INVOKE):
             # unstake flush error
             key = str(account.address)
+            tx_hash = f"0x{context.tx.hash.hex()}"
             if key in context.unstake_error:
                 context.unstake_error[key]["error_count"] += 1
                 context.unstake_error[key]["error_amount"] += account.normalize_status
-                context.unstake_error[key]["transactions"].append(f"0x{context.tx.hash.hex()}")
+                context.unstake_error[key]["transactions"].append(tx_hash)
             else:
                 context.unstake_error[key] = {
                     "error_count": 1,
                     "error_amount": account.normalize_status,
-                    "transactions": [context.tx.hash]
+                    "transactions": [tx_hash]
                 }
         return account
 
