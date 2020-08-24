@@ -110,10 +110,8 @@ class Engine(EngineBase):
         :param lock: enable/disable lock
         """
 
-        account = context.storage.icx.get_account(
+        context.storage.icx.lock_coin_part(
             context=context,
             address=address,
-            skip_lock=True
+            lock=lock
         )
-        account.coin_part.toggle_lock(on=lock)
-        context.storage.icx.put_account(context, account)
