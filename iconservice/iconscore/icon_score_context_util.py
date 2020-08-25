@@ -212,3 +212,7 @@ class IconScoreContextUtil(object):
     @staticmethod
     def lock_account(context: 'IconScoreContext', address: 'Address', lock: bool):
         context.engine.icx.lock_account(context=context, address=address, lock=lock)
+
+    @staticmethod
+    def is_lock_account(context: 'IconScoreContext', address: 'Address') -> bool:
+        return context.engine.icx.is_lock_account(context=context, address=address)

@@ -83,6 +83,12 @@ class IconSystemScoreBase(IconScoreBase):
             lock=lock
         )
 
+    def is_lock_account(self, address: 'Address') -> bool:
+        return IconScoreContextUtil.is_lock_account(
+            context=self._context,
+            address=address
+        )
+
     def migrate_icon_network_value(self, data: Dict['IconNetworkValueType', Any]):
         converted_data: list = []
         for type_, value in data.items():

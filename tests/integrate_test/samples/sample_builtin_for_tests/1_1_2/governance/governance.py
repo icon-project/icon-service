@@ -954,10 +954,18 @@ class Governance(IconSystemScoreBase):
         self.PRepDisqualified(address, success, reason)
 
     @external
-    def lockAccount(self, address: Address, lock: bool):
+    def lockAccount(self, addresses: List[Address], locks: List[bool]):
         if self.msg.sender != self.owner:
-            revert('Invalid sender: not owner')
+            revert(f"No permission: {self.msg.sender}")
+        if len(addresses) != len(locks):
+            revert("Argument number mismatch")
+        if len(addresses) > 10:
+            revert("Too many addresses")
 
-        self.lock_account(address, lock)
+        for address, lock in zip(addresses, locks):
+            self.lock_account(address, lock)
+            self.AccountLocked(address, lock)
 
-        self.AccountLocked(address, lock)
+    @external(readonly=True)
+    def isAccountLocked(self, address: Address) -> bool:
+        return self.is_lock_account(address=address)

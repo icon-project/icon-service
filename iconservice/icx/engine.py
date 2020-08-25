@@ -115,3 +115,13 @@ class Engine(EngineBase):
             address=address,
             lock=lock
         )
+
+    def is_lock_account(
+            self,
+            context: 'IconScoreContext',
+            address: 'Address'
+    ) -> bool:
+        return context.storage.icx.is_lock_account(
+            context=context,
+            address=address
+        )

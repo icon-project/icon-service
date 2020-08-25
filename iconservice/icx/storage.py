@@ -393,3 +393,15 @@ class Storage(StorageBase):
             key: bytes = coin_part.make_key(address)
             value: bytes = coin_part.to_bytes(context.revision)
             self._db.put(context, key, value)
+
+    def is_lock_account(
+            self,
+            context: 'IconScoreContext',
+            address: 'Address'
+    ):
+        coin_part: 'CoinPart' = self._get_part(
+            context=context,
+            part_class=CoinPart,
+            address=address
+        )
+        return CoinPartFlag.LOCK in coin_part.flags

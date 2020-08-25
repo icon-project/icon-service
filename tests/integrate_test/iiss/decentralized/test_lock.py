@@ -19,8 +19,9 @@
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import AccessDeniedException
+from iconservice.base.exception import AccessDeniedException, IconScoreException
 from iconservice.icon_constant import ICX_IN_LOOP
+from iconservice.iconscore.icon_score_event_log import EventLog
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -47,8 +48,8 @@ class TestLock(TestIISSBase):
             to_=GOVERNANCE_SCORE_ADDRESS,
             func_name="lockAccount",
             params={
-                "address": str(self._accounts[0].address),
-                "lock": hex(1)
+                "addresses": [str(self._accounts[0].address)],
+                "locks": [hex(1)]
             },
             expected_status=True
         )
@@ -98,8 +99,8 @@ class TestLock(TestIISSBase):
             to_=GOVERNANCE_SCORE_ADDRESS,
             func_name="lockAccount",
             params={
-                "address": str(self._accounts[0].address),
-                "lock": hex(0)
+                "addresses": [str(self._accounts[0].address)],
+                "locks": [hex(0)]
             },
             expected_status=True
         )
@@ -129,3 +130,263 @@ class TestLock(TestIISSBase):
         )
 
         self.set_stake(from_=from_, value=1 * ICX_IN_LOOP)
+
+    def test_lock_multiple(self):
+        multi_cnt: int = 10
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        for i in range(multi_cnt):
+            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(1) for _ in range(multi_cnt)]
+
+        tx_results: list = self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=True
+        )
+
+        for i in range(multi_cnt):
+            event_log: 'EventLog' = tx_results[1].event_logs[i]
+            self.assertEqual(GOVERNANCE_SCORE_ADDRESS, event_log.score_address)
+            self.assertEqual(f'AccountLocked(Address,bool)', event_log.indexed[0])
+            self.assertEqual(self._accounts[i].address, event_log.indexed[1])
+            self.assertEqual(True, event_log.data[0])
+
+        for i in range(multi_cnt):
+            with self.assertRaises(AccessDeniedException) as e:
+                self.get_balance(account=self._accounts[i])
+            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
+
+        for i in range(multi_cnt):
+            with self.assertRaises(AccessDeniedException) as e:
+                tx = self.create_transfer_icx_tx(
+                    from_=self._accounts[i],
+                    to_=self._admin,
+                    value=1 * ICX_IN_LOOP,
+                )
+                self.estimate_step(tx)
+            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
+
+        for i in range(multi_cnt):
+            with self.assertRaises(AccessDeniedException) as e:
+                tx = self.create_transfer_icx_tx(
+                    from_=self._accounts[i],
+                    to_=self._admin,
+                    value=1 * ICX_IN_LOOP
+                )
+                self.estimate_step(tx)
+            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
+
+        for i in range(multi_cnt):
+            tx_results: list = self.transfer_icx(
+                from_=self._accounts[i],
+                to_=self._admin,
+                value=1 * ICX_IN_LOOP,
+                disable_pre_validate=True,
+                expected_status=False
+            )
+            self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[i].address}")
+
+        for i in range(multi_cnt):
+            with self.assertRaises(AccessDeniedException) as e:
+                self.set_stake(from_=self._accounts[i], value=1 * ICX_IN_LOOP)
+            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
+
+        # avoid point delegate passed!
+        delegations: list = [(self._accounts[i], 0) for i in range(multi_cnt)]
+        self.set_delegation(from_=self._admin, origin_delegations=delegations)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(0) for _ in range(multi_cnt)]
+
+        # unlock
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=True
+        )
+
+        for i in range(multi_cnt):
+            self.get_balance(account=self._accounts[i])
+
+        for i in range(multi_cnt):
+            tx = self.create_transfer_icx_tx(
+                from_=self._accounts[i],
+                to_=self._admin,
+                value=1 * ICX_IN_LOOP,
+            )
+            self.estimate_step(tx)
+
+        for i in range(multi_cnt):
+            self.transfer_icx(
+                from_=self._accounts[i],
+                to_=self._admin,
+                value=1 * ICX_IN_LOOP,
+                disable_pre_validate=True,
+                expected_status=True
+            )
+
+        for i in range(multi_cnt):
+            self.set_stake(from_=self._accounts[i], value=1 * ICX_IN_LOOP)
+
+    def test_is_lock_account(self):
+        multi_cnt: int = 10
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        for i in range(multi_cnt):
+            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
+
+        # lock 10 accounts
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(1) for _ in range(multi_cnt)]
+
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=True
+        )
+
+        half_cnt = multi_cnt // 2
+        addresses: list = [str(self._accounts[i].address) for i in range(half_cnt)]
+        locks: list = [hex(0) for _ in range(half_cnt)]
+
+        # unlock
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=True
+        )
+
+        # check half lock account
+        for i in range(half_cnt):
+            ret = self.query_score(
+                from_=None,
+                to_=GOVERNANCE_SCORE_ADDRESS,
+                func_name="isAccountLocked",
+                params={"address": str(self._accounts[i].address)}
+            )
+            self.assertEqual(False, ret)
+
+        for i in range(half_cnt, multi_cnt):
+            ret = self.query_score(
+                from_=None,
+                to_=GOVERNANCE_SCORE_ADDRESS,
+                func_name="isAccountLocked",
+                params={"address": str(self._accounts[i].address)}
+            )
+            self.assertEqual(True, ret)
+
+    def test_invalid_access(self):
+        multi_cnt: int = 10
+
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        for i in range(multi_cnt):
+            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(1) for _ in range(multi_cnt)]
+
+        tx_results: list = self.score_call(
+            from_=self._accounts[0],
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=False
+        )
+
+        self.assertEqual(tx_results[1].failure.message, f"No permission: {str(self._accounts[0].address)}")
+
+    def test_overflow_account(self):
+        multi_cnt: int = 10 + 1
+
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        for i in range(multi_cnt):
+            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(1) for _ in range(multi_cnt)]
+
+        tx_results: list = self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=False
+        )
+
+        self.assertEqual(tx_results[1].failure.message, f"Too many addresses")
+
+    def test_mismatch_account(self):
+        multi_cnt: int = 10 + 1
+
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        for i in range(multi_cnt):
+            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        invalid_locks: list = [hex(1)]
+
+        tx_results: list = self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": invalid_locks
+            },
+            expected_status=False
+        )
+
+        self.assertEqual(tx_results[1].failure.message, f"Argument number mismatch")
+
