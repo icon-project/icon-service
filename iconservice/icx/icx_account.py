@@ -143,7 +143,14 @@ class Account(object):
             if self.coin_part is None:
                 raise InvalidParamsException('Failed to normalize: no coin part')
 
-            self.coin_part.toggle_has_unstake(False)
+            if revision >= Revision.FIX_BALANCE_BUG.value:
+                if self.stake_part.total_unstake == 0:
+                    self.coin_part.toggle_has_unstake(False)
+                else:
+                    # recover has_unstake flag
+                    self.coin_part.toggle_has_unstake(True)
+            else:
+                self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
     def set_stake(self, context: "IconScoreContext", value: int, unstake_lock_period: int):
