@@ -319,9 +319,7 @@ class IconPreValidator:
 
     @classmethod
     def _check_balance(cls, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
-        Account.VALIDATE = True
         balance = context.engine.icx.get_balance(context, from_)
-        Account.VALIDATE = False
 
         if is_address_locked(from_) and (
                 context.type == IconScoreContextType.QUERY or

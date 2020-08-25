@@ -28,8 +28,6 @@ if TYPE_CHECKING:
 
 
 class Account(object):
-    VALIDATE = False
-
     def __init__(self, address: 'Address', current_block_height: int, revision: int, *,
                  coin_part: Optional['CoinPart'] = None,
                  stake_part: Optional['StakePart'] = None,
@@ -42,8 +40,6 @@ class Account(object):
         self._delegation_part: 'DelegationPart' = delegation_part
 
         self.normalize_status = self.normalize(revision)
-        if self.VALIDATE:
-            self.normalize_status = 0
 
     @property
     def address(self):
