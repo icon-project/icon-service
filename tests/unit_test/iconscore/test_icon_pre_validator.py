@@ -52,6 +52,7 @@ def context():
 
     context = Mock()
     context.engine.icx.get_balance.return_value = 10 ** 18
+    context.engine.icx.is_lock_account.return_value = False
 
     return context
 

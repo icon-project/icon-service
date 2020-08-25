@@ -620,6 +620,7 @@ class TestTransactionValidator(unittest.TestCase):
     def test_check_balance(self):
         balance = 200
         IconScoreContext.engine.icx.get_balance = Mock(return_value=balance)
+        IconScoreContext.engine.icx.is_lock_account = Mock(return_value=False)
         _from = create_address()
         value = 100
         fee = 10
