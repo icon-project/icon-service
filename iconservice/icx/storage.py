@@ -311,7 +311,6 @@ class Storage(StorageBase):
         :param context:
         :param account: account to save
         """
-        self._update_unstake_error(context, account)
         parts = [account.coin_part, account.stake_part, account.delegation_part]
 
         for part in parts:
@@ -324,6 +323,12 @@ class Storage(StorageBase):
                     value: bytes = part.to_bytes()
 
                 self._db.put(context, key, value)
+                self._update_unstake_error(context, account)
+            elif isinstance(part, CoinPart) and account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
+                Logger.error(
+                    f"UNSTAKE_ERROR gather wrong value: {str(account.address)}, {account.normalize_status:,}, "
+                    f"0x{context.tx.hash.hex()}"
+                )
 
     def _update_unstake_error(self,
                               context: 'IconScoreContext',
