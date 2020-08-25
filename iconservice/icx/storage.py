@@ -281,7 +281,8 @@ class Storage(StorageBase):
         account = Account(address, context.block.height, context.revision,
                           coin_part=coin_part,
                           stake_part=stake_part,
-                          delegation_part=delegation_part)
+                          delegation_part=delegation_part,
+                          context=context)
         if account.normalize_status != 0 and \
                 context.type in (IconScoreContextType.DIRECT, IconScoreContextType.INVOKE):
             # unstake flush error
