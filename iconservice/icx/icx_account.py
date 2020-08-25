@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Optional
 
 from ..base.exception import InvalidParamsException
 from ..icon_constant import Revision
+from ..iconscore.context.context import ContextContainer
+from ..iconscore.icon_score_context import IconScoreContextType
 
 if TYPE_CHECKING:
     from .coin_part import CoinPart
@@ -145,7 +147,9 @@ class Account(object):
 
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
-            if not self.stake_part.is_dirty():
+
+            context = ContextContainer._get_context()
+            if not self.stake_part.is_dirty() and context.type == IconScoreContextType.INVOKE:
                 return balance
         return 0
 
