@@ -65,6 +65,8 @@ class TestIISSStake(TestIISSBase):
         tx_results = self.transfer_icx(from_=self._accounts[0], to_=self._accounts[0], value=0)
         fee = tx_results[0].step_used * tx_results[0].step_price
 
+        # apply expire balance
         self.make_empty_blocks(1)
+        
         balance: int = self.get_balance(self._accounts[0])
         self.assertEqual(last_balance - fee + 2, balance)
