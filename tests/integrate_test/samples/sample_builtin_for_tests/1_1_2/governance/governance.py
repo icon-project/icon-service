@@ -976,4 +976,3 @@ class Governance(IconSystemScoreBase):
             revert(f"No permission: {self.msg.sender}")
 
         return self.get_locked_accounts()
-

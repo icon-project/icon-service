@@ -57,7 +57,7 @@ class TestIISSBase(TestIntegrateBase):
                     to: int,
                     prev_block_generator: Optional['Address'] = None,
                     prev_block_validators: Optional[List['Address']] = None,
-                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None)\
+                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
             -> List[List['TransactionResult']]:
         block_height = self._block_height
         tx_results: List[List['TransactionResult']] = []
@@ -120,20 +120,30 @@ class TestIISSBase(TestIntegrateBase):
 
     def create_set_stake_tx(self,
                             from_: Union['EOAAccount', 'Address'],
-                            value: int) -> dict:
-        return self.create_score_call_tx(from_,
-                                         to_=SYSTEM_SCORE_ADDRESS,
-                                         func_name=IISSMethod.SET_STAKE,
-                                         params={"value": hex(value)})
+                            value: int,
+                            pre_validation_enabled: bool = True) -> dict:
+        return self.create_score_call_tx(
+            from_,
+            to_=SYSTEM_SCORE_ADDRESS,
+            func_name=IISSMethod.SET_STAKE,
+            params={"value": hex(value)},
+            pre_validation_enabled=pre_validation_enabled
+        )
 
-    def create_set_delegation_tx(self,
-                                 from_: Union['EOAAccount', 'Address'],
-                                 origin_delegations: List[Tuple[Union['EOAAccount', 'Address'], int]]) -> dict:
+    def create_set_delegation_tx(
+            self,
+            from_: Union['EOAAccount', 'Address'],
+            origin_delegations: List[Tuple[Union['EOAAccount', 'Address'], int]],
+            pre_validation_enabled: bool = True
+    ) -> dict:
         delegations: List[Dict[str, str]] = self.create_delegation_params(origin_delegations)
-        return self.create_score_call_tx(from_=from_,
-                                         to_=SYSTEM_SCORE_ADDRESS,
-                                         func_name=IISSMethod.SET_DELEGATION,
-                                         params={"delegations": delegations})
+        return self.create_score_call_tx(
+            from_=from_,
+            to_=SYSTEM_SCORE_ADDRESS,
+            func_name=IISSMethod.SET_DELEGATION,
+            params={"delegations": delegations},
+            pre_validation_enabled=pre_validation_enabled
+        )
 
     @classmethod
     def create_delegation_params(cls, params: List[Tuple[Union['EOAAccount', 'Address'], int]]) -> List[Dict[str, str]]:
@@ -141,10 +151,13 @@ class TestIISSBase(TestIntegrateBase):
                 for (address, value) in params
                 if value > 0]
 
-    def create_register_prep_tx(self,
-                                from_: 'EOAAccount',
-                                reg_data: Dict[str, Union[str, bytes]] = None,
-                                value: int = None) -> dict:
+    def create_register_prep_tx(
+            self,
+            from_: 'EOAAccount',
+            reg_data: Dict[str, Union[str, bytes]] = None,
+            value: int = None,
+            pre_validation_enabled: bool = True
+    ) -> dict:
 
         if value is None:
             value: int = self._config[ConfigKey.PREP_REGISTRATION_FEE]
@@ -155,7 +168,8 @@ class TestIISSBase(TestIntegrateBase):
                                          to_=SYSTEM_SCORE_ADDRESS,
                                          func_name=PRepMethod.REGISTER,
                                          params=reg_data,
-                                         value=value)
+                                         value=value,
+                                         pre_validation_enabled=pre_validation_enabled)
 
     @classmethod
     def create_register_prep_params(cls,
@@ -173,15 +187,21 @@ class TestIISSBase(TestIntegrateBase):
             ConstantKeys.P2P_ENDPOINT: f"{name}.example.com:7100",
         }
 
-    def create_set_prep_tx(self,
-                           from_: Union['EOAAccount', 'Address'],
-                           set_data: Dict[str, Union[str, bytes]] = None) -> dict:
+    def create_set_prep_tx(
+            self,
+            from_: Union['EOAAccount', 'Address'],
+            set_data: Dict[str, Union[str, bytes]] = None,
+            pre_validation_enabled: bool = True
+    ) -> dict:
         if set_data is None:
             set_data: dict = {}
-        return self.create_score_call_tx(from_=from_,
-                                         to_=SYSTEM_SCORE_ADDRESS,
-                                         func_name=PRepMethod.SET_PREP,
-                                         params=set_data)
+        return self.create_score_call_tx(
+            from_=from_,
+            to_=SYSTEM_SCORE_ADDRESS,
+            func_name=PRepMethod.SET_PREP,
+            params=set_data,
+            pre_validation_enabled=pre_validation_enabled
+        )
 
     def create_set_governance_variables(self,
                                         from_: Union['EOAAccount', 'Address'],
@@ -206,12 +226,16 @@ class TestIISSBase(TestIntegrateBase):
                                          func_name=PRepMethod.UNREGISTER,
                                          params={})
 
-    def create_claim_tx(self,
-                        from_: Union['EOAAccount', 'Address']) -> dict:
+    def create_claim_tx(
+            self,
+            from_: Union['EOAAccount', 'Address'],
+            pre_validation_enabled: bool = True
+    ) -> dict:
         return self.create_score_call_tx(from_=from_,
                                          to_=SYSTEM_SCORE_ADDRESS,
                                          func_name=IISSMethod.CLAIM_ISCORE,
-                                         params={})
+                                         params={},
+                                         pre_validation_enabled=pre_validation_enabled)
 
     def get_prep_term(self) -> dict:
         query_request = {

@@ -325,3 +325,60 @@ class TestLock(TestIISSBase):
             params={}
         )
         self.assertEqual([], ret)
+
+    def test_locked_account_send_tx(self):
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        from_ = self._accounts[0]
+        self.transfer_icx(from_=self._admin, to_=self._accounts[0], value=100 * ICX_IN_LOOP)
+
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": [str(self._accounts[0].address)],
+                "locks": [hex(1)]
+            },
+            expected_status=True
+        )
+
+        tx_results: list = self.transfer_icx(
+            from_=from_,
+            to_=self._admin,
+            value=1 * ICX_IN_LOOP,
+            disable_pre_validate=True,
+            expected_status=False
+        )
+        self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[0].address}")
+
+        tx = self.create_set_stake_tx(from_=from_, value=1 * ICX_IN_LOOP, pre_validation_enabled=False)
+        tx_results: list = self.process_confirm_block_tx([tx], expected_status=False)
+        self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[0].address}")
+
+        delegations: list = [(self._accounts[i], 0) for i in range(10)]
+        tx = self.create_set_delegation_tx(from_=from_, origin_delegations=delegations, pre_validation_enabled=False)
+        tx_results: list = self.process_confirm_block_tx([tx], expected_status=False)
+        self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[0].address}")
+
+        tx = self.create_claim_tx(from_=from_, pre_validation_enabled=False)
+        tx_results: list = self.process_confirm_block_tx([tx], expected_status=False)
+        self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[0].address}")
+
+        tx = self.create_register_prep_tx(from_=from_, pre_validation_enabled=False)
+        tx_results: list = self.process_confirm_block_tx([tx], expected_status=False)
+        self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[0].address}")
+
+        tx = self.create_deploy_score_tx(
+            score_root="sample_scores",
+            score_name="sample_array_db",
+            from_=self._accounts[0],
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            pre_validation_enabled=False
+        )
+        tx_results: list = self.process_confirm_block_tx([tx], expected_status=False)
+        self.assertEqual(tx_results[1].failure.message, f"Lock Account: {self._accounts[0].address}")
