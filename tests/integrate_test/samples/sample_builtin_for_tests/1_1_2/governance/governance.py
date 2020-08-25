@@ -962,10 +962,18 @@ class Governance(IconSystemScoreBase):
         if len(addresses) > 10:
             revert("Too many addresses")
 
+        for address in addresses:
+            if address.is_contract:
+                revert(f"Invalid EOA Address: {address}")
+
         for address, lock in zip(addresses, locks):
             self.lock_account(address, lock)
             self.AccountLocked(address, lock)
 
     @external(readonly=True)
-    def isAccountLocked(self, address: Address) -> bool:
-        return self.is_lock_account(address=address)
+    def getLockedAccounts(self) -> list:
+        if self.msg.sender != self.owner:
+            revert(f"No permission: {self.msg.sender}")
+
+        return self.get_locked_accounts()
+

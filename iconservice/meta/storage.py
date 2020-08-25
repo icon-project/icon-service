@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Tuple, List
+from typing import TYPE_CHECKING, Tuple, List, Optional
 
 from ..base.ComponentBase import StorageBase
 from ..database.db import MetaContextDatabase, ContextDatabase
@@ -32,6 +32,7 @@ class Storage(StorageBase):
     _KEY_LAST_MAIN_PREPS = b'last_main_preps'
 
     _KEY_PREV_NODE_ADDRESS_MAPPER = b'prev_node_address_mapper'
+    _KEY_LOCKED_ACCOUNTS = b'locked_accounts'
 
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(MetaContextDatabase(db.key_value_db))
@@ -92,3 +93,34 @@ class Storage(StorageBase):
     def get_prep_address_converter(self, context: 'IconScoreContext') -> 'PRepAddressConverter':
         value: bytes = self._db.get(context, self._KEY_PREV_NODE_ADDRESS_MAPPER)
         return PRepAddressConverter.from_bytes(value)
+
+    def update_locked_accounts(
+            self,
+            context: 'IconScoreContext',
+            address: 'Address',
+            lock: bool
+    ):
+        value: Optional[bytes] = self._db.get(context, self._KEY_LOCKED_ACCOUNTS)
+        if value:
+            data: list = MsgPackForDB.loads(value)
+            accounts: list = data[1]
+        else:
+            accounts: list = []
+
+        if lock:
+            accounts.append(address)
+        else:
+            accounts.remove(address)
+
+        version = 0
+        value: bytes = MsgPackForDB.dumps([version, accounts])
+        self._db.put(context, self._KEY_LOCKED_ACCOUNTS, value)
+
+    def get_locked_accounts(self, context: 'IconScoreContext') -> list:
+        value: Optional[bytes] = self._db.get(context, self._KEY_LOCKED_ACCOUNTS)
+        if value:
+            data: list = MsgPackForDB.loads(value)
+            accounts: list = data[1]
+        else:
+            accounts: list = []
+        return accounts

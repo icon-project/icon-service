@@ -21,7 +21,8 @@ from iconcommons.logger import Logger
 from .icon_score_context import IconScoreContextType
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
-from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
+from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException, \
+    AccessDeniedException
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
 from ..utils import is_lowercase_hex_string
 from ..utils.locked import is_address_locked
@@ -319,6 +320,14 @@ class IconPreValidator:
     @classmethod
     def _check_balance(cls, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
         balance = context.engine.icx.get_balance(context, from_)
+
+        # check locked
+        if context.engine.icx.is_lock_account(context=context, address=from_):
+            Logger.warning(
+                tag="LOCK",
+                msg=f"Address is locked: balance={balance} from={str(from_)} value={value} fee={fee}"
+            )
+            raise AccessDeniedException(f"Lock Account: {from_}")
 
         if is_address_locked(from_) and (
                 context.type == IconScoreContextType.QUERY or

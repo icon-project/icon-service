@@ -54,27 +54,17 @@ class TestLock(TestIISSBase):
             expected_status=True
         )
 
-        with self.assertRaises(AccessDeniedException) as e:
-            self.get_balance(account=from_)
-        self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[0].address}")
+        # pass query
+        self.get_balance(account=from_)
 
-        with self.assertRaises(AccessDeniedException) as e:
-            tx = self.create_transfer_icx_tx(
-                from_=from_,
-                to_=self._admin,
-                value=1 * ICX_IN_LOOP,
-            )
-            self.estimate_step(tx)
-        self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[0].address}")
-
-        with self.assertRaises(AccessDeniedException) as e:
-            tx = self.create_transfer_icx_tx(
-                from_=from_,
-                to_=self._admin,
-                value=1 * ICX_IN_LOOP
-            )
-            self.estimate_step(tx)
-        self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[0].address}")
+        # pass estimate
+        tx = self.create_transfer_icx_tx(
+            from_=from_,
+            to_=self._admin,
+            value=1 * ICX_IN_LOOP,
+            disable_pre_validate=True
+        )
+        self.estimate_step(tx)
 
         tx_results: list = self.transfer_icx(
             from_=from_,
@@ -89,9 +79,10 @@ class TestLock(TestIISSBase):
             self.set_stake(from_=from_, value=1 * ICX_IN_LOOP)
         self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[0].address}")
 
-        # avoid point delegate passed!
-        delegations: list = [(self._accounts[0], 0)]
-        self.set_delegation(from_=self._admin, origin_delegations=delegations)
+        delegations: list = [(self._accounts[i], 0) for i in range(10)]
+        with self.assertRaises(AccessDeniedException) as e:
+            self.set_delegation(from_=self._accounts[0], origin_delegations=delegations)
+            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[0].address}")
 
         # unlock
         self.score_call(
@@ -104,22 +95,6 @@ class TestLock(TestIISSBase):
             },
             expected_status=True
         )
-
-        self.get_balance(account=from_)
-
-        tx = self.create_transfer_icx_tx(
-            from_=from_,
-            to_=self._admin,
-            value=1 * ICX_IN_LOOP,
-        )
-        self.estimate_step(tx)
-
-        tx = self.create_transfer_icx_tx(
-            from_=from_,
-            to_=self._admin,
-            value=1 * ICX_IN_LOOP
-        )
-        self.estimate_step(tx)
 
         self.transfer_icx(
             from_=from_,
@@ -164,31 +139,6 @@ class TestLock(TestIISSBase):
             self.assertEqual(True, event_log.data[0])
 
         for i in range(multi_cnt):
-            with self.assertRaises(AccessDeniedException) as e:
-                self.get_balance(account=self._accounts[i])
-            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
-
-        for i in range(multi_cnt):
-            with self.assertRaises(AccessDeniedException) as e:
-                tx = self.create_transfer_icx_tx(
-                    from_=self._accounts[i],
-                    to_=self._admin,
-                    value=1 * ICX_IN_LOOP,
-                )
-                self.estimate_step(tx)
-            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
-
-        for i in range(multi_cnt):
-            with self.assertRaises(AccessDeniedException) as e:
-                tx = self.create_transfer_icx_tx(
-                    from_=self._accounts[i],
-                    to_=self._admin,
-                    value=1 * ICX_IN_LOOP
-                )
-                self.estimate_step(tx)
-            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
-
-        for i in range(multi_cnt):
             tx_results: list = self.transfer_icx(
                 from_=self._accounts[i],
                 to_=self._admin,
@@ -203,9 +153,11 @@ class TestLock(TestIISSBase):
                 self.set_stake(from_=self._accounts[i], value=1 * ICX_IN_LOOP)
             self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
 
-        # avoid point delegate passed!
-        delegations: list = [(self._accounts[i], 0) for i in range(multi_cnt)]
-        self.set_delegation(from_=self._admin, origin_delegations=delegations)
+        for i in range(multi_cnt):
+            delegations: list = [(self._accounts[i], 0) for i in range(multi_cnt)]
+            with self.assertRaises(AccessDeniedException) as e:
+                self.set_delegation(from_=self._accounts[i], origin_delegations=delegations)
+            self.assertEqual(e.exception.args[0], f"Lock Account: {self._accounts[i].address}")
 
         addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
         locks: list = [hex(0) for _ in range(multi_cnt)]
@@ -223,17 +175,6 @@ class TestLock(TestIISSBase):
         )
 
         for i in range(multi_cnt):
-            self.get_balance(account=self._accounts[i])
-
-        for i in range(multi_cnt):
-            tx = self.create_transfer_icx_tx(
-                from_=self._accounts[i],
-                to_=self._admin,
-                value=1 * ICX_IN_LOOP,
-            )
-            self.estimate_step(tx)
-
-        for i in range(multi_cnt):
             self.transfer_icx(
                 from_=self._accounts[i],
                 to_=self._admin,
@@ -244,67 +185,6 @@ class TestLock(TestIISSBase):
 
         for i in range(multi_cnt):
             self.set_stake(from_=self._accounts[i], value=1 * ICX_IN_LOOP)
-
-    def test_is_lock_account(self):
-        multi_cnt: int = 10
-        self.update_governance(
-            version="1_1_2",
-            expected_status=True,
-            root_path="sample_builtin_for_tests"
-        )
-
-        for i in range(multi_cnt):
-            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
-
-        # lock 10 accounts
-        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
-        locks: list = [hex(1) for _ in range(multi_cnt)]
-
-        self.score_call(
-            from_=self._admin,
-            to_=GOVERNANCE_SCORE_ADDRESS,
-            func_name="lockAccount",
-            params={
-                "addresses": addresses,
-                "locks": locks
-            },
-            expected_status=True
-        )
-
-        half_cnt = multi_cnt // 2
-        addresses: list = [str(self._accounts[i].address) for i in range(half_cnt)]
-        locks: list = [hex(0) for _ in range(half_cnt)]
-
-        # unlock
-        self.score_call(
-            from_=self._admin,
-            to_=GOVERNANCE_SCORE_ADDRESS,
-            func_name="lockAccount",
-            params={
-                "addresses": addresses,
-                "locks": locks
-            },
-            expected_status=True
-        )
-
-        # check half lock account
-        for i in range(half_cnt):
-            ret = self.query_score(
-                from_=None,
-                to_=GOVERNANCE_SCORE_ADDRESS,
-                func_name="isAccountLocked",
-                params={"address": str(self._accounts[i].address)}
-            )
-            self.assertEqual(False, ret)
-
-        for i in range(half_cnt, multi_cnt):
-            ret = self.query_score(
-                from_=None,
-                to_=GOVERNANCE_SCORE_ADDRESS,
-                func_name="isAccountLocked",
-                params={"address": str(self._accounts[i].address)}
-            )
-            self.assertEqual(True, ret)
 
     def test_invalid_access(self):
         multi_cnt: int = 10
@@ -390,3 +270,58 @@ class TestLock(TestIISSBase):
 
         self.assertEqual(tx_results[1].failure.message, f"Argument number mismatch")
 
+    def test_query_locked_accounts(self):
+        multi_cnt: int = 10
+
+        self.update_governance(
+            version="1_1_2",
+            expected_status=True,
+            root_path="sample_builtin_for_tests"
+        )
+
+        for i in range(multi_cnt):
+            self.transfer_icx(from_=self._admin, to_=self._accounts[i], value=100 * ICX_IN_LOOP)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(1) for _ in range(multi_cnt)]
+
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=True
+        )
+
+        ret = self.query_score(
+            from_=self._admin.address,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="getLockedAccounts",
+            params={}
+        )
+        self.assertEqual([self._accounts[i].address for i in range(multi_cnt)], ret)
+
+        addresses: list = [str(self._accounts[i].address) for i in range(multi_cnt)]
+        locks: list = [hex(0) for _ in range(multi_cnt)]
+
+        self.score_call(
+            from_=self._admin,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="lockAccount",
+            params={
+                "addresses": addresses,
+                "locks": locks
+            },
+            expected_status=True
+        )
+
+        ret = self.query_score(
+            from_=self._admin.address,
+            to_=GOVERNANCE_SCORE_ADDRESS,
+            func_name="getLockedAccounts",
+            params={}
+        )
+        self.assertEqual([], ret)
