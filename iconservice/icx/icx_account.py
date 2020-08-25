@@ -28,20 +28,22 @@ if TYPE_CHECKING:
 
 
 class Account(object):
+    VALIDATE = False
+
     def __init__(self, address: 'Address', current_block_height: int, revision: int, *,
                  coin_part: Optional['CoinPart'] = None,
                  stake_part: Optional['StakePart'] = None,
-                 delegation_part: Optional['DelegationPart'] = None,
-                 context=None):
+                 delegation_part: Optional['DelegationPart'] = None):
         self._address: 'Address' = address
         self._current_block_height: int = current_block_height
 
         self._coin_part: 'CoinPart' = coin_part
         self._stake_part: 'StakePart' = stake_part
         self._delegation_part: 'DelegationPart' = delegation_part
-        self._context = context
 
         self.normalize_status = self.normalize(revision)
+        if self.VALIDATE:
+            self.normalize_status = 0
 
     @property
     def address(self):
@@ -148,7 +150,7 @@ class Account(object):
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
-            if not self.stake_part.is_dirty() and self._context is not None and self._context.type == 1:
+            if not self.stake_part.is_dirty():
                 return balance
         return 0
 

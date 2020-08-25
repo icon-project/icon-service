@@ -25,6 +25,7 @@ from ..base.exception import InvalidRequestException, InvalidParamsException, Ou
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
 from ..utils import is_lowercase_hex_string
 from ..utils.locked import is_address_locked
+from ..icx.icx_account import Account
 
 if TYPE_CHECKING:
     from ..deploy.storage import IconScoreDeployInfo
@@ -318,7 +319,9 @@ class IconPreValidator:
 
     @classmethod
     def _check_balance(cls, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
+        Account.VALIDATE = True
         balance = context.engine.icx.get_balance(context, from_)
+        Account.VALIDATE = False
 
         if is_address_locked(from_) and (
                 context.type == IconScoreContextType.QUERY or

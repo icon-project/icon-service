@@ -281,11 +281,8 @@ class Storage(StorageBase):
         account = Account(address, context.block.height, context.revision,
                           coin_part=coin_part,
                           stake_part=stake_part,
-                          delegation_part=delegation_part,
-                          context=context)
-        if account.normalize_status != 0 and \
-                context.type in (IconScoreContextType.DIRECT, IconScoreContextType.INVOKE):
-            # unstake flush error
+                          delegation_part=delegation_part)
+        if account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
             key = str(account.address)
             tx_hash = f"0x{context.tx.hash.hex()}"
             if key in context.unstake_error:
