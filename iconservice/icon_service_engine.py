@@ -1236,7 +1236,7 @@ class IconServiceEngine(ContextContainer):
 
     def _clear_unstake_error(self, context: 'IconScoreContext') -> dict:
         new_unstake_error = {}
-        tx_hash = context.tx.hash.hex()
+        tx_hash = f"0x{context.tx.hash.hex()}"
         for k, v in context.unstake_error.items():
             error_count = 0
             error_amount = 0
