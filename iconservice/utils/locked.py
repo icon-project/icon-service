@@ -22,7 +22,6 @@ LOCKED_ADDRESSES = (
     "hx19e551eae80f9b9dcfed1554192c91c96a9c71d1",
 
     "hx0607341382dee5e039a87562dcb966e71881f336",
-    "hx19e551eae80f9b9dcfed1554192c91c96a9c71d1",
     "hxdea6fe8d6811ec28db095b97762fdd78b48c291f",
 
     "hxaf3a561e3888a2b497941e464f82fd4456db3ebf",
@@ -32,7 +31,7 @@ LOCKED_ADDRESSES = (
 )
 
 
-_locked_addresses = [Address.from_string(address) for address in LOCKED_ADDRESSES]
+_locked_addresses = set(Address.from_string(address) for address in LOCKED_ADDRESSES)
 
 
 def is_address_locked(address: 'Address') -> bool:
