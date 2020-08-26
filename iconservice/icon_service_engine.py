@@ -1267,6 +1267,7 @@ class IconServiceEngine(ContextContainer):
             # find stake part for k from block_batch
             if stake_part_key in context.block_batch:
                 stake_part = StakePart.from_bytes(context.block_batch[stake_part_key].value)
+                stake_part.set_complete(True)
 
                 # if stake part has no invalid unstake_info, remove from unstake_error
                 if len(stake_part.unstakes_info) > 0 and stake_part.unstakes_info[0][1] > context.block.height:
