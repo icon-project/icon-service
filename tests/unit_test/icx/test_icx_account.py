@@ -46,24 +46,25 @@ class TestMultipleUnstake:
     @pytest.mark.parametrize("revision", [
         revision.value for revision in Revision if revision.value >= Revision.MULTIPLE_UNSTAKE.value
     ])
-    @pytest.mark.parametrize("unstakes_info, current_block_height", [
-        ([], 20),
-        ([[10, 20]], 5),
-        ([[10, 20]], 25),
-        ([[10, 20], [10, 30]], 15),
-        ([[10, 20], [10, 30]], 25),
-        ([[10, 20], [10, 30]], 35),
+    @pytest.mark.parametrize("unstakes_info, current_block_height, has_unstake", [
+        ([], 20, False),
+        ([[10, 20]], 5, True),
+        ([[10, 20]], 25, False),
+        ([[10, 20], [10, 30]], 15, True),
+        ([[10, 20], [10, 30]], 25, False),
+        ([[10, 20], [10, 30]], 35, False),
     ])
     def test_multiple_unstake_deposit_(
-            self, context, mocker, revision, unstakes_info, current_block_height):
+            self, context, mocker, revision, unstakes_info, current_block_height, has_unstake):
         mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
         stake, balance = 100, 0
         coin_part = CoinPart(CoinPartType.GENERAL, CoinPartFlag.NONE, balance)
+        stake_part = StakePart(stake=stake, unstake=0, unstake_block_height=0)
         account = Account(ADDRESS,
                           current_block_height,
                           revision,
                           coin_part=coin_part,
-                          stake_part=StakePart(stake=stake, unstake=0, unstake_block_height=0))
+                          stake_part=stake_part)
 
         for info in unstakes_info:
             context.block._height = info[1] - UNSTAKE_LOCK_PERIOD
@@ -72,12 +73,18 @@ class TestMultipleUnstake:
             account._current_block_height = context.block.height
             account.set_stake(context, stake, UNSTAKE_LOCK_PERIOD)
 
+        stake_part = account.stake_part
+        remaining_unstakes = [unstake_info for unstake_info in unstakes_info if unstake_info[1] > current_block_height]
+        expired_unstake = sum((unstake_info[0] for unstake_info in unstakes_info
+                               if unstake_info[1] < current_block_height))
+        balance = expired_unstake
+
+        account = Account(ADDRESS, current_block_height, revision, coin_part=coin_part,
+                          stake_part=stake_part)
         if revision >= Revision.FIX_BALANCE_BUG.value:
-            account._current_block_height = current_block_height
-            expired_unstake = sum((unstake_info[0] for unstake_info in unstakes_info
-                                   if unstake_info[1] < current_block_height))
-            balance = expired_unstake
+            has_unstake = False
 
-        account.normalize(revision)
-
+        assert stake == account.stake
         assert balance == account.balance
+        assert remaining_unstakes == account.unstakes_info
+        assert (CoinPartFlag.HAS_UNSTAKE in account.coin_part.flags) == has_unstake
