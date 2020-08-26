@@ -49,7 +49,7 @@ class TestMultipleUnstake:
     @pytest.mark.parametrize("unstakes_info, current_block_height", [
         ([], 20),
         ([[10, 20]], 5),
-        ([[10, 20]], 15),
+        ([[10, 20]], 25),
         ([[10, 20], [10, 30]], 15),
         ([[10, 20], [10, 30]], 25),
         ([[10, 20], [10, 30]], 35),
