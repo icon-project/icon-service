@@ -60,15 +60,21 @@ def storage(context):
 class TestIcxStorage:
 
     @pytest.mark.parametrize("unstakes_info, current_block_height, flag, expected_balance", [
+        (None, 20, CoinPartFlag.NONE, 100),
         ([], 20, CoinPartFlag.NONE, 100),
+        ([], 20, CoinPartFlag.HAS_UNSTAKE, 100),
         ([[10, 20]], 5, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
         ([[10, 20]], 25, CoinPartFlag.NONE, 110),
         ([[10, 20], [10, 30]], 15, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20], [10, 30]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
         ([[10, 20], [10, 30]], 25, CoinPartFlag.NONE, 110),
+        ([[10, 20], [10, 30]], 30, CoinPartFlag.NONE, 110),
         ([[10, 20], [10, 30]], 35, CoinPartFlag.NONE, 120),
     ])
     def test_get_account(
             self, storage, context, mocker, unstakes_info, current_block_height, flag, expected_balance):
+        # test whether the `Account` saved in the wrong format is properly got on revision11.
         revision = Revision.FIX_BALANCE_BUG.value
         mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
         stake, balance = 100, 100
@@ -82,7 +88,12 @@ class TestIcxStorage:
         context.block._height = current_block_height
         storage.put_account(context, account)
 
-        remaining_unstakes = [unstake_info for unstake_info in unstakes_info if unstake_info[1] > current_block_height]
+        if unstakes_info is None:
+            remaining_unstakes = []
+        else:
+            remaining_unstakes = [
+                unstake_info for unstake_info in unstakes_info if unstake_info[1] >= current_block_height
+            ]
 
         account = storage.get_account(context, ADDRESS)
         assert account.balance == expected_balance
