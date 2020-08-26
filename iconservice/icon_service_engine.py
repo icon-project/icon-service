@@ -62,6 +62,7 @@ from .iconscore.icon_score_step import StepType, get_input_data_size, \
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
+from .icx.stake_part import StakePart
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .iiss import check_decentralization_condition
@@ -482,6 +483,9 @@ class IconServiceEngine(ContextContainer):
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
                 Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
+
+            # check unstake_error for block_batch
+            self._update_unstake_error_with_block_batch(context)
 
         if self._check_end_block_height_of_calc(context):
             context.revision_changed_flag |= RevisionChangedFlag.IISS_CALC
@@ -1209,7 +1213,7 @@ class IconServiceEngine(ContextContainer):
             context.traces.append(trace)
             context.event_logs.clear()
             # clear unstake_error
-            context.unstake_error = self._clear_unstake_error(context)
+            context.unstake_error = self._clear_unstake_error_for_failed_tx(context)
         finally:
             # Revert func_type to IconScoreFuncType.WRITABLE
             # to avoid DatabaseException in self._charge_transaction_fee()
@@ -1234,7 +1238,8 @@ class IconServiceEngine(ContextContainer):
 
         return tx_result
 
-    def _clear_unstake_error(self, context: 'IconScoreContext') -> dict:
+    @staticmethod
+    def _clear_unstake_error_for_failed_tx(context: 'IconScoreContext') -> dict:
         new_unstake_error = {}
         tx_hash = f"0x{context.tx.hash.hex()}"
         for k, v in context.unstake_error.items():
@@ -1253,6 +1258,24 @@ class IconServiceEngine(ContextContainer):
                     "transactions": transactions
                 }
         return new_unstake_error
+
+    @staticmethod
+    def _update_unstake_error_with_block_batch(context: 'IconScoreContext') -> dict:
+        remove_keys = []
+        for k, v in context.unstake_error.items():
+            stake_part_key = StakePart.make_key(Address.from_string(k))
+            # find stake part for k from block_batch
+            if stake_part_key in context.block_batch:
+                stake_part = StakePart.from_bytes(v)
+
+                # if stake part has no invalid unstake_info, remove from unstake_error
+                if len(stake_part.unstakes_info) > 0 and stake_part.unstakes_info[0][1] > context.block.height:
+                    remove_keys.append(k)
+
+        # remove from unstake_error
+        for k in remove_keys:
+            Logger.error(f"UNSTAKE_ERROR: remove {k} : {context.unstake_error[k]}")
+            del context.unstake_error[k]
 
     def _handle_estimate_step(self,
                               context: 'IconScoreContext',
