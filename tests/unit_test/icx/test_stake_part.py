@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import copy
 import random
+
 import pytest
 
 from iconservice.icon_constant import Revision
@@ -56,6 +58,92 @@ class TestStakePart:
         assert stake_part.unstake_block_height == expected["unstake_block_height"]
 
     @pytest.mark.parametrize(
+        "revision, block_height,"
+        "unstakes_info,"
+        "expected_unstakes_info, expected_expired_unstake, expected_dirty",
+        [
+            (
+                Revision.MULTIPLE_UNSTAKE.value, 500,
+                [[100, 1000]],
+                [[100, 1000]], 0, False
+            ),
+            (
+                Revision.FIX_UNSTAKE_BUG.value, 500,
+                [[100, 1000]],
+                [[100, 1000]], 0, False
+            ),
+
+            (
+                # BUG case
+                Revision.MULTIPLE_UNSTAKE.value, 1001,
+                [[100, 1000]],
+                [], 100, False
+            ),
+            (
+                Revision.FIX_UNSTAKE_BUG.value, 1001,
+                [[100, 1000]],
+                [], 100, True
+            ),
+
+            (
+                Revision.MULTIPLE_UNSTAKE.value, 999,
+                [[100, 1000], [200, 2000]],
+                [[100, 1000], [200, 2000]], 0, False
+            ),
+            (
+                Revision.FIX_UNSTAKE_BUG.value, 1000,
+                [[100, 1000], [200, 2000]],
+                [[100, 1000], [200, 2000]], 0, False
+            ),
+
+            (
+                Revision.MULTIPLE_UNSTAKE.value, 1001,
+                [[100, 1000], [200, 2000]],
+                [[200, 2000]], 100, True
+            ),
+            (
+                Revision.FIX_UNSTAKE_BUG.value, 1001,
+                [[100, 1000], [200, 2000]],
+                [[200, 2000]], 100, True
+            ),
+
+            (
+                Revision.MULTIPLE_UNSTAKE.value, 2000,
+                [[100, 1000], [200, 2000]],
+                [[200, 2000]], 100, True
+            ),
+            (
+                Revision.FIX_UNSTAKE_BUG.value, 2000,
+                [[100, 1000], [200, 2000]],
+                [[200, 2000]], 100, True
+            ),
+
+            (
+                # BUG Case
+                Revision.MULTIPLE_UNSTAKE.value, 2001,
+                [[100, 1000], [200, 2000]],
+                [], 300, False
+            ),
+            (
+                Revision.FIX_UNSTAKE_BUG.value, 2001,
+                [[100, 1000], [200, 2000]],
+                [], 300, True
+            ),
+        ]
+    )
+    def test_normalize(
+            self, revision, block_height,
+            unstakes_info,
+            expected_expired_unstake, expected_unstakes_info, expected_dirty):
+        stake = random.randint(0, 100)
+
+        stake_part = StakePart(stake=stake, unstakes_info=copy.deepcopy(unstakes_info))
+        expired_unstake = stake_part.normalize(block_height, revision)
+        assert expired_unstake == expected_expired_unstake
+        assert stake_part.unstakes_info == expected_unstakes_info
+        assert stake_part.is_dirty() == expected_dirty
+
+    @pytest.mark.parametrize(
         "stake,unstakes_info,amount,expected_unstakes_info",
         [
             (0, [[100, 1000]], 10, [[90, 1000]]),
@@ -89,15 +177,62 @@ class TestStakePart:
             (None, 100, 1000, [[100, 1000]]),
             ([], 50, 5000, [[50, 5000]]),
 
-            ([[100, 1000]], 300, 2000, [[100, 1000], [200, 2000]]),
-            ([[100, 1000]], 300,  800, [[200,  800], [100, 1000]]),
-
-            ([[100, 2000], [200, 3000]], 600, 1000, [[300, 1000], [100, 2000], [200, 3000]]),
-            ([[100, 1000], [200, 3000]], 600, 2000, [[100, 1000], [300, 2000], [200, 3000]]),
-            ([[100, 1000], [200, 2000]], 600, 3000, [[100, 1000], [200, 2000], [300, 3000]]),
+            (
+                [[100, 1000]],
+                300, 2000,
+                [[100, 1000], [200, 2000]]
+            ),
+            (
+                [[100, 1000]],
+                300,  800,
+                [[200,  800], [100, 1000]]
+            ),
 
             (
-                [[100, 1000], [200, 1500], [300, 2000]], 550, 3000, [[100, 1000], [200, 1500], [250, 2000]]
+                [[100, 2000], [200, 3000]],
+                600, 1000,
+                [[300, 1000], [100, 2000], [200, 3000]]
+            ),
+            (
+                [[100, 1000], [200, 3000]],
+                600, 2000,
+                [[100, 1000], [300, 2000], [200, 3000]]
+            ),
+            (
+                [[100, 1000], [200, 2000]],
+                600, 3000,
+                [[100, 1000], [200, 2000], [300, 3000]]
+            ),
+
+            (
+                [[100, 1000], [200, 1500], [300, 2000]],
+                700, 3000,
+                [[100, 1000], [200, 1500], [400, 3000]]
+            ),
+            (
+                [[100, 1000], [200, 1500], [300, 2000]],
+                550, 3000,
+                [[100, 1000], [200, 1500], [250, 2000]]
+            ),
+            (
+                [[100, 1000], [200, 1500], [300, 2000]],
+                300, 3000,
+                [[100, 1000], [200, 1500]]
+            ),
+            (
+                [[100, 1000], [200, 1500], [300, 2000]],
+                250, 3000,
+                [[100, 1000], [150, 1500]]
+            ),
+            (
+                [[100, 1000], [200, 1500], [300, 2000]],
+                100, 3000,
+                [[100, 1000]]
+            ),
+            (
+                [[100, 1000], [200, 1500], [300, 2000]],
+                50, 3000,
+                [[50, 1000]]
             ),
         ]
     )
@@ -113,6 +248,10 @@ class TestStakePart:
         stake_part = StakePart(stake=stake, unstakes_info=unstakes_info)
         stake_part.normalize(block_height, revision)
 
+        unstake_delta: int = new_total_unstake - old_total_unsake
         stake_part.set_unstakes_info(unstake_block_height, new_total_unstake, slot_max)
         assert stake_part.is_dirty()
+        assert stake_part.stake == stake - unstake_delta
         assert stake_part.unstakes_info == expected_unstakes_info
+        assert stake_part.total_unstake == new_total_unstake
+        assert stake_part.total_stake == stake_part.stake + stake_part.total_unstake
