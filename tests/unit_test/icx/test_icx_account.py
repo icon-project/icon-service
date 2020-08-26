@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 from unittest.mock import PropertyMock
 
 import pytest
@@ -46,41 +47,38 @@ class TestAccount:
     @pytest.mark.parametrize("revision", [
         revision.value for revision in Revision if revision.value >= Revision.MULTIPLE_UNSTAKE.value
     ])
-    @pytest.mark.parametrize("unstakes_info, current_block_height, has_unstake", [
-        ([], 20, False),
-        ([[10, 20]], 5, True),
-        ([[10, 20]], 25, False),
-        ([[10, 20], [10, 30]], 15, True),
-        ([[10, 20], [10, 30]], 25, False),
-        ([[10, 20], [10, 30]], 35, False),
+    @pytest.mark.parametrize("unstakes_info, current_block_height, flag, expected_balance", [
+        (None, 20, CoinPartFlag.NONE, 100),
+        ([], 20, CoinPartFlag.NONE, 100),
+        ([], 20, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20]], 5, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20]], 25, CoinPartFlag.NONE, 110),
+        ([[10, 20], [10, 30]], 15, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20], [10, 30]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
+        ([[10, 20], [10, 30]], 25, CoinPartFlag.NONE, 110),
+        ([[10, 20], [10, 30]], 30, CoinPartFlag.NONE, 110),
+        ([[10, 20], [10, 30]], 35, CoinPartFlag.NONE, 120),
     ])
     def test_normalize(
-            self, context, mocker, revision, unstakes_info, current_block_height, has_unstake):
+            self, context, mocker, revision, unstakes_info, current_block_height, flag, expected_balance):
+        unstakes_info = copy.deepcopy(unstakes_info)
         mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
-        stake, balance = 100, 0
-        coin_part = CoinPart(CoinPartType.GENERAL, CoinPartFlag.NONE, balance)
-        stake_part = StakePart(stake=stake, unstake=0, unstake_block_height=0)
+        stake, balance = 100, 100
+        coin_part = CoinPart(CoinPartType.GENERAL, flag, balance)
+        stake_part = StakePart(stake=stake, unstake=0, unstake_block_height=0, unstakes_info=unstakes_info)
         account = Account(
             ADDRESS, current_block_height, revision, coin_part=coin_part, stake_part=stake_part)
 
-        for info in unstakes_info:
-            context.block._height = info[1] - UNSTAKE_LOCK_PERIOD
-            stake = stake - info[0]
-            # set_stake method refer account._current_block_height
-            account._current_block_height = context.block.height
-            account.set_stake(context, stake, UNSTAKE_LOCK_PERIOD)
+        if unstakes_info is None:
+            remaining_unstakes = []
+        else:
+            remaining_unstakes = [
+                unstake_info for unstake_info in unstakes_info if unstake_info[1] >= current_block_height
+            ]
 
-        stake_part = account.stake_part
-        remaining_unstakes = [unstake_info for unstake_info in unstakes_info if unstake_info[1] > current_block_height]
-        expired_unstake = sum((unstake_info[0] for unstake_info in unstakes_info
-                               if unstake_info[1] < current_block_height))
-        balance = expired_unstake
+        account.normalize(revision)
 
-        account = Account(ADDRESS, current_block_height, revision, coin_part=coin_part, stake_part=stake_part)
-        if revision >= Revision.FIX_BALANCE_BUG.value:
-            has_unstake = False
-
-        assert stake == account.stake
-        assert balance == account.balance
-        assert remaining_unstakes == account.unstakes_info
-        assert (CoinPartFlag.HAS_UNSTAKE in account.coin_part.flags) == has_unstake
+        assert account.stake == stake
+        assert account.balance == expected_balance
+        assert account.unstakes_info == remaining_unstakes
