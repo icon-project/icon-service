@@ -60,12 +60,17 @@ class TestIISSStake(TestIISSBase):
                 value=stake - i
             )
 
+        # 1st expired unstake
         self.make_empty_blocks(16)
         last_balance: int = self.get_balance(self._accounts[0])
         tx_results = self.transfer_icx(from_=self._accounts[0], to_=self._accounts[0], value=0)
         fee = tx_results[0].step_used * tx_results[0].step_price
 
+        # todo unstake info
+        # todo unittest about account
+
         # apply expire balance
+        # 2st expired unstake
         self.make_empty_blocks(1)
         
         balance: int = self.get_balance(self._accounts[0])
