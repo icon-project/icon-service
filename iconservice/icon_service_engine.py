@@ -1269,8 +1269,12 @@ class IconServiceEngine(ContextContainer):
                 stake_part = StakePart.from_bytes(context.block_batch[stake_part_key].value)
                 stake_part.set_complete(True)
 
+                Logger.error(f"UNSTAKE_ERROR: check stake_part: {stake_part}")
                 # if stake part has no invalid unstake_info, remove from unstake_error
-                if len(stake_part.unstakes_info) > 0 and stake_part.unstakes_info[0][1] > context.block.height:
+                unstake_len = len(stake_part.unstakes_info)
+                if stake_part.unstake == 0 and \
+                        (unstake_len == 0 or
+                         (unstake_len > 0 and stake_part.unstakes_info[0][1] > context.block.height)):
                     remove_keys.append(k)
 
         # remove from unstake_error
