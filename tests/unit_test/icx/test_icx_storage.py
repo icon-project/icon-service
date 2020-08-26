@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import shutil
 from unittest.mock import PropertyMock
 
@@ -59,42 +60,46 @@ def storage(context):
 
 class TestIcxStorage:
 
-    @pytest.mark.parametrize("unstakes_info, current_block_height, flag, expected_balance", [
-        (None, 20, CoinPartFlag.NONE, 100),
-        ([], 20, CoinPartFlag.NONE, 100),
-        ([], 20, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20]], 5, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20]], 25, CoinPartFlag.NONE, 110),
-        ([[10, 20], [10, 30]], 15, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20], [10, 30]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20], [10, 30]], 25, CoinPartFlag.NONE, 110),
-        ([[10, 20], [10, 30]], 30, CoinPartFlag.NONE, 110),
-        ([[10, 20], [10, 30]], 35, CoinPartFlag.NONE, 120),
+    @pytest.mark.parametrize("flag", [CoinPartFlag.NONE, CoinPartFlag.HAS_UNSTAKE])
+    @pytest.mark.parametrize("unstakes_info, current_block_height, expected_balance", [
+        (None, 20, 100),
+        ([], 20, 100),
+        ([], 20, 100),
+        ([[10, 20]], 5, 100),
+        ([[10, 20]], 20, 100),
+        ([[10, 20]], 25, 110),
+        ([[10, 20], [10, 30]], 15, 100),
+        ([[10, 20], [10, 30]], 20, 100),
+        ([[10, 20], [10, 30]], 25, 110),
+        ([[10, 20], [10, 30]], 30, 110),
+        ([[10, 20], [10, 30]], 35, 120),
     ])
-    def test_get_account(
-            self, storage, context, mocker, unstakes_info, current_block_height, flag, expected_balance):
-        # test whether the `Account` saved in the wrong format is properly got on revision11.
-        revision = Revision.FIX_BALANCE_BUG.value
-        mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
-        stake, balance = 100, 100
-        coin_part = CoinPart(CoinPartType.GENERAL, CoinPartFlag.NONE, balance)
-        coin_part.set_dirty(True)
-        stake_part = StakePart(stake=stake, unstake=0, unstake_block_height=0, unstakes_info=unstakes_info)
-        stake_part.set_dirty(True)
-        account = Account(
-            ADDRESS, current_block_height, revision, coin_part=coin_part, stake_part=stake_part)
-        account.coin_part._flags = flag
-        context.block._height = current_block_height
-        storage.put_account(context, account)
+    def test_get_account(self,
+                         storage, context, mocker, flag, unstakes_info, current_block_height, expected_balance):
+            unstakes_info = copy.deepcopy(unstakes_info)
 
-        if unstakes_info is None:
-            remaining_unstakes = []
-        else:
-            remaining_unstakes = [
-                unstake_info for unstake_info in unstakes_info if unstake_info[1] >= current_block_height
-            ]
+            # test whether the `Account` saved in the wrong format is properly got on revision11.
+            revision = Revision.FIX_BALANCE_BUG.value
+            mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
 
-        account = storage.get_account(context, ADDRESS)
-        assert account.balance == expected_balance
-        assert account.unstakes_info == remaining_unstakes
+            stake, balance = 100, 100
+            coin_part = CoinPart(CoinPartType.GENERAL, flag, balance)
+            coin_part.set_dirty(True)
+            stake_part = StakePart(stake=stake, unstake=0, unstake_block_height=0, unstakes_info=unstakes_info)
+            stake_part.set_dirty(True)
+            account = Account(
+                ADDRESS, current_block_height, revision, coin_part=coin_part, stake_part=stake_part)
+            account.coin_part._flags = flag
+            context.block._height = current_block_height
+            storage.put_account(context, account)
+
+            if unstakes_info is None:
+                remaining_unstakes = []
+            else:
+                remaining_unstakes = [
+                    unstake_info for unstake_info in unstakes_info if unstake_info[1] >= current_block_height
+                ]
+
+            account = storage.get_account(context, ADDRESS)
+            assert account.balance == expected_balance
+            assert account.unstakes_info == remaining_unstakes
