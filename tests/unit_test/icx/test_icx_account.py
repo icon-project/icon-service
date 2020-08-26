@@ -19,7 +19,6 @@ import pytest
 
 from iconservice import Address
 from iconservice.base.block import Block
-from iconservice.base.exception import OutOfBalanceException
 from iconservice.icon_constant import Revision, IconScoreContextType
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -28,6 +27,8 @@ from iconservice.icx.icx_account import Account
 from iconservice.icx.stake_part import StakePart
 
 ADDRESS = Address.from_string(f"hx{'1234'*10}")
+UNSTAKE_LOCK_PERIOD = 20
+WITHDRAWAL_AMOUNT = 10
 
 
 @pytest.fixture(scope="function")
@@ -43,37 +44,40 @@ def context():
 class TestMultipleUnstake:
 
     @pytest.mark.parametrize("revision", [
-        revision.value for revision in Revision if revision.value == Revision.FIX_BALANCE_BUG.value
+        revision.value for revision in Revision if revision.value >= Revision.MULTIPLE_UNSTAKE.value
     ])
-    @pytest.mark.parametrize("balance, withdrawal_amount", [(0, 10)])
-    @pytest.mark.parametrize("unstake_info, current_block_height", [
+    @pytest.mark.parametrize("unstakes_info, current_block_height", [
         ([], 20),
         ([[10, 20]], 5),
         ([[10, 20]], 15),
-        ([[10, 20], [10, 40]], 5),
-        ([[10, 20], [10, 40]], 15),
-        ([[10, 20], [10, 40]], 25),
+        ([[10, 20], [10, 30]], 15),
+        ([[10, 20], [10, 30]], 25),
+        ([[10, 20], [10, 30]], 35),
     ])
     def test_multiple_unstake_deposit_(
-            self, context, mocker, revision, balance, withdrawal_amount, unstake_info, current_block_height):
+            self, context, mocker, revision, unstakes_info, current_block_height):
         mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
+        stake, balance = 100, 0
         coin_part = CoinPart(CoinPartType.GENERAL, CoinPartFlag.NONE, balance)
-        stake = 100
-        unstake_lock_period = 20
         account = Account(ADDRESS,
                           current_block_height,
                           revision,
                           coin_part=coin_part,
                           stake_part=StakePart(stake=stake, unstake=0, unstake_block_height=0))
 
-        for info in unstake_info:
-            context.block._height = info[1] - unstake_lock_period
+        for info in unstakes_info:
+            context.block._height = info[1] - UNSTAKE_LOCK_PERIOD
             stake = stake - info[0]
-            account.set_stake(context, stake, unstake_lock_period)
+            # set_stake method refer account._current_block_height
+            account._current_block_height = context.block.height
+            account.set_stake(context, stake, UNSTAKE_LOCK_PERIOD)
 
         if revision >= Revision.FIX_BALANCE_BUG.value:
-            account.normalize(revision)
-            account.withdraw(withdrawal_amount)
-        else:
-            with pytest.raises(OutOfBalanceException) as e:
-                account.withdraw(withdrawal_amount)
+            account._current_block_height = current_block_height
+            expired_unstake = sum((unstake_info[0] for unstake_info in unstakes_info
+                                   if unstake_info[1] < current_block_height))
+            balance = expired_unstake
+
+        account.normalize(revision)
+
+        assert balance == account.balance
