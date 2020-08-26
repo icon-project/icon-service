@@ -314,7 +314,9 @@ class Storage(StorageBase):
         parts = [account.coin_part, account.stake_part, account.delegation_part]
 
         for part in parts:
-            if part and part.is_dirty():
+            if not part:
+                continue
+            if part.is_dirty():
                 key: bytes = part.make_key(account.address)
 
                 if isinstance(part, CoinPart) or isinstance(part, StakePart):
@@ -323,30 +325,31 @@ class Storage(StorageBase):
                     value: bytes = part.to_bytes()
 
                 self._db.put(context, key, value)
-                self._update_unstake_error(context, account)
-            elif isinstance(part, CoinPart) and account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
-                Logger.error(
-                    f"UNSTAKE_ERROR gather wrong value: {str(account.address)}, {account.normalize_status:,}, "
-                    f"0x{context.tx.hash.hex()}"
-                )
+
+            if isinstance(part, CoinPart) and account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
+                if part.is_dirty():
+                    self._update_unstake_error(context, account)
+                else:
+                    Logger.error(
+                        f"UNSTAKE_ERROR gather wrong value: {str(account.address)}, {account.normalize_status:,}, "
+                        f"0x{context.tx.hash.hex()}"
+                    )
 
     def _update_unstake_error(self,
                               context: 'IconScoreContext',
                               account: 'Account'):
-        if account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
-            key = str(account.address)
-            tx_hash = f"0x{context.tx.hash.hex()}"
-            if key in context.unstake_error:
-                context.unstake_error[key]["error_count"] += 1
-                context.unstake_error[key]["error_amount"] += account.normalize_status
-                context.unstake_error[key]["transactions"].append((tx_hash, account.normalize_status))
-            else:
-                context.unstake_error[key] = {
-                    "error_count": 1,
-                    "error_amount": account.normalize_status,
-                    "transactions": [(tx_hash, account.normalize_status)]
-                }
-        return account
+        key = str(account.address)
+        tx_hash = f"0x{context.tx.hash.hex()}"
+        if key in context.unstake_error:
+            context.unstake_error[key]["error_count"] += 1
+            context.unstake_error[key]["error_amount"] += account.normalize_status
+            context.unstake_error[key]["transactions"].append((tx_hash, account.normalize_status))
+        else:
+            context.unstake_error[key] = {
+                "error_count": 1,
+                "error_amount": account.normalize_status,
+                "transactions": [(tx_hash, account.normalize_status)]
+            }
 
     def delete_account(self,
                        context: 'IconScoreContext',
