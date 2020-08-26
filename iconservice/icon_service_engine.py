@@ -1262,11 +1262,11 @@ class IconServiceEngine(ContextContainer):
     @staticmethod
     def _update_unstake_error_with_block_batch(context: 'IconScoreContext') -> dict:
         remove_keys = []
-        for k, v in context.unstake_error.items():
+        for k in context.unstake_error.keys():
             stake_part_key = StakePart.make_key(Address.from_string(k))
             # find stake part for k from block_batch
             if stake_part_key in context.block_batch:
-                stake_part = StakePart.from_bytes(v)
+                stake_part = StakePart.from_bytes(context.block_batch[k])
 
                 # if stake part has no invalid unstake_info, remove from unstake_error
                 if len(stake_part.unstakes_info) > 0 and stake_part.unstakes_info[0][1] > context.block.height:
