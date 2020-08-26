@@ -47,24 +47,25 @@ class TestAccount:
     @pytest.mark.parametrize("revision", [
         revision.value for revision in Revision if revision.value >= Revision.MULTIPLE_UNSTAKE.value
     ])
-    @pytest.mark.parametrize("unstakes_info, current_block_height, flag, expected_balance", [
-        (None, 20, CoinPartFlag.NONE, 100),
-        ([], 20, CoinPartFlag.NONE, 100),
-        ([], 20, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20]], 5, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20]], 25, CoinPartFlag.NONE, 110),
-        ([[10, 20], [10, 30]], 15, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20], [10, 30]], 20, CoinPartFlag.HAS_UNSTAKE, 100),
-        ([[10, 20], [10, 30]], 25, CoinPartFlag.NONE, 110),
-        ([[10, 20], [10, 30]], 30, CoinPartFlag.NONE, 110),
-        ([[10, 20], [10, 30]], 35, CoinPartFlag.NONE, 120),
+    @pytest.mark.parametrize("flag", [CoinPartFlag.NONE, CoinPartFlag.HAS_UNSTAKE])
+    @pytest.mark.parametrize("unstakes_info, current_block_height, expected_balance", [
+        (None, 20, 100),
+        ([], 20, 100),
+        ([[10, 20]], 5, 100),
+        ([[10, 20]], 20, 100),
+        ([[10, 20]], 25, 110),
+        ([[10, 20], [10, 30]], 15, 100),
+        ([[10, 20], [10, 30]], 20, 100),
+        ([[10, 20], [10, 30]], 25, 110),
+        ([[10, 20], [10, 30]], 30, 110),
+        ([[10, 20], [10, 30]], 35, 120),
     ])
     def test_normalize(
             self, context, mocker, revision, unstakes_info, current_block_height, flag, expected_balance):
         unstakes_info = copy.deepcopy(unstakes_info)
         mocker.patch.object(IconScoreContext, "revision", PropertyMock(return_value=revision))
         stake, balance = 100, 100
+
         coin_part = CoinPart(CoinPartType.GENERAL, flag, balance)
         stake_part = StakePart(stake=stake, unstake=0, unstake_block_height=0, unstakes_info=unstakes_info)
         account = Account(
