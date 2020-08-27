@@ -326,14 +326,10 @@ class Storage(StorageBase):
 
                 self._db.put(context, key, value)
 
-            if isinstance(part, CoinPart) and account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
-                if part.is_dirty():
-                    self._update_unstake_error(context, account)
-                else:
-                    Logger.error(
-                        f"UNSTAKE_ERROR gather wrong value: {str(account.address)}, {account.normalize_status:,}, "
-                        f"0x{context.tx.hash.hex()}"
-                    )
+        if account.normalize_status != 0 and context.type == IconScoreContextType.INVOKE:
+            if account.coin_part and account.coin_part.is_dirty() and \
+                    account.stake_part and not account.stake_part.is_dirty():
+                self._update_unstake_error(context, account)
 
     def _update_unstake_error(self,
                               context: 'IconScoreContext',
