@@ -17,9 +17,7 @@
 """IconScoreEngine testcase
 """
 from typing import TYPE_CHECKING, List
-from unittest.mock import patch
 
-from iconservice import SYSTEM_SCORE_ADDRESS
 from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -28,7 +26,26 @@ if TYPE_CHECKING:
 
 
 class TestIISSStake(TestIISSBase):
-    def test_unstake(self):
+    def test_unstake_balance_rev_10(self):
+        self._test_unstake_balance(
+            rev=Revision.FIX_UNSTAKE_BUG.value,
+            expected_expired_ustake_cnt=2,
+            expected_last_balance=0
+        )
+
+    def test_unstake_balance_rev_11(self):
+        self._test_unstake_balance(
+            rev=Revision.FIX_BALANCE_BUG.value,
+            expected_expired_ustake_cnt=3,
+            expected_last_balance=1 * ICX_IN_LOOP
+        )
+
+    def _test_unstake_balance(
+            self,
+            rev: int,
+            expected_expired_ustake_cnt: int,
+            expected_last_balance: int
+    ):
         self.update_governance()
 
         # set Revision REV_IISS
@@ -42,7 +59,8 @@ class TestIISSStake(TestIISSBase):
         )
 
         # set stake
-        stake: int = 4 * ICX_IN_LOOP
+        target_stake: int = 8
+        stake: int = target_stake * ICX_IN_LOOP
         tx_results: List['TransactionResult'] = self.set_stake(
             from_=self._accounts[0],
             value=stake
@@ -52,48 +70,58 @@ class TestIISSStake(TestIISSBase):
         response: int = self.get_balance(self._accounts[0])
         self.assertEqual(expected_balance, response)
 
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
 
-        for i in range(1, 5):
+        for i in range(6):
             self.set_stake(
                 from_=self._accounts[0],
-                value=stake - i
+                value=stake - (i+1) * ICX_IN_LOOP
             )
 
+        last_balance: int = self.get_balance(self._accounts[0])
+
         actual_res: dict = self.get_stake(self._accounts[0])
-        first_remaining_blocks: int = 16
+        first_remaining_blocks: int = 14
         expected_res = {
-            "stake": stake - 1 * 4,
+            "stake": stake - 1 * ICX_IN_LOOP * 6,
             "unstakes": [
-                {"unstake": 1, "unstakeBlockHeight": 25, "remainingBlocks": first_remaining_blocks},
-                {"unstake": 1, "unstakeBlockHeight": 26, "remainingBlocks": first_remaining_blocks+1},
-                {"unstake": 1, "unstakeBlockHeight": 27, "remainingBlocks": first_remaining_blocks+2},
-                {"unstake": 1, "unstakeBlockHeight": 28, "remainingBlocks": first_remaining_blocks+3},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 25, "remainingBlocks": first_remaining_blocks},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 26, "remainingBlocks": first_remaining_blocks+1},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 27, "remainingBlocks": first_remaining_blocks+2},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 28, "remainingBlocks": first_remaining_blocks+3},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 29, "remainingBlocks": first_remaining_blocks+4},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 30, "remainingBlocks": first_remaining_blocks+5},
             ]
         }
         self.assertEqual(expected_res, actual_res)
+
+        self.set_revision(rev)
 
         # 1st expired unstake
         self.make_empty_blocks(first_remaining_blocks)
-        last_balance: int = self.get_balance(self._accounts[0])
-        tx_results = self.transfer_icx(from_=self._accounts[0], to_=self._accounts[0], value=0)
-        fee = tx_results[0].step_used * tx_results[0].step_price
+        # len(unstakes_info) = 6
+        tx_results = self.transfer_icx(from_=self._accounts[0], to_=self._accounts[1], value=0)
+        # len(unstakes_info) = 5
+        estimate_fee = tx_results[0].step_used * tx_results[0].step_price
 
-        actual_res: dict = self.get_stake(self._accounts[0])
-        remaining_blocks: int = 0
-        expected_res = {
-            "stake": stake - 1 * 4,
-            "unstakes": [
-                {"unstake": 1, "unstakeBlockHeight": 26, "remainingBlocks": remaining_blocks},
-                {"unstake": 1, "unstakeBlockHeight": 27, "remainingBlocks": remaining_blocks+1},
-                {"unstake": 1, "unstakeBlockHeight": 28, "remainingBlocks": remaining_blocks+2},
-            ]
-        }
-        self.assertEqual(expected_res, actual_res)
-
-        # apply expire balance
-        # 2st expired unstake
+        # 2nd expired unstake
         self.make_empty_blocks(1)
-        
+        # len(unstakes_info) = 4
+
+        current_balance: int = self.get_balance(self._accounts[0])
+        expected_balance: int = last_balance + 1 * ICX_IN_LOOP * expected_expired_ustake_cnt - estimate_fee
+        self.assertEqual(current_balance, expected_balance)
+
+        self.transfer_icx(
+            from_=self._accounts[0],
+            to_=self._accounts[1],
+            value=expected_balance-estimate_fee,
+            disable_pre_validate=True,
+            step_limit=1 * 10 ** 5,
+            expected_status=True
+        )
+
+        # len(unstakes_info) = 3
+
         balance: int = self.get_balance(self._accounts[0])
-        self.assertEqual(last_balance - fee + 2, balance)
+        self.assertEqual(balance, expected_last_balance)
