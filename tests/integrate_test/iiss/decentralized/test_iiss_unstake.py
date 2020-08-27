@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_result import TransactionResult
 
 
-class TestIISSStake(TestIISSBase):
+class TestIISSUnStake(TestIISSBase):
     def test_unstake_balance_rev_10(self):
         self._test_unstake_balance(
             rev=Revision.FIX_UNSTAKE_BUG.value,
@@ -99,17 +99,53 @@ class TestIISSStake(TestIISSBase):
 
         # 1st expired unstake
         self.make_empty_blocks(first_remaining_blocks)
-        # len(unstakes_info) = 6
+
+        res: dict = self.get_stake(self._accounts[0])
+        expected_res = {
+            "stake": stake - 1 * ICX_IN_LOOP * 6,
+            "unstakes": [
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 26, "remainingBlocks": 0},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 27, "remainingBlocks": 1},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 28, "remainingBlocks": 2},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 29, "remainingBlocks": 3},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 30, "remainingBlocks": 4},
+            ]
+        }
+        self.assertEqual(res, expected_res)
+
         tx_results = self.transfer_icx(from_=self._accounts[0], to_=self._accounts[1], value=0)
-        # len(unstakes_info) = 5
+
+        res: dict = self.get_stake(self._accounts[0])
+        expected_res = {
+            "stake": stake - 1 * ICX_IN_LOOP * 6,
+            "unstakes": [
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 27, "remainingBlocks": 0},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 28, "remainingBlocks": 1},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 29, "remainingBlocks": 2},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 30, "remainingBlocks": 3},
+            ]
+        }
+        self.assertEqual(res, expected_res)
+
         estimate_fee = tx_results[0].step_used * tx_results[0].step_price
 
         # 2nd expired unstake
         self.make_empty_blocks(1)
-        # len(unstakes_info) = 4
+
+        res: dict = self.get_stake(self._accounts[0])
+        expected_res = {
+            "stake": stake - 1 * ICX_IN_LOOP * 6,
+            "unstakes": [
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 28, "remainingBlocks": 0},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 29, "remainingBlocks": 1},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 30, "remainingBlocks": 2},
+            ]
+        }
+        self.assertEqual(res, expected_res)
 
         current_balance: int = self.get_balance(self._accounts[0])
-        expected_balance: int = last_balance + 1 * ICX_IN_LOOP * expected_expired_ustake_cnt - estimate_fee
+        expected_exipred_stake_balance: int = 1 * ICX_IN_LOOP * expected_expired_ustake_cnt
+        expected_balance: int = last_balance + expected_exipred_stake_balance - estimate_fee
         self.assertEqual(current_balance, expected_balance)
 
         self.transfer_icx(
@@ -121,7 +157,15 @@ class TestIISSStake(TestIISSBase):
             expected_status=True
         )
 
-        # len(unstakes_info) = 3
+        res: dict = self.get_stake(self._accounts[0])
+        expected_res = {
+            "stake": stake - 1 * ICX_IN_LOOP * 6,
+            "unstakes": [
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 29, "remainingBlocks": 0},
+                {"unstake": 1 * ICX_IN_LOOP, "unstakeBlockHeight": 30, "remainingBlocks": 1},
+            ]
+        }
+        self.assertEqual(res, expected_res)
 
         balance: int = self.get_balance(self._accounts[0])
         self.assertEqual(balance, expected_last_balance)
