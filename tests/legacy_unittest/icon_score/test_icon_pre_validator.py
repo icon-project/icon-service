@@ -17,15 +17,19 @@
 import unittest
 from unittest.mock import Mock, ANY, patch, MagicMock
 
+import pytest
+
+from iconservice.base.address import Address
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException, OutOfBalanceException
 from iconservice.deploy import DeployEngine
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextEngine, ContextStorage
+from iconservice.utils.locked import LOCKED_ADDRESSES, is_address_locked
 from tests import create_address
 
 

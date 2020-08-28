@@ -49,7 +49,7 @@ class CoinPartType(IntEnum):
 
 class CoinPartFlag(Flag):
     NONE = 0
-    HAS_UNSTAKE = 1
+    HAS_UNSTAKE = 1 # deprecated
 
 
 class CoinPart(BasePart):
@@ -130,7 +130,11 @@ class CoinPart(BasePart):
         """
         return self._flags
 
-    def toggle_has_unstake(self, on: bool):
+    def toggle_has_unstake(self, on: bool, revision: int):
+        # deprecated flag
+        if revision >= Revision.FIX_BALANCE_BUG.value:
+            return
+
         new_flags = set_flag(self._flags, CoinPartFlag.HAS_UNSTAKE, on)
 
         if self._flags != new_flags:

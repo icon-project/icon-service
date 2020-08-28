@@ -134,7 +134,12 @@ class Revision(Enum):
     FIX_COIN_PART_BYTES_ENCODING = 9
     STRICT_SCORE_DECORATOR_CHECK = 9
 
-    LATEST = 9
+    FIX_UNSTAKE_BUG = 10
+    LOCK_ADDRESS = 10
+
+    FIX_BALANCE_BUG = 11
+
+    LATEST = 11
 
 
 RC_DB_VERSION_0 = 0
@@ -218,6 +223,10 @@ class ConfigKey:
     BLOCK_INVOKE_TIMEOUT = "blockInvokeTimeout"
 
     UNSTAKE_SLOT_MAX = "unstakeSlotMax"
+
+    # The list of items(address, unstake, unstake_block_height)
+    # containing invisible ghost ICX to remove
+    INVISIBLE_GHOST_ICX_LIST_PATH = "invisibleGhostICXListPath"
 
 
 class EnableThreadFlag(IntFlag):
@@ -463,3 +472,4 @@ class RPCMethod:
     ICX_CALL = 'icx_call'
     ICX_SEND_TRANSACTION = 'icx_sendTransaction'
     DEBUG_ESTIMATE_STEP = "debug_estimateStep"
+    DEBUG_GET_ACCOUNT = "debug_getAccount"
