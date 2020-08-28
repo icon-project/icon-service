@@ -138,13 +138,13 @@ class Account(object):
         if self.coin_part is None or self.stake_part is None:
             return
 
-        balance: int = self.stake_part.normalize(self._current_block_height, revision)
-        if balance > 0:
+        expired_unstaked_balance: int = self.stake_part.normalize(self._current_block_height, revision)
+        if expired_unstaked_balance > 0:
             if self.coin_part is None:
                 raise InvalidParamsException('Failed to normalize: no coin part')
 
-            self.coin_part.toggle_has_unstake(False)
-            self.coin_part.deposit(balance)
+            self.coin_part.toggle_has_unstake(False, revision)
+            self.coin_part.deposit(expired_unstaked_balance)
 
     def set_stake(self, context: "IconScoreContext", value: int, unstake_lock_period: int):
         if self.coin_part is None or self.stake_part is None:
@@ -168,12 +168,12 @@ class Account(object):
             self.stake_part.reset_unstake()
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
-            self.coin_part.toggle_has_unstake(True)
+            self.coin_part.toggle_has_unstake(True, context.revision)
             if context.revision >= Revision.MULTIPLE_UNSTAKE.value:
                 self.stake_part.set_unstakes_info(unlock_block_height,
                                                   -offset, context.unstake_slot_max)
             else:
-                self.stake_part.set_unstake(unlock_block_height,  -offset)
+                self.stake_part.set_unstake(unlock_block_height, -offset)
 
     def update_delegated_amount(self, offset: int):
         if self.delegation_part is None:

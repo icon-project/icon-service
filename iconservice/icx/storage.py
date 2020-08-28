@@ -27,7 +27,8 @@ from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 from ..base.block import Block, NULL_BLOCK
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, IconScoreContextType
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, IconScoreContextType, \
+    Revision
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -269,7 +270,26 @@ class Storage(StorageBase):
         if AccountPartFlag.COIN in part_flags:
             coin_part: 'CoinPart' = self._get_part(context, CoinPart, address)
 
-            if CoinPartFlag.HAS_UNSTAKE in coin_part.flags:
+            """
+            Ref IS-1208.
+            Mismatch has_unstake flag and actual unstake info below rev 10.
+            The reason that branch logic by revision is backward compatibility process on transfer ICX logic.
+            
+            The below code is a logic that determines in advance whether it is possible or not before ICX transfer.
+            
+            ### _process_transaction in icon_service_engine.py ###
+            # Checks the balance only on the invoke context(skip estimate context)
+            if context.type == IconScoreContextType.INVOKE:
+                tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
+                tmp_context.block = self._get_last_block()
+                # Check if from account can charge a tx fee
+                self._icon_pre_validator.execute_to_check_out_of_balance(
+                    context if context.revision >= Revision.THREE.value else tmp_context,
+                    params,
+                    step_price=context.step_counter.step_price)
+            """
+            if context.revision >= Revision.FIX_BALANCE_BUG.value or \
+                    CoinPartFlag.HAS_UNSTAKE in coin_part.flags:
                 part_flags |= AccountPartFlag.STAKE
 
         if AccountPartFlag.STAKE in part_flags:

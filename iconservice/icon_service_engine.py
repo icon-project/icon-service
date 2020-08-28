@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy
-from enum import IntEnum
-
 import os
 import shutil
-from iconcommons.logger import Logger
+from copy import deepcopy
+from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Tuple, Dict, Union, Any
+
+from iconcommons.logger import Logger
 
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
@@ -82,6 +82,7 @@ from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 from .utils.timer import Timer
+from .utils.locked import is_address_locked
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
