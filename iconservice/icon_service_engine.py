@@ -1279,7 +1279,7 @@ class IconServiceEngine(ContextContainer):
         data_type: str = params.get('dataType')
 
         # Can't transfer ICX to system SCORE
-        if data_type in (None, 'call', 'message') and to != SYSTEM_SCORE_ADDRESS:
+        if data_type in (None, 'call', 'message'):
             self._transfer_coin(context, params)
 
         if to.is_contract:
@@ -1299,6 +1299,12 @@ class IconServiceEngine(ContextContainer):
         from_: 'Address' = params['from']
         to: 'Address' = params['to']
         value: int = params.get('value', 0)
+
+        if (
+                to == SYSTEM_SCORE_ADDRESS
+                and context.revision < Revision.BURN_V2_ENABLED.value
+        ):
+            return
 
         context.engine.icx.transfer(context, from_, to, value)
 

@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice.base.exception import InvalidParamsException
 from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
@@ -34,14 +35,24 @@ def event_log_emitter(monkeypatch):
 
 class TestIssueEngine:
 
-    def test_burn_event_log_should_be_fixed_after_revision_9(self, context, issue_engine):
+    def test_burn_event_log(self, context, issue_engine):
         address: 'Address' = create_address()
         amount: int = 10
         expected_score_address: 'Address' = ZERO_SCORE_ADDRESS
-        expected_signature: str = "ICXBurned(int)" \
-            if context.revision >= Revision.FIX_BURN_EVENT_SIGNATURE.value else "ICXBurned"
-        expected_arguments: list = [amount]
-        expected_indexed_args_count: int = 0
+
+        if context.revision < Revision.FIX_BURN_EVENT_SIGNATURE.value:
+            expected_signature = "ICXBurned"
+        elif context.revision < Revision.BURN_V2_ENABLED.value:
+            expected_signature: str = "ICXBurned(int)"
+        else:
+            expected_signature: str = "ICXBurnedV2(Address,int)"
+
+        if context.revision < Revision.BURN_V2_ENABLED.value:
+            expected_arguments: list = [amount]
+            expected_indexed_args_count: int = 0
+        else:
+            expected_arguments: list = [address, amount]
+            expected_indexed_args_count: int = 1
 
         issue_engine.burn(context, address, amount)
 
@@ -51,3 +62,12 @@ class TestIssueEngine:
                                                           event_signature=expected_signature,
                                                           arguments=expected_arguments,
                                                           indexed_args_count=expected_indexed_args_count)
+
+    def test_burn_0_amount(self, context, issue_engine):
+        address: Address = create_address()
+
+        if context.revision >= Revision.BURN_V2_ENABLED.value:
+            with pytest.raises(InvalidParamsException):
+                issue_engine.burn(context, address, amount=0)
+        else:
+            issue_engine.burn(context, address, amount=0)

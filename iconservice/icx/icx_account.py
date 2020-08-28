@@ -130,7 +130,7 @@ class Account(object):
 
     def withdraw(self, value: int):
         if self.coin_part is None:
-            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+            raise InvalidParamsException('Failed to withdraw: InvalidAccount')
 
         self.coin_part.withdraw(value)
 

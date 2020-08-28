@@ -16,11 +16,12 @@
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
+
 from .issue_formula import IssueFormula
 from .regulator import Regulator
 from ... import SYSTEM_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
-from ...base.exception import OutOfBalanceException
+from ...base.exception import OutOfBalanceException, InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG, Revision
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
@@ -109,26 +110,62 @@ class Engine(EngineBase):
 
     @staticmethod
     def _burn(context: 'IconScoreContext', address: 'Address', amount: int):
+        if context.revision >= Revision.BURN_V2_ENABLED.value:
+            address = SYSTEM_SCORE_ADDRESS
+
         account: 'Account' = context.storage.icx.get_account(context, address)
         if account.balance < amount:
             raise OutOfBalanceException(f'Not enough ICX to Burn: '
                                         f'balance({account.balance}) < intended burn amount({amount})')
-        else:
-            account.withdraw(amount)
-            current_total_supply = context.storage.icx.get_total_supply(context)
 
-            context.storage.icx.put_account(context, account)
-            context.storage.icx.put_total_supply(context, current_total_supply - amount)
+        account.withdraw(amount)
+        current_total_supply = context.storage.icx.get_total_supply(context)
+
+        context.storage.icx.put_account(context, account)
+        context.storage.icx.put_total_supply(context, current_total_supply - amount)
 
     def burn(self, context: 'IconScoreContext', address: 'Address', amount: int):
+        """
+
+        :param context:
+        :param address: The address to burn ICX
+        :param amount: the amount of ICX to burn
+        :return:
+        """
+        revision: int = context.revision
+
+        if revision >= Revision.BURN_V2_ENABLED.value and amount <= 0:
+            raise InvalidParamsException(f"Invalid amount: {amount}")
+
         self._burn(context, address, amount)
-        event_sig: str = "ICXBurned"
-        # Before 'FIX_BURN_EVENT_SIGNATURE' revision, event signature format was correct.
-        # So fix this bugs.
-        if context.revision >= Revision.FIX_BURN_EVENT_SIGNATURE.value:
-            event_sig: str = "ICXBurned(int)"
-        EventLogEmitter.emit_event_log(context,
-                                       score_address=SYSTEM_SCORE_ADDRESS,
-                                       event_signature=event_sig,
-                                       arguments=[amount],
-                                       indexed_args_count=0)
+        self._log_burn_event(context, address, amount)
+
+    @staticmethod
+    def _log_burn_event(
+            context: 'IconScoreContext', address: 'Address', amount: int):
+        revision = context.revision
+
+        # Event signature
+        if revision < Revision.FIX_BURN_EVENT_SIGNATURE.value:
+            event_sig = "ICXBurned"
+        elif revision < Revision.BURN_V2_ENABLED.value:
+            event_sig = "ICXBurned(int)"
+        else:
+            event_sig = "ICXBurnedV2(Address,int)"
+
+        # Arguments
+        if revision < Revision.BURN_V2_ENABLED.value:
+            arguments = [amount]
+            indexed_args_count = 0
+        else:
+            arguments = [address, amount]
+            indexed_args_count = 1
+
+        # Log event
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=SYSTEM_SCORE_ADDRESS,
+            event_signature=event_sig,
+            arguments=arguments,
+            indexed_args_count=indexed_args_count
+        )

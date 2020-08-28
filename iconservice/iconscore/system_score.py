@@ -22,11 +22,11 @@ from typing import TYPE_CHECKING, List
 from iconcommons.logger import Logger
 from typing_extensions import TypedDict
 
-from .icon_score_base import IconScoreBase, interface, external, payable, eventlog
+from .icon_score_base import IconScoreBase, interface, external, payable, eventlog, revert
 from .icon_score_base2 import InterfaceScore
 from ..base.address import Address
 from ..base.exception import *
-from ..icon_constant import ISCORE_EXCHANGE_RATE
+from ..icon_constant import ISCORE_EXCHANGE_RATE, Revision
 from ..utils import to_camel_case
 
 if TYPE_CHECKING:
@@ -59,6 +59,10 @@ class SystemScore(IconScoreBase):
 
     @eventlog
     def PRepSet(self, address: Address):
+        pass
+
+    @eventlog
+    def ICXBurnedV2(self, address: Address, amount: int):
         pass
 
     def __init__(self, db: 'IconScoreDatabase') -> None:
@@ -157,6 +161,15 @@ class SystemScore(IconScoreBase):
         )
         return None if deposit_info is None else deposit_info.to_dict(to_camel_case)
 
+    @payable
+    @external
+    def burn(self):
+        context = self._context
+        if context.revision < Revision.BURN_V2_ENABLED.value:
+            revert("burn is not enabled")
+
+        context.engine.issue.burn(context, self.msg.sender, self.msg.value)
+
     def _get_params(self, locals_params: dict) -> tuple:
         method = currentframe().f_back.f_code.co_name
         params: dict = self._del_self_in_params(locals_params)
@@ -214,6 +227,9 @@ class InterfaceSystemScore(InterfaceScore):
 
     @interface
     def getScoreDepositInfo(self, address: Address) -> dict: pass
+
+    @interface
+    def burn(self): pass
 
 
 def _create_rc_result(context: "IconScoreContext", start_block: int, end_block: int) -> dict:
