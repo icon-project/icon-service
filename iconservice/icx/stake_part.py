@@ -175,15 +175,21 @@ class StakePart(BasePart):
             size = len(self._unstakes_info)
             for i in range(size):
                 info = self._unstakes_info[0]
-                if info[1] >= block_height:
-                    if i > 0:
-                        state |= BasePartState.DIRTY
-                    break
-
-                # Remove unstatke_info of which lock period is already expired
-                self._unstakes_info.pop(0)
-                unstake += info[0]
-
+                if revision >= Revision.FIX_UNSTAKE_BUG.value:
+                    if info[1] >= block_height:
+                        break
+                    # Remove unstake_info of which lock period is already expired
+                    self._unstakes_info.pop(0)
+                    unstake += info[0]
+                    state |= BasePartState.DIRTY
+                else:
+                    if info[1] >= block_height:
+                        if i > 0:
+                            state |= BasePartState.DIRTY
+                        break
+                    # Remove unstake_info of which lock period is already expired
+                    self._unstakes_info.pop(0)
+                    unstake += info[0]
         else:
             if 0 < self._unstake_block_height < block_height:
                 unstake: int = self._unstake
