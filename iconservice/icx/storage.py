@@ -27,8 +27,7 @@ from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 from ..base.block import Block, NULL_BLOCK
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, IconScoreContextType, \
-    Revision
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, Revision
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -391,3 +390,18 @@ class Storage(StorageBase):
         """
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
         self._db.put(context, self._TOTAL_SUPPLY_KEY, value)
+
+    def get_coin_part(self, context: 'IconScoreContext', address: 'Address') -> 'CoinPart':
+        return self._get_part(context, CoinPart, address)
+
+    def get_stake_part(self, context: 'IconScoreContext', address: 'Address') -> 'StakePart':
+        return self._get_part(context, StakePart, address)
+
+    def put_stake_part(self, context: 'IconScoreContext', address: 'Address', part: 'StakePart'):
+        if not (isinstance(part, StakePart) and part.is_dirty()):
+            return
+
+        key: bytes = part.make_key(address)
+        value: bytes = part.to_bytes(context.revision)
+
+        self._db.put(context, key, value)
