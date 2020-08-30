@@ -19,10 +19,13 @@
 from typing import TYPE_CHECKING, List
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP
+from iconservice.icx.coin_part import CoinPart
+from iconservice.icx.stake_part import StakePart
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_result import TransactionResult
+    from tests.integrate_test.test_integrate_base import EOAAccount
 
 
 class TestIISSUnStake(TestIISSBase):
@@ -281,6 +284,7 @@ class TestIISSUnStake(TestIISSBase):
 
         # wait expire unstake
         unstake_info = self.get_stake(self._accounts[0])["unstakes"][0]
+        unstake_block_height: int = unstake_info["unstakeBlockHeight"]
         remaining_blocks = unstake_info["remainingBlocks"]
         self.make_empty_blocks(remaining_blocks + 1)
         # Balance | Stake   | UnStake    | Ghost_icx
@@ -302,6 +306,12 @@ class TestIISSUnStake(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         balance = expected_balance
 
+        # check ghost_icx 1
+        self._check_ghost_icx(
+            ghost_icx=ghost_icx,
+            unstake_block_height=unstake_block_height
+        )
+
         # Balance | Stake   | UnStake    | Ghost_icx
         # 150 icx | 0 icx   | 100 icx(e) | 100 icx
 
@@ -319,6 +329,12 @@ class TestIISSUnStake(TestIISSBase):
         expected_balance = balance - fee + ghost_icx
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         balance = expected_balance
+
+        # check ghost_icx 2
+        self._check_ghost_icx(
+            ghost_icx=ghost_icx,
+            unstake_block_height=unstake_block_height
+        )
 
         # Balance | Stake   | UnStake    | Ghost_icx
         # 250 icx | 0 icx   | 100 icx(e) | 100 icx
@@ -342,6 +358,9 @@ class TestIISSUnStake(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         balance = expected_balance
 
+        # check ghost_icx 3
+        self._check_ghost_icx_release()
+
         # Balance | Stake   | UnStake    | Ghost_icx
         # 350 icx | 0 icx   | 0 icx(e) | 0 icx
 
@@ -359,5 +378,37 @@ class TestIISSUnStake(TestIISSBase):
         expected_balance = balance - fee
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
 
+        # check ghost_icx 4
+        self._check_ghost_icx_release()
+
         # Balance | Stake   | UnStake    | Ghost_icx
         # 350 icx | 0 icx   | 0 icx(e) | 0 icx
+
+    def _get_account_info(self, account: 'EOAAccount') -> dict:
+        c_key: bytes = CoinPart.make_key(account.address)
+        value: bytes = self.get_state_db(c_key)
+        coin_part: 'CoinPart' = CoinPart.from_bytes(value)
+        s_key: bytes = StakePart.make_key(account.address)
+        value: bytes = self.get_state_db(s_key)
+        state_part: 'StakePart' = StakePart.from_bytes(value)
+
+        return {
+            "coin": coin_part,
+            "stake": state_part
+        }
+
+    def _check_ghost_icx(self, ghost_icx: int, unstake_block_height: int):
+        get_stake_info: dict = self.get_stake(self._accounts[0])
+        self.assertNotIn("unstakes", get_stake_info)
+        db_info: dict = self._get_account_info(self._accounts[0])
+        unstakes_info: list = db_info["stake"]._unstakes_info
+        self.assertEqual(1, len(unstakes_info))
+        self.assertEqual(ghost_icx, unstakes_info[0][0])
+        self.assertEqual(unstake_block_height, unstakes_info[0][1])
+
+    def _check_ghost_icx_release(self):
+        get_stake_info: dict = self.get_stake(self._accounts[0])
+        self.assertNotIn("unstakes", get_stake_info)
+        db_info: dict = self._get_account_info(self._accounts[0])
+        unstakes_info: list = db_info["stake"]._unstakes_info
+        self.assertEqual(0, len(unstakes_info))
