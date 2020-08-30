@@ -224,6 +224,10 @@ class ConfigKey:
 
     UNSTAKE_SLOT_MAX = "unstakeSlotMax"
 
+    # The list of items(address, unstake, unstake_block_height)
+    # containing invisible ghost ICX to remove
+    INVISIBLE_GHOST_ICX_LIST_PATH = "invisibleGhostICXListPath"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1

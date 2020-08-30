@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = "UnstakePatcher"
 
+import importlib.resources
 import json
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
@@ -63,34 +64,27 @@ class _UnstakeType(IntEnum):
 
 class UnstakePatcher(object):
 
-    def __init__(self):
-        self._items: List[_Item] = []
-        self._success_items: Optional[List[_Item]] = None
-        self._failure_items: Optional[List[_Item]] = None
-        self._unstakes: Optional[List[int]] = None  # 0: total, 1: success, 2: failure
+    def __init__(self, path: Optional[str]):
+        self._success_items: List[_Item] = []
+        self._failure_items: List[_Item] = []
+        self._unstakes: List[int] = [0, 0, 0]
 
-    def load(self, path: str):
-        f = open(path, "rt")
-        items: List[Dict[str, Any]] = json.load(f)
-        f.close()
-
+        items = self._load(path)
         self._items = [_Item.from_dict(item) for item in items]
 
+    @classmethod
+    def _load(cls, path: str) -> List[Dict[str, Any]]:
+        if isinstance(path, str):
+            with open(path, "rt") as f:
+                json_text = f.read()
+        else:
+            json_text = importlib.resources.read_text(
+                "iconservice.res", "invisible_ghost_icx_list.json"
+            )
+
+        return json.loads(json_text)
+
     def run(self, context: 'IconScoreContext'):
-        Logger.debug(tag=TAG, msg=f"StakePatcher.run() start")
-
-        self._burn(context)
-        self._write_report()
-
-        Logger.debug(tag=TAG, msg="StakePatcher.run() end")
-
-    def _init_metrics(self):
-        self._success_items = []
-        self._failure_items = []
-        self._unstakes = [0, 0, 0]
-
-    def _burn(self, context: 'IconScoreContext'):
-        self._init_metrics()
         storage = context.storage.icx
 
         for item in self._items:
@@ -142,8 +136,7 @@ class UnstakePatcher(object):
         self._failure_items.append(item)
         self._unstakes[_UnstakeType.FAILURE] += item.unstake
 
-    def _write_report(self):
-        path = ""
+    def write_report(self, path: str):
 
         Logger.warning(
             tag=TAG,
