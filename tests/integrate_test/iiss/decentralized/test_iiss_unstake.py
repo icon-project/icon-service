@@ -412,3 +412,11 @@ class TestIISSUnStake(TestIISSBase):
         db_info: dict = self._get_account_info(self._accounts[0])
         unstakes_info: list = db_info["stake"]._unstakes_info
         self.assertEqual(0, len(unstakes_info))
+
+    def test_fix_bug_rev11(self):
+        # TODO make ghost icx case
+
+        # TODO update Revision 11
+
+        # TODO check state DB
+        pass
