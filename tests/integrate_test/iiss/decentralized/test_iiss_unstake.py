@@ -223,7 +223,6 @@ class TestIISSUnStake(TestIISSBase):
         self.make_empty_blocks(remaining_blocks + 1)
         # Balance | Stake   | UnStake    | Ghost_icx
         # 50 icx  | 0 icx   | 100 icx(e) | 0 icx
-        self._check_ghost_icx(unstake_info["unstake"], unstake_info["unstakeBlockHeight"])
         self.assertEqual(balance + stake, self.get_balance(account))
 
         # transfer 10 icx to other account
@@ -270,6 +269,7 @@ class TestIISSUnStake(TestIISSBase):
         self.assertEqual(0, self.get_balance(account))
         response_stake = self.get_stake(account)
         self.assertEqual(stake, response_stake["stake"])
+        self._check_ghost_icx_release()
 
     def test_ghost_icx_case2(self):
         initial_balance: int = 150 * ICX_IN_LOOP
