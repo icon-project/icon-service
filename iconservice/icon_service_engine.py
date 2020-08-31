@@ -2115,7 +2115,7 @@ class IconServiceEngine(ContextContainer):
                 patcher.run(context)
 
                 report_path: str = os.path.join(self._log_dir, "invisible_ghost_icx_report.json")
-                patcher.write_report(report_path)
+                patcher.write_result(report_path)
             except BaseException as e:
                 Logger.exception(tag=_TAG, msg=f"Failed to run UnstakePatcher: {str(e)}")
         else:

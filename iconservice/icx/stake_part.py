@@ -76,7 +76,7 @@ class StakePart(BasePart):
         return self._stake + self.total_unstake
 
     @property
-    def unstakes_info(self) -> List[List[int, int]]:
+    def unstakes_info(self) -> List[List[int]]:
         assert self.is_set(BasePartState.COMPLETE)
         return self._unstakes_info
 
@@ -272,6 +272,13 @@ class StakePart(BasePart):
             if block_height >= unstakes_info[index][1]:
                 return index + 1
         return 0
+
+    # Functions to handle invisible ghost ICX
+
+    def cleanup_single_unstake(self):
+        self._unstake = 0
+        self._unstake_block_height: int = 0
+        self.set_dirty(True)
 
     def remove_unstake_info(self, index: int):
         if index >= len(self._unstakes_info):
