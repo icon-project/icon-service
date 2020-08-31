@@ -260,12 +260,32 @@ class TestIISSUnStake(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(account))
         balance = expected_balance
 
+        # fix unstake bug
+        self.set_revision(Revision.FIX_UNSTAKE_BUG.value)
+
+        # transfer 10 icx to other account
+        transfer_value = 10 * ICX_IN_LOOP
+        tx_results = self.transfer_icx(account, self._accounts[1], transfer_value)
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        transfer_fee: int = fee
+        expired_unstake1 = (unstakes_info[0]["unstake"], unstakes_info[0]["unstakeBlockHeight"])
+        expired_unstake2 = (unstakes_info[1]["unstake"], unstakes_info[1]["unstakeBlockHeight"])
+        expired_unstakes_info = [expired_unstake1, expired_unstake2]
+        self._check_ghost_icx(ghost_icx, expired_unstakes_info)
+
+        # ghost icx will not be produced
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 130 icx | 0 icx   | 100 icx(e) | 0 icx
+        expected_balance = balance - transfer_value - fee
+        self.assertEqual(expected_balance, self.get_balance(account))
+        balance = expected_balance
+
         # set stake to 30
         stake = 30 * ICX_IN_LOOP
         tx_results: List['TransactionResult'] = self.set_stake(from_=account, value=stake)
         fee = tx_results[0].step_used * tx_results[0].step_price
         # Balance | Stake   | UnStake    | Ghost_icx
-        # 210 icx | 30 icx  | 0 icx      | 0 icx
+        # 200 icx | 30 icx  | 0 icx      | 0 icx
         expected_balance = balance - stake - fee + ghost_icx
         self.assertEqual(expected_balance, self.get_balance(account))
         balance = expected_balance
