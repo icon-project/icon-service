@@ -272,44 +272,12 @@ class TestIISSUnStake(TestIISSBase):
         self.assertEqual(stake, response_stake["stake"])
 
     def test_ghost_icx_case2(self):
-        self.update_governance()
-        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
-        # gain 150 icx
         initial_balance: int = 150 * ICX_IN_LOOP
-        balance: int = initial_balance
-        self.distribute_icx(
-            accounts=self._accounts[:1],
-            init_balance=balance
-        )
-        # Balance | Stake   | UnStake    | Ghost_icx
-        # 150 icx | 0 icx   | 0 icx      | 0 icx
-
-        # set stake
         stake: int = 100 * ICX_IN_LOOP
-        tx_results: List['TransactionResult'] = self.set_stake(from_=self._accounts[0], value=stake)
-        fee = tx_results[0].step_used * tx_results[0].step_price
-        expected_balance = balance - stake - fee
-        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
-        balance = expected_balance
-        # Balance | Stake   | UnStake    | Ghost_icx
-        # 50 icx  | 100 icx | 0 icx      | 0 icx
-
-        # unstake all staked value
-        tx_results: List["TransactionResult"] = self.set_stake(from_=self._accounts[0], value=0)
-        fee = tx_results[0].step_used * tx_results[0].step_price
-        expected_balance = balance - fee
-        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
-        balance = expected_balance
-        # Balance | Stake   | UnStake    | Ghost_icx
-        # 50 icx  | 0 icx   | 100 icx    | 0 icx
-
-        # wait expire unstake
-        unstake_info = self.get_stake(self._accounts[0])["unstakes"][0]
-        unstake_block_height: int = unstake_info["unstakeBlockHeight"]
-        remaining_blocks = unstake_info["remainingBlocks"]
-        self.make_empty_blocks(remaining_blocks + 1)
-        # Balance | Stake   | UnStake    | Ghost_icx
-        # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
+        balance, unstake_block_height = self._setup(
+            init_balance=initial_balance,
+            stake=stake
+        )
 
         # delegation
         ghost_icx: int = stake
@@ -418,30 +386,128 @@ class TestIISSUnStake(TestIISSBase):
             "stake": state_part
         }
 
-    def _check_ghost_icx(self, ghost_icx: int, unstake_block_height: int):
-        get_stake_info: dict = self.get_stake(self._accounts[0])
-        self.assertNotIn("unstakes", get_stake_info)
-        db_info: dict = self._get_account_info(self._accounts[0])
-        unstakes_info: list = db_info["stake"]._unstakes_info
-        flag: CoinPartFlag = db_info["coin"].flags
-        self.assertEqual(CoinPartFlag.NONE, flag)
-        self.assertEqual(1, len(unstakes_info))
-        self.assertEqual(ghost_icx, unstakes_info[0][0])
-        self.assertEqual(unstake_block_height, unstakes_info[0][1])
+    def _check_ghost_icx(self, ghost_icx: int, unstake_block_height: int, account_count: int = 1):
+        for i in range(account_count):
+            get_stake_info: dict = self.get_stake(self._accounts[i])
+            self.assertNotIn("unstakes", get_stake_info)
+            db_info: dict = self._get_account_info(self._accounts[i])
+            unstakes_info: list = db_info["stake"]._unstakes_info
+            flag: CoinPartFlag = db_info["coin"].flags
+            self.assertEqual(CoinPartFlag.NONE, flag)
+            self.assertEqual(1, len(unstakes_info))
+            self.assertEqual(ghost_icx, unstakes_info[0][0])
+            self.assertEqual(unstake_block_height, unstakes_info[0][1])
 
-    def _check_ghost_icx_release(self):
-        get_stake_info: dict = self.get_stake(self._accounts[0])
-        self.assertNotIn("unstakes", get_stake_info)
-        db_info: dict = self._get_account_info(self._accounts[0])
-        unstakes_info: list = db_info["stake"]._unstakes_info
-        flag: CoinPartFlag = db_info["coin"].flags
-        self.assertEqual(CoinPartFlag.NONE, flag)
-        self.assertEqual(0, len(unstakes_info))
+    def _check_ghost_icx_release(self, account_count: int = 1):
+        for i in range(account_count):
+            get_stake_info: dict = self.get_stake(self._accounts[i])
+            self.assertNotIn("unstakes", get_stake_info)
+            db_info: dict = self._get_account_info(self._accounts[i])
+            unstakes_info: list = db_info["stake"]._unstakes_info
+            flag: CoinPartFlag = db_info["coin"].flags
+            self.assertEqual(CoinPartFlag.NONE, flag)
+            self.assertEqual(0, len(unstakes_info))
 
     def test_fix_bug_rev11(self):
+        account_count: int = 5
+        initial_balance: int = 150 * ICX_IN_LOOP
+        stake: int = 100 * ICX_IN_LOOP
+        balance, unstake_block_height = self._setup(
+            init_balance=initial_balance,
+            stake=stake,
+            account_count=account_count
+        )
+
         # TODO make ghost icx case
+
+        # delegation
+        ghost_icx: int = stake
+        tx_list = []
+        for i in range(account_count):
+            tx = self.create_set_delegation_tx(
+                from_=self._accounts[i],
+                origin_delegations=[
+                    (
+                        self._accounts[i],
+                        0
+                    )
+                ]
+            )
+            tx_list.append(tx)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list)
+
+        expected_balance = 0
+        for i in range(account_count):
+            fee = tx_results[i].step_used * tx_results[i].step_price
+            expected_balance = balance - fee + ghost_icx
+            self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
+        balance = expected_balance
+
+        # check ghost_icx 1
+        self._check_ghost_icx(
+            ghost_icx=ghost_icx,
+            unstake_block_height=unstake_block_height,
+            account_count=account_count
+        )
 
         # TODO update Revision 11
 
         # TODO check state DB
-        pass
+
+    def _setup(self, init_balance: int, stake: int, account_count: int = 1) -> tuple:
+        self.update_governance()
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
+        # gain 150 icx
+        balance: int = init_balance
+        self.distribute_icx(
+            accounts=self._accounts[:account_count],
+            init_balance=balance
+        )
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 150 icx | 0 icx   | 0 icx      | 0 icx
+
+        # set stake
+        tx_list = []
+        for i in range(account_count):
+            tx = self.create_set_stake_tx(from_=self._accounts[i], value=stake)
+            tx_list.append(tx)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list)
+
+        expected_balance = 0
+        for i in range(account_count):
+            fee = tx_results[i].step_used * tx_results[i].step_price
+            expected_balance = balance - stake - fee
+            self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
+        balance = expected_balance
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 50 icx  | 100 icx | 0 icx      | 0 icx
+
+        # unstake all staked value
+        tx_list = []
+        for i in range(account_count):
+            tx = self.create_set_stake_tx(from_=self._accounts[i], value=0)
+            tx_list.append(tx)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list)
+
+        expected_balance = 0
+        for i in range(account_count):
+            fee = tx_results[i].step_used * tx_results[i].step_price
+            expected_balance = balance - fee
+            self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
+        balance = expected_balance
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 50 icx  | 0 icx   | 100 icx    | 0 icx
+
+        # wait expire unstake
+        remaining_blocks = 0
+        unstake_block_height: int = 0
+        for i in range(account_count):
+            unstake_info = self.get_stake(self._accounts[0])["unstakes"][0]
+            unstake_block_height: int = unstake_info["unstakeBlockHeight"]
+            remaining_blocks = unstake_info["remainingBlocks"]
+        self.make_empty_blocks(remaining_blocks + 1)
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
+
+        return balance, unstake_block_height
+
