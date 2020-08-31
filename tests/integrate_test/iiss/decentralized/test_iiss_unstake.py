@@ -176,7 +176,7 @@ class TestIISSUnStake(TestIISSBase):
     def test_ghost_icx_case1(self):
         initial_balance: int = 150 * ICX_IN_LOOP
         stake: int = 100 * ICX_IN_LOOP
-        balance, unstake_block_height, unstakes_info = self._setup(
+        balance, unstakes_info = self._setup(
             init_balance=initial_balance,
             stake=stake
         )
@@ -233,7 +233,7 @@ class TestIISSUnStake(TestIISSBase):
     def test_multiple_ghost_icx(self):
         initial_balance: int = 150 * ICX_IN_LOOP
         stake: int = 100 * ICX_IN_LOOP
-        balance, unstake_block_height, unstakes_info = self._setup(
+        balance, unstakes_info = self._setup(
             init_balance=initial_balance,
             stake=stake,
             unstake_count=2
@@ -292,7 +292,7 @@ class TestIISSUnStake(TestIISSBase):
     def test_ghost_icx_case2(self):
         initial_balance: int = 150 * ICX_IN_LOOP
         stake: int = 100 * ICX_IN_LOOP
-        balance, unstake_block_height, unstakes_info = self._setup(
+        balance, unstakes_info = self._setup(
             init_balance=initial_balance,
             stake=stake
         )
@@ -412,7 +412,7 @@ class TestIISSUnStake(TestIISSBase):
         account_count: int = 5
         initial_balance: int = 150 * ICX_IN_LOOP
         stake: int = 100 * ICX_IN_LOOP
-        balance, unstake_block_height, unstakes_info = self._setup(
+        balance, unstakes_info = self._setup(
             init_balance=initial_balance,
             stake=stake,
             account_count=account_count
@@ -528,4 +528,4 @@ class TestIISSUnStake(TestIISSBase):
         # Balance | Stake   | UnStake    | Ghost_icx
         # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
 
-        return balance, unstake_block_height, unstakes_info
+        return balance, unstakes_info
