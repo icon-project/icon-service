@@ -275,7 +275,7 @@ class StakePart(BasePart):
 
     # Functions to handle invisible ghost ICX
 
-    def cleanup_single_unstake(self):
+    def cleanup_old_format_unstake(self):
         self._unstake = 0
         self._unstake_block_height: int = 0
         self.set_dirty(True)

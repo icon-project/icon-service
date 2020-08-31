@@ -78,9 +78,6 @@ class Target(object):
     def add_unstake(self, amount: int, block_height: int):
         self._unstakes.append(Unstake(amount, block_height))
 
-    def get_unstake(self, index: int) -> Unstake:
-        return self._unstakes[index]
-
     def to_dict(self) -> Dict[str, Any]:
         return {
             "address": str(self._address),
@@ -190,13 +187,17 @@ class UnstakePatcher(object):
         :return:
         """
         unstakes_info: List[List[int, int]] = stake_part.unstakes_info
-        if len(unstakes_info) == 0:
+        if (
+                len(unstakes_info) == 0
+                or stake_part.unstake > 0
+                or stake_part.unstake_block_height > 0
+        ):
             return False
 
-        for unstake_info, unstake in zip(stake_part.unstakes_info, target.unstakes):
+        for info, unstake in zip(stake_part.unstakes_info, target.unstakes):
             if not (
-                unstakes_info[0] == unstake.amount
-                and unstake_info[1] == unstake.block_height
+                info[0] == unstake.amount
+                and info[1] == unstake.block_height
             ):
                 return False
 
@@ -213,11 +214,13 @@ class UnstakePatcher(object):
         assert len(stake_part.unstakes_info) == 0
         assert len(target.unstakes) == 1
 
-        stake_part.cleanup_signle_unstake()
-
         unstake: Unstake = target.unstakes[0]
         assert stake_part.unstake == unstake.amount
         assert stake_part.unstake_block_height == unstake.block_height
+
+        stake_part.cleanup_old_format_unstake()
+        assert stake_part.unstake == 0
+        assert stake_part.unstake_block_height == 0
 
         Logger.info(tag=TAG, msg=f"remove_ghost_icx_v0: {target}")
 
