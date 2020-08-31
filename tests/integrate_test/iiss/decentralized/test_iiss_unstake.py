@@ -183,24 +183,23 @@ class TestIISSUnStake(TestIISSBase):
         account = self._accounts[0]
 
         # transfer 10 icx to other account
+        ghost_icx = stake
         transfer_value = 10 * ICX_IN_LOOP
         tx_results = self.transfer_icx(account, self._accounts[1], transfer_value)
         fee = tx_results[0].step_used * tx_results[0].step_price
         transfer_fee: int = fee
         # Balance | Stake   | UnStake    | Ghost_icx
         # 40 icx  | 0 icx   | 100 icx(e) | 100 icx
+        self._check_ghost_icx(ghost_icx, unstake_block_height)
 
-        ghost_icx: int = stake
         # gain unstaked icx
         # Balance | Stake   | UnStake    | Ghost_icx
         # 140 icx | 0 icx   | 100 icx(e) | 0 icx
         expected_balance = balance - transfer_value - fee + stake
         self.assertEqual(expected_balance, self.get_balance(account))
         balance = expected_balance
-        self._check_ghost_icx(ghost_icx, unstake_block_height)
 
         # set stake to 30
-        ghost_icx = stake
         stake = 30 * ICX_IN_LOOP
         tx_results: List['TransactionResult'] = self.set_stake(from_=account, value=stake)
         fee = tx_results[0].step_used * tx_results[0].step_price
