@@ -238,20 +238,23 @@ class TestIISSUnStake(TestIISSBase):
 
         # delegation
         ghost_icx: int = stake
-        tx_results: List["TransactionResult"] = self.set_delegation(
-            from_=self._accounts[0],
-            origin_delegations=[
-                (
-                    self._accounts[0],
-                    0
-                )
-            ]
-        )
-        fee = tx_results[0].step_used * tx_results[0].step_price
-        expected_balance = balance - fee + ghost_icx
-        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
-        balance = expected_balance
 
+        def set_delegation():
+            tx_results: List["TransactionResult"] = self.set_delegation(
+                from_=self._accounts[0],
+                origin_delegations=[
+                    (
+                        self._accounts[0],
+                        0
+                    )
+                ]
+            )
+            fee = tx_results[0].step_used * tx_results[0].step_price
+            expected_balance = balance - fee + ghost_icx
+            self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
+            return expected_balance
+
+        balance: int = set_delegation()
         # check ghost_icx 1
         self._check_ghost_icx(
             ghost_icx=ghost_icx,
@@ -261,21 +264,7 @@ class TestIISSUnStake(TestIISSBase):
         # Balance | Stake   | UnStake    | Ghost_icx
         # 150 icx | 0 icx   | 100 icx(e) | 100 icx
 
-        tx_results: List["TransactionResult"] = self.set_delegation(
-            from_=self._accounts[0],
-            origin_delegations=[
-                (
-                    self._accounts[0],
-                    0
-                )
-            ]
-        )
-
-        fee = tx_results[0].step_used * tx_results[0].step_price
-        expected_balance = balance - fee + ghost_icx
-        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
-        balance = expected_balance
-
+        balance: int = set_delegation()
         # check ghost_icx 2
         self._check_ghost_icx(
             ghost_icx=ghost_icx,
@@ -289,20 +278,7 @@ class TestIISSUnStake(TestIISSBase):
         self.set_revision(Revision.FIX_UNSTAKE_BUG.value)
 
         # Try Again
-        tx_results: List["TransactionResult"] = self.set_delegation(
-            from_=self._accounts[0],
-            origin_delegations=[
-                (
-                    self._accounts[0],
-                    0
-                )
-            ]
-        )
-
-        fee = tx_results[0].step_used * tx_results[0].step_price
-        expected_balance = balance - fee + ghost_icx
-        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
-        balance = expected_balance
+        balance: int = set_delegation()
 
         # check ghost_icx 3
         self._check_ghost_icx_release()
@@ -375,8 +351,6 @@ class TestIISSUnStake(TestIISSBase):
             account_count=account_count
         )
 
-        # TODO make ghost icx case
-
         # delegation
         ghost_icx: int = stake
         tx_list = []
@@ -398,7 +372,6 @@ class TestIISSUnStake(TestIISSBase):
             fee = tx_results[i].step_used * tx_results[i].step_price
             expected_balance = balance - fee + ghost_icx
             self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
-        balance = expected_balance
 
         # check ghost_icx 1
         self._check_ghost_icx(
@@ -407,9 +380,11 @@ class TestIISSUnStake(TestIISSBase):
             account_count=account_count
         )
 
-        # TODO update Revision 11
+        # TODO set ghost icx account list
 
-        # TODO check state DB
+        # check rev 11
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        self._check_ghost_icx_release(account_count=account_count)
 
     def _setup(self, init_balance: int, stake: int, account_count: int = 1) -> tuple:
         self.update_governance()
