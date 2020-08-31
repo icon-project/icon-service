@@ -756,12 +756,82 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(ghost_icx, stake_part._unstake)
         self.assertEqual(unstake_block_height, stake_part._unstake_block_height)
 
-
-    def test_old_format_multi(self):
-        pass
-
     def test_new_format(self):
-        pass
+        self.update_governance()
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value - 1)
+
+        init_balance: int = 150 * ICX_IN_LOOP
+        stake: int = 100 * ICX_IN_LOOP
+        # gain 150 icx
+        self.distribute_icx(
+            accounts=self._accounts[:1],
+            init_balance=init_balance
+        )
+
+        self._accounts[0].balance = init_balance
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 150 icx | 0 icx   | 0 icx      | 0 icx
+
+        # set stake
+        ghost_icx: int = stake
+        tx = self.create_set_stake_tx(from_=self._accounts[0], value=stake)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=[tx])
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance = self._accounts[0].balance - stake - fee
+        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
+        self._accounts[0].balance = expected_balance
+
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 50 icx  | 100 icx | 0 icx      | 0 icx
+
+        self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
+
+        # unstake all staked value
+        tx = self.create_set_stake_tx(from_=self._accounts[0], value=0)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=[tx])
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance = self._accounts[0].balance - fee
+        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
+        self._accounts[0].balance = expected_balance
+
+        res: dict = self.get_stake(self._accounts[0])
+        remaining_blocks: int = res["unstakes"][0]["remainingBlocks"]
+        unstake_block_height: int = res["unstakes"][0]["unstakeBlockHeight"]
+        self.make_empty_blocks(remaining_blocks + 1)
+        # Balance | Stake   | UnStake    | Ghost_icx
+        # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
+
+        # new format
+        db_info: dict = self._get_account_info(self._accounts[0])
+        coin_part: 'CoinPart' = db_info["coin"]
+        stake_part: 'StakePart' = db_info["stake"]
+        self.assertEqual(CoinPartFlag.HAS_UNSTAKE, coin_part._flags)
+        self.assertEqual(0, stake_part._stake)
+        self.assertEqual(ghost_icx, stake_part._unstakes_info[0][0])
+        self.assertEqual(unstake_block_height, stake_part._unstakes_info[0][1])
+
+        tx_results: List["TransactionResult"] = self.set_delegation(
+            from_=self._accounts[0],
+            origin_delegations=[
+                (
+                    self._accounts[0],
+                    0
+                )
+            ]
+        )
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance = self._accounts[0].balance - fee + ghost_icx
+        self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
+        self._accounts[0].balance = expected_balance
+
+        # new format
+        db_info: dict = self._get_account_info(self._accounts[0])
+        coin_part: 'CoinPart' = db_info["coin"]
+        stake_part: 'StakePart' = db_info["stake"]
+        self.assertEqual(CoinPartFlag.NONE, coin_part._flags)
+        self.assertEqual(0, stake_part._stake)
+        self.assertEqual(ghost_icx, stake_part._unstakes_info[0][0])
+        self.assertEqual(unstake_block_height, stake_part._unstakes_info[0][1])
 
     def test_new_format_multi(self):
         pass
