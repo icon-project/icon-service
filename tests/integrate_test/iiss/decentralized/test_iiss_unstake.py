@@ -518,7 +518,6 @@ class TestIISSUnStake(TestIISSBase):
 
         # wait expire unstake
         remaining_blocks = 0
-        unstake_block_height: int = 0
         unstakes_info = self.get_stake(self._accounts[0]).get("unstakes")
         for i in range(account_count):
             unstake_info = self.get_stake(self._accounts[0])["unstakes"][0]
