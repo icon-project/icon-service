@@ -19,7 +19,7 @@
 from typing import TYPE_CHECKING, List
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP
-from iconservice.icx.coin_part import CoinPart
+from iconservice.icx.coin_part import CoinPart, CoinPartFlag
 from iconservice.icx.stake_part import StakePart
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -423,6 +423,8 @@ class TestIISSUnStake(TestIISSBase):
         self.assertNotIn("unstakes", get_stake_info)
         db_info: dict = self._get_account_info(self._accounts[0])
         unstakes_info: list = db_info["stake"]._unstakes_info
+        flag: CoinPartFlag = db_info["coin"].flags
+        self.assertEqual(CoinPartFlag.NONE, flag)
         self.assertEqual(1, len(unstakes_info))
         self.assertEqual(ghost_icx, unstakes_info[0][0])
         self.assertEqual(unstake_block_height, unstakes_info[0][1])
@@ -432,6 +434,8 @@ class TestIISSUnStake(TestIISSBase):
         self.assertNotIn("unstakes", get_stake_info)
         db_info: dict = self._get_account_info(self._accounts[0])
         unstakes_info: list = db_info["stake"]._unstakes_info
+        flag: CoinPartFlag = db_info["coin"].flags
+        self.assertEqual(CoinPartFlag.NONE, flag)
         self.assertEqual(0, len(unstakes_info))
 
     def test_fix_bug_rev11(self):
