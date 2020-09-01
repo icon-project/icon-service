@@ -131,7 +131,7 @@ class UnstakePatcher(object):
             if result == Result.FALSE:
                 self._add_failure_item(target)
             else:
-                if Result.REMOVABLE_V0:
+                if result == Result.REMOVABLE_V0:
                     stake_part = self._remove_ghost_icx_v0(stake_part, target)
                 else:
                     stake_part = self._remove_ghost_icx_v1(stake_part, target)
@@ -281,7 +281,7 @@ class UnstakePatcher(object):
                 # Item count
                 "total": len(self._targets),
                 "success": len(self._success_targets),
-                "failure": list(self._failure_targets),
+                "failure": [target.to_dict() for target in self._failure_targets],
 
                 # Item list
                 "success_targets": [target.to_dict() for target in self._success_targets],
