@@ -198,10 +198,7 @@ class UnstakePatcher(object):
             return False
 
         for info, unstake in zip(stake_part.unstakes_info, target.unstakes):
-            if not (
-                info[0] == unstake.amount
-                and info[1] == unstake.block_height
-            ):
+            if not (info[0] == unstake.amount and info[1] == unstake.block_height):
                 return False
 
         return True

@@ -780,7 +780,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        assert isinstance(dirty_prep, PRep), f"dirty_prep: {address}"
+        assert isinstance(dirty_prep, PRep), f"dirty_prep: {dirty_prep.address}"
 
         dirty_prep.last_generate_block_height = context.block.height - 1
         context.put_dirty_prep(dirty_prep)
@@ -2111,7 +2111,7 @@ class IconServiceEngine(ContextContainer):
                 path: Optional[str] = self._conf.get(
                     ConfigKey.INVISIBLE_GHOST_ICX_LIST_PATH, None)
 
-                patcher = UnstakePatcher(path)
+                patcher = UnstakePatcher.from_path(path)
                 patcher.run(context)
 
                 report_path: str = os.path.join(self._log_dir, "invisible_ghost_icx_report.json")
