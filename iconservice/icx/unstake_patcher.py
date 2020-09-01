@@ -20,8 +20,6 @@ if TYPE_CHECKING:
     from ..icx.stake_part import StakePart
 
 TAG = "GHOST"
-SUCCESS = 0
-FAILURE = 1
 
 
 class Unstake(object):
@@ -105,7 +103,8 @@ class UnstakePatcher(object):
 
         self._success_targets: List[Target] = []
         self._failure_targets: List[Target] = []
-        self._unstakes: List[int] = [0, 0, 0]
+        self._success_unstake = 0  # Succeeded to remove invisible ghost icx
+        self._failure_unstake = 0  # Failed to remove invisible ghost icx
 
     @classmethod
     def _load(cls, path: str) -> Dict[str, Any]:
@@ -120,6 +119,8 @@ class UnstakePatcher(object):
         return json.loads(json_text)
 
     def run(self, context: 'IconScoreContext'):
+        Logger.info(tag=TAG, msg="UnstakePatcher.run() start")
+
         storage = context.storage.icx
 
         for target in self._targets:
@@ -139,6 +140,8 @@ class UnstakePatcher(object):
                 assert stake_part.is_dirty()
                 storage.put_stake_part(context, stake_part)
                 self._add_success_item(target)
+
+        Logger.info(tag=TAG, msg="UnstakePatcher.run() end")
 
     @classmethod
     def _check_removable(
@@ -250,21 +253,23 @@ class UnstakePatcher(object):
 
     def _add_success_item(self, target: Target):
         self._success_targets.append(target)
-        self._unstakes[SUCCESS] += target.total_unstake
+        self._success_unstake += target.total_unstake
 
     def _add_failure_item(self, target: Target):
         self._failure_targets.append(target)
-        self._unstakes[FAILURE] += target.total_unstake
+        self._failure_unstake += target.total_unstake
 
     def write_result(self, path: str):
-        total_unstake = sum(self._unstakes)
+        Logger.info(tag=TAG, msg=f"UnstakePatcher.write_result() start: {path}")
+
+        total_unstake = self._success_unstake + self._failure_unstake
 
         Logger.warning(
             tag=TAG,
             msg="Invisible ghost ICX patch result: "
             f"total_unstake={total_unstake} "
-            f"success_unstake={self._unstakes[SUCCESS]} "
-            f"failure_unstake={self._unstakes[FAILURE]} "
+            f"success_unstake={self._success_unstake} "
+            f"failure_unstake={self._failure_unstake} "
             f"total_items={len(self._targets)} "
             f"success_items={len(self._success_targets)} "
             f"failure_items={len(self._failure_targets)}",
@@ -274,8 +279,8 @@ class UnstakePatcher(object):
             report = {
                 # Unstake amount
                 "total_unstake": total_unstake,
-                "success_unstake": self._unstakes[SUCCESS],
-                "failure_unstake": self._unstakes[FAILURE],
+                "success_unstake": self._success_unstake,
+                "failure_unstake": self._failure_unstake,
 
                 # Item count
                 "total": len(self._targets),
@@ -292,6 +297,8 @@ class UnstakePatcher(object):
                 f.write(text)
         except BaseException as e:
             Logger.exception(tag=TAG, msg=str(e))
+
+        Logger.info(tag=TAG, msg=f"UnstakePatcher.write_result() end")
 
     @classmethod
     def from_path(cls, path: str) -> UnstakePatcher:
