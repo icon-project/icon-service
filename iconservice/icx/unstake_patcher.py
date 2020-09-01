@@ -10,7 +10,6 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Dict, Any
 
 from iconcommons.logger import Logger
-
 from ..base.address import Address
 from ..icx.coin_part import CoinPartFlag
 
@@ -80,7 +79,7 @@ class Target(object):
         return {
             "address": str(self._address),
             "total_unstake": self.total_unstake,
-            "unstakes": self._unstakes,
+            "unstakes": [unstake.to_list() for unstake in self._unstakes],
         }
 
     @classmethod
@@ -98,11 +97,11 @@ class Result(IntEnum):
 
 class UnstakePatcher(object):
 
-    def __init__(self, targets: List['Target']):
+    def __init__(self, targets: List[Target]):
         self._targets = targets
 
-        self._success_targets: List['Target'] = []
-        self._failure_targets: List['Target'] = []
+        self._success_targets: List[Target] = []
+        self._failure_targets: List[Target] = []
         self._success_unstake = 0  # Succeeded to remove invisible ghost icx
         self._failure_unstake = 0  # Failed to remove invisible ghost icx
 
@@ -138,14 +137,14 @@ class UnstakePatcher(object):
                     stake_part = self._remove_ghost_icx_v1(stake_part, target)
 
                 assert stake_part.is_dirty()
-                storage.put_stake_part(context, stake_part)
+                storage.put_stake_part(context, address, stake_part)
                 self._add_success_item(target)
 
         Logger.info(tag=TAG, msg="UnstakePatcher.run() end")
 
     @classmethod
     def _check_removable(
-        cls, coin_part: 'CoinPart', stake_part: 'StakePart', target: 'Target'
+        cls, coin_part: 'CoinPart', stake_part: 'StakePart', target: Target
     ) -> Result:
 
         if CoinPartFlag.HAS_UNSTAKE not in coin_part.flags:
@@ -159,7 +158,7 @@ class UnstakePatcher(object):
         return Result.FALSE
 
     @classmethod
-    def _is_removable_v0(cls, stake_part: 'StakePart', target: 'Target') -> bool:
+    def _is_removable_v0(cls, stake_part: 'StakePart', target: Target) -> bool:
         """Inspect stake_part.unstake and stake_part.unstake_block_height
 
         :param target:
@@ -182,7 +181,7 @@ class UnstakePatcher(object):
         )
 
     @classmethod
-    def _is_removable_v1(cls, stake_part: 'StakePart', target: 'Target') -> bool:
+    def _is_removable_v1(cls, stake_part: 'StakePart', target: Target) -> bool:
         """Inspect stake_part.unstakes_info
 
         :param stake_part:
@@ -204,7 +203,7 @@ class UnstakePatcher(object):
         return True
 
     @classmethod
-    def _remove_ghost_icx_v0(cls, stake_part, target: Target) -> 'StakePart':
+    def _remove_ghost_icx_v0(cls, stake_part: 'StakePart', target: Target) -> 'StakePart':
         """Remove ghost icx from stake_part.unstake and stake_part.unstake_block_height
 
         :param stake_part:
@@ -227,7 +226,7 @@ class UnstakePatcher(object):
         return stake_part
 
     @classmethod
-    def _remove_ghost_icx_v1(cls, stake_part, target) -> 'StakePart':
+    def _remove_ghost_icx_v1(cls, stake_part: 'StakePart', target: Target) -> 'StakePart':
         """Remove ghost icx from stake_part.unstakes_info
 
         :param stake_part:
