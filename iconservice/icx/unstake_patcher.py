@@ -281,7 +281,7 @@ class UnstakePatcher(object):
                 # Item count
                 "total": len(self._targets),
                 "success": len(self._success_targets),
-                "failure": [target.to_dict() for target in self._failure_targets],
+                "failure": len(self._failure_targets),
 
                 # Item list
                 "success_targets": [target.to_dict() for target in self._success_targets],
