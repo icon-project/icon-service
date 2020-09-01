@@ -17,10 +17,12 @@
 """IconScoreEngine testcase
 """
 from typing import TYPE_CHECKING, List, Tuple
+from unittest.mock import Mock
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP
 from iconservice.icx.coin_part import CoinPart, CoinPartFlag
 from iconservice.icx.stake_part import StakePart
+from iconservice.icx.unstake_patcher import UnstakePatcher, Target
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -631,11 +633,11 @@ class TestIISSUnStake2(TestIISSBase):
             self.assertEqual(CoinPartFlag.NONE, flag)
             self.assertEqual(0, len(unstakes_info))
 
-    def test_fix_bug_rev11(self):
+    def test_fix_bug_rev11_all_success(self):
         account_count: int = 5
         initial_balance: int = 150 * ICX_IN_LOOP
         stake: int = 100 * ICX_IN_LOOP
-        balance, unstakes_info = self._setup(
+        unstakes_info_per_account: list = self._setup(
             init_balance=initial_balance,
             stake=stake,
             account_count=account_count
@@ -659,11 +661,15 @@ class TestIISSUnStake2(TestIISSBase):
 
         for i in range(account_count):
             fee = tx_results[i].step_used * tx_results[i].step_price
-            expected_balance = balance - fee + ghost_icx
+            expected_balance = self._accounts[i].balance - fee + ghost_icx
             self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
 
         # check ghost_icx 1
-        expired_unstake = (unstakes_info[0]["unstake"], unstakes_info[0]["unstakeBlockHeight"])
+        account0_unstakes_info = unstakes_info_per_account[0]
+        expired_unstake = (
+            account0_unstakes_info[0]["unstake"],
+            account0_unstakes_info[0]["unstakeBlockHeight"]
+        )
         expired_unstakes_info = [expired_unstake]
         self._check_ghost_icx(
             ghost_icx=ghost_icx,
@@ -671,11 +677,98 @@ class TestIISSUnStake2(TestIISSBase):
             account_count=account_count
         )
 
-        # TODO set ghost icx account list
+        src: list = []
+        for i in range(account_count):
+            db_info: dict = self._get_account_info(self._accounts[0])
+            stake_part: 'StakePart' = db_info["stake"]
+            data: dict = {
+                "address": str(self._accounts[i].address),
+                "total_unstake": stake_part._stake + stake_part._total_unstake(),
+                "old_unstake_format": False,
+                "unstakes": [
+                    [
+                        stake_part._unstakes_info[0][0],
+                        stake_part._unstakes_info[0][1]
+                    ],
+                ]
+            }
+            src.append(data)
+
+        targets: List[Target] = [Target.from_dict(i) for i in src]
+        patcher = UnstakePatcher(targets=targets)
+        UnstakePatcher.from_path = Mock(return_value=patcher)
 
         # check rev 11
         self.set_revision(Revision.FIX_BALANCE_BUG.value)
         self._check_ghost_icx_release(account_count=account_count)
+
+    def test_fix_bug_rev11_all_fail(self):
+        account_count: int = 5
+        initial_balance: int = 150 * ICX_IN_LOOP
+        stake: int = 100 * ICX_IN_LOOP
+        unstakes_info_per_account: list = self._setup(
+            init_balance=initial_balance,
+            stake=stake,
+            account_count=account_count
+        )
+
+        # delegation
+        ghost_icx: int = stake
+        tx_list = []
+        for i in range(account_count):
+            tx = self.create_set_delegation_tx(
+                from_=self._accounts[i],
+                origin_delegations=[
+                    (
+                        self._accounts[i],
+                        0
+                    )
+                ]
+            )
+            tx_list.append(tx)
+        tx_results: List['TransactionResult'] = self.process_confirm_block_tx(tx_list=tx_list)
+
+        for i in range(account_count):
+            fee = tx_results[i].step_used * tx_results[i].step_price
+            expected_balance = self._accounts[i].balance - fee + ghost_icx
+            self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
+
+        # check ghost_icx 1
+        account0_unstakes_info = unstakes_info_per_account[0]
+        expired_unstake = (
+            account0_unstakes_info[0]["unstake"],
+            account0_unstakes_info[0]["unstakeBlockHeight"]
+        )
+        expired_unstakes_info = [expired_unstake]
+        self._check_ghost_icx(
+            ghost_icx=ghost_icx,
+            expired_unstakes_info=expired_unstakes_info,
+            account_count=account_count
+        )
+
+        src: list = []
+        for i in range(account_count):
+            db_info: dict = self._get_account_info(self._accounts[0])
+            stake_part: 'StakePart' = db_info["stake"]
+            data: dict = {
+                "address": str(self._accounts[i].address),
+                "total_unstake": stake_part._stake + stake_part._total_unstake(),
+                "old_unstake_format": False,
+                "unstakes": [
+                    [
+                        stake_part._unstakes_info[0][0] - 1,
+                        stake_part._unstakes_info[0][1]
+                    ],
+                ]
+            }
+            src.append(data)
+
+        targets: List[Target] = [Target.from_dict(i) for i in src]
+        patcher = UnstakePatcher(targets=targets)
+        UnstakePatcher.from_path = Mock(return_value=patcher)
+
+        # check rev 11
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
 
 
 class TestIISSUnStake3(TestIISSBase):
@@ -756,6 +849,27 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(ghost_icx, stake_part._unstake)
         self.assertEqual(unstake_block_height, stake_part._unstake_block_height)
 
+        # Check Fix logic
+        data: list = [
+            {
+                "address": str(self._accounts[0].address),
+                "total_unstake": stake_part._stake + stake_part._total_unstake(),
+                "old_unstake_format": True,
+                "unstakes": [
+                    [
+                        stake_part._unstake,
+                        stake_part._unstake_block_height
+                    ],
+                ]
+            },
+        ]
+        targets: List[Target] = [Target.from_dict(i) for i in data]
+        patcher = UnstakePatcher(targets=targets)
+        UnstakePatcher.from_path = Mock(return_value=patcher)
+
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        self._check_unstake_patch()
+
     def test_new_format(self):
         self.update_governance()
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value - 1)
@@ -832,6 +946,26 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(0, stake_part._stake)
         self.assertEqual(ghost_icx, stake_part._unstakes_info[0][0])
         self.assertEqual(unstake_block_height, stake_part._unstakes_info[0][1])
+
+        data: list = [
+            {
+                "address": str(self._accounts[0].address),
+                "total_unstake": stake_part._stake + stake_part._total_unstake(),
+                "old_unstake_format": False,
+                "unstakes": [
+                    [
+                        stake_part._unstakes_info[0][0],
+                        stake_part._unstakes_info[0][1]
+                    ],
+                ]
+            },
+        ]
+        targets: List[Target] = [Target.from_dict(i) for i in data]
+        patcher = UnstakePatcher(targets=targets)
+        UnstakePatcher.from_path = Mock(return_value=patcher)
+
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        self._check_unstake_patch()
 
     def test_new_format_multi_1_of_2_expired(self):
         self.update_governance()
@@ -930,6 +1064,26 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(ghost_icx, stake_part._unstakes_info[0][0])
         self.assertEqual(unstakes_info[-1]["unstakeBlockHeight"], stake_part._unstakes_info[0][1])
 
+        data: list = [
+            {
+                "address": str(self._accounts[0].address),
+                "total_unstake": stake_part._stake + stake_part._total_unstake(),
+                "old_unstake_format": False,
+                "unstakes": [
+                    [
+                        stake_part._unstakes_info[0][0],
+                        stake_part._unstakes_info[0][1]
+                    ],
+                ]
+            },
+        ]
+        targets: List[Target] = [Target.from_dict(i) for i in data]
+        patcher = UnstakePatcher(targets=targets)
+        UnstakePatcher.from_path = Mock(return_value=patcher)
+
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        self._check_unstake_patch()
+
     def test_new_format_multi_2_of_2_expired(self):
         self.update_governance()
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value - 1)
@@ -1022,6 +1176,30 @@ class TestIISSUnStake3(TestIISSBase):
             expected_ghost_icx += unstake_info[0]
         self.assertEqual(ghost_icx, expected_ghost_icx)
 
+        data: list = [
+            {
+                "address": str(self._accounts[0].address),
+                "total_unstake": stake_part._stake + stake_part._total_unstake(),
+                "old_unstake_format": False,
+                "unstakes": [
+                    [
+                        stake_part._unstakes_info[0][0],
+                        stake_part._unstakes_info[0][1]
+                    ],
+                    [
+                        stake_part._unstakes_info[1][0],
+                        stake_part._unstakes_info[1][1]
+                    ],
+                ]
+            },
+        ]
+        targets: List[Target] = [Target.from_dict(i) for i in data]
+        patcher = UnstakePatcher(targets=targets)
+        UnstakePatcher.from_path = Mock(return_value=patcher)
+
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        self._check_unstake_patch()
+
     def _get_account_info(self, account: 'EOAAccount') -> dict:
         c_key: bytes = CoinPart.make_key(account.address)
         value: bytes = self.get_state_db(c_key)
@@ -1034,3 +1212,16 @@ class TestIISSUnStake3(TestIISSBase):
             "coin": coin_part,
             "stake": state_part
         }
+
+    def _check_unstake_patch(self):
+        get_stake_info: dict = self.get_stake(self._accounts[0])
+        self.assertNotIn("unstake", get_stake_info)
+        db_info: dict = self._get_account_info(self._accounts[0])
+        unstake: int = db_info["stake"]._unstake
+        unstake_block_height: int = db_info["stake"]._unstake_block_height
+        unstakes_info: list = db_info["stake"]._unstakes_info
+        flag: CoinPartFlag = db_info["coin"].flags
+        self.assertEqual(CoinPartFlag.NONE, flag)
+        self.assertEqual(0, unstake)
+        self.assertEqual(0, unstake_block_height)
+        self.assertEqual(0, len(unstakes_info))
