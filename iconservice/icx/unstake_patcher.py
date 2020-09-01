@@ -98,11 +98,11 @@ class Result(IntEnum):
 
 class UnstakePatcher(object):
 
-    def __init__(self, targets: List[Target]):
+    def __init__(self, targets: List['Target']):
         self._targets = targets
 
-        self._success_targets: List[Target] = []
-        self._failure_targets: List[Target] = []
+        self._success_targets: List['Target'] = []
+        self._failure_targets: List['Target'] = []
         self._success_unstake = 0  # Succeeded to remove invisible ghost icx
         self._failure_unstake = 0  # Failed to remove invisible ghost icx
 
@@ -145,7 +145,7 @@ class UnstakePatcher(object):
 
     @classmethod
     def _check_removable(
-        cls, coin_part: CoinPart, stake_part: StakePart, target: Target
+        cls, coin_part: 'CoinPart', stake_part: 'StakePart', target: 'Target'
     ) -> Result:
 
         if CoinPartFlag.HAS_UNSTAKE not in coin_part.flags:
@@ -159,7 +159,7 @@ class UnstakePatcher(object):
         return Result.FALSE
 
     @classmethod
-    def _is_removable_v0(cls, stake_part: 'StakePart', target: Target) -> bool:
+    def _is_removable_v0(cls, stake_part: 'StakePart', target: 'Target') -> bool:
         """Inspect stake_part.unstake and stake_part.unstake_block_height
 
         :param target:
@@ -175,14 +175,14 @@ class UnstakePatcher(object):
             )
             return False
 
-        unstake: Unstake = target.unstakes[0]
+        unstake: 'Unstake' = target.unstakes[0]
         return (
             unstake.amount == stake_part.unstake
             and unstake.block_height == stake_part.unstake_block_height
         )
 
     @classmethod
-    def _is_removable_v1(cls, stake_part: 'StakePart', target: Target) -> bool:
+    def _is_removable_v1(cls, stake_part: 'StakePart', target: 'Target') -> bool:
         """Inspect stake_part.unstakes_info
 
         :param stake_part:

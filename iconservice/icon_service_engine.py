@@ -2106,7 +2106,7 @@ class IconServiceEngine(ContextContainer):
     def _run_unstake_patcher(self, context: 'IconScoreContext'):
         Logger.info(tag=_TAG, msg="_run_unstake_patcher() start")
 
-        if context.revision == Revision.FIX_BALANCE_BUG:
+        if context.revision == Revision.FIX_BALANCE_BUG.value:
             try:
                 path: Optional[str] = self._conf.get(
                     ConfigKey.INVISIBLE_GHOST_ICX_LIST_PATH, None)

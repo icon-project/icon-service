@@ -392,10 +392,14 @@ class Storage(StorageBase):
         self._db.put(context, self._TOTAL_SUPPLY_KEY, value)
 
     def get_coin_part(self, context: 'IconScoreContext', address: 'Address') -> 'CoinPart':
-        return self._get_part(context, CoinPart, address)
+        part: 'CoinPart' = self._get_part(context, CoinPart, address)
+        part.set_complete(True)
+        return part
 
     def get_stake_part(self, context: 'IconScoreContext', address: 'Address') -> 'StakePart':
-        return self._get_part(context, StakePart, address)
+        part: 'StakePart' = self._get_part(context, StakePart, address)
+        part.set_complete(True)
+        return part
 
     def put_stake_part(self, context: 'IconScoreContext', address: 'Address', part: 'StakePart'):
         if not (isinstance(part, StakePart) and part.is_dirty()):
