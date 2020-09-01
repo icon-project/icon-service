@@ -16,10 +16,11 @@
 
 """IconScoreEngine testcase
 """
+import json
 from typing import TYPE_CHECKING, List, Tuple
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
-from iconservice.icon_constant import Revision, ICX_IN_LOOP
+from iconservice.icon_constant import Revision, ICX_IN_LOOP, ConfigKey
 from iconservice.icx.coin_part import CoinPart, CoinPartFlag
 from iconservice.icx.stake_part import StakePart
 from iconservice.icx.unstake_patcher import UnstakePatcher, Target
@@ -1225,3 +1226,70 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(0, unstake)
         self.assertEqual(0, unstake_block_height)
         self.assertEqual(0, len(unstakes_info))
+
+
+class TestIISSUnStakePatcher(TestIISSBase):
+    PATH: str = "./test_invisible_ghost_icx_list/test.json"
+    def _make_init_config(self) -> dict:
+        return {
+            ConfigKey.INVISIBLE_GHOST_ICX_LIST_PATH: self.PATH
+        }
+
+    def test_loader(self):
+        self.update_governance()
+        self.set_revision(Revision.IISS.value)
+        self.set_revision(Revision.DECENTRALIZATION.value)
+        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+
+        expected_data: dict = {
+            "block_height": 100,
+            "target_count": 3,
+            "total_unstake": 50000,
+            "targets": [
+                {
+                    "address": "hx001977f6b796a8f0e9c6b6ce3ae1c1a6851099e4",
+                    "total_unstake": 20000,
+                    "old_unstake_format": False,
+                    "unstakes": [
+                        [
+                            10000,
+                            5
+                        ],
+                        [
+                            10000,
+                            6
+                        ]
+                    ]
+                },
+                {
+                    "address": "hx00aa98611e6993c907dcd9abf3e6f647fb641229",
+                    "total_unstake": 10000,
+                    "old_unstake_format": True,
+                    "unstakes": [
+                        [
+                            10000,
+                            10
+                        ]
+                    ]
+                },
+                {
+                    "address": "hx0108a796980c03733ab3809f7a2be80ace2ceef3",
+                    "total_unstake": 20000,
+                    "old_unstake_format": False,
+                    "unstakes": [
+                        [
+                            10000,
+                            1
+                        ],
+                        [
+                            10000,
+                            2
+                        ]
+                    ]
+                }
+            ]
+        }
+        with open(self.PATH, "r") as f:
+            actual_text = f.read()
+            actual_data: dict = json.loads(actual_text)
+        self.assertEqual(expected_data, actual_data)
