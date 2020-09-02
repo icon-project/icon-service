@@ -38,6 +38,7 @@ class ParamType(IntEnum):
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
     ISE_GET_STATUS = 305
+    DEBUG_GET_ACCOUNT = 306
 
     WRITE_PRECOMMIT = 400
     # REMOVE_PRECOMMIT = 500
@@ -161,6 +162,7 @@ class ConstantKeys:
     ICX_GET_TOTAL_SUPPLY = "icx_getTotalSupply"
     ICX_GET_SCORE_API = "icx_getScoreApi"
     ISE_GET_STATUS = "ise_getStatus"
+    DEBUG_GET_ACCOUNT = "debug_getAccount"
 
     DEPOSIT_TERM = "term"
     DEPOSIT_ID = "id"
@@ -304,6 +306,11 @@ type_convert_templates[ParamType.ISE_GET_STATUS] = {
     ConstantKeys.FILTER: [ValueType.STRING]
 }
 
+type_convert_templates[ParamType.DEBUG_GET_ACCOUNT] = {
+    ConstantKeys.ADDRESS: ValueType.ADDRESS,
+    ConstantKeys.FILTER: ValueType.INT
+}
+
 type_convert_templates[ParamType.QUERY] = {
     ConstantKeys.METHOD: ValueType.STRING,
     ConstantKeys.PARAMS: {
@@ -313,7 +320,8 @@ type_convert_templates[ParamType.QUERY] = {
             ConstantKeys.ICX_GET_BALANCE: type_convert_templates[ParamType.ICX_GET_BALANCE],
             ConstantKeys.ICX_GET_TOTAL_SUPPLY: type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
             ConstantKeys.ICX_GET_SCORE_API: type_convert_templates[ParamType.ICX_GET_SCORE_API],
-            ConstantKeys.ISE_GET_STATUS: type_convert_templates[ParamType.ISE_GET_STATUS]
+            ConstantKeys.ISE_GET_STATUS: type_convert_templates[ParamType.ISE_GET_STATUS],
+            ConstantKeys.DEBUG_GET_ACCOUNT: type_convert_templates[ParamType.DEBUG_GET_ACCOUNT],
         }
     }
 }
