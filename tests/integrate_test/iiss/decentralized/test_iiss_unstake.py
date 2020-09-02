@@ -36,21 +36,21 @@ class TestIISSUnStake1(TestIISSBase):
     def test_unstake_balance_rev_10(self):
         self._test_unstake_balance(
             rev=Revision.FIX_UNSTAKE_BUG.value,
-            expected_expired_ustake_cnt=2,
+            expected_expired_unstake_cnt=2,
             expected_last_balance=0
         )
 
     def test_unstake_balance_rev_11(self):
         self._test_unstake_balance(
             rev=Revision.FIX_BALANCE_BUG.value,
-            expected_expired_ustake_cnt=3,
+            expected_expired_unstake_cnt=3,
             expected_last_balance=1 * ICX_IN_LOOP
         )
 
     def _test_unstake_balance(
             self,
             rev: int,
-            expected_expired_ustake_cnt: int,
+            expected_expired_unstake_cnt: int,
             expected_last_balance: int
     ):
         self.update_governance()
@@ -151,7 +151,7 @@ class TestIISSUnStake1(TestIISSBase):
         self.assertEqual(res, expected_res)
 
         current_balance: int = self.get_balance(self._accounts[0])
-        expected_expired_stake_balance: int = 1 * ICX_IN_LOOP * expected_expired_ustake_cnt
+        expected_expired_stake_balance: int = 1 * ICX_IN_LOOP * expected_expired_unstake_cnt
         expected_balance: int = last_balance + expected_expired_stake_balance - estimate_fee
         self.assertEqual(current_balance, expected_balance)
 
@@ -204,7 +204,7 @@ class TestIISSUnStake2(TestIISSBase):
         for i in range(account_count):
             self._accounts[i].balance = init_balance
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 150 icx | 0 icx   | 0 icx      | 0 icx
 
         # set stake
@@ -219,10 +219,10 @@ class TestIISSUnStake2(TestIISSBase):
             expected_balance = self._accounts[i].balance - stake - fee
             self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
             self._accounts[i].balance = expected_balance
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 100 icx | 0 icx      | 0 icx
 
-        # unnstake (unstake_count - 1) times
+        # unstake (unstake_count - 1) times
         tx_list = []
         unstake = stake // unstake_count
         for i in range(unstake_count-1):
@@ -251,7 +251,7 @@ class TestIISSUnStake2(TestIISSBase):
             self.assertEqual(expected_balance, self.get_balance(self._accounts[i]))
             self._accounts[i].balance = expected_balance
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 0 icx   | 100 icx    | 0 icx
 
         # wait expire unstake
@@ -264,7 +264,7 @@ class TestIISSUnStake2(TestIISSBase):
             unstake_info = unstakes_info[-1]
             remaining_blocks = unstake_info["remainingBlocks"]
         self.make_empty_blocks(remaining_blocks + 1)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
         return rets
 
@@ -288,12 +288,12 @@ class TestIISSUnStake2(TestIISSBase):
             account0_unstakes_info[0]["unstakeBlockHeight"]
         )
         expired_unstakes_info = [expired_unstake]
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 40 icx  | 0 icx   | 100 icx(e) | 100 icx
         self._check_expired_icx(expired_icx, expired_unstakes_info)
 
         # gain unstaked icx
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 140 icx | 0 icx   | 100 icx(e) | 0 icx
         expected_balance = self._accounts[0].balance - transfer_value - fee + stake
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
@@ -306,7 +306,7 @@ class TestIISSUnStake2(TestIISSBase):
             value=stake
         )
         fee = tx_results[0].step_used * tx_results[0].step_price
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 210 icx | 30 icx  | 0 icx      | 0 icx
         expected_balance = self._accounts[0].balance - stake - fee + expired_icx
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
@@ -326,7 +326,7 @@ class TestIISSUnStake2(TestIISSBase):
         actual_balance: int = self.get_balance(account=self._accounts[0])
         self.assertEqual(0, actual_balance)
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 0 icx   | 30 icx  | 0 icx      | 0 icx
         response_stake = self.get_stake(self._accounts[0])
         self.assertEqual(stake, response_stake["stake"])
@@ -360,12 +360,12 @@ class TestIISSUnStake2(TestIISSBase):
             account0_unstakes_info[1]["unstakeBlockHeight"]
         )
         expired_unstakes_info = [expired_unstake1, expired_unstake2]
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 40 icx  | 0 icx   | 100 icx(e) | 100 icx
         self._check_expired_icx(expired_icx, expired_unstakes_info)
 
         # gain unstaked icx
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 140 icx | 0 icx   | 100 icx(e) | 0 icx
         expected_balance = self._accounts[0].balance - transfer_value - fee + stake
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
@@ -396,7 +396,7 @@ class TestIISSUnStake2(TestIISSBase):
         self._check_expired_icx(expired_icx, expired_unstakes_info)
 
         # invalid expired icx will not be produced
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 130 icx | 0 icx   | 100 icx(e) | 0 icx
         expected_balance = self._accounts[0].balance - transfer_value - fee
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
@@ -409,7 +409,7 @@ class TestIISSUnStake2(TestIISSBase):
             value=stake
         )
         fee = tx_results[0].step_used * tx_results[0].step_price
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 200 icx | 30 icx  | 0 icx      | 0 icx
         expected_balance = self._accounts[0].balance - stake - fee + expired_icx
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
@@ -428,7 +428,7 @@ class TestIISSUnStake2(TestIISSBase):
         )
         actual_balance: int = self.get_balance(account=self._accounts[0])
         self.assertEqual(0, actual_balance)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 0 icx   | 30 icx  | 0 icx      | 0 icx
 
         response_stake = self.get_stake(self._accounts[0])
@@ -445,8 +445,9 @@ class TestIISSUnStake2(TestIISSBase):
 
         # delegation
         expired_icx: int = stake
+
         def set_delegation():
-            tx_results: List["TransactionResult"] = self.set_delegation(
+            _tx_results: List["TransactionResult"] = self.set_delegation(
                 from_=self._accounts[0],
                 origin_delegations=[
                     (
@@ -455,10 +456,10 @@ class TestIISSUnStake2(TestIISSBase):
                     )
                 ]
             )
-            fee = tx_results[0].step_used * tx_results[0].step_price
-            expected_balance = self._accounts[0].balance - fee + expired_icx
-            self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
-            self._accounts[0].balance = expected_balance
+            _fee = _tx_results[0].step_used * _tx_results[0].step_price
+            _expected_balance = self._accounts[0].balance - _fee + expired_icx
+            self.assertEqual(_expected_balance, self.get_balance(self._accounts[0]))
+            self._accounts[0].balance = _expected_balance
 
         set_delegation()
         account0_unstakes_info = unstakes_info_per_account[0]
@@ -473,7 +474,7 @@ class TestIISSUnStake2(TestIISSBase):
             expired_unstakes_info=expired_unstake_info
         )
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 150 icx | 0 icx   | 100 icx(e) | 100 icx
 
         set_delegation()
@@ -483,7 +484,7 @@ class TestIISSUnStake2(TestIISSBase):
             expired_unstakes_info=expired_unstake_info
         )
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 250 icx | 0 icx   | 100 icx(e) | 100 icx
 
         # Fix Unstake Bug
@@ -495,7 +496,7 @@ class TestIISSUnStake2(TestIISSBase):
         # check expired_icx 3
         self._check_expired_icx_release()
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 350 icx | 0 icx   | 0 icx(e) | 0 icx
 
         tx_results: List["TransactionResult"] = self.set_delegation(
@@ -516,7 +517,7 @@ class TestIISSUnStake2(TestIISSBase):
         # check expired_icx 4
         self._check_expired_icx_release()
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 350 icx | 0 icx   | 0 icx(e) | 0 icx
 
     def test_expired_icx_case2_2_transfer_icx(self):
@@ -539,14 +540,14 @@ class TestIISSUnStake2(TestIISSBase):
             account0_unstakes_info[0]["unstakeBlockHeight"]
         )
         expired_unstakes_info = [expired_unstake]
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 40 icx  | 0 icx   | 100 icx(e) | 100 icx
         self._check_expired_icx(expired_icx, expired_unstakes_info)
         self._accounts[0].balance = self.get_balance(self._accounts[0])
 
         # delegation
         def set_delegation():
-            tx_results: List["TransactionResult"] = self.set_delegation(
+            _tx_results: List["TransactionResult"] = self.set_delegation(
                 from_=self._accounts[0],
                 origin_delegations=[
                     (
@@ -555,8 +556,8 @@ class TestIISSUnStake2(TestIISSBase):
                     )
                 ]
             )
-            fee = tx_results[0].step_used * tx_results[0].step_price
-            expected_balance = self._accounts[0].balance - fee + expired_icx
+            _fee = _tx_results[0].step_used * _tx_results[0].step_price
+            expected_balance = self._accounts[0].balance - _fee + expired_icx
             self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
             self._accounts[0].balance = expected_balance
 
@@ -574,7 +575,7 @@ class TestIISSUnStake2(TestIISSBase):
             expired_unstakes_info=expired_unstake_info
         )
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 140 icx | 0 icx   | 100 icx(e) | 100 icx
 
         set_delegation()
@@ -584,7 +585,7 @@ class TestIISSUnStake2(TestIISSBase):
             expired_unstakes_info=expired_unstake_info
         )
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 240 icx | 0 icx   | 100 icx(e) | 100 icx
 
         # account can transfer invalid expired icx all
@@ -596,7 +597,7 @@ class TestIISSUnStake2(TestIISSBase):
             )
         actual_balance: int = self.get_balance(account=self._accounts[0])
         self.assertEqual(0, actual_balance)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 0 icx   | 0 icx   | 0 icx      | 100 icx
 
         self._check_expired_icx(
@@ -617,7 +618,8 @@ class TestIISSUnStake2(TestIISSBase):
             "stake": state_part
         }
 
-    def _check_expired_icx(self, expired_icx: int, expired_unstakes_info: List[Tuple[int, int]], account_count: int = 1):
+    def _check_expired_icx(self, expired_icx: int,
+                           expired_unstakes_info: List[Tuple[int, int]], account_count: int = 1):
         for i in range(account_count):
             get_stake_info: dict = self.get_stake(self._accounts[i])
             self.assertNotIn("unstakes", get_stake_info)
@@ -805,7 +807,7 @@ class TestIISSUnStake3(TestIISSBase):
         )
 
         self._accounts[0].balance = init_balance
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 150 icx | 0 icx   | 0 icx      | 0 icx
 
         # set stake
@@ -817,7 +819,7 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         self._accounts[0].balance = expected_balance
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 100 icx | 0 icx      | 0 icx
 
         # unstake all staked value
@@ -832,7 +834,7 @@ class TestIISSUnStake3(TestIISSBase):
         remaining_blocks: int = res["remainingBlocks"]
         unstake_block_height: int = res["unstakeBlockHeight"]
         self.make_empty_blocks(remaining_blocks + 1)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
 
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
@@ -904,7 +906,7 @@ class TestIISSUnStake3(TestIISSBase):
         )
 
         self._accounts[0].balance = init_balance
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 150 icx | 0 icx   | 0 icx      | 0 icx
 
         # set stake
@@ -916,7 +918,7 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         self._accounts[0].balance = expected_balance
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 100 icx | 0 icx      | 0 icx
 
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
@@ -933,7 +935,7 @@ class TestIISSUnStake3(TestIISSBase):
         remaining_blocks: int = res["unstakes"][0]["remainingBlocks"]
         unstake_block_height: int = res["unstakes"][0]["unstakeBlockHeight"]
         self.make_empty_blocks(remaining_blocks + 1)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
 
         # new format
@@ -1002,7 +1004,7 @@ class TestIISSUnStake3(TestIISSBase):
         )
 
         self._accounts[0].balance = init_balance
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 150 icx | 0 icx   | 0 icx      | 0 icx
 
         # set stake
@@ -1014,7 +1016,7 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         self._accounts[0].balance = expected_balance
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 100 icx | 0 icx      | 0 icx
 
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
@@ -1043,7 +1045,7 @@ class TestIISSUnStake3(TestIISSBase):
         unstakes_info = res["unstakes"]
         first_slot_remaining: int = unstakes_info[0]["remainingBlocks"]
         self.make_empty_blocks(first_slot_remaining + 1)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 0 icx   | 50 icx(e) | 50 icx
 
         # new format
@@ -1120,7 +1122,7 @@ class TestIISSUnStake3(TestIISSBase):
         )
 
         self._accounts[0].balance = init_balance
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 150 icx | 0 icx   | 0 icx      | 0 icx
 
         # set stake
@@ -1132,7 +1134,7 @@ class TestIISSUnStake3(TestIISSBase):
         self.assertEqual(expected_balance, self.get_balance(self._accounts[0]))
         self._accounts[0].balance = expected_balance
 
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 100 icx | 0 icx      | 0 icx
 
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value)
@@ -1158,7 +1160,7 @@ class TestIISSUnStake3(TestIISSBase):
         unstakes_info = res["unstakes"]
         last_slot_remaining: int = unstakes_info[-1]["remainingBlocks"]
         self.make_empty_blocks(last_slot_remaining + 1)
-        # Balance | Stake   | UnStake    | Expried_icx
+        # Balance | Stake   | UnStake    | Expired_icx
         # 50 icx  | 0 icx   | 100 icx(e) | 100 icx
 
         # new format
@@ -1252,6 +1254,7 @@ class TestIISSUnStake3(TestIISSBase):
 
 class TestIISSUnStakePatcher(TestIISSBase):
     PATH = os.path.join(os.path.dirname(__file__), "./invalid_expired_unstakes/test.json")
+
     def _make_init_config(self) -> dict:
         return {
             ConfigKey.INVALID_EXPIRED_UNSTAKES_PATH: self.PATH
