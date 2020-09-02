@@ -10,8 +10,10 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Dict, Any
 
 from iconcommons.logger import Logger
+
 from .storage import AccountPartFlag
-from ..base.address import Address
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS
+from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.coin_part import CoinPartFlag
 
 if TYPE_CHECKING:
@@ -140,6 +142,7 @@ class UnstakePatcher(object):
 
                 assert stake_part.is_dirty()
                 storage.put_stake_part(context, address, stake_part)
+                self._emit_event_log(context, target)
                 self._add_success_item(target)
 
         Logger.info(tag=TAG, msg="UnstakePatcher.run() end")
@@ -256,6 +259,18 @@ class UnstakePatcher(object):
     def _add_failure_item(self, target: Target):
         self._failure_targets.append(target)
         self._failure_unstake += target.total_unstake
+
+    @classmethod
+    def _emit_event_log(cls, context: 'IconScoreContext', target: Target):
+        for unstake in target.unstakes:
+            EventLogEmitter.emit_event_log(
+                context=context,
+                event_signature="InvalidUnstakeFixed(Address,int,int)",
+                score_address=SYSTEM_SCORE_ADDRESS,
+                arguments=[target.address, unstake.amount, unstake.block_height],
+                indexed_args_count=1,
+                fee_charge=False
+            )
 
     def write_result(self, path: str):
         Logger.info(tag=TAG, msg=f"UnstakePatcher.write_result() start: {path}")
