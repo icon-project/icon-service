@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any
 
 from iconcommons.logger import Logger
 
-from .icon_score_context import IconScoreContextType
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
@@ -320,13 +319,10 @@ class IconPreValidator:
     def _check_balance(cls, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
         balance = context.engine.icx.get_balance(context, from_)
 
-        if is_address_locked(from_) and (
-                context.type == IconScoreContextType.QUERY or
-                (context.type == IconScoreContextType.INVOKE and
-                 context.revision == Revision.LOCK_ADDRESS.value)):
+        if context.revision >= Revision.LOCK_ADDRESS.value and is_address_locked(from_):
             Logger.warning(
                 tag="LOCK",
-                msg=f"Address is locked: balance={balance} from={str(from_)} value={value} fee={fee}"
+                msg=f"Address is locked: balance={balance} from={from_} value={value} fee={fee}"
             )
             raise InvalidRequestException(f"Address is locked: {from_}")
 
