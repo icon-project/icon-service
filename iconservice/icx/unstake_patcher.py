@@ -10,6 +10,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Dict, Any
 
 from iconcommons.logger import Logger
+from .storage import AccountPartFlag
 from ..base.address import Address
 from ..icx.coin_part import CoinPartFlag
 
@@ -124,8 +125,8 @@ class UnstakePatcher(object):
 
         for target in self._targets:
             address = target.address
-            coin_part = storage.get_coin_part(context, address)
-            stake_part = storage.get_stake_part(context, address)
+            coin_part = storage.get_part(context, AccountPartFlag.COIN, address)
+            stake_part = storage.get_stake_part(context, AccountPartFlag.STAKE, address)
 
             result: Result = self._check_removable(coin_part, stake_part, target)
             if result == Result.FALSE:
