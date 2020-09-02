@@ -19,12 +19,12 @@
 import json
 import os
 from typing import TYPE_CHECKING, List, Tuple
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from iconservice.icon_constant import Revision, ICX_IN_LOOP, ConfigKey
 from iconservice.icx.coin_part import CoinPart, CoinPartFlag
 from iconservice.icx.stake_part import StakePart
-from iconservice.icx.unstake_patcher import UnstakePatcher, Target
+from iconservice.icx.unstake_patcher import UnstakePatcher, Target, INVALID_EXPIRED_UNSTAKES_FILENAME
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 if TYPE_CHECKING:
@@ -179,6 +179,14 @@ class TestIISSUnStake1(TestIISSBase):
 
 
 class TestIISSUnStake2(TestIISSBase):
+    def tearDown(self):
+        super().tearDown()
+        names: List[str] = INVALID_EXPIRED_UNSTAKES_FILENAME.split(".")
+        log_dir = "."
+        report_path: str = os.path.join(log_dir, f"{names[0]}_report.json")
+        if os.path.isfile(report_path):
+            os.remove(report_path)
+
     def _setup(
             self,
             init_balance: int,
@@ -308,7 +316,7 @@ class TestIISSUnStake2(TestIISSBase):
         self.assertEqual(stake, response_stake["stake"])
         self._check_expired_icx_release()
 
-        # account can transfer ghost icx all
+        # account can transfer invalid expired icx all
         self.transfer_icx(
             self._accounts[0],
             self._accounts[1],
@@ -387,7 +395,7 @@ class TestIISSUnStake2(TestIISSBase):
         expired_unstakes_info = [expired_unstake1, expired_unstake2]
         self._check_expired_icx(expired_icx, expired_unstakes_info)
 
-        # ghost icx will not be produced
+        # invalid expired icx will not be produced
         # Balance | Stake   | UnStake    | Expried_icx
         # 130 icx | 0 icx   | 100 icx(e) | 0 icx
         expected_balance = self._accounts[0].balance - transfer_value - fee
@@ -411,7 +419,7 @@ class TestIISSUnStake2(TestIISSBase):
         self.assertEqual(stake, response_stake["stake"])
         self._check_expired_icx_release()
 
-        # account can transfer ghost icx all
+        # account can transfer invalid expired icx all
         self.transfer_icx(
             self._accounts[0],
             self._accounts[1],
@@ -579,7 +587,7 @@ class TestIISSUnStake2(TestIISSBase):
         # Balance | Stake   | UnStake    | Expried_icx
         # 240 icx | 0 icx   | 100 icx(e) | 100 icx
 
-        # account can transfer ghost icx all
+        # account can transfer invalid expired icx all
         self.transfer_icx(
             self._accounts[0],
             self._accounts[1],
@@ -776,6 +784,14 @@ class TestIISSUnStake2(TestIISSBase):
 
 
 class TestIISSUnStake3(TestIISSBase):
+    def tearDown(self):
+        super().tearDown()
+        names: List[str] = INVALID_EXPIRED_UNSTAKES_FILENAME.split(".")
+        log_dir = "."
+        report_path: str = os.path.join(log_dir, f"{names[0]}_report.json")
+        if os.path.isfile(report_path):
+            os.remove(report_path)
+
     def test_old_format1(self):
         self.update_governance()
         self.set_revision(Revision.MULTIPLE_UNSTAKE.value - 1)
