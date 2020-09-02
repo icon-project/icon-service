@@ -17,6 +17,7 @@
 """IconScoreEngine testcase
 """
 import json
+import os
 from typing import TYPE_CHECKING, List, Tuple
 from unittest.mock import Mock, patch
 
@@ -697,11 +698,12 @@ class TestIISSUnStake2(TestIISSBase):
 
         targets: List[Target] = [Target.from_dict(i) for i in src]
         patcher = UnstakePatcher(targets=targets)
-        UnstakePatcher.from_path = Mock(return_value=patcher)
 
-        # check rev 11
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
-        self._check_ghost_icx_release(account_count=account_count)
+        with patch.object(UnstakePatcher, 'from_path') as from_path_mock:
+            from_path_mock.return_value = patcher
+
+            self.set_revision(Revision.FIX_BALANCE_BUG.value)
+            self._check_ghost_icx_release(account_count=account_count)
 
     def test_fix_bug_rev11_all_fail(self):
         account_count: int = 5
@@ -766,10 +768,11 @@ class TestIISSUnStake2(TestIISSBase):
 
         targets: List[Target] = [Target.from_dict(i) for i in src]
         patcher = UnstakePatcher(targets=targets)
-        UnstakePatcher.from_path = Mock(return_value=patcher)
 
-        # check rev 11
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
+        with patch.object(UnstakePatcher, 'from_path') as from_path_mock:
+            from_path_mock.return_value = patcher
+
+            self.set_revision(Revision.FIX_BALANCE_BUG.value)
 
 
 class TestIISSUnStake3(TestIISSBase):
@@ -866,10 +869,11 @@ class TestIISSUnStake3(TestIISSBase):
         ]
         targets: List[Target] = [Target.from_dict(i) for i in data]
         patcher = UnstakePatcher(targets=targets)
-        UnstakePatcher.from_path = Mock(return_value=patcher)
+        with patch.object(UnstakePatcher, 'from_path') as from_path_mock:
+            from_path_mock.return_value = patcher
 
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
-        self._check_unstake_patch()
+            self.set_revision(Revision.FIX_BALANCE_BUG.value)
+            self._check_unstake_patch()
 
     def test_new_format(self):
         self.update_governance()
@@ -963,10 +967,11 @@ class TestIISSUnStake3(TestIISSBase):
         ]
         targets: List[Target] = [Target.from_dict(i) for i in data]
         patcher = UnstakePatcher(targets=targets)
-        UnstakePatcher.from_path = Mock(return_value=patcher)
+        with patch.object(UnstakePatcher, 'from_path') as from_path_mock:
+            from_path_mock.return_value = patcher
 
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
-        self._check_unstake_patch()
+            self.set_revision(Revision.FIX_BALANCE_BUG.value)
+            self._check_unstake_patch()
 
     def test_new_format_multi_1_of_2_expired(self):
         self.update_governance()
@@ -1080,10 +1085,11 @@ class TestIISSUnStake3(TestIISSBase):
         ]
         targets: List[Target] = [Target.from_dict(i) for i in data]
         patcher = UnstakePatcher(targets=targets)
-        UnstakePatcher.from_path = Mock(return_value=patcher)
+        with patch.object(UnstakePatcher, 'from_path') as from_path_mock:
+            from_path_mock.return_value = patcher
 
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
-        self._check_unstake_patch()
+            self.set_revision(Revision.FIX_BALANCE_BUG.value)
+            self._check_unstake_patch()
 
     def test_new_format_multi_2_of_2_expired(self):
         self.update_governance()
@@ -1196,10 +1202,10 @@ class TestIISSUnStake3(TestIISSBase):
         ]
         targets: List[Target] = [Target.from_dict(i) for i in data]
         patcher = UnstakePatcher(targets=targets)
-        UnstakePatcher.from_path = Mock(return_value=patcher)
-
-        self.set_revision(Revision.FIX_BALANCE_BUG.value)
-        self._check_unstake_patch()
+        with patch.object(UnstakePatcher, 'from_path') as from_path_mock:
+            from_path_mock.return_value = patcher
+            self.set_revision(Revision.FIX_BALANCE_BUG.value)
+            self._check_unstake_patch()
 
     def _get_account_info(self, account: 'EOAAccount') -> dict:
         c_key: bytes = CoinPart.make_key(account.address)
@@ -1229,7 +1235,7 @@ class TestIISSUnStake3(TestIISSBase):
 
 
 class TestIISSUnStakePatcher(TestIISSBase):
-    PATH: str = "./test_invisible_ghost_icx_list/test.json"
+    PATH = os.path.join(os.path.dirname(__file__), "./test_invisible_ghost_icx_list/test.json")
     def _make_init_config(self) -> dict:
         return {
             ConfigKey.INVISIBLE_GHOST_ICX_LIST_PATH: self.PATH
