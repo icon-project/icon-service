@@ -64,7 +64,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
-from .icx.unstake_patcher import UnstakePatcher
+from .icx.unstake_patcher import UnstakePatcher, INVALID_EXPIRED_UNSTAKES_FILENAME
 from .iiss import check_decentralization_condition
 from .iiss.engine import Engine as IISSEngine
 from .iiss.reward_calc import RewardCalcStorage
@@ -2109,12 +2109,13 @@ class IconServiceEngine(ContextContainer):
         if context.revision == Revision.FIX_BALANCE_BUG.value:
             try:
                 path: Optional[str] = self._conf.get(
-                    ConfigKey.INVISIBLE_GHOST_ICX_LIST_PATH, None)
+                    ConfigKey.INVALID_EXPIRED_UNSTAKES_PATH, None)
 
                 patcher = UnstakePatcher.from_path(path)
                 patcher.run(context)
 
-                report_path: str = os.path.join(self._log_dir, "invisible_ghost_icx_report.json")
+                names: List[str] = INVALID_EXPIRED_UNSTAKES_FILENAME.split(".")
+                report_path: str = os.path.join(self._log_dir, f"{names[0]}_report.json")
                 patcher.write_result(report_path)
             except BaseException as e:
                 Logger.exception(tag=_TAG, msg=f"Failed to run UnstakePatcher: {str(e)}")

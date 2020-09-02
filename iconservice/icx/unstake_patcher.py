@@ -10,6 +10,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Dict, Any
 
 from iconcommons.logger import Logger
+
 from ..base.address import Address
 from ..icx.coin_part import CoinPartFlag
 
@@ -18,7 +19,8 @@ if TYPE_CHECKING:
     from ..icx.coin_part import CoinPart
     from ..icx.stake_part import StakePart
 
-TAG = "GHOST"
+TAG = "UNSTAKE"
+INVALID_EXPIRED_UNSTAKES_FILENAME = "invalid_expired_unstakes.json"
 
 
 class Unstake(object):
@@ -102,8 +104,8 @@ class UnstakePatcher(object):
 
         self._success_targets: List[Target] = []
         self._failure_targets: List[Target] = []
-        self._success_unstake = 0  # Succeeded to remove invisible ghost icx
-        self._failure_unstake = 0  # Failed to remove invisible ghost icx
+        self._success_unstake = 0
+        self._failure_unstake = 0
 
     @classmethod
     def _load(cls, path: str) -> Dict[str, Any]:
@@ -112,7 +114,7 @@ class UnstakePatcher(object):
                 json_text = f.read()
         else:
             json_text = importlib.resources.read_text(
-                "iconservice.res", "invisible_ghost_icx_list.json"
+                "iconservice.res", INVALID_EXPIRED_UNSTAKES_FILENAME
             )
 
         return json.loads(json_text)
@@ -132,9 +134,9 @@ class UnstakePatcher(object):
                 self._add_failure_item(target)
             else:
                 if result == Result.REMOVABLE_V0:
-                    stake_part = self._remove_ghost_icx_v0(stake_part, target)
+                    stake_part = self._remove_invalid_expired_unstakes_v0(stake_part, target)
                 else:
-                    stake_part = self._remove_ghost_icx_v1(stake_part, target)
+                    stake_part = self._remove_invalid_expired_unstakes_v1(stake_part, target)
 
                 assert stake_part.is_dirty()
                 storage.put_stake_part(context, address, stake_part)
@@ -203,8 +205,8 @@ class UnstakePatcher(object):
         return True
 
     @classmethod
-    def _remove_ghost_icx_v0(cls, stake_part: 'StakePart', target: Target) -> 'StakePart':
-        """Remove ghost icx from stake_part.unstake and stake_part.unstake_block_height
+    def _remove_invalid_expired_unstakes_v0(cls, stake_part: 'StakePart', target: Target) -> 'StakePart':
+        """Remove invalid expired unstakes from stake_part.unstake and stake_part.unstake_block_height
 
         :param stake_part:
         :param target:
@@ -221,13 +223,13 @@ class UnstakePatcher(object):
         assert stake_part.unstake == 0
         assert stake_part.unstake_block_height == 0
 
-        Logger.info(tag=TAG, msg=f"remove_ghost_icx_v0: {target}")
+        Logger.info(tag=TAG, msg=f"remove_invalid_expired_unstakes_v0: {target}")
 
         return stake_part
 
     @classmethod
-    def _remove_ghost_icx_v1(cls, stake_part: 'StakePart', target: Target) -> 'StakePart':
-        """Remove ghost icx from stake_part.unstakes_info
+    def _remove_invalid_expired_unstakes_v1(cls, stake_part: 'StakePart', target: Target) -> 'StakePart':
+        """Remove invalid expired unstakes from stake_part.unstakes_info
 
         :param stake_part:
         :param target:
@@ -242,7 +244,7 @@ class UnstakePatcher(object):
             assert amount == unstake.amount
             assert unstake_block_height == unstake.block_height
 
-        Logger.info(tag=TAG, msg=f"remove_ghost_icx_v1: {target}")
+        Logger.info(tag=TAG, msg=f"remove_invalid_expired_unstakes_v1: {target}")
 
         stake_part.set_dirty(True)
         return stake_part
@@ -260,9 +262,9 @@ class UnstakePatcher(object):
 
         total_unstake = self._success_unstake + self._failure_unstake
 
-        Logger.warning(
+        Logger.info(
             tag=TAG,
-            msg="Invisible ghost ICX patch result: "
+            msg="Invalid expired unstakes management result: "
             f"total_unstake={total_unstake} "
             f"success_unstake={self._success_unstake} "
             f"failure_unstake={self._failure_unstake} "

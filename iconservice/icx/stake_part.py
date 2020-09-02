@@ -273,7 +273,7 @@ class StakePart(BasePart):
                 return index + 1
         return 0
 
-    # Functions to handle invisible ghost ICX
+    # Functions to handle invalid expired unstakes
 
     def cleanup_old_format_unstake(self):
         self._unstake = 0

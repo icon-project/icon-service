@@ -9,26 +9,26 @@ from typing import Dict, Any
 import pytest
 
 from iconservice.icx.stake_part import StakePart
-from iconservice.icx.unstake_patcher import UnstakePatcher
+from iconservice.icx.unstake_patcher import UnstakePatcher, INVALID_EXPIRED_UNSTAKES_FILENAME
 
 
-def get_ghost_icx_list_path() -> str:
+def get_invalid_expired_unstakes_path() -> str:
     return os.path.join(
         os.path.dirname(__file__),
-        "../../../iconservice/res/invisible_ghost_icx_list.json"
+        f"../../../iconservice/res/{INVALID_EXPIRED_UNSTAKES_FILENAME}"
     )
 
 
 @pytest.fixture
 def unstake_patcher() -> UnstakePatcher:
-    # iconservice/res/invisible_ghost_icx_list.json
-    path: str = get_ghost_icx_list_path()
+    # iconservice/res/invalid_expired_unstakes.json
+    path: str = get_invalid_expired_unstakes_path()
     return UnstakePatcher.from_path(path)
 
 
 class TestUnstakePatcher:
     def test_init(self, unstake_patcher):
-        path = get_ghost_icx_list_path()
+        path = get_invalid_expired_unstakes_path()
         with open(path, "rt") as f:
             data: Dict[str, Any] = json.load(f)
 
@@ -108,7 +108,7 @@ class TestUnstakePatcher:
             (2, 2684320100000000000000, 22469640),
         ]
     )
-    def test_remove_ghost_icx_v0(
+    def test_remove_invalid_expired_unstakes_v0(
             self, unstake_patcher, index, unstake, unstake_block_height):
         stake = random.randint(0, 1000)
         stake_part = StakePart(stake, unstake, unstake_block_height)
@@ -120,7 +120,7 @@ class TestUnstakePatcher:
         assert stake_part.unstake_block_height == unstake_block_height
         assert not stake_part.is_dirty()
 
-        stake_part = unstake_patcher._remove_ghost_icx_v0(stake_part, target)
+        stake_part = unstake_patcher._remove_invalid_expired_unstakes_v0(stake_part, target)
         assert stake_part.is_dirty()
         assert len(stake_part.unstakes_info) == 0
         assert stake_part.stake == stake
@@ -143,13 +143,13 @@ class TestUnstakePatcher:
             ),
         ]
     )
-    def test_remove_ghost_icx_v1(self, unstake_patcher, unstakes_info, index):
+    def test_remove_invalid_expired_unstakes_v1(self, unstake_patcher, unstakes_info, index):
         stake = random.randint(0, 1000)
         stake_part = StakePart(stake, 0, 0, copy.deepcopy(unstakes_info))
         stake_part.set_complete(True)
         target = unstake_patcher._targets[index]
 
-        stake_part = unstake_patcher._remove_ghost_icx_v1(stake_part, target)
+        stake_part = unstake_patcher._remove_invalid_expired_unstakes_v1(stake_part, target)
         assert stake_part.is_dirty()
         assert stake_part.stake == stake
         assert stake_part.unstake == 0
