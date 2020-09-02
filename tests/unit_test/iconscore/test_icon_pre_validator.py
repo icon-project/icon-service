@@ -61,7 +61,7 @@ class TestTransactionValidator:
     @pytest.mark.parametrize(
         "context_type,revision,blocked",
         [
-            (IconScoreContextType.QUERY, 9, True),
+            (IconScoreContextType.QUERY, 9, False),
             (IconScoreContextType.INVOKE, 9, False),
             (IconScoreContextType.QUERY, Revision.LOCK_ADDRESS.value, True),
             (IconScoreContextType.INVOKE, Revision.LOCK_ADDRESS.value, True),
