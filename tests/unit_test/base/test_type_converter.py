@@ -970,3 +970,25 @@ def test_wrong_block_convert():
         TypeConverter.convert(request, ParamType.BLOCK)
 
     assert "TypeConvert Exception int value :1, type: <class 'int'>" == e.value.message
+
+
+def test_query_convert_debug_get_account():
+    method = "debug_getAccount"
+    addr1 = create_address()
+    account_filter = 7
+
+    request = {
+        ConstantKeys.METHOD: method,
+        ConstantKeys.PARAMS: {
+            ConstantKeys.ADDRESS: str(addr1),
+            ConstantKeys.FILTER: hex(account_filter)
+        }
+    }
+
+    ret_params = TypeConverter.convert(request, ParamType.QUERY)
+
+    assert method == ret_params[ConstantKeys.METHOD]
+
+    params_params = ret_params[ConstantKeys.PARAMS]
+    assert addr1 == params_params[ConstantKeys.ADDRESS]
+    assert account_filter == params_params[ConstantKeys.FILTER]
