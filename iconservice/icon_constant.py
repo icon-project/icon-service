@@ -472,3 +472,4 @@ class RPCMethod:
     ICX_CALL = 'icx_call'
     ICX_SEND_TRANSACTION = 'icx_sendTransaction'
     DEBUG_ESTIMATE_STEP = "debug_estimateStep"
+    DEBUG_GET_ACCOUNT = "debug_getAccount"
