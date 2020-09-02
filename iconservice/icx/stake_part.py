@@ -17,7 +17,7 @@
 from typing import TYPE_CHECKING, Optional, List
 
 from .base_part import BasePart, BasePartState
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, InternalServiceErrorException
 from ..icon_constant import Revision
 from ..utils.msgpack_for_db import MsgPackForDB
 
@@ -76,7 +76,7 @@ class StakePart(BasePart):
         return self._stake + self.total_unstake
 
     @property
-    def unstakes_info(self) -> List:
+    def unstakes_info(self) -> List[List[int]]:
         assert self.is_set(BasePartState.COMPLETE)
         return self._unstakes_info
 
@@ -272,3 +272,20 @@ class StakePart(BasePart):
             if block_height >= unstakes_info[index][1]:
                 return index + 1
         return 0
+
+    # Functions to handle invalid expired unstakes
+
+    def cleanup_old_format_unstake(self):
+        self._unstake = 0
+        self._unstake_block_height: int = 0
+        self.set_dirty(True)
+
+    def remove_unstake_info(self, index: int):
+        if index >= len(self._unstakes_info):
+            raise InternalServiceErrorException(
+                f"Index out of range: index={index} "
+                f"unstakes_info={self._unstakes_info}"
+            )
+
+        del self._unstakes_info[index]
+        self.set_dirty(True)

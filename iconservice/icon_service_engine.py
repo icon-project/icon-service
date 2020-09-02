@@ -64,6 +64,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
+from .icx.unstake_patcher import UnstakePatcher, INVALID_EXPIRED_UNSTAKES_FILENAME
 from .iiss import check_decentralization_condition
 from .iiss.engine import Engine as IISSEngine
 from .iiss.reward_calc import RewardCalcStorage
@@ -82,7 +83,6 @@ from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 from .utils.timer import Timer
-from .utils.locked import is_address_locked
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -116,6 +116,7 @@ class IconServiceEngine(ContextContainer):
         self._backup_cleaner: Optional[BackupCleaner] = None
         self._conf: Optional[Dict[str, Union[str, int]]] = None
         self._block_invoke_timeout_s: int = BLOCK_INVOKE_TIMEOUT_S
+        self._log_dir: str = "."
 
         # JSON-RPC handlers
         self._handlers = {
@@ -218,11 +219,10 @@ class IconServiceEngine(ContextContainer):
 
         self._set_block_invoke_timeout(conf)
 
-        self._set_block_invoke_timeout(conf)
-
         # DO NOT change the values in conf
         self._conf = conf
         self._precommit_data_writer = PrecommitDataWriter(log_dir)
+        self._log_dir = log_dir
 
     def _init_component_context(self):
         engine: 'ContextEngine' = ContextEngine(deploy=DeployEngine(),
@@ -479,6 +479,9 @@ class IconServiceEngine(ContextContainer):
 
                 if context.revision >= Revision.IISS.value:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
+
+                if context.is_revision_changed(Revision.FIX_BALANCE_BUG.value):
+                    self._run_unstake_patcher(context)
 
                 Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
 
@@ -777,7 +780,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         dirty_prep: 'PRep' = context.get_prep(prev_block_generator, mutable=True)
-        assert isinstance(dirty_prep, PRep), f"dirty_prep: {address}"
+        assert isinstance(dirty_prep, PRep), f"dirty_prep: {dirty_prep.address}"
 
         dirty_prep.last_generate_block_height = context.block.height - 1
         context.put_dirty_prep(dirty_prep)
@@ -2099,3 +2102,28 @@ class IconServiceEngine(ContextContainer):
                 return False
 
         return True
+
+    def _run_unstake_patcher(self, context: 'IconScoreContext'):
+        Logger.info(tag=_TAG, msg="_run_unstake_patcher() start")
+
+        if context.revision == Revision.FIX_BALANCE_BUG.value:
+            try:
+                path: Optional[str] = self._conf.get(
+                    ConfigKey.INVALID_EXPIRED_UNSTAKES_PATH, None)
+
+                patcher = UnstakePatcher.from_path(path)
+                patcher.run(context)
+
+                names: List[str] = INVALID_EXPIRED_UNSTAKES_FILENAME.split(".")
+                report_path: str = os.path.join(self._log_dir, f"{names[0]}_report.json")
+                patcher.write_result(report_path)
+            except BaseException as e:
+                Logger.exception(tag=_TAG, msg=f"Failed to run UnstakePatcher: {str(e)}")
+        else:
+            Logger.exception(
+                tag=_TAG,
+                msg="Failed to run unstake_patcher: "
+                    f"revision({context.revision}) != {Revision.FIX_BALANCE_BUG.value}"
+            )
+
+        Logger.info(tag=_TAG, msg="_run_unstake_patcher() end")

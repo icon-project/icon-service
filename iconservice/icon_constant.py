@@ -224,6 +224,10 @@ class ConfigKey:
 
     UNSTAKE_SLOT_MAX = "unstakeSlotMax"
 
+    # The list of items(address, unstake, unstake_block_height)
+    # containing invalid expired unstakes to remove
+    INVALID_EXPIRED_UNSTAKES_PATH = "invalidExpiredUnstakesPath"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1
