@@ -127,23 +127,27 @@ class UnstakePatcher(object):
         storage = context.storage.icx
 
         for target in self._targets:
-            address = target.address
-            coin_part = storage.get_part(context, AccountPartFlag.COIN, address)
-            stake_part = storage.get_part(context, AccountPartFlag.STAKE, address)
+            try:
+                address = target.address
+                coin_part = storage.get_part(context, AccountPartFlag.COIN, address)
+                stake_part = storage.get_part(context, AccountPartFlag.STAKE, address)
 
-            result: Result = self._check_removable(coin_part, stake_part, target)
-            if result == Result.FALSE:
-                self._add_failure_item(target)
-            else:
-                if result == Result.REMOVABLE_V0:
-                    stake_part = self._remove_invalid_expired_unstakes_v0(stake_part, target)
+                result: Result = self._check_removable(coin_part, stake_part, target)
+                if result == Result.FALSE:
+                    self._add_failure_item(target)
                 else:
-                    stake_part = self._remove_invalid_expired_unstakes_v1(stake_part, target)
+                    if result == Result.REMOVABLE_V0:
+                        stake_part = self._remove_invalid_expired_unstakes_v0(stake_part, target)
+                    else:
+                        stake_part = self._remove_invalid_expired_unstakes_v1(stake_part, target)
 
-                assert stake_part.is_dirty()
-                storage.put_stake_part(context, address, stake_part)
-                self._emit_event_log(context, target)
-                self._add_success_item(target)
+                    assert stake_part.is_dirty()
+                    storage.put_stake_part(context, address, stake_part)
+                    self._emit_event_log(context, target)
+                    self._add_success_item(target)
+            except BaseException as e:
+                # Although some unexpected errors happen, keep going
+                Logger.exception(tag=TAG, msg=str(e))
 
         Logger.info(tag=TAG, msg="UnstakePatcher.run() end")
 
