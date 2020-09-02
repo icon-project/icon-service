@@ -64,6 +64,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.base_transaction_creator import BaseTransactionCreator
+from .icx.storage import AccountPartFlag
 from .icx.unstake_patcher import UnstakePatcher
 from .iiss import check_decentralization_condition
 from .iiss.engine import Engine as IISSEngine
@@ -126,7 +127,8 @@ class IconServiceEngine(ContextContainer):
             RPCMethod.ISE_GET_STATUS: self._handle_ise_get_status,
             RPCMethod.ICX_CALL: self._handle_icx_call,
             RPCMethod.DEBUG_ESTIMATE_STEP: self._handle_estimate_step,
-            RPCMethod.ICX_SEND_TRANSACTION: self._handle_icx_send_transaction
+            RPCMethod.ICX_SEND_TRANSACTION: self._handle_icx_send_transaction,
+            RPCMethod.DEBUG_GET_ACCOUNT: self._handle_debug_get_account
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -2126,3 +2128,26 @@ class IconServiceEngine(ContextContainer):
             )
 
         Logger.info(tag=_TAG, msg="_run_unstake_patcher() end")
+
+    @classmethod
+    def _handle_debug_get_account(
+            cls,
+            context: 'IconScoreContext',
+            params: dict
+    ) -> dict:
+        """
+        Handles get raw data of account in StateDB
+
+        :param context: context
+        :param params: parameters of account address and filter
+        :return: account raw data of stateDB
+        """
+
+        address: 'Address' = params["address"]
+        account_filter: 'AccountPartFlag' = AccountPartFlag(params["filter"])
+        raw_data: dict = context.engine.icx.get_account_raw_data(
+            context=context,
+            address=address,
+            account_filter=account_filter
+        )
+        return raw_data

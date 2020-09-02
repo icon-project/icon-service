@@ -310,9 +310,11 @@ class Storage(StorageBase):
         """
         return context.storage.icx.get_account(context, context.storage.icx.fee_treasury)
 
-    def _get_part(self, context: 'IconScoreContext',
-                  part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
-                  address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
+    def _get_part(
+            self,
+            context: 'IconScoreContext',
+            part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
+            address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
         key: bytes = part_class.make_key(address)
         value: bytes = self._db.get(context, key)
 
@@ -391,13 +393,21 @@ class Storage(StorageBase):
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
         self._db.put(context, self._TOTAL_SUPPLY_KEY, value)
 
-    def get_coin_part(self, context: 'IconScoreContext', address: 'Address') -> 'CoinPart':
-        part: 'CoinPart' = self._get_part(context, CoinPart, address)
-        part.set_complete(True)
-        return part
+    def get_part(
+            self,
+            context: 'IconScoreContext',
+            flag: 'AccountPartFlag',
+            address: 'Address'
+    ) -> Union['CoinPart', 'StakePart', 'DelegationPart']:
 
-    def get_stake_part(self, context: 'IconScoreContext', address: 'Address') -> 'StakePart':
-        part: 'StakePart' = self._get_part(context, StakePart, address)
+        if AccountPartFlag.COIN == flag:
+            part_class = CoinPart
+        elif AccountPartFlag.STAKE == flag:
+            part_class = StakePart
+        else:
+            part_class = DelegationPart
+
+        part: Union['CoinPart', 'StakePart', 'DelegationPart'] = self._get_part(context, part_class, address)
         part.set_complete(True)
         return part
 
