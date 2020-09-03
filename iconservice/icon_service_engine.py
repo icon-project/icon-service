@@ -20,6 +20,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Tuple, Dict, Union, Any
 
 from iconcommons.logger import Logger
+
 from iconservice.rollback import check_backup_exists
 from iconservice.rollback.backup_cleaner import BackupCleaner
 from iconservice.rollback.backup_manager import BackupManager
@@ -2112,6 +2113,7 @@ class IconServiceEngine(ContextContainer):
             try:
                 path: Optional[str] = self._conf.get(
                     ConfigKey.INVALID_EXPIRED_UNSTAKES_PATH, None)
+                Logger.info(tag="UNSTAKE", msg=f"path: {path}")
 
                 patcher = UnstakePatcher.from_path(path)
                 patcher.run(context)

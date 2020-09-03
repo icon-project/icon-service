@@ -4,12 +4,17 @@ import copy
 import json
 import os
 import random
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import pytest
 
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.icx.stake_part import StakePart
-from iconservice.icx.unstake_patcher import UnstakePatcher, INVALID_EXPIRED_UNSTAKES_FILENAME
+from iconservice.icx.unstake_patcher import (
+    INVALID_EXPIRED_UNSTAKES_FILENAME,
+    Target,
+    UnstakePatcher,
+)
 
 
 def get_invalid_expired_unstakes_path() -> str:
@@ -24,6 +29,32 @@ def unstake_patcher() -> UnstakePatcher:
     # iconservice/res/invalid_expired_unstakes.json
     path: str = get_invalid_expired_unstakes_path()
     return UnstakePatcher.from_path(path)
+
+
+class TestTarget:
+    def test_from_dict(self):
+        address = Address(AddressPrefix.EOA, os.urandom(20))
+        count = random.randint(1, 5)
+        unstakes: List[List[int]] = []
+
+        for _ in range(count):
+            amount = random.randint(1, 1000)
+            block_height = random.randint(10000, 99999)
+            unstakes.append([amount, block_height])
+
+        data = {
+            "address": str(address),
+            "unstakes": unstakes
+        }
+        target = Target.from_dict(data)
+
+        assert target.address == address
+        assert target.total_unstake == sum(unstake[0] for unstake in unstakes)
+        assert len(target.unstakes) == count
+
+        for i, unstake in enumerate(target.unstakes):
+            assert unstake.amount == unstakes[i][0]
+            assert unstake.block_height == unstakes[i][1]
 
 
 class TestUnstakePatcher:
