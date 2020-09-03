@@ -1,15 +1,12 @@
 {
+    "block_height": 100,
+    "target_count": 3,
     "total_unstake": 50000,
-    "success_unstake": 0,
-    "failure_unstake": 50000,
-    "total": 3,
-    "success": 0,
-    "failure": 3,
-    "success_targets": [],
-    "failure_targets": [
+    "targets": [
         {
             "address": "hx001977f6b796a8f0e9c6b6ce3ae1c1a6851099e4",
             "total_unstake": 20000,
+            "old_unstake_format": false,
             "unstakes": [
                 [
                     10000,
@@ -24,6 +21,7 @@
         {
             "address": "hx00aa98611e6993c907dcd9abf3e6f647fb641229",
             "total_unstake": 10000,
+            "old_unstake_format": true,
             "unstakes": [
                 [
                     10000,
@@ -34,6 +32,7 @@
         {
             "address": "hx0108a796980c03733ab3809f7a2be80ace2ceef3",
             "total_unstake": 20000,
+            "old_unstake_format": false,
             "unstakes": [
                 [
                     10000,

@@ -1024,6 +1024,9 @@ class TestIntegrateBase(TestCase):
             method=RPCMethod.DEBUG_GET_ACCOUNT
         )
 
+    def get_state_db(self, key: bytes) -> bytes:
+        return self.icon_service_engine._icx_context_db.key_value_db.get(key)
+
 
 class EOAAccount:
     def __init__(self, wallet: 'KeyWallet', balance: int = 0):
