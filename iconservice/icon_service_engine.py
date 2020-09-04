@@ -32,8 +32,14 @@ from .base.address import GOVERNANCE_SCORE_ADDRESS
 from .base.address import SYSTEM_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import (
-    ExceptionCode, IconServiceBaseException, IconScoreException, InvalidBaseTransactionException,
-    InternalServiceErrorException, DatabaseException, InvalidParamsException,
+    ExceptionCode,
+    IconServiceBaseException,
+    IconScoreException,
+    InvalidBaseTransactionException,
+    InternalServiceErrorException,
+    DatabaseException,
+    InvalidBalanceException,
+    InvalidParamsException,
 )
 from .base.message import Message
 from .base.transaction import Transaction
@@ -471,6 +477,8 @@ class IconServiceEngine(ContextContainer):
                     tx_result = self._invoke_base_request(context, tx_request, is_block_editable)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
+
+                context.balance_verifier.verify()
 
                 self._log_step_trace(context)
                 block_result.append(tx_result)
@@ -1217,6 +1225,11 @@ class IconServiceEngine(ContextContainer):
             # process the transaction
             self._process_transaction(context, params, tx_result)
             tx_result.status = TransactionResult.SUCCESS
+        except InvalidBalanceException as e:
+            # If InvalidBalanceException is raised, stop to invoke this block
+            # Because balance integrity is broken
+            Logger.exception(tag=_TAG, msg=str(e))
+            raise e
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
             trace = self._get_trace_from_exception(context.current_address, e)

@@ -33,6 +33,7 @@ from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
     TermFlag, PRepStatus,
     Revision, PRepFlag, RevisionChangedFlag, UNSTAKE_SLOT_MAX)
+from ..icx.balance_verifier import BalanceVerifier
 from ..icx.issue.regulator import Regulator
 
 if TYPE_CHECKING:
@@ -111,6 +112,7 @@ class IconScoreContext(ABC):
 
         self._prep_address_converter: Optional['PRepAddressConverter'] = None
         self._inv_container: Optional['INVContainer'] = None
+        self._balance_verifier: Optional['BalanceVerifier'] = None
         self.regulator: Optional['Regulator'] = None
         self.revision_changed_flag: 'RevisionChangedFlag' = RevisionChangedFlag.NONE
 
@@ -153,6 +155,10 @@ class IconScoreContext(ABC):
     @property
     def inv_container(self) -> Optional['INVContainer']:
         return self._inv_container
+
+    @property
+    def balance_verifier(self) -> Optional['BalanceVerifier']:
+        return self._balance_verifier
 
     def is_revision_changed(self, target_rev: int) -> bool:
         old: 'INVContainer' = self.engine.inv.inv_container
@@ -401,6 +407,7 @@ class IconScoreContextFactory(object):
             context._tx_dirty_preps = OrderedDict()
             container: 'INVContainer' = context.engine.inv.inv_container.copy()
             context._inv_container = container
+            context._balance_verifier = BalanceVerifier()
             context._prep_address_converter = context.engine.prep.prep_address_converter.copy()
         else:
             # Readonly

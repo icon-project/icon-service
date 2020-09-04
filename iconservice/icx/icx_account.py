@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import InvalidParamsException, InternalServiceErrorException
+from ..base.exception import InvalidParamsException, InvalidBalanceException
 from ..icon_constant import Revision
 
 if TYPE_CHECKING:
@@ -222,11 +222,13 @@ class Account(object):
         asset means balance + total_stake(=stake + total_unstake)
 
         """
-        if revision < Revision.VERIFY_ASSET_INTEGRITY.value:
+        if revision == Revision.MULTIPLE_UNSTAKE.value:
+            # Skip to verify only if revision is MULTIPLE_UNSTAKE
+            # Asset integrity failure exists during Revision.MULTIPLE_UNSTAKE
             return
 
         if before_asset != after_asset:
-            raise InternalServiceErrorException(
+            raise InvalidBalanceException(
                 f"Invalid asset integrity: "
                 f"address={self._address} "
                 f"before_asset={before_asset} "
