@@ -27,8 +27,7 @@ from .stake_part import StakePart
 from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 from ..base.block import Block, NULL_BLOCK
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, IconScoreContextType, \
-    Revision
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG, ROLLBACK_LOG_TAG, Revision
 from ..utils import bytes_to_hex
 
 if TYPE_CHECKING:
@@ -311,9 +310,11 @@ class Storage(StorageBase):
         """
         return context.storage.icx.get_account(context, context.storage.icx.fee_treasury)
 
-    def _get_part(self, context: 'IconScoreContext',
-                  part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
-                  address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
+    def _get_part(
+            self,
+            context: 'IconScoreContext',
+            part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
+            address: 'Address') -> Union['CoinPart', 'StakePart', 'DelegationPart']:
         key: bytes = part_class.make_key(address)
         value: bytes = self._db.get(context, key)
 
@@ -391,3 +392,30 @@ class Storage(StorageBase):
         """
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
         self._db.put(context, self._TOTAL_SUPPLY_KEY, value)
+
+    def get_part(
+            self,
+            context: 'IconScoreContext',
+            flag: 'AccountPartFlag',
+            address: 'Address'
+    ) -> Union['CoinPart', 'StakePart', 'DelegationPart']:
+
+        if AccountPartFlag.COIN == flag:
+            part_class = CoinPart
+        elif AccountPartFlag.STAKE == flag:
+            part_class = StakePart
+        else:
+            part_class = DelegationPart
+
+        part: Union['CoinPart', 'StakePart', 'DelegationPart'] = self._get_part(context, part_class, address)
+        part.set_complete(True)
+        return part
+
+    def put_stake_part(self, context: 'IconScoreContext', address: 'Address', part: 'StakePart'):
+        if not (isinstance(part, StakePart) and part.is_dirty()):
+            return
+
+        key: bytes = part.make_key(address)
+        value: bytes = part.to_bytes(context.revision)
+
+        self._db.put(context, key, value)

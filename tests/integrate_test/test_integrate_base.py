@@ -29,7 +29,12 @@ from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDR
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, RCCalculateResult, Revision
+from iconservice.icon_constant import (
+    ConfigKey,
+    IconScoreContextType,
+    RCCalculateResult,
+    RPCMethod
+)
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
@@ -1004,6 +1009,23 @@ class TestIntegrateBase(TestCase):
     @classmethod
     def create_eoa_accounts(cls, count: int) -> List['EOAAccount']:
         return [cls.create_eoa_account() for _ in range(count)]
+
+    def debug_get_account(
+            self,
+            account: Union['EOAAccount', 'Address'],
+            account_filter: int
+    ) -> dict:
+        address: Optional['Address'] = self._convert_address_from_address_type(account)
+        return self._query(
+            request={
+                "address": address,
+                "filter": account_filter
+            },
+            method=RPCMethod.DEBUG_GET_ACCOUNT
+        )
+
+    def get_state_db(self, key: bytes) -> bytes:
+        return self.icon_service_engine._icx_context_db.key_value_db.get(key)
 
 
 class EOAAccount:
