@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, InternalServiceErrorException
 from ..icon_constant import Revision
 
 if TYPE_CHECKING:
@@ -39,7 +39,11 @@ class Account(object):
         self._stake_part: 'StakePart' = stake_part
         self._delegation_part: 'DelegationPart' = delegation_part
 
+        before_asset: int = self._get_asset()
         self.normalize(revision)
+        after_asset: int = self._get_asset()
+
+        self._verify_asset_integrity(revision, before_asset, after_asset)
 
     @property
     def address(self):
@@ -144,6 +148,7 @@ class Account(object):
                 raise InvalidParamsException('Failed to normalize: no coin part')
 
             self.coin_part.toggle_has_unstake(False, revision)
+
             self.coin_part.deposit(expired_unstaked_balance)
 
     def set_stake(self, context: "IconScoreContext", value: int, unstake_lock_period: int):
@@ -204,3 +209,26 @@ class Account(object):
         :param other: (CoinPart)
         """
         return not self.__eq__(other)
+
+    def _get_asset(self) -> int:
+        balance: int = self.coin_part.balance if self.coin_part else 0
+        total_stake: int = self.stake_part.total_stake if self.stake_part else 0
+
+        return balance + total_stake
+
+    def _verify_asset_integrity(self, revision: int, before_asset: int, after_asset: int):
+        """Verify if the assets before normalization is the same as the assets after normalization
+
+        asset means balance + total_stake(=stake + total_unstake)
+
+        """
+        if revision < Revision.VERIFY_ASSET_INTEGRITY.value:
+            return
+
+        if before_asset != after_asset:
+            raise InternalServiceErrorException(
+                f"Invalid asset integrity: "
+                f"address={self._address} "
+                f"before_asset={before_asset} "
+                f"after_asset={after_asset}"
+            )
