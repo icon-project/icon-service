@@ -17,12 +17,16 @@
 from typing import TYPE_CHECKING
 
 from .icx_account import Account
+from .storage import AccountPartFlag
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
+    from .coin_part import CoinPart
+    from .stake_part import StakePart
+    from .delegation_part import DelegationPart
 
 
 class Engine(EngineBase):
@@ -97,3 +101,59 @@ class Engine(EngineBase):
             context.storage.icx.put_account(context, to_account)
 
         return True
+
+    @classmethod
+    def get_account_raw_data(
+            cls,
+            context: 'IconScoreContext',
+            address: 'Address',
+            account_filter: 'AccountPartFlag'
+    ) -> dict:
+        """Get the balance of address
+
+        :param context:
+        :param address: account address
+        :param account_filter:
+        :return: raw data of account in stateDB
+        """
+
+        ret = {}
+        if AccountPartFlag.COIN in account_filter:
+            part: 'CoinPart' = context.storage.icx.get_part(
+                context=context,
+                flag=AccountPartFlag.COIN,
+                address=address
+            )
+            ret["coin"] = {
+                "type": part.type.value,
+                "typeStr": str(part.type),
+                "flag": part.flags.value,
+                "flagStr": str(part.flags),
+                "balance": part.balance
+            }
+        if AccountPartFlag.STAKE in account_filter:
+            part: 'StakePart' = context.storage.icx.get_part(
+                context=context,
+                flag=AccountPartFlag.STAKE,
+                address=address
+            )
+            ret["stake"] = {
+                "stake": part.stake,
+                "unstake": part.unstake,
+                "unstakeBlockHeight": part.unstake_block_height,
+                "unstakesInfo": part.unstakes_info,
+            }
+        if AccountPartFlag.DELEGATION in account_filter:
+            part: 'DelegationPart' = context.storage.icx.get_part(
+                context=context,
+                flag=AccountPartFlag.DELEGATION,
+                address=address
+            )
+            ret["delegation"] = {
+                "totalDelegated": part.delegated_amount,
+                "delegations": [
+                    {"address": delegation[0], "value": delegation[1]}
+                    for delegation in part.delegations
+                ],
+            }
+        return ret

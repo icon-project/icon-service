@@ -224,6 +224,10 @@ class ConfigKey:
 
     UNSTAKE_SLOT_MAX = "unstakeSlotMax"
 
+    # The list of items(address, unstake, unstake_block_height)
+    # containing invalid expired unstakes to remove
+    INVALID_EXPIRED_UNSTAKES_PATH = "invalidExpiredUnstakesPath"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1
@@ -468,3 +472,4 @@ class RPCMethod:
     ICX_CALL = 'icx_call'
     ICX_SEND_TRANSACTION = 'icx_sendTransaction'
     DEBUG_ESTIMATE_STEP = "debug_estimateStep"
+    DEBUG_GET_ACCOUNT = "debug_getAccount"
