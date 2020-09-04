@@ -771,7 +771,7 @@ class Governance(IconSystemScoreBase):
 
     # ========== for debug ==========
     @external
-    def set_revision(self, code: str, name: str):
+    def setRevision(self, code: str, name: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
@@ -787,7 +787,7 @@ class Governance(IconSystemScoreBase):
         self.RevisionChanged(code, name)
 
     @external
-    def set_step_price(self, stepPrice: str):
+    def setStepPrice(self, stepPrice: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
@@ -797,7 +797,7 @@ class Governance(IconSystemScoreBase):
             self.StepPriceChanged(step_price)
 
     @external
-    def set_max_step_limit(self, contextType: str, value: str):
+    def setMaxStepLimit(self, contextType: str, value: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
@@ -808,7 +808,7 @@ class Governance(IconSystemScoreBase):
             self.set_icon_network_value(IconNetworkValueType.MAX_STEP_LIMITS, max_step_limits)
 
     @external
-    def set_step_cost(self, stepType: str, cost: str):
+    def setStepCost(self, stepType: str, cost: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
@@ -819,13 +819,13 @@ class Governance(IconSystemScoreBase):
             self.set_icon_network_value(IconNetworkValueType.STEP_COSTS, step_costs)
 
     @external
-    def add_to_score_black_list(self, address: 'Address'):
+    def addToScoreBlackList(self, address: 'Address'):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
         self._addToScoreBlackList(address)
 
     @external
-    def malicious_score(self, address: str, type: str):
+    def maliciousScore(self, address: str, type: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 
@@ -837,7 +837,7 @@ class Governance(IconSystemScoreBase):
             self._removeFromScoreBlackList(converted_address)
 
     @external
-    def disqualify_prep(self, address: str):
+    def disqualifyPrep(self, address: str):
         if self.msg.sender != self.owner:
             revert('Invalid sender: not owner')
 

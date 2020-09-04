@@ -49,7 +49,7 @@ class TestINVMigration(TestIISSBase):
                                 func_name="getStepPrice")
 
     def _set_step_price(self, step_price: int, is_migrated: bool):
-        func_name = "set_step_price" if is_migrated else "setStepPrice"
+        func_name = "setStepPrice"
         self.score_call(from_=self._admin,
                         to_=GOVERNANCE_SCORE_ADDRESS,
                         func_name=func_name,
@@ -63,7 +63,7 @@ class TestINVMigration(TestIISSBase):
                                 params={"address": str(address)})
 
     def _add_to_score_black_list(self, address: 'Address', is_migrated: bool):
-        func_name = "add_to_score_black_list" if is_migrated else "addToScoreBlackList"
+        func_name = "addToScoreBlackList"
         self.score_call(from_=self._admin,
                         to_=GOVERNANCE_SCORE_ADDRESS,
                         func_name=func_name,
@@ -99,7 +99,7 @@ class TestINVMigration(TestIISSBase):
                                 func_name="getStepCosts")
 
     def _set_step_costs(self, step_type: str, cost: int, is_migrated: bool):
-        func_name = "set_step_cost" if is_migrated else "setStepCost"
+        func_name = "setStepCost"
         self.score_call(from_=self._admin,
                         to_=GOVERNANCE_SCORE_ADDRESS,
                         func_name=func_name,
@@ -116,7 +116,7 @@ class TestINVMigration(TestIISSBase):
                                 })
 
     def _set_max_step_limit(self, context_type: str, value: int, is_migrated: bool):
-        func_name = "set_max_step_limit" if is_migrated else "setMaxStepLimit"
+        func_name = "setMaxStepLimit"
         self.score_call(from_=self._admin,
                         to_=GOVERNANCE_SCORE_ADDRESS,
                         func_name=func_name,
@@ -131,7 +131,7 @@ class TestINVMigration(TestIISSBase):
 
     # Override
     def _set_revision(self, revision: int, is_migrated: bool):
-        func_name = "set_revision" if is_migrated else "setRevision"
+        func_name = "setRevision"
         return self.score_call(from_=self._admin,
                                to_=GOVERNANCE_SCORE_ADDRESS,
                                func_name=func_name,
