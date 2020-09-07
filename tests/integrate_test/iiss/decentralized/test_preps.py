@@ -248,8 +248,10 @@ class TestPreps(TestIISSBase):
         self.assertEqual(int(False), tx_results[1].status)
 
     def test_weighted_average_of_irep(self):
-        self.distribute_icx(accounts=self._accounts[:2] + self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2],
-                            init_balance=1 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:2] + self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2],
+            init_balance=2 * ICX_IN_LOOP
+        )
 
         tx_list = []
         for account in self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2]:
@@ -295,32 +297,39 @@ class TestPreps(TestIISSBase):
         self.assertEqual(response['nextCalculation'], response['nextPRepTerm'])
 
     def test_register_prep_apply_terms_irep(self):
-        self.distribute_icx(accounts=self._accounts[:2] + self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2],
-                            init_balance=1 * ICX_IN_LOOP)
+        self.distribute_icx(
+            accounts=self._accounts[:2] + self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2],
+            init_balance=2 * ICX_IN_LOOP)
 
         tx_list = []
         for account in self._accounts[PREP_MAIN_PREPS:PREP_MAIN_PREPS + 2]:
-            tx = self.create_set_stake_tx(from_=account,
-                                          value=3)
+            tx = self.create_set_stake_tx(
+                from_=account,
+                value=3
+            )
             tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
 
         delegation1: int = 1
-        tx1: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS],
-                                                  origin_delegations=[
-                                                      (
-                                                          self._accounts[0],
-                                                          delegation1
-                                                      )
-                                                  ])
+        tx1: dict = self.create_set_delegation_tx(
+            from_=self._accounts[PREP_MAIN_PREPS],
+            origin_delegations=[
+                (
+                    self._accounts[0],
+                    delegation1
+                )
+            ]
+        )
         delegation2: int = 3
-        tx2: dict = self.create_set_delegation_tx(from_=self._accounts[PREP_MAIN_PREPS + 1],
-                                                  origin_delegations=[
-                                                      (
-                                                          self._accounts[1],
-                                                          delegation2
-                                                      )
-                                                  ])
+        tx2: dict = self.create_set_delegation_tx(
+            from_=self._accounts[PREP_MAIN_PREPS + 1],
+            origin_delegations=[
+                (
+                    self._accounts[1],
+                    delegation2
+                )
+            ]
+        )
         self.process_confirm_block_tx([tx1, tx2])
 
         irep1: int = IISS_INITIAL_IREP * 12 // 10

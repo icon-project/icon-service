@@ -123,7 +123,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+                            init_balance=2 * ICX_IN_LOOP)
 
         # 0 start change node_address
         account: 'EOAAccount' = self._accounts[0]
@@ -181,7 +181,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+                            init_balance=2 * ICX_IN_LOOP)
 
         # 0 start change node_key
         account: 'EOAAccount' = self._accounts[1]
@@ -270,7 +270,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+                            init_balance=2 * ICX_IN_LOOP)
 
         # PRepA: 0
         prep_a: 'EOAAccount' = self._accounts[0]
@@ -302,7 +302,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+                            init_balance=2 * ICX_IN_LOOP)
 
         # PRepA: 0
         # PRepB: 1
@@ -544,7 +544,7 @@ class TestPRepNodeAddressDivision(TestIISSBase):
         self.set_revision(Revision.DIVIDE_NODE_ADDRESS.value)
 
         self.distribute_icx(accounts=self._accounts[:PREP_MAIN_PREPS],
-                            init_balance=1 * ICX_IN_LOOP)
+                            init_balance=2 * ICX_IN_LOOP)
 
         # PRepA: 0
         # PRepB: 1

@@ -302,8 +302,10 @@ class Engine(EngineBase, IISSEngineListener):
             main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         else:
             # first term
-            new_preps: List['PRep'] = context.preps.get_preps(start_index=0,
-                                                              size=context.main_prep_count)
+            new_preps: List['PRep'] = context.preps.get_preps(
+                start_index=0,
+                size=context.main_prep_count
+            )
             main_preps: List['Address'] = [prep.address for prep in new_preps]
 
         context.storage.meta.put_last_main_preps(context, main_preps)

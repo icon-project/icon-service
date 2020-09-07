@@ -785,7 +785,6 @@ class TestIntegrateBase(TestCase):
                      revision: int,
                      expected_status: bool = True,
                      with_np: bool = False) -> List['TransactionResult']:
-        response = self.get_revision()
         if not with_np:
             # update revision value only
             self.score_call(from_=self._admin,
@@ -889,7 +888,7 @@ class TestIntegrateBase(TestCase):
         return self.process_confirm_block_tx([tx], expected_status)
 
     def register_proposal(self,
-                          from_: 'Address',
+                          from_: Union['EOAAccount', 'Address'],
                           title: str,
                           description: str,
                           type_: int,
