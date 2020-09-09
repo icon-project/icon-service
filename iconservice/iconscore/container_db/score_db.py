@@ -1,6 +1,11 @@
 from typing import Optional, TYPE_CHECKING
 
-from ...database.score_db.utils import KeyElement, DICT_DB_ID, KeyElementState
+from ...database.score_db.utils import (
+    KeyElement,
+    DICT_DB_ID,
+    CUSTOM_DB_ID,
+    KeyElementState,
+)
 
 if TYPE_CHECKING:
     from ...base.address import Address
@@ -57,8 +62,15 @@ class IconScoreDatabase:
 
     @classmethod
     def _make_key_element(cls, key: bytes) -> 'KeyElement':
-        return KeyElement(keys=[key], container_id=DICT_DB_ID)
+        return KeyElement(
+            keys=[key],
+            container_id=DICT_DB_ID
+        )
 
     @classmethod
     def _make_key_element_in_custom(cls, key: bytes) -> 'KeyElement':
-        return KeyElement(keys=[key], container_id=DICT_DB_ID, state=KeyElementState.USE_CUSTOM_SUB_DB)
+        return KeyElement(
+            keys=[key],
+            container_id=DICT_DB_ID,
+            state=KeyElementState.USE_CUSTOM_SUB_DB
+        )

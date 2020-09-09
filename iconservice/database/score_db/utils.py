@@ -73,7 +73,6 @@ class KeyElement:
                 return self._keys[0]
         else:
             if self._state == KeyElementState.USE_CUSTOM_SUB_DB:
-                # TODO return specific bytes
                 return self._rlp_encode_bytes(CUSTOM_DB_ID) + self._rlp_encode_bytes(self._keys[0])
             else:
                 return self._rlp_encode_bytes(self._keys[0])
