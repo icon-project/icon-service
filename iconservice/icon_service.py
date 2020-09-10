@@ -200,7 +200,6 @@ async def _check_rabbitmq(amqp_target: str):
         amqp_user_name = os.getenv("AMQP_USERNAME", "guest")
         amqp_password = os.getenv("AMQP_PASSWORD", "guest")
         connection = await aio_pika.connect(host=amqp_target, login=amqp_user_name, password=amqp_password)
-        connection.connect()
     except ConnectionRefusedError:
         Logger.error("rabbitmq-service disable", _TAG)
         exit(0)
