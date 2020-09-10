@@ -16,9 +16,12 @@
 
 """IconScoreEngine testcase
 """
+from typing import List
 
-from iconservice.base.address import Address, SYSTEM_SCORE_ADDRESS
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
+from iconservice.icon_constant import ConfigKey
 from iconservice.icon_constant import ICX_IN_LOOP, Revision
+from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
@@ -126,3 +129,43 @@ class TestIntegrateSystemScoreCall(TestIISSBase):
         treasury_balance: int = self.get_balance(treasury_address)
         expected_treasury_balance: int = old_treasury_balance + fee
         self.assertEqual(expected_treasury_balance, treasury_balance)
+
+    def test_register_prep(self):
+        self.set_revision(Revision.BURN_V2_ENABLED.value)
+        sender = self._accounts[0].address
+
+        # success case: If input 2000 ICX as value when calling 'registerPRep' method, should be registered successfully
+        icx_to_burn = 2_000 * ICX_IN_LOOP
+        old_total_supply: int = self.get_total_supply()
+
+        old_balance: int = self.get_balance(sender)
+        tx_results: List['TransactionResult'] = self.register_prep(
+            from_=sender,
+            value=self._config[ConfigKey.PREP_REGISTRATION_FEE]
+        )
+
+        tx_result = tx_results[0]
+        self.assertEqual(2, len(tx_result.event_logs))
+
+        # Check for ICXBurnedV2 eventlog
+        event_log = tx_result.event_logs[0]
+        self.assertEqual(
+            ["ICXBurnedV2(Address,int)", sender],
+            event_log.indexed
+        )
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
+        self.assertEqual([icx_to_burn], event_log.data)
+
+        # Check for PRepRegistered eventlog
+        event_log = tx_result.event_logs[1]
+        self.assertEqual(["PRepRegistered(Address)"], event_log.indexed)
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
+        self.assertEqual([sender], event_log.data)
+
+        # Check for balance
+        fee = tx_result.step_price * tx_result.step_used
+        balance: int = self.get_balance(sender)
+        self.assertEqual(old_balance - icx_to_burn - fee, balance)
+
+        # Check for total_supply
+        self.assertEqual(old_total_supply - icx_to_burn, self.get_total_supply())
