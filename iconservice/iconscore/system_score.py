@@ -61,7 +61,7 @@ class SystemScore(IconScoreBase):
     def PRepSet(self, address: Address):
         pass
 
-    @eventlog
+    @eventlog(indexed=1)
     def ICXBurnedV2(self, address: Address, amount: int):
         pass
 

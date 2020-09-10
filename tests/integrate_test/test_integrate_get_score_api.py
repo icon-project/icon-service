@@ -617,7 +617,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "type": "eventlog",
                 "name": "ICXBurnedV2",
                 "inputs": [
-                    {"name": "address", "type": "Address"},
+                    {"name": "address", "type": "Address", "indexed": True},
                     {"name": "amount", "type": "int"},
                 ]
             },
