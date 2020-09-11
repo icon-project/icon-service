@@ -1104,15 +1104,14 @@ class IconServiceEngine(ContextContainer):
             self._icon_pre_validator.origin_request_execute(revision=context.revision, origin_request=origin_request)
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-            if 'dataType' in params and params['dataType'] == 'call':
-                self._validate_contract_call(
-                    revision=context.revision,
-                    data_type="call",
-                    to=to
-                )
-
-                # SCORE updating is not blocked by SCORE blacklist
-                IconScoreContextUtil.validate_score_blacklist(context, to)
+            if "dataType" in params:
+                data_type: str = params["dataType"]
+                if data_type in ("call", "deploy", "deposit"):
+                    if to.is_contract:
+                        IconScoreContextUtil.validate_score_blacklist(context, to)
+                    else:
+                        if context.revision >= Revision.IMPROVED_PRE_VALIDATOR.value:
+                            raise InvalidParamsException(f"Invalid Contract Address: {to}")
         finally:
             self._pop_context()
 
@@ -1191,13 +1190,12 @@ class IconServiceEngine(ContextContainer):
         data_type = params.get('dataType', None)
         data = params.get('data', None)
 
-        cls._validate_contract_call(
-            revision=context.revision,
-            data_type=data_type,
-            to=to
-        )
-
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+
+        if data_type == "call" and not to.is_contract:
+            if context.revision >= Revision.IMPROVED_PRE_VALIDATOR.value:
+                raise InvalidParamsException(f"Invalid Contract Address: {to}")
+
         return IconScoreEngine.query(context, to, data_type, data)
 
     def _handle_icx_send_transaction(self,
@@ -1292,18 +1290,20 @@ class IconServiceEngine(ContextContainer):
         to: 'Address' = params['to']
         data_type: str = params.get('dataType')
 
-        self._validate_contract_call(
-            revision=context.revision,
-            data_type=data_type,
-            to=to
-        )
-
         # Can't transfer ICX to system SCORE
         if data_type in (None, 'call', 'message') and to != SYSTEM_SCORE_ADDRESS:
             self._transfer_coin(context, params)
 
         if to.is_contract:
             tx_result.score_address = self._handle_score_invoke(context, to, params)
+        else:
+            if context.revision >= Revision.IMPROVED_PRE_VALIDATOR.value:
+                if data_type == "call":
+                    context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+                    raise InvalidParamsException(f"Invalid Contract Address: {to}")
+                elif data_type == "deploy":
+                    context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
+                    raise InvalidParamsException(f"Invalid Contract Address: {to}")
 
     @classmethod
     def _transfer_coin(cls,
@@ -2174,9 +2174,3 @@ class IconServiceEngine(ContextContainer):
             account_filter=account_filter
         )
         return raw_data
-
-    @classmethod
-    def _validate_contract_call(cls, revision: int, data_type: Optional[str], to: 'Address'):
-        if revision >= Revision.IMPROVED_PRE_VALIDATOR.value:
-            if data_type is not None and data_type in "call" and not to.is_contract:
-                raise InvalidParamsException(f"EOA account cannot be used in the field 'to' in the dataType 'call'.")
