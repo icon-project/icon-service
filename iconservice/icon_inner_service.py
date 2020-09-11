@@ -410,7 +410,7 @@ class IconScoreInnerTask(object):
     def _validate_transaction(self, request: dict):
         try:
             converted_request = TypeConverter.convert(request, ParamType.VALIDATE_TRANSACTION)
-            self._icon_service_engine.validate_transaction(converted_request)
+            self._icon_service_engine.validate_transaction(converted_request, request)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
             self._log_exception(e, _TAG)

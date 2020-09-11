@@ -13,20 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import copy
 from unittest.mock import Mock
 
 import pytest
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, is_icon_address_valid
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
 from iconservice.base.exception import InvalidRequestException
+from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextEngine, ContextStorage
 from iconservice.utils.locked import LOCKED_ADDRESSES
+from tests import create_address, create_tx_hash
 
 
 @pytest.fixture
@@ -149,3 +151,152 @@ class TestTransactionValidator:
 
         validator.execute(context, params, step_price, 100_000)
         validator.execute_to_check_out_of_balance(context, params, step_price)
+
+    @pytest.mark.parametrize(
+        "version",
+        [
+            None,
+            hex(2),
+            hex(3),
+            "3"
+            "0x003"
+        ]
+    )
+    @pytest.mark.parametrize(
+        "value",
+        [
+            None,
+            hex(1),
+            "1"
+            "0x001"
+        ]
+    )
+    @pytest.mark.parametrize(
+        "step_limit",
+        [
+            None,
+            hex(1),
+            "1"
+            "0x001"
+        ]
+    )
+    @pytest.mark.parametrize(
+        "timestamp",
+        [
+            None,
+            hex(1),
+            "1",
+            "0x001"
+        ]
+    )
+    @pytest.mark.parametrize(
+        "nonce",
+        [
+            None,
+            hex(1),
+            "1",
+            "0x001"
+        ]
+    )
+    @pytest.mark.parametrize(
+        "to",
+        [
+            None,
+            str(create_address(0)),
+            str(create_address(1)),
+            str(create_address(0))[2:],
+            str(create_address(0))[:10],
+        ]
+    )
+    @pytest.mark.parametrize(
+        "fee",
+        [
+            None,
+            hex(1),
+            "123",
+        ]
+    )
+    @pytest.mark.parametrize(
+        "tx_hash",
+        [
+            None,
+            create_tx_hash().hex(),
+        ]
+    )
+    def test_origin_request_execute(
+            self,
+            version: str,
+            value: str,
+            step_limit: str,
+            timestamp: str,
+            nonce: str,
+            to: str,
+            fee: str,
+            tx_hash: str,
+    ):
+        revision: int = Revision.IMPROVED_PRE_VALIDATOR.value
+        validator = IconPreValidator()
+        origin_request = {}
+
+        def set_value(value, key):
+            if origin_request:
+                if value:
+                    origin_request[ConstantKeys.PARAMS][key] = value
+                elif key in origin_request[ConstantKeys.PARAMS]:
+                    del origin_request[ConstantKeys.PARAMS][key]
+
+        params: list = [
+            (version, ConstantKeys.VERSION),
+            (value, ConstantKeys.VALUE),
+            (step_limit, ConstantKeys.STEP_LIMIT),
+            (timestamp, ConstantKeys.TIMESTAMP),
+            (nonce, ConstantKeys.NONCE),
+            (to, ConstantKeys.TO),
+            (fee, ConstantKeys.FEE),
+            (tx_hash, ConstantKeys.OLD_TX_HASH)
+        ]
+        for value, key in params:
+            set_value(value, key)
+
+        if origin_request:
+            if version is None:
+                with pytest.raises(InvalidRequestException) as e:
+                    validator.origin_request_execute(revision=revision, origin_request=origin_request)
+                assert f"The version field is essential." == e.value
+            elif version == hex(2):
+                with pytest.raises(InvalidRequestException) as e:
+                    validator.origin_request_execute(revision=revision, origin_request=origin_request)
+                assert f"Version2 is deprecated." == e.value
+            elif version not in [hex(3)]:
+                with pytest.raises(InvalidRequestException) as e:
+                    validator.origin_request_execute(revision=revision, origin_request=origin_request)
+                assert f"Malformed int: {version}" == e.value
+
+            key_list: list = [
+                value,
+                step_limit,
+                timestamp,
+                nonce,
+            ]
+            for key in key_list:
+                if key not in [None, hex(1)]:
+                    with pytest.raises(InvalidRequestException) as e:
+                        validator.origin_request_execute(revision=revision, origin_request=origin_request)
+                    assert f"Malformed int: {key}" == e.value
+
+            if not is_icon_address_valid(to):
+                with pytest.raises(InvalidRequestException) as e:
+                    validator.origin_request_execute(revision=revision, origin_request=origin_request)
+                assert f"Malformed address: {to}" == e.value
+
+            key_list: list = [
+                fee,
+                tx_hash,
+            ]
+            for key in key_list:
+                if key not in [None]:
+                    with pytest.raises(InvalidRequestException) as e:
+                        validator.origin_request_execute(revision=revision, origin_request=origin_request)
+                    assert f"Invalid v2 field: {key}" == e.value
+        else:
+            validator.origin_request_execute(revision=revision, origin_request=origin_request)

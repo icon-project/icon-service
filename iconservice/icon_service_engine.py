@@ -33,7 +33,7 @@ from .base.address import SYSTEM_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, IconScoreException, InvalidBaseTransactionException,
-    InternalServiceErrorException, DatabaseException)
+    InternalServiceErrorException, DatabaseException, InvalidParamsException)
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
@@ -1062,7 +1062,7 @@ class IconServiceEngine(ContextContainer):
         ret = self._call(context, method, params)
         return ret
 
-    def validate_transaction(self, request: dict) -> None:
+    def validate_transaction(self, request: dict, origin_request: dict) -> None:
         """Validate JSON-RPC transaction request
         before putting it into transaction pool
 
@@ -1073,6 +1073,7 @@ class IconServiceEngine(ContextContainer):
         :param request: JSON-RPC request
             values in request have already been converted to original format
             in IconInnerService
+        :param origin_request: JSON_RPC Original request for more strict validate
         :return:
         """
         assert self._get_context_stack_size() == 0
@@ -1100,10 +1101,17 @@ class IconServiceEngine(ContextContainer):
                 input_size = get_input_data_size(context.revision, data)
                 minimum_step += input_size * context.inv_container.step_costs.get(StepType.INPUT, 0)
 
+            self._icon_pre_validator.origin_request_execute(revision=context.revision, origin_request=origin_request)
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-            # SCORE updating is not blocked by SCORE blacklist
             if 'dataType' in params and params['dataType'] == 'call':
+                self._validate_contract_call(
+                    revision=context.revision,
+                    data_type="call",
+                    to=to
+                )
+
+                # SCORE updating is not blocked by SCORE blacklist
                 IconScoreContextUtil.validate_score_blacklist(context, to)
         finally:
             self._pop_context()
@@ -1179,12 +1187,18 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        icon_score_address: Address = params['to']
+        to: 'Address' = params['to']
         data_type = params.get('dataType', None)
         data = params.get('data', None)
 
+        cls._validate_contract_call(
+            revision=context.revision,
+            data_type=data_type,
+            to=to
+        )
+
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        return IconScoreEngine.query(context, icon_score_address, data_type, data)
+        return IconScoreEngine.query(context, to, data_type, data)
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -1275,8 +1289,14 @@ class IconServiceEngine(ContextContainer):
         input_size = get_input_data_size(context.revision, params.get('data', None))
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
-        to: Address = params['to']
+        to: 'Address' = params['to']
         data_type: str = params.get('dataType')
+
+        self._validate_contract_call(
+            revision=context.revision,
+            data_type=data_type,
+            to=to
+        )
 
         # Can't transfer ICX to system SCORE
         if data_type in (None, 'call', 'message') and to != SYSTEM_SCORE_ADDRESS:
@@ -2154,3 +2174,9 @@ class IconServiceEngine(ContextContainer):
             account_filter=account_filter
         )
         return raw_data
+
+    @classmethod
+    def _validate_contract_call(cls, revision: int, data_type: Optional[str], to: 'Address'):
+        if revision >= Revision.IMPROVED_PRE_VALIDATOR.value:
+            if data_type is not None and data_type in "call" and not to.is_contract:
+                raise InvalidParamsException(f"EOA account cannot be used in the field 'to' in the dataType 'call'.")

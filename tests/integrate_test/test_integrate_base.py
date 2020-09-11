@@ -478,7 +478,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, {})
 
         return tx
 
@@ -523,7 +523,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, {})
 
         return tx
 
@@ -565,7 +565,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if not disable_pre_validate:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, {})
         return tx
 
     def create_message_tx(self,
@@ -602,7 +602,7 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        self.icon_service_engine.validate_transaction(tx, {})
         return tx
 
     def create_deposit_tx(self,
@@ -647,7 +647,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, {})
 
         return tx
 
@@ -770,7 +770,9 @@ class TestIntegrateBase(TestCase):
                    func_name: str,
                    params: dict = None,
                    value: int = 0,
+                   pre_validation_enabled: bool = True,
                    step_limit: int = DEFAULT_BIG_STEP_LIMIT,
+
                    expected_status: bool = True) -> List['TransactionResult']:
 
         tx = self.create_score_call_tx(from_=from_,
@@ -778,6 +780,7 @@ class TestIntegrateBase(TestCase):
                                        func_name=func_name,
                                        params=params,
                                        value=value,
+                                       pre_validation_enabled=pre_validation_enabled,
                                        step_limit=step_limit)
         return self.process_confirm_block_tx([tx], expected_status)
 

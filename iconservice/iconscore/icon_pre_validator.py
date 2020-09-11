@@ -19,8 +19,9 @@ from typing import TYPE_CHECKING, Any
 from iconcommons.logger import Logger
 
 from .icon_score_step import get_input_data_size
-from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address, is_icon_address_valid
 from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
+from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
 from ..utils import is_lowercase_hex_string
 from ..utils.locked import is_address_locked
@@ -43,6 +44,53 @@ class IconPreValidator:
         """Constructor
         """
         pass
+
+    @classmethod
+    def origin_request_execute(cls, revision: int, origin_request: dict):
+        if not origin_request or revision < Revision.IMPROVED_PRE_VALIDATOR.value:
+            return
+
+        params: dict = origin_request[ConstantKeys.PARAMS]
+
+        if ConstantKeys.VERSION not in params:
+            raise InvalidRequestException(f"The version field is essential.")
+
+        version: str = params[ConstantKeys.VERSION]
+        if version == hex(2):
+            raise InvalidRequestException(f"Version2 is deprecated.")
+
+        invalid_v2: list = [
+            ConstantKeys.FEE,
+            ConstantKeys.OLD_TX_HASH
+        ]
+        for key in invalid_v2:
+            if key in params:
+                raise InvalidRequestException(f"Invalid v2 field: {key}")
+
+        int_list: list = [
+            ConstantKeys.VERSION,
+            ConstantKeys.VALUE,
+            ConstantKeys.STEP_LIMIT,
+            ConstantKeys.TIMESTAMP,
+            ConstantKeys.NONCE
+        ]
+        for key in int_list:
+            value: str = params[key]
+            try:
+                int_value: int = int(value, 16)
+                convert_hex: str = hex(int_value)
+                if value != convert_hex:
+                    raise InvalidRequestException(f"Malformed int: {value}")
+            except:
+                raise InvalidRequestException(f"Malformed int: {value}")
+
+        address_list: list = [
+            ConstantKeys.TO
+        ]
+        for key in address_list:
+            value: str = params[key]
+            if not is_icon_address_valid(value):
+                raise InvalidRequestException(f"Malformed Address: {value}")
 
     def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int):
         """Validate a transaction on icx_sendTransaction
