@@ -401,7 +401,7 @@ class ScoreDatabase(ContextGetter):
 
     def get(
             self,
-            keys: List['KeyElement']
+            keys: List['KeyElement'],
     ) -> Optional[bytes]:
         """
         Gets the value for the specified key
@@ -442,7 +442,7 @@ class ScoreDatabase(ContextGetter):
     def put(
             self,
             keys: List['KeyElement'],
-            value: bytes
+            value: bytes,
     ):
         """
         Sets a value for the specified key.
@@ -536,7 +536,7 @@ class ScoreDatabase(ContextGetter):
         return ScoreSubDatabase(
             address=self.address,
             score_db=self,
-            prefixs=[]
+            sub_dbs=[]
         )
 
     def close(self):
@@ -559,12 +559,24 @@ class ScoreDatabase(ContextGetter):
             keys: List['KeyElement'],
             is_legacy: bool = False
     ) -> bytes:
-        bytes_list = [] if is_legacy else [keys[-1].container_id]
+        if is_legacy:
+            tag: Optional[bytes] = None
+        else:
+            tag: Optional[bytes] = keys[-1].tag
+
+        lst = []
         for ke in keys:
             v: bytes = ke.to_bytes(is_legacy=is_legacy)
-            bytes_list.append(v)
+            if not is_legacy and ke.is_prefix:
+                lst.insert(0, v)
+            else:
+                lst.append(v)
+                
+        if tag:
+            lst.insert(0, tag)
+
         separator: bytes = b'|' if is_legacy else b''
-        return separator.join([self._prefix] + bytes_list)
+        return separator.join([self._prefix] + lst)
 
     @classmethod
     def _validate_keys(cls, keys: List[KeyElement]):
@@ -581,15 +593,17 @@ class ScoreSubDatabase:
             self,
             address: 'Address',
             score_db: 'ScoreDatabase',
-            prefixs: List['KeyElement']
+            sub_dbs: List['KeyElement'],
+            cached_prefix: 'KeyElement' = None
     ):
         self.address: 'Address' = address
         self._score_db: Union['ScoreDatabase'] = score_db
-        self._prefixs: List['KeyElement'] = prefixs
+        self._sub_dbs: List['KeyElement'] = sub_dbs
+        self._cached_prefix: 'KeyElement' = cached_prefix
 
     def get(
             self,
-            key: 'KeyElement',
+            key: Optional['KeyElement'],
     ) -> Optional[bytes]:
         """
         Gets the value for the specified key
@@ -597,47 +611,59 @@ class ScoreSubDatabase:
         :param key: key to retrieve
         :return: value for the specified key, or None if not found
         """
-        return self._score_db.get(keys=self._prefixs + [key])
+        return self._score_db.get(keys=self.combine_keys(key=key))
 
-    def put(self, key: 'KeyElement', value: bytes):
+    def put(
+            self,
+            key: Optional['KeyElement'],
+            value: bytes
+    ):
         """
         Sets a value for the specified key.
 
         :param key: key to set
         :param value: value to set
         """
-        self._score_db.put(keys=self._prefixs + [key], value=value)
+        self._score_db.put(keys=self.combine_keys(key=key), value=value)
 
-    def delete(self, key: 'KeyElement'):
+    def delete(
+            self,
+            key: Optional['KeyElement']
+    ):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
         """
-        self._score_db.delete(keys=self._prefixs + [key])
+        self._score_db.delete(keys=self.combine_keys(key=key))
 
     def get_sub_db(
             self,
-            key: 'KeyElement'
+            key: 'KeyElement',
     ) -> 'ScoreSubDatabase':
         """
-
         :param key:
         :return:
         """
 
+        # tag property is only used containerDB
+        if self._cached_prefix is None and key.tag is not None:
+            key.enable_is_prefix(on=True)
+            cached_prefix = key
+        else:
+            cached_prefix = self._cached_prefix
+        sub_dbs = self._sub_dbs + [key]
+
         return ScoreSubDatabase(
             address=self.address,
             score_db=self._score_db,
-            prefixs=self._prefixs + [key]
+            sub_dbs=sub_dbs,
+            cached_prefix=cached_prefix
         )
 
     def close(self):
         self._score_db.close()
 
-    @classmethod
-    def _validate_prefixs(cls, prefixs: List[KeyElement]):
-        for prefix in prefixs:
-            if not isinstance(prefix, KeyElement):
-                raise InvalidParamsException(f"prefixs is not KeyElement type: {type(prefixs)}")
-
+    def combine_keys(self, key: Optional['KeyElement']) -> List[KeyElement]:
+        keys = [key] if key else []
+        return self._sub_dbs + keys

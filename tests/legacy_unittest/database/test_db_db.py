@@ -317,7 +317,7 @@ class TestIconScoreDatabase(unittest.TestCase):
         key = self.address.body
         value = 100
 
-        keys: List['KeyElement'] = [KeyElement(keys=[key], container_id=DICT_DB_ID)]
+        keys: List['KeyElement'] = [KeyElement(keys=[key], tag=DICT_DB_ID)]
         self.assertIsNone(db.get(keys=keys))
 
         context.readonly = False

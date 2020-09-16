@@ -2,9 +2,6 @@ from typing import Optional, TYPE_CHECKING
 
 from ...database.score_db.utils import (
     KeyElement,
-    DICT_DB_ID,
-    CUSTOM_DB_ID,
-    KeyElementState,
 )
 
 if TYPE_CHECKING:
@@ -13,9 +10,8 @@ if TYPE_CHECKING:
 
 
 class IconScoreDatabase:
-    def __init__(self, db: 'ScoreSubDatabase', is_container_db: bool = False):
+    def __init__(self, db: 'ScoreSubDatabase'):
         self._db: 'ScoreSubDatabase' = db
-        self._is_container_db: bool = is_container_db
 
     @property
     def address(self) -> 'Address':
@@ -53,10 +49,7 @@ class IconScoreDatabase:
         self._db.delete(key)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
-        if self._is_container_db:
-            key: 'KeyElement' = self._make_key_element(key=prefix)
-        else:
-            key: 'KeyElement' = self._make_key_element_in_custom(key=prefix)
+        key: 'KeyElement' = self._make_key_element(key=prefix)
         db: 'ScoreSubDatabase' = self._db.get_sub_db(key=key)
         return IconScoreDatabase(db=db)
 
@@ -64,13 +57,5 @@ class IconScoreDatabase:
     def _make_key_element(cls, key: bytes) -> 'KeyElement':
         return KeyElement(
             keys=[key],
-            container_id=DICT_DB_ID
-        )
-
-    @classmethod
-    def _make_key_element_in_custom(cls, key: bytes) -> 'KeyElement':
-        return KeyElement(
-            keys=[key],
-            container_id=DICT_DB_ID,
-            state=KeyElementState.USE_CUSTOM_SUB_DB
+            tag=None,
         )

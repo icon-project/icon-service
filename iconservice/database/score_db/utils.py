@@ -15,9 +15,10 @@
 # limitations under the License.
 
 import enum
-from typing import TypeVar, List
+from typing import TypeVar, List, Optional
 
 from iconservice import Address
+from iconservice.utils import set_flag, is_any_flag_on, is_all_flag_on
 
 K = TypeVar('K', int, str, Address, bytes)
 V = TypeVar('V', int, str, Address, bytes, bool)
@@ -25,57 +26,63 @@ V = TypeVar('V', int, str, Address, bytes, bool)
 ARRAY_DB_ID = b'\x00'
 DICT_DB_ID = b'\x01'
 VAR_DB_ID = b'\x02'
-CUSTOM_DB_ID = b'\x03'
 
 
 class KeyElementState(enum.Flag):
     NONE = 0
     IS_CONSTRUCTOR = 1
     IS_CONTAINER = 2
-    USE_CUSTOM_SUB_DB = 4
-
-
-class ScoreDBBase:
-    pass
+    IS_PREFIX = 4
 
 
 class KeyElement:
     def __init__(
             self,
             keys: List[bytes],
-            container_id: bytes,
+            tag: Optional[bytes],
             state: 'KeyElementState' = KeyElementState.NONE
     ):
         """
 
         :param keys: contain with legacy key
-        :param container_id:
+        :param tag:
         :param state:
         """
 
         self._keys: List[bytes] = keys
-        self._container_id: bytes = container_id
+        self._tag: Optional[bytes] = tag
         self._state: 'KeyElementState' = state
 
     @property
-    def container_id(self) -> bytes:
-        return self._container_id
+    def tag(self) -> bytes:
+        return self._tag
+
+    @property
+    def is_prefix(self) -> bool:
+        return is_any_flag_on(
+            src_flags=self._state,
+            flag=KeyElementState.IS_PREFIX,
+        )
 
     def to_bytes(self, is_legacy: bool) -> bytes:
         if is_legacy:
-            if self._state == KeyElementState.IS_CONSTRUCTOR | KeyElementState.IS_CONTAINER:
+            if is_all_flag_on(self._state, KeyElementState.IS_CONSTRUCTOR | KeyElementState.IS_CONTAINER):
                 # 1. Bug DictDB (is appended container_id whenever make sub db in DictDB)
-                return b'|'.join((self._container_id, self._keys[0]))
-            elif self._container_id == ARRAY_DB_ID and len(self._keys) == 2:
+                return b'|'.join((self._tag, self._keys[0]))
+            elif self._tag == ARRAY_DB_ID and len(self._keys) == 2:
                 # 2. Consider array size key
                 return self._keys[1]
             else:
                 return self._keys[0]
         else:
-            if self._state == KeyElementState.USE_CUSTOM_SUB_DB:
-                return self._rlp_encode_bytes(CUSTOM_DB_ID) + self._rlp_encode_bytes(self._keys[0])
-            else:
-                return self._rlp_encode_bytes(self._keys[0])
+            return self._rlp_encode_bytes(self._keys[0])
+
+    def enable_is_prefix(self, on: bool):
+        self._state = set_flag(
+            src_flags=self._state,
+            flag=KeyElementState.IS_PREFIX,
+            on=on,
+        )
 
     @classmethod
     def _rlp_encode_bytes(cls, b: bytes) -> bytes:

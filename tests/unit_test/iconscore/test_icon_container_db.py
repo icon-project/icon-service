@@ -22,7 +22,7 @@ from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidParamsException
 from iconservice.database.db import ScoreDatabase
 from iconservice.iconscore.container_db.score_db import IconScoreDatabase
-from iconservice.database.score_db.utils import DICT_DB_ID, KeyElement, ARRAY_DB_ID, VAR_DB_ID, CUSTOM_DB_ID
+from iconservice.database.score_db.utils import DICT_DB_ID, KeyElement, ARRAY_DB_ID, VAR_DB_ID
 from iconservice.iconscore.container_db.utils import Utils as ContainerUtils
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_container_db import DictDB, ArrayDB, VarDB
@@ -325,87 +325,163 @@ class TestIconContainerDB:
             testarray[5] = 1
             a = testarray[5]
 
-    def test_dict_db_check_prefix_v1(self, score_db):
-        name = 'test_dict'
+    @pytest.mark.parametrize(
+        "is_v2,expected",
+        [
+            (False, b'|'.join((
+                    b'sub1',
+                    b'sub2',
+                    b'sub3',
+                    b'sub4',
+                    DICT_DB_ID,
+                    b'test_dict',
+                    DICT_DB_ID,
+                    b'aaaa',
+                    DICT_DB_ID,
+                    b'bbbb',
+                    DICT_DB_ID,
+                    b'cccc',
+                    b'dddd'
+            ))),
+            (True, b''.join((
+                    DICT_DB_ID,
+                    KeyElement._rlp_encode_bytes(b'test_dict'),
+                    KeyElement._rlp_encode_bytes(b'sub1'),
+                    KeyElement._rlp_encode_bytes(b'sub2'),
+                    KeyElement._rlp_encode_bytes(b'sub3'),
+                    KeyElement._rlp_encode_bytes(b'sub4'),
+                    KeyElement._rlp_encode_bytes(b'aaaa'),
+                    KeyElement._rlp_encode_bytes(b'bbbb'),
+                    KeyElement._rlp_encode_bytes(b'cccc'),
+                    KeyElement._rlp_encode_bytes(b'dddd')
+            ))),
+        ]
+    )
+    def test_dict_db_check_prefix(self, score_db, is_v2, expected):
+        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=is_v2)
+
+        if is_v2:
+            sep: bytes = b''
+        else:
+            sep: bytes = b'|'
+        expected: bytes = sep.join((score_db.address.to_bytes(), expected))
+
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
+
+        name = b'test_dict'
+        key1 = b'aaaa'
+        key2 = b'bbbb'
+        key3 = b'cccc'
+        key4 = b'dddd'
         depth = 4
-        value = 1
-        test_dict = DictDB(name, score_db, value_type=int, depth=depth)
+        value = b'value'
+
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_dict = DictDB(name, sub_db, value_type=bytes, depth=depth)
 
         def _get_context_db(score_db):
             return score_db._db._score_db._context_db
 
         _get_context_db(score_db).put = mock.Mock()
-        _get_context_db(score_db).get = mock.Mock(return_value=int_to_bytes(value))
+        _get_context_db(score_db).get = mock.Mock(return_value=value)
         _get_context_db(score_db).delete = mock.Mock()
 
-        test_dict['aaaa']['bbbb']['cccc']['dddd'] = value
+        test_dict[key1][key2][key3][key4] = value
 
-        expected_key = b'|'.join((
-            score_db.address.to_bytes(),
-            DICT_DB_ID,
-            name.encode(),
-            DICT_DB_ID,
-            'aaaa'.encode(),
-            DICT_DB_ID,
-            'bbbb'.encode(),
-            DICT_DB_ID,
-            'cccc'.encode(),
-            'dddd'.encode()
-        ))
-        args, _ = _get_context_db(score_db).put.call_args
-        assert expected_key == args[1]
-
-        ret = test_dict['aaaa']['bbbb']['cccc']['dddd']
-        args, _ = _get_context_db(score_db).get.call_args
-        assert expected_key == args[1]
-
-        del test_dict['aaaa']['bbbb']['cccc']['dddd']
-        args, _ = _get_context_db(score_db).get.call_args
-        assert expected_key == args[1]
-
-    def test_dict_db_check_prefix_v2(self, score_db):
-        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
-
-        name = 'test_dict'
-        depth = 4
-        value = 1
-        test_dict = DictDB(name, score_db, value_type=int, depth=depth)
-
-        def _get_context_db(score_db):
-            return score_db._db._score_db._context_db
-
-        _get_context_db(score_db).put = mock.Mock()
-        _get_context_db(score_db).get = mock.Mock(return_value=int_to_bytes(value))
-        _get_context_db(score_db).delete = mock.Mock()
-
-        test_dict['aaaa']['bbbb']['cccc']['dddd'] = 1
-
-        expected_key = b''.join((
-            score_db.address.to_bytes(),
-            DICT_DB_ID,
-            KeyElement._rlp_encode_bytes(name.encode()),
-            KeyElement._rlp_encode_bytes('aaaa'.encode()),
-            KeyElement._rlp_encode_bytes('bbbb'.encode()),
-            KeyElement._rlp_encode_bytes('cccc'.encode()),
-            KeyElement._rlp_encode_bytes('dddd'.encode())
-        ))
         args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
-
-        ret = test_dict['aaaa']['bbbb']['cccc']['dddd']
+        assert args[1] == expected
+        ret = test_dict[key1][key2][key3][key4]
         args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
-
-        del test_dict['aaaa']['bbbb']['cccc']['dddd']
+        assert args[1] == expected
+        del test_dict[key1][key2][key3][key4]
         args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
+        assert args[1] == expected
 
-    def test_array_db_check_prefix_v1(self, score_db):
-        name = 'test_array'
+    @pytest.mark.parametrize(
+        "is_v2,expected1,expected2",
+        [
+            (
+                    False,
+                    b'|'.join(
+                        (
+                                b'sub1',
+                                b'sub2',
+                                b'sub3',
+                                b'sub4',
+                                ARRAY_DB_ID,
+                                b'test_array',
+                                int_to_bytes(0)
+                        )
+                    ),
+                    b'|'.join(
+                        (
+                                b'sub1',
+                                b'sub2',
+                                b'sub3',
+                                b'sub4',
+                                ARRAY_DB_ID,
+                                b'test_array',
+                                b'size'
+                        )
+                    )
+            ),
+            (
+                    True,
+                    b''.join(
+                        (
+                                ARRAY_DB_ID,
+                                KeyElement._rlp_encode_bytes(b'test_array'),
+                                KeyElement._rlp_encode_bytes(b'sub1'),
+                                KeyElement._rlp_encode_bytes(b'sub2'),
+                                KeyElement._rlp_encode_bytes(b'sub3'),
+                                KeyElement._rlp_encode_bytes(b'sub4'),
+                                KeyElement._rlp_encode_bytes(int_to_bytes(0))
+                        )
+                    ),
+                    b''.join(
+                        (
+                                ARRAY_DB_ID,
+                                KeyElement._rlp_encode_bytes(b'test_array'),
+                                KeyElement._rlp_encode_bytes(b'sub1'),
+                                KeyElement._rlp_encode_bytes(b'sub2'),
+                                KeyElement._rlp_encode_bytes(b'sub3'),
+                                KeyElement._rlp_encode_bytes(b'sub4'),
+                                KeyElement._rlp_encode_bytes(b'')
+                        )
+                    )
+            )
+        ]
+    )
+    def test_array_db_check_prefix(self, score_db, is_v2, expected1, expected2):
+        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=is_v2)
+
+        if is_v2:
+            sep: bytes = b''
+        else:
+            sep: bytes = b'|'
+        expected1: bytes = sep.join((score_db.address.to_bytes(), expected1))
+        expected2: bytes = sep.join((score_db.address.to_bytes(), expected2))
+
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
+
+        name = b'test_array'
         depth = 1
-        value = 1
-        size = 0
-        test_array = ArrayDB(name, score_db, value_type=int, depth=depth)
+        value = b'value'
+
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_array = ArrayDB(name, sub_db, value_type=bytes, depth=depth)
 
         def _get_context_db(score_db):
             return score_db._db._score_db._context_db
@@ -414,84 +490,56 @@ class TestIconContainerDB:
 
         test_array.put(value)
 
-        expected_key = b'|'.join((
-            score_db.address.to_bytes(),
-            ARRAY_DB_ID,
-            name.encode(),
-            int_to_bytes(size)
-        ))
         args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
+        assert args[1] == expected1
 
-        expected_key = b'|'.join((
-            score_db.address.to_bytes(),
-            ARRAY_DB_ID,
-            name.encode(),
-            b'size'
-        ))
         args, _ = _get_context_db(score_db).put.call_args_list[1]
-        assert expected_key == args[1]
+        assert args[1] == expected2
 
-    def test_array_db_check_prefix_v2(self, score_db):
-        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
 
-        name = 'test_array'
-        depth = 1
-        value = 1
-        size = 0
-        test_array = ArrayDB(name, score_db, value_type=int, depth=depth)
+    @pytest.mark.parametrize(
+        "is_v2,expected",
+        [
+            (False, b'|'.join((
+                    b'sub1',
+                    b'sub2',
+                    b'sub3',
+                    b'sub4',
+                    VAR_DB_ID,
+                    b'test_var',
+            ))),
+            (True, b''.join((
+                    VAR_DB_ID,
+                    KeyElement._rlp_encode_bytes(b'test_var'),
+                    KeyElement._rlp_encode_bytes(b'sub1'),
+                    KeyElement._rlp_encode_bytes(b'sub2'),
+                    KeyElement._rlp_encode_bytes(b'sub3'),
+                    KeyElement._rlp_encode_bytes(b'sub4'),
+            ))),
+        ]
+    )
+    def test_var_db_check_prefix(self, score_db, is_v2, expected):
+        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=is_v2)
 
-        def _get_context_db(score_db):
-            return score_db._db._score_db._context_db
+        if is_v2:
+            sep: bytes = b''
+        else:
+            sep: bytes = b'|'
+        expected: bytes = sep.join((score_db.address.to_bytes(), expected))
 
-        _get_context_db(score_db).put = mock.Mock()
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
 
-        test_array.put(value)
+        name = b'test_var'
+        value = b'value'
 
-        expected_key = b''.join((
-            score_db.address.to_bytes(),
-            ARRAY_DB_ID,
-            KeyElement._rlp_encode_bytes(name.encode()),
-            KeyElement._rlp_encode_bytes(int_to_bytes(size))
-        ))
-        args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
-
-        expected_key = b''.join((
-            score_db.address.to_bytes(),
-            ARRAY_DB_ID,
-            KeyElement._rlp_encode_bytes(name.encode()),
-            KeyElement._rlp_encode_bytes(b''),
-        ))
-        args, _ = _get_context_db(score_db).put.call_args_list[1]
-        assert expected_key == args[1]
-
-    def test_var_db_check_prefix_v1(self, score_db):
-        name = 'test_var'
-        value = 1
-        test_var = VarDB(name, score_db, value_type=int)
-
-        def _get_context_db(score_db):
-            return score_db._db._score_db._context_db
-
-        _get_context_db(score_db).put = mock.Mock()
-
-        test_var.set(value)
-
-        expected_key = b'|'.join((
-            score_db.address.to_bytes(),
-            VAR_DB_ID,
-            name.encode()
-        ))
-        args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
-
-    def test_var_db_check_prefix_v2(self, score_db):
-        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
-
-        name = 'test_var'
-        value = 1
-        test_var = VarDB(name, score_db, value_type=int)
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_var = VarDB(name, sub_db, value_type=bytes)
 
         def _get_context_db(score_db):
             return score_db._db._score_db._context_db
@@ -500,160 +548,205 @@ class TestIconContainerDB:
 
         test_var.set(value)
 
-        expected_key = b''.join((
-            score_db.address.to_bytes(),
-            VAR_DB_ID,
-            KeyElement._rlp_encode_bytes(name.encode())
-        ))
         args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert expected_key == args[1]
+        assert args[1] == expected
 
-    def test_sub_var_db_check_prefix_v1(self, score_db):
-        sub_prefix = b'sub'
-        sub_db = score_db.get_sub_db(sub_prefix)
+    @pytest.mark.parametrize(
+        "is_v2,expected",
+        [
+            (False, b'|'.join((
+                    b'sub1',
+                    b'sub2',
+                    b'sub3',
+                    b'sub4',
+                    b'key',
+            ))),
+            (True, b''.join((
+                    KeyElement._rlp_encode_bytes(b'sub1'),
+                    KeyElement._rlp_encode_bytes(b'sub2'),
+                    KeyElement._rlp_encode_bytes(b'sub3'),
+                    KeyElement._rlp_encode_bytes(b'sub4'),
+                    KeyElement._rlp_encode_bytes(b'key'),
+            ))),
+        ]
+    )
+    def test_sub_db_check_prefix(self, score_db, is_v2, expected):
+        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=is_v2)
 
-        name = 'test_var'
-        value = 1
-        test_var = VarDB(name, sub_db, value_type=int)
+        if is_v2:
+            sep: bytes = b''
+        else:
+            sep: bytes = b'|'
+        expected: bytes = sep.join((score_db.address.to_bytes(), expected))
+
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
+
+        key = b'key'
+        value = b'value'
+
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
 
         def _get_context_db(score_db):
             return score_db._db._score_db._context_db
 
         _get_context_db(score_db).put = mock.Mock()
 
-        test_var.set(value)
+        sub_db.put(key, value)
 
-        expected_key = b'|'.join((
-            score_db.address.to_bytes(),
-            sub_prefix,
-            VAR_DB_ID,
-            name.encode()
-        ))
         args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert args[1] == expected_key
-
-    def test_sub_var_db_check_prefix_v2(self, score_db):
-        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
-
-        sub_prefix = b'sub'
-        sub_db = score_db.get_sub_db(sub_prefix)
-
-        name = 'test_var'
-        value = 1
-        test_var = VarDB(name, sub_db, value_type=int)
-
-        def _get_context_db(score_db):
-            return score_db._db._score_db._context_db
-
-        _get_context_db(score_db).put = mock.Mock()
-
-        test_var.set(value)
-
-        expected_key = b''.join((
-            score_db.address.to_bytes(),
-            VAR_DB_ID,
-            KeyElement._rlp_encode_bytes(CUSTOM_DB_ID),
-            KeyElement._rlp_encode_bytes(sub_prefix),
-            KeyElement._rlp_encode_bytes(name.encode())
-        ))
-        args, _ = _get_context_db(score_db).put.call_args_list[0]
-        assert args[1] == expected_key
+        assert args[1] == expected
 
     def test_dict_db_migration(self, score_db):
-        name = 'test'
-        key1 = "aaaa"
-        key2 = "bbbb"
-        key3 = "cccc"
-        key4 = "dddd"
-        value = 1
+
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
+
+        name = b'test'
+        key1 = b'aaaa'
+        key2 = b'bbbb'
+        key3 = b'cccc'
+        key4 = b'dddd'
+        value = b'value'
         depth = 4
 
-        test_db = DictDB(name, score_db, value_type=int, depth=depth)
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_db = DictDB(name, sub_db, value_type=bytes, depth=depth)
         test_db[key1][key2][key3][key4] = value
         assert value == test_db[key1][key2][key3][key4]
 
         type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
 
-        test_db = DictDB(name, score_db, value_type=int, depth=depth)
+        test_db = DictDB(name, sub_db, value_type=bytes, depth=depth)
         assert value == test_db[key1][key2][key3][key4]
 
     def test_array_db_migration(self, score_db):
-        name = 'test'
-        value = 1
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
 
-        test_db = ArrayDB(name, score_db, value_type=int)
+        name = b'test'
+        value = b'value'
+
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_db = ArrayDB(name, sub_db, value_type=bytes)
         test_db.put(value)
         assert value == test_db[0]
 
         type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
 
-        test_db = ArrayDB(name, score_db, value_type=int)
+        test_db = ArrayDB(name, sub_db, value_type=bytes)
         assert value == test_db[0]
 
     def test_var_db_migration(self, score_db):
-        name = 'test'
-        value = 1
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
 
-        test_db = VarDB(name, score_db, value_type=int)
+        name = b'test'
+        value = b'value'
+
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_db = VarDB(name, sub_db, value_type=bytes)
         test_db.set(value)
         assert value == test_db.get()
 
         type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
 
-        test_db = VarDB(name, score_db, value_type=int)
+        test_db = VarDB(name, sub_db, value_type=bytes)
         assert value == test_db.get()
 
-    def test_sub_var_db_migration(self, score_db):
-        name = 'test'
-        value = 1
+    def test_sub_db_migration(self, score_db):
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
 
-        sub_db = score_db.get_sub_db(b'sub')
-        test_db = VarDB(name, sub_db, value_type=int)
-        test_db.set(value)
-        assert value == test_db.get()
+        key = b'key'
+        value = b'value'
 
-        type(sub_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        sub_db.put(key, value)
+        assert value == sub_db.get(key)
 
-        test_db = VarDB(name, sub_db, value_type=int)
-        assert value == test_db.get()
+        type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
 
-    def test_conplict_container_db(self, score_db):
+        assert value == sub_db.get(key)
+
+    def test_conflict_container_db(self, score_db):
         type(score_db._db._score_db)._is_v2 = PropertyMock(return_value=True)
         def _get_context_db(score_db):
             return score_db._db._score_db._context_db
         _get_context_db(score_db).put = mock.Mock()
 
-        name: str = "test"
+        sub1 = b'sub1'
+        sub2 = b'sub2'
+        sub3 = b'sub3'
+        sub4 = b'sub4'
+
+        name: bytes = b'test'
+        key1 = b'aaaa'
+        key2 = b'bbbb'
+        key3 = b'cccc'
+        key4 = b'dddd'
+        value = b'value'
         depth: int = 4
 
-        test_dict = DictDB(key=name, db=score_db, value_type=int, depth=depth)
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        test_dict = DictDB(key=name, db=sub_db, value_type=bytes, depth=depth)
 
-        level_keys = [
-            "aaaa",
-            "bbbb",
-            "cccc",
-            "dddd"
-        ]
-        test_dict[level_keys[0]][level_keys[1]][level_keys[2]][level_keys[3]] = 1
+        test_dict[key1][key2][key3][key4] = value
 
-        expected_key = b''.join(
+        expected = b''.join(
             (
                 score_db.address.to_bytes(),
                 DICT_DB_ID,
-                KeyElement._rlp_encode_bytes(name.encode()),
-                KeyElement._rlp_encode_bytes(level_keys[0].encode()),
-                KeyElement._rlp_encode_bytes(level_keys[1].encode()),
-                KeyElement._rlp_encode_bytes(level_keys[2].encode()),
-                KeyElement._rlp_encode_bytes(level_keys[3].encode())
+                KeyElement._rlp_encode_bytes(name),
+                KeyElement._rlp_encode_bytes(sub1),
+                KeyElement._rlp_encode_bytes(sub2),
+                KeyElement._rlp_encode_bytes(sub3),
+                KeyElement._rlp_encode_bytes(sub4),
+                KeyElement._rlp_encode_bytes(key1),
+                KeyElement._rlp_encode_bytes(key2),
+                KeyElement._rlp_encode_bytes(key3),
+                KeyElement._rlp_encode_bytes(key4)
             )
         )
         args, _ = _get_context_db(score_db).put.call_args_list[0]
         final_key1 = args[1]
-        assert expected_key == final_key1
+        assert final_key1 == expected
 
-        name_db = score_db.get_sub_db(prefix=name.encode())
-        depth_3_dict_db = DictDB(key=level_keys[0], db=name_db, value_type=int, depth=3)
-        depth_3_dict_db[level_keys[1]][level_keys[2]][level_keys[3]] = 2
+        sub_db = score_db.get_sub_db(sub1)
+        sub_db = sub_db.get_sub_db(sub2)
+        sub_db = sub_db.get_sub_db(sub3)
+        sub_db = sub_db.get_sub_db(sub4)
+        name_db = sub_db.get_sub_db(prefix=name)
+        depth_3_dict_db = DictDB(key=key1, db=name_db, value_type=bytes, depth=3)
+        depth_3_dict_db[key2][key3][key4] = 2
         args, _ = _get_context_db(score_db).put.call_args_list[1]
         final_key2 = args[1]
-        assert expected_key != final_key2
+        assert final_key2 != expected

@@ -26,7 +26,7 @@ from ..database.score_db.utils import (
     VAR_DB_ID,
     K, V,
     KeyElement,
-    KeyElementState
+    KeyElementState,
 )
 from ..icon_constant import IconScoreContextType, Revision
 
@@ -34,36 +34,42 @@ if TYPE_CHECKING:
     from ..database.db import ScoreSubDatabase
 
 
-def make_constructor_key_element(
-        keys: List[K],
-        container_id: bytes,
-) -> 'KeyElement':
-    return _make_encoded_key_element_in_container_db(
-        keys=keys,
-        container_id=container_id,
-        state=KeyElementState.IS_CONTAINER | KeyElementState.IS_CONSTRUCTOR
-    )
+def make_sub_db(db: 'IconScoreDatabase', key: K, tag: bytes) -> 'ScoreSubDatabase':
+    ke: 'KeyElement' = _make_constructor_key_element(keys=[key], tag=tag)
+    score_sub_db: 'ScoreSubDatabase' = db._db
+    return score_sub_db.get_sub_db(key=ke)
 
 
 def make_key_element(
         keys: List[K],
-        container_id: bytes,
+        tag: bytes,
 ) -> 'KeyElement':
     return _make_encoded_key_element_in_container_db(
         keys=keys,
-        container_id=container_id,
+        tag=tag,
         state=KeyElementState.IS_CONTAINER
+    )
+
+
+def _make_constructor_key_element(
+        keys: List[K],
+        tag: bytes,
+) -> 'KeyElement':
+    return _make_encoded_key_element_in_container_db(
+        keys=keys,
+        tag=tag,
+        state=KeyElementState.IS_CONTAINER | KeyElementState.IS_CONSTRUCTOR
     )
 
 
 def _make_encoded_key_element_in_container_db(
         keys: List[K],
-        container_id: bytes,
+        tag: bytes,
         state: 'KeyElementState'
 ) -> 'KeyElement':
     return KeyElement(
         keys=[Utils.encode_key(k) for k in keys],
-        container_id=container_id,
+        tag=tag,
         state=state
     )
 
@@ -87,13 +93,7 @@ class DictDB:
     ):
         self.__value_type: type = value_type
         self.__depth: int = depth
-
-        ke: 'KeyElement' = make_constructor_key_element(
-            keys=[key],
-            container_id=DICT_DB_ID,
-        )
-        score_sub_db: 'ScoreSubDatabase' = db._db
-        self._db: 'ScoreSubDatabase' = score_sub_db.get_sub_db(key=ke)
+        self._db: 'ScoreSubDatabase' = make_sub_db(db=db, key=key, tag=DICT_DB_ID)
 
     def remove(self, key: K):
         self._remove(key)
@@ -104,7 +104,7 @@ class DictDB:
 
         ke: 'KeyElement' = make_key_element(
             keys=[key],
-            container_id=DICT_DB_ID,
+            tag=DICT_DB_ID,
         )
         self._db.delete(key=ke)
 
@@ -114,7 +114,7 @@ class DictDB:
 
         ke: 'KeyElement' = make_key_element(
             keys=[key],
-            container_id=DICT_DB_ID,
+            tag=DICT_DB_ID,
         )
         value: bytes = Utils.encode_value(value)
         self._db.put(key=ke, value=value)
@@ -123,14 +123,14 @@ class DictDB:
         if not self._is_leaf:
             return DictDB(
                 key=key,
-                db=IconScoreDatabase(db=self._db, is_container_db=True),
+                db=IconScoreDatabase(db=self._db),
                 value_type=self.__value_type,
                 depth=self.__depth - 1
             )
 
         ke: 'KeyElement' = make_key_element(
             keys=[key],
-            container_id=DICT_DB_ID,
+            tag=DICT_DB_ID,
         )
         value: bytes = self._db.get(key=ke)
         return Utils.decode_object(value, self.__value_type)
@@ -141,7 +141,7 @@ class DictDB:
     def __contains__(self, key: K) -> bool:
         ke: 'KeyElement' = make_key_element(
             keys=[key],
-            container_id=DICT_DB_ID,
+            tag=DICT_DB_ID,
         )
         value: bytes = self._db.get(key=ke)
         return value is not None
@@ -173,14 +173,7 @@ class ArrayDB:
         self.__value_type = value_type
         self.__depth = depth
 
-        ke: 'KeyElement' = make_constructor_key_element(
-            keys=[key],
-            container_id=ARRAY_DB_ID,
-        )
-
-        score_sub_db: 'ScoreSubDatabase' = db._db
-        self._db: 'ScoreSubDatabase' = score_sub_db.get_sub_db(key=ke)
-
+        self._db: 'ScoreSubDatabase' = make_sub_db(db=db, key=key, tag=ARRAY_DB_ID)
         self.__legacy_size: int = self.__get_size_from_db()
 
     @property
@@ -211,7 +204,7 @@ class ArrayDB:
         if not self._is_leaf:
             return ArrayDB(
                 key=index,
-                db=IconScoreDatabase(db=self._db, is_container_db=True),
+                db=IconScoreDatabase(db=self._db),
                 value_type=self.__value_type,
                 depth=self.__depth - 1
             )
@@ -243,7 +236,7 @@ class ArrayDB:
 
         ke: 'KeyElement' = make_key_element(
             keys=[index],
-            container_id=ARRAY_DB_ID,
+            tag=ARRAY_DB_ID,
         )
         self._db.delete(key=ke)
         self.__set_size(index)
@@ -263,7 +256,7 @@ class ArrayDB:
     def __put(self, index: int, value: V):
         ke: 'KeyElement' = make_key_element(
             keys=[index],
-            container_id=ARRAY_DB_ID,
+            tag=ARRAY_DB_ID,
         )
         value = Utils.encode_value(value)
         self._db.put(key=ke, value=value)
@@ -333,7 +326,7 @@ class ArrayDB:
         if 0 <= index < size:
             ke: 'KeyElement' = make_key_element(
                 keys=[index],
-                container_id=ARRAY_DB_ID,
+                tag=ARRAY_DB_ID,
             )
             value: bytes = db.get(key=ke)
             return Utils.decode_object(value, value_type)
@@ -353,7 +346,7 @@ class ArrayDB:
     def _get_size_key(cls) -> 'KeyElement':
         return make_key_element(
             keys=[b'', b'size'],
-            container_id=ARRAY_DB_ID,
+            tag=ARRAY_DB_ID,
         )
 
     def __get_size(self) -> int:
@@ -384,13 +377,8 @@ class VarDB:
             db: Union['IconScoreDatabase'],
             value_type: type
     ):
-        # Use var_key as a db prefix in the case of VarDB
-
-        self.__key = var_key
         self.__value_type = value_type
-
-        score_sub_db: 'ScoreSubDatabase' = db._db
-        self._db: 'ScoreSubDatabase' = score_sub_db
+        self._db: 'ScoreSubDatabase' = make_sub_db(db=db, key=var_key, tag=VAR_DB_ID)
 
     def set(self, value: V):
         """
@@ -398,10 +386,9 @@ class VarDB:
 
         :param value: a value to be set
         """
-        ke: 'KeyElement' = self._get_key()
         value: bytes = Utils.encode_value(value=value)
         self._db.put(
-            key=ke,
+            key=None,
             value=value,
         )
 
@@ -411,24 +398,16 @@ class VarDB:
 
         :return: value of the var db
         """
-        ke: 'KeyElement' = self._get_key()
         value: bytes = self._db.get(
-            key=ke,
+            key=None,
         )
-
         return Utils.decode_object(value, self.__value_type)
 
     def remove(self):
         """
         Deletes the value
         """
-        ke: 'KeyElement' = self._get_key()
         self._db.delete(
-            key=ke,
+            key=None,
         )
 
-    def _get_key(self) -> 'KeyElement':
-        return make_constructor_key_element(
-            keys=[self.__key],
-            container_id=VAR_DB_ID,
-        )
