@@ -633,3 +633,147 @@ class TestIntegratePrep(TestIISSBase):
                                        func_name=method,
                                        params=params)
         return self.process_confirm_block_tx([tx], expected_status=expected_status)
+
+    def test_get_preps_normal(self):
+        self.init_decentralized()
+
+        start_ranking = 1
+        end_ranking = 10
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": SYSTEM_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": PRepMethod.GET_PREPS,
+                "params": {
+                    "startRanking": hex(start_ranking),
+                    "endRanking": hex(end_ranking),
+                }
+            }
+        }
+        ret = self._query(query_request)
+        self.assertEqual(start_ranking, ret["startRanking"])
+        self.assertEqual(end_ranking, len(ret["preps"]))
+
+    def test_get_preps_over_end_ranking(self):
+        self.init_decentralized()
+
+        start_ranking = 1
+        end_ranking = 10000
+        expected_prep_count = 22
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": SYSTEM_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": PRepMethod.GET_PREPS,
+                "params": {
+                    "startRanking": hex(start_ranking),
+                    "endRanking": hex(end_ranking),
+                }
+            }
+        }
+        ret = self._query(query_request)
+        self.assertEqual(start_ranking, ret["startRanking"])
+        self.assertEqual(expected_prep_count, len(ret["preps"]))
+
+    def test_get_preps_raise_start_zero(self):
+        self.init_decentralized()
+
+        start_ranking = 0
+        end_ranking = 10
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": SYSTEM_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": PRepMethod.GET_PREPS,
+                "params": {
+                    "startRanking": hex(start_ranking),
+                    "endRanking": hex(end_ranking),
+                }
+            }
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            self._query(query_request)
+
+        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
+
+    def test_get_preps_raise_end_zero(self):
+        self.init_decentralized()
+
+        end_ranking = 0
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": SYSTEM_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": PRepMethod.GET_PREPS,
+                "params": {
+                    "endRanking": hex(end_ranking),
+                }
+            }
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            self._query(query_request)
+
+        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking(1), endRanking({end_ranking})")
+
+    def test_get_preps_raise_reverse(self):
+        self.init_decentralized()
+
+        start_ranking = 10
+        end_ranking = 2
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": SYSTEM_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": PRepMethod.GET_PREPS,
+                "params": {
+                    "startRanking": hex(start_ranking),
+                    "endRanking": hex(end_ranking),
+                }
+            }
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            self._query(query_request)
+
+        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
+
+    def test_get_preps_raise_only_one(self):
+        self.init_decentralized()
+
+        start_ranking = 10
+        end_ranking = 10
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": SYSTEM_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": PRepMethod.GET_PREPS,
+                "params": {
+                    "startRanking": hex(start_ranking),
+                    "endRanking": hex(end_ranking),
+                }
+            }
+        }
+
+        ret = self._query(query_request)
+        self.assertEqual(start_ranking, ret["startRanking"])
+        self.assertEqual(1, len(ret["preps"]))
