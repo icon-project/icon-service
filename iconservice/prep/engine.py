@@ -916,7 +916,7 @@ class Engine(EngineBase, IISSEngineListener):
             endRanking = prep_count
 
         if prep_count > 0:
-            if startRanking < 1 or endRanking < 1 or startRanking - 1 >= endRanking:
+            if startRanking < 1 or startRanking > endRanking:
                 raise InvalidParamsException(
                     f"Invalid ranking: startRanking({startRanking}), endRanking({endRanking})")
 
