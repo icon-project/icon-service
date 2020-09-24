@@ -911,22 +911,27 @@ class Engine(EngineBase, IISSEngineListener):
         prep_list: list = []
 
         if startRanking is None:
-            startRanking = 1
+            start_ranking = 1
+        else:
+            start_ranking = startRanking
+
         if endRanking is None or endRanking > prep_count:
-            endRanking = prep_count
+            end_ranking = prep_count
+        else:
+            end_ranking = endRanking
 
         if prep_count > 0:
-            if startRanking < 1 or startRanking > endRanking:
+            if start_ranking < 1 or start_ranking > end_ranking:
                 raise InvalidParamsException(
                     f"Invalid ranking: startRanking({startRanking}), endRanking({endRanking})")
 
-            for i in range(startRanking - 1, endRanking):
+            for i in range(start_ranking - 1, end_ranking):
                 prep: 'PRep' = preps.get_by_index(i)
                 prep_list.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
-            "startRanking": startRanking,
+            "startRanking": start_ranking,
             "totalDelegated": preps.total_delegated,
             "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
