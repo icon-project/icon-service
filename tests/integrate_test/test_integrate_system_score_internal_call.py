@@ -185,7 +185,7 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
         response = self.query_score(from_=self._accounts[0],
                                     to_=self.score_addr,
                                     func_name="call_getPReps",
-                                    params={"startRanking": hex(0), "endRanking": hex(0)})
+                                    params={"startRanking": hex(1), "endRanking": hex(100)})
         self.assertTrue("blockHeight" in response, response)
         self.assertTrue("startRanking" in response, response)
         self.assertTrue("totalDelegated" in response, response)

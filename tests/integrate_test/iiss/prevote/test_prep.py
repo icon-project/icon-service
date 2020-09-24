@@ -676,10 +676,9 @@ class TestIntegratePrep(TestIISSBase):
                 }
             }
         }
-        with self.assertRaises(InvalidParamsException) as e:
-            self._query(query_request)
-
-        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
+        ret = self._query(query_request)
+        self.assertEqual(start_ranking, ret["startRanking"])
+        self.assertEqual(0, len(ret["preps"]))
 
     def test_get_preps_over_end_ranking(self):
         self.init_decentralized()
@@ -751,7 +750,7 @@ class TestIntegratePrep(TestIISSBase):
         with self.assertRaises(InvalidParamsException) as e:
             self._query(query_request)
 
-        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking(None), endRanking({end_ranking})")
+        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking(1), endRanking({end_ranking})")
 
     def test_get_preps_raise_reverse(self):
         self.init_decentralized()
@@ -824,7 +823,10 @@ class TestIntegratePrep(TestIISSBase):
         with self.assertRaises(InvalidParamsException) as e:
             self._query(query_request)
 
-        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking({start_ranking}), endRanking(None)")
+        self.assertEqual(
+            e.exception.args[0],
+            f"Invalid ranking: startRanking({start_ranking}), endRanking({expected_prep_count})"
+        )
 
     def test_get_preps_negative_end(self):
         self.init_decentralized()
@@ -847,4 +849,4 @@ class TestIntegratePrep(TestIISSBase):
         with self.assertRaises(InvalidParamsException) as e:
             self._query(query_request)
 
-        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking(None), endRanking({end_ranking})")
+        self.assertEqual(e.exception.args[0], f"Invalid ranking: startRanking(1), endRanking({end_ranking})")

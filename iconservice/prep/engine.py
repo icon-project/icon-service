@@ -910,24 +910,25 @@ class Engine(EngineBase, IISSEngineListener):
         prep_count: int = preps.size(active_prep_only=True)
         prep_list: list = []
 
-        if startRanking is None:
-            start_ranking = 1
-        else:
-            start_ranking = startRanking
+        start_ranking = 1 if startRanking is None else startRanking
 
-        if endRanking is None or endRanking > prep_count:
-            end_ranking = prep_count
+        if endRanking is None:
+            end_ranking = max(start_ranking, prep_count)
         else:
             end_ranking = endRanking
 
-        if prep_count > 0:
-            if start_ranking < 1 or start_ranking > end_ranking:
-                raise InvalidParamsException(
-                    f"Invalid ranking: startRanking({startRanking}), endRanking({endRanking})")
+        if not self._verify_rankings(start_ranking, end_ranking):
+            raise InvalidParamsException(
+                f"Invalid ranking: startRanking({start_ranking}), "
+                f"endRanking({end_ranking})"
+            )
 
-            for i in range(start_ranking - 1, end_ranking):
-                prep: 'PRep' = preps.get_by_index(i)
-                prep_list.append(prep.to_dict(PRepDictType.FULL))
+        for i in range(start_ranking - 1, end_ranking):
+            if i >= prep_count:
+                break
+
+            prep: 'PRep' = preps.get_by_index(i)
+            prep_list.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
@@ -936,6 +937,13 @@ class Engine(EngineBase, IISSEngineListener):
             "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
         }
+
+    @classmethod
+    def _verify_rankings(cls, start_ranking: int, end_ranking: int) -> bool:
+        if not (isinstance(start_ranking, int) and isinstance(end_ranking, int)):
+            return False
+
+        return 0 < start_ranking <= end_ranking
 
     def handle_get_prep_term(self, context: 'IconScoreContext') -> dict:
         """Provides the information on the current term
