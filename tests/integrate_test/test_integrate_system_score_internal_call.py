@@ -227,15 +227,16 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
 
         account = self._accounts[0]
         value = 10 * ICX_IN_LOOP
+        old_total_supply: int = self.get_total_supply()
 
         self.transfer_icx(from_=self._admin, to_=account, value=value)
 
-        amount_to_burn = 5 * ICX_IN_LOOP
+        icx_to_burn = 5 * ICX_IN_LOOP
         tx_results = self.score_call(
             from_=account,
             to_=self.score_addr,
             func_name="call_burn",
-            value=amount_to_burn
+            value=icx_to_burn
         )
         tx_result = tx_results[0]
         self.assertTrue(tx_result.status == 1)
@@ -248,18 +249,18 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
                 "ICXTransfer(Address,Address,int)",
                 self.score_addr,
                 SYSTEM_SCORE_ADDRESS,
-                amount_to_burn,
+                icx_to_burn,
             ],
             event_log.indexed
         )
 
         event_log = tx_result.event_logs[1]
         self.assertEqual(
-            ["ICXBurnedV2(Address,int)", self.score_addr],
+            ["ICXBurnedV2(Address,int,int)", self.score_addr],
             event_log.indexed
         )
         self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
-        self.assertEqual([amount_to_burn], event_log.data)
+        self.assertEqual([icx_to_burn, old_total_supply - icx_to_burn], event_log.data)
 
 
 class TestIntegrateSystemScoreInternalCallWithInterface(TestIntegrateSystemScoreInternalCall):

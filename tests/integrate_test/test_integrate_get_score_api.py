@@ -619,6 +619,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "inputs": [
                     {"name": "address", "type": "Address", "indexed": True},
                     {"name": "amount", "type": "int"},
+                    {"name": "totalSupply", "type": "int"},
                 ]
             },
         ]

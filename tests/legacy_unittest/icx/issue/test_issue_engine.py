@@ -21,7 +21,7 @@ def context(request):
 @pytest.fixture(scope="function")
 def issue_engine(monkeypatch):
     issue_engine: 'IssueEngine' = IssueEngine()
-    monkeypatch.setattr(IssueEngine, "_burn", Mock())
+    monkeypatch.setattr(IssueEngine, "_burn", Mock(return_value=1000))
     yield issue_engine
     monkeypatch.undo()
 
@@ -37,7 +37,8 @@ class TestIssueEngine:
 
     def test_burn_event_log(self, context, issue_engine):
         address: 'Address' = create_address()
-        amount: int = 10
+        amount = 10
+        total_supply = 1000
         expected_score_address: 'Address' = ZERO_SCORE_ADDRESS
 
         if context.revision < Revision.FIX_BURN_EVENT_SIGNATURE.value:
@@ -45,23 +46,25 @@ class TestIssueEngine:
         elif context.revision < Revision.BURN_V2_ENABLED.value:
             expected_signature: str = "ICXBurned(int)"
         else:
-            expected_signature: str = "ICXBurnedV2(Address,int)"
+            expected_signature: str = "ICXBurnedV2(Address,int,int)"
 
         if context.revision < Revision.BURN_V2_ENABLED.value:
             expected_arguments: list = [amount]
             expected_indexed_args_count: int = 0
         else:
-            expected_arguments: list = [address, amount]
+            expected_arguments: list = [address, amount, total_supply]
             expected_indexed_args_count: int = 1
 
         issue_engine.burn(context, address, amount)
 
         issue_engine._burn.assert_called_with(context, address, amount)
-        EventLogEmitter.emit_event_log.assert_called_with(context,
-                                                          score_address=expected_score_address,
-                                                          event_signature=expected_signature,
-                                                          arguments=expected_arguments,
-                                                          indexed_args_count=expected_indexed_args_count)
+        EventLogEmitter.emit_event_log.assert_called_with(
+            context,
+            score_address=expected_score_address,
+            event_signature=expected_signature,
+            arguments=expected_arguments,
+            indexed_args_count=expected_indexed_args_count
+        )
 
     def test_burn_0_amount(self, context, issue_engine):
         address: Address = create_address()

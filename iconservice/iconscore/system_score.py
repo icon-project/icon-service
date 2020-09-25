@@ -62,7 +62,7 @@ class SystemScore(IconScoreBase):
         pass
 
     @eventlog(indexed=1)
-    def ICXBurnedV2(self, address: Address, amount: int):
+    def ICXBurnedV2(self, address: Address, amount: int, totalSupply: int):
         pass
 
     def __init__(self, db: 'IconScoreDatabase') -> None:

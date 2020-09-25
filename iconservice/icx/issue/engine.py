@@ -21,7 +21,11 @@ from .issue_formula import IssueFormula
 from .regulator import Regulator
 from ... import SYSTEM_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
-from ...base.exception import OutOfBalanceException, InvalidParamsException
+from ...base.exception import (
+    OutOfBalanceException,
+    InvalidParamsException,
+    InternalServiceErrorException,
+)
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, ICX_LOG_TAG, Revision
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
@@ -109,20 +113,39 @@ class Engine(EngineBase):
                                        indexed_args_count=0)
 
     @staticmethod
-    def _burn(context: 'IconScoreContext', address: 'Address', amount: int):
+    def _burn(context: 'IconScoreContext', address: 'Address', amount: int) -> int:
         if context.revision >= Revision.BURN_V2_ENABLED.value:
             address = SYSTEM_SCORE_ADDRESS
 
         account: 'Account' = context.storage.icx.get_account(context, address)
         if account.balance < amount:
-            raise OutOfBalanceException(f'Not enough ICX to Burn: '
-                                        f'balance({account.balance}) < intended burn amount({amount})')
+            raise OutOfBalanceException(
+                f'Not enough icx to burn: '
+                f'balance({account.balance}) < icx_to_burn({amount})'
+            )
+
+        old_total_supply: int = context.storage.icx.get_total_supply(context)
+        new_total_supply = old_total_supply - amount
+        if new_total_supply < 0:
+            raise InternalServiceErrorException(
+                "Failed to burn icx: "
+                f"total_supply({old_total_supply}) < icx_to_burn({amount})"
+            )
 
         account.withdraw(amount)
-        current_total_supply = context.storage.icx.get_total_supply(context)
-
         context.storage.icx.put_account(context, account)
-        context.storage.icx.put_total_supply(context, current_total_supply - amount)
+        context.storage.icx.put_total_supply(context, new_total_supply)
+
+        # Verify whether total_supply decreased by amount
+        total_supply: int = context.storage.icx.get_total_supply(context)
+        if total_supply != new_total_supply:
+            raise InternalServiceErrorException(
+                f"Failed to burn icx: new_total_supply={total_supply} "
+                f"old_total_supply={old_total_supply} "
+                f"icx_to_burn={amount}"
+            )
+
+        return new_total_supply
 
     def burn(self, context: 'IconScoreContext', address: 'Address', amount: int):
         """
@@ -137,12 +160,12 @@ class Engine(EngineBase):
         if revision >= Revision.BURN_V2_ENABLED.value and amount <= 0:
             raise InvalidParamsException(f"Invalid amount: {amount}")
 
-        self._burn(context, address, amount)
-        self._log_burn_event(context, address, amount)
+        new_total_supply: int = self._burn(context, address, amount)
+        self._log_burn_event(context, address, amount, new_total_supply)
 
     @staticmethod
     def _log_burn_event(
-            context: 'IconScoreContext', address: 'Address', amount: int):
+            context: 'IconScoreContext', address: 'Address', amount: int, new_total_supply: int):
         revision = context.revision
 
         # Event signature
@@ -151,14 +174,17 @@ class Engine(EngineBase):
         elif revision < Revision.BURN_V2_ENABLED.value:
             event_sig = "ICXBurned(int)"
         else:
-            event_sig = "ICXBurnedV2(Address,int)"
+            # 0: Who burns ICX
+            # 1: The amount of ICX to burn
+            # 2: New total supply
+            event_sig = "ICXBurnedV2(Address,int,int)"
 
         # Arguments
         if revision < Revision.BURN_V2_ENABLED.value:
             arguments = [amount]
             indexed_args_count = 0
         else:
-            arguments = [address, amount]
+            arguments = [address, amount, new_total_supply]
             indexed_args_count = 1
 
         # Log event

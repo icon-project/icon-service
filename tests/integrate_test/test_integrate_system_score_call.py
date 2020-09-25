@@ -102,6 +102,8 @@ class TestIntegrateSystemScoreCall(TestIISSBase):
         self.assertEqual(1, tx_result.status)
         self.assertEqual(1, len(tx_result.event_logs))
 
+        new_total_supply: int = self.get_total_supply()
+
         # Check for the balance of sender
         fee: int = tx_result.step_price * tx_result.step_used
         expected_balance = old_sender_balance - fee - amount_to_burn
@@ -115,15 +117,14 @@ class TestIntegrateSystemScoreCall(TestIISSBase):
         # Check if ICXBurnedV2 event_log is recorded
         event_log = tx_result.event_logs[0]
         self.assertEqual(
-            ["ICXBurnedV2(Address,int)", sender],
+            ["ICXBurnedV2(Address,int,int)", sender],
             event_log.indexed
         )
-        self.assertEqual([amount_to_burn], event_log.data)
+        self.assertEqual([amount_to_burn, new_total_supply], event_log.data)
         self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
 
         # Check whether total_supply is reduced by amount_to_burn
-        total_supply: int = self.get_total_supply()
-        self.assertEqual(old_total_supply - amount_to_burn, total_supply)
+        self.assertEqual(old_total_supply - amount_to_burn, new_total_supply)
 
         # Check whether fee is transferred to treasury_address
         treasury_balance: int = self.get_balance(treasury_address)
@@ -135,13 +136,14 @@ class TestIntegrateSystemScoreCall(TestIISSBase):
         sender = self._accounts[0].address
 
         # success case: If input 2000 ICX as value when calling 'registerPRep' method, should be registered successfully
-        icx_to_burn = 2_000 * ICX_IN_LOOP
+        prep_registration_fee: int = self._config[ConfigKey.PREP_REGISTRATION_FEE]
+        self.assertTrue(prep_registration_fee > 0)
         old_total_supply: int = self.get_total_supply()
 
         old_balance: int = self.get_balance(sender)
         tx_results: List['TransactionResult'] = self.register_prep(
             from_=sender,
-            value=self._config[ConfigKey.PREP_REGISTRATION_FEE]
+            value=prep_registration_fee
         )
 
         tx_result = tx_results[0]
@@ -150,11 +152,11 @@ class TestIntegrateSystemScoreCall(TestIISSBase):
         # Check for ICXBurnedV2 eventlog
         event_log = tx_result.event_logs[0]
         self.assertEqual(
-            ["ICXBurnedV2(Address,int)", sender],
+            ["ICXBurnedV2(Address,int,int)", sender],
             event_log.indexed
         )
         self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
-        self.assertEqual([icx_to_burn], event_log.data)
+        self.assertEqual([prep_registration_fee, old_total_supply - prep_registration_fee], event_log.data)
 
         # Check for PRepRegistered eventlog
         event_log = tx_result.event_logs[1]
@@ -165,7 +167,7 @@ class TestIntegrateSystemScoreCall(TestIISSBase):
         # Check for balance
         fee = tx_result.step_price * tx_result.step_used
         balance: int = self.get_balance(sender)
-        self.assertEqual(old_balance - icx_to_burn - fee, balance)
+        self.assertEqual(old_balance - prep_registration_fee - fee, balance)
 
         # Check for total_supply
-        self.assertEqual(old_total_supply - icx_to_burn, self.get_total_supply())
+        self.assertEqual(old_total_supply - prep_registration_fee, self.get_total_supply())
