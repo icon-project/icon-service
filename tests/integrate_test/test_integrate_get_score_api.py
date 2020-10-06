@@ -606,6 +606,22 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "outputs": [{"type": "{}"}],
                 "readonly": True,
             },
+            {
+                "type": "function",
+                "name": "burn",
+                "inputs": [],
+                "outputs": [],
+                "payable": True,
+            },
+            {
+                "type": "eventlog",
+                "name": "ICXBurnedV2",
+                "inputs": [
+                    {"name": "address", "type": "Address", "indexed": True},
+                    {"name": "amount", "type": "int"},
+                    {"name": "totalSupply", "type": "int"},
+                ]
+            },
         ]
 
         expected.sort(key=lambda x: x["name"])

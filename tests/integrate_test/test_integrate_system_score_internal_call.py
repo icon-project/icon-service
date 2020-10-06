@@ -36,7 +36,7 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
     In this test, only one success case per external method of System SCORE is checked
     through inter-call to confirm System SCORE inter-call functionality.
     """
-    use_interface : int = 0
+    use_interface: int = 0
 
     def setUp(self):
         super().setUp()
@@ -221,6 +221,46 @@ class TestIntegrateSystemScoreInternalCall(TestIISSBase):
                                     func_name="call_getScoreDepositInfo",
                                     params={"address": str(self.score_addr)})
         self.assertEqual(None, response)
+
+    def test_system_score_intercall_burn(self):
+        self.set_revision(Revision.BURN_V2_ENABLED.value)
+
+        account = self._accounts[0]
+        value = 10 * ICX_IN_LOOP
+        old_total_supply: int = self.get_total_supply()
+
+        self.transfer_icx(from_=self._admin, to_=account, value=value)
+
+        icx_to_burn = 5 * ICX_IN_LOOP
+        tx_results = self.score_call(
+            from_=account,
+            to_=self.score_addr,
+            func_name="call_burn",
+            value=icx_to_burn
+        )
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status == 1)
+        # ICXTransfer, ICXBurnedV2
+        self.assertEqual(2, len(tx_result.event_logs))
+
+        event_log = tx_result.event_logs[0]
+        self.assertEqual(
+            [
+                "ICXTransfer(Address,Address,int)",
+                self.score_addr,
+                SYSTEM_SCORE_ADDRESS,
+                icx_to_burn,
+            ],
+            event_log.indexed
+        )
+
+        event_log = tx_result.event_logs[1]
+        self.assertEqual(
+            ["ICXBurnedV2(Address,int,int)", self.score_addr],
+            event_log.indexed
+        )
+        self.assertEqual(SYSTEM_SCORE_ADDRESS, event_log.score_address)
+        self.assertEqual([icx_to_burn, old_total_supply - icx_to_burn], event_log.data)
 
 
 class TestIntegrateSystemScoreInternalCallWithInterface(TestIntegrateSystemScoreInternalCall):

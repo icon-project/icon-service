@@ -107,6 +107,9 @@ class TestIntegrateBase(TestCase):
     def get_block_height(self) -> int:
         return self._block_height
 
+    def get_treasury_address(self) -> 'Address':
+        return self._fee_treasury
+
     def mock_calculate(self, _path, _block_height):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
