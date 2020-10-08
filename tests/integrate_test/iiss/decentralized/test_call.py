@@ -14,33 +14,156 @@
 # limitations under the License.
 
 """Test for icon_score_base.py and icon_score_base2.py"""
+from typing import List
+
+from iconservice.base.address import SYSTEM_SCORE_ADDRESS
+from iconservice.base.exception import InvalidParamsException
+from iconservice.icon_constant import DataType
 from iconservice.icon_constant import ICX_IN_LOOP, Revision
+from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
-class TestIntegrateCall(TestIISSBase):
-    def test_invalid_eoa_call(self):
+class TestDataTypeInRequest(TestIISSBase):
+    def setUp(self):
+        super().setUp()
         self.init_decentralized()
         self.init_inv()
 
-        balance: int = 10 * ICX_IN_LOOP
         self.distribute_icx(
             accounts=self._accounts[:1],
-            init_balance=balance
+            init_balance=2000 * ICX_IN_LOOP
         )
 
-        self.score_call(
-            from_=self._accounts[0],
-            to_=self._accounts[1].address,
+    def test_success_on_legacy_mode(self):
+        _from = self._accounts[0]
+        _to = self._accounts[1]
+        value = 1 * ICX_IN_LOOP
+
+        old_from_balance: int = self.get_balance(_from)
+        self.assertTrue(old_from_balance > value)
+
+        self.assertTrue(not _to.address.is_contract)
+        old_to_balance: int = self.get_balance(_to)
+        self.assertTrue(old_to_balance >= 0)
+
+        tx_results: List['TransactionResult'] = self.score_call(
+            from_=_from,
+            to_=_to.address,
+            value=value,
             func_name="test",
         )
 
+        self.assertEqual(2, len(tx_results))
+        tx_result = tx_results[1]
+        self.assertEqual(1, tx_result.status)
+        fee: int = tx_result.step_used * tx_result.step_price
+        self.assertTrue(fee > 0)
+
+        self.assertEqual(old_from_balance - fee - value, self.get_balance(_from))
+        self.assertEqual(old_to_balance + value, self.get_balance(_to))
+
+    def test_validate_data_type(self):
         self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
 
-        self.score_call(
+        _from = self._accounts[0]
+        _to = SYSTEM_SCORE_ADDRESS
+        value = 1 * ICX_IN_LOOP
+
+        self.assertTrue(_to.is_contract)
+
+        tx = self.create_transfer_icx_tx(
+            from_=_from,
+            to_=_to,
+            value=value,
+            disable_pre_validate=True
+        )
+
+        self.icon_service_engine.validate_transaction(tx)
+
+        invalid_data_types = ("abc", 1, 1.1, b"call", b"deploy", b"deposit", b"message")
+        for data_type in invalid_data_types:
+            tx["params"]["dataType"] = data_type
+
+            with self.assertRaises(InvalidParamsException):
+                self.icon_service_engine.validate_transaction(tx)
+
+        for data_type in DataType._TYPES:
+            params = tx["params"]
+
+            if data_type:
+                params["dataType"] = data_type
+            if data_type == DataType.CALL:
+                params["data"] = {
+                    "method": "do"
+                }
+            else:
+                continue
+
+            self.icon_service_engine.validate_transaction(tx)
+
+    def test_invalid_score_call_failure_on_strict_pre_validation_mode(self):
+        self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
+
+        _from = self._accounts[0]
+        _to = self._accounts[1]
+        value = 1 * ICX_IN_LOOP
+
+        old_from_balance: int = self.get_balance(_from)
+        self.assertTrue(old_from_balance > value)
+
+        self.assertTrue(not _to.address.is_contract)
+        old_to_balance: int = self.get_balance(_to)
+        self.assertTrue(old_to_balance >= 0)
+
+        tx_results: List['TransactionResult'] = self.score_call(
             from_=self._accounts[0],
             to_=self._accounts[1].address,
+            value=value,
             func_name="test",
             pre_validation_enabled=False,
             expected_status=False
         )
+
+        self.assertEqual(2, len(tx_results))
+        tx_result = tx_results[1]
+        self.assertEqual(0, tx_result.status)
+        fee: int = tx_result.step_used * tx_result.step_price
+        self.assertTrue(fee > 0)
+
+        self.assertEqual(old_from_balance - fee, self.get_balance(_from))
+        self.assertEqual(old_to_balance, self.get_balance(_to))
+
+    def test_invalid_deploy_call_failure_on_strict_pre_validation_mode(self):
+        self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
+
+        _from = self._accounts[0]
+        _to = self._accounts[1]
+        value = 1 * ICX_IN_LOOP
+
+        old_from_balance: int = self.get_balance(_from)
+        self.assertTrue(old_from_balance > value)
+
+        self.assertTrue(not _to.address.is_contract)
+        old_to_balance: int = self.get_balance(_to)
+        self.assertTrue(old_to_balance >= 0)
+
+        tx_results: List['TransactionResult'] = self.deploy_score(
+            score_root="sample_deploy_scores",
+            score_name="install/sample_score",
+            from_=_from,
+            to_=_to,
+            step_limit=10 ** 10,
+            deploy_params={'value': hex(1 * ICX_IN_LOOP)},
+            pre_validation_enabled=False,
+            expected_status=False
+        )
+
+        self.assertEqual(2, len(tx_results))
+        tx_result = tx_results[1]
+        self.assertEqual(0, tx_result.status)
+        fee: int = tx_result.step_used * tx_result.step_price
+        self.assertTrue(fee > 0)
+
+        self.assertEqual(old_from_balance - fee, self.get_balance(_from))
+        self.assertEqual(old_to_balance, self.get_balance(_to))

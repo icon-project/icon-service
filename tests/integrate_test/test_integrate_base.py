@@ -756,6 +756,7 @@ class TestIntegrateBase(TestCase):
                      step_limit: int = DEFAULT_DEPLOY_STEP_LIMIT,
                      expected_status: bool = True,
                      to_: Union['EOAAccount', 'Address'] = SYSTEM_SCORE_ADDRESS,
+                     pre_validation_enabled: bool = True,
                      data: bytes = None) -> List['TransactionResult']:
 
         tx = self.create_deploy_score_tx(score_root=score_root,
@@ -764,6 +765,7 @@ class TestIntegrateBase(TestCase):
                                          to_=to_,
                                          deploy_params=deploy_params,
                                          step_limit=step_limit,
+                                         pre_validation_enabled=pre_validation_enabled,
                                          data=data)
         return self.process_confirm_block_tx([tx], expected_status)
 
