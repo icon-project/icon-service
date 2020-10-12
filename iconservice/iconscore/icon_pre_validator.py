@@ -19,9 +19,10 @@ from typing import TYPE_CHECKING, Any
 from iconcommons.logger import Logger
 
 from .icon_score_step import get_input_data_size
-from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS, generate_score_address, is_icon_address_valid
 from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, Revision, DeployState
+from ..base.type_converter_templates import ConstantKeys
 from ..utils import is_lowercase_hex_string
 from ..utils.locked import is_address_locked
 
@@ -31,6 +32,23 @@ if TYPE_CHECKING:
 
 
 TAG = "PV"
+REQUEST_PARAMS = (
+    ConstantKeys.VERSION,
+    ConstantKeys.STEP_LIMIT,
+    ConstantKeys.NID,
+    ConstantKeys.TIMESTAMP,
+    ConstantKeys.VALUE,
+    ConstantKeys.NONCE,
+    ConstantKeys.FROM,
+    ConstantKeys.TO,
+    ConstantKeys.SIGNATURE,
+    ConstantKeys.DATA_TYPE,
+    ConstantKeys.DATA,
+)
+
+REQUIRED_PARAMS = REQUEST_PARAMS[:4] + REQUEST_PARAMS[6:9]
+INT_PARAMS = REQUEST_PARAMS[:6]
+ADDR_PARAMS = REQUEST_PARAMS[6:8]
 
 
 class IconPreValidator:
@@ -43,6 +61,63 @@ class IconPreValidator:
         """Constructor
         """
         pass
+
+    def origin_request_execute(self, request: dict):
+        self.origin_pre_validate_version(request)
+        self.origin_pre_validate_params(request)
+        self.origin_validate_fields(request)
+
+    def origin_validate_fields(self, params: dict):
+        for param, value in params.items():
+            self.origin_validate_param(param)
+            self.origin_validate_value(param, value)
+
+    @classmethod
+    def origin_pre_validate_version(cls, params: dict):
+        version: str = params.get(ConstantKeys.VERSION, None)
+        if version != '0x3':
+            raise InvalidRequestException(f'Invalid message version, got {version}')
+
+    @classmethod
+    def origin_pre_validate_params(cls, params: dict):
+        if len(params) > len(REQUEST_PARAMS):
+            raise InvalidRequestException('Unexpected Parameters')
+
+        required_results = [
+            required_key
+            for required_key
+            in REQUIRED_PARAMS
+            if required_key not in params
+        ]
+
+        if required_results:
+            raise InvalidRequestException(
+                f'Not included required parameters, missing parameters {required_results}'
+            )
+
+    @classmethod
+    def origin_validate_param(cls, param: str):
+        if param not in REQUEST_PARAMS:
+            raise InvalidParamsException(f'Unexpected Parameters, got {param}')
+
+    @classmethod
+    def origin_validate_value(cls, param: str, value: str):
+        if param in INT_PARAMS:
+            if not cls.is_integer_type(value):
+                raise InvalidRequestException(f'Unexpected INT Type, got {value}')
+        elif param in ADDR_PARAMS:
+            if not cls.is_address_type(value):
+                raise InvalidRequestException(f'Unexpected Address Type, got {value}')
+
+    @classmethod
+    def is_integer_type(cls, value: str) -> bool:
+        if value.startswith('0x'):
+            return value == hex(int(value, 16))
+        return False
+
+    @classmethod
+    def is_address_type(cls, value: str) -> bool:
+        return is_icon_address_valid(value)
 
     def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int):
         """Validate a transaction on icx_sendTransaction
