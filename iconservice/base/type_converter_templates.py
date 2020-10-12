@@ -107,6 +107,7 @@ class ConstantKeys:
     FROM = "from"
     TO = "to"
     VALUE = "value"
+    NID = "nid"
     STEP_LIMIT = "stepLimit"
     FEE = "fee"
     NONCE = "nonce"
