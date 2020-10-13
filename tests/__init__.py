@@ -26,10 +26,10 @@ import sys
 from time import time
 
 from iconcommons.logger import Logger
-
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.internal_call import InternalCall
+from iconservice.icx.unstake_patcher import INVALID_EXPIRED_UNSTAKES_FILENAME
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 
@@ -83,6 +83,14 @@ def root_clear(score_path: str, state_db_path: str, iiss_db_path: str, precommit
     rmtree(state_db_path)
     rmtree(iiss_db_path)
     rmtree(precommit_log_path)
+
+
+def remove_unstake_report():
+    names = INVALID_EXPIRED_UNSTAKES_FILENAME.split(".")
+    log_dir = "."
+    report_path: str = os.path.join(log_dir, f"{names[0]}_report.json")
+    if os.path.isfile(report_path):
+        os.remove(report_path)
 
 
 def create_timestamp():

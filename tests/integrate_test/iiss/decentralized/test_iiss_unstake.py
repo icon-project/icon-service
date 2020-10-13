@@ -949,14 +949,6 @@ class TestIISSUnStake2(TestIISSBase):
 
 
 class TestIISSUnStake3(TestIISSBase):
-    def tearDown(self):
-        super().tearDown()
-        names: List[str] = INVALID_EXPIRED_UNSTAKES_FILENAME.split(".")
-        log_dir = "."
-        report_path: str = os.path.join(log_dir, f"{names[0]}_report.json")
-        if os.path.isfile(report_path):
-            os.remove(report_path)
-
     def test_old_format1(self):
         self.init_decentralized()
         self.init_inv()

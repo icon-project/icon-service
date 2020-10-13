@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
 
-from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
+from iconcommons import IconConfig
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
@@ -40,7 +40,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
 from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
-from tests import create_address, create_tx_hash, create_block_hash
+from tests import create_address, create_tx_hash, create_block_hash, remove_unstake_report
 from tests import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
@@ -137,6 +137,7 @@ class TestIntegrateBase(TestCase):
     def tearDown(self):
         self.icon_service_engine.close()
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
+        remove_unstake_report()
 
     def _make_init_config(self) -> dict:
         return {}
@@ -576,7 +577,7 @@ class TestIntegrateBase(TestCase):
                           to_: Union['EOAAccount', 'Address', 'MalformedAddress'],
                           data: bytes = None,
                           value: int = 0,
-                          disable_pre_validate: bool = False) -> dict:
+                          pre_validation_enabled: bool = False) -> dict:
 
         addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
         addr_to: Optional['Address', 'MalformedAddress'] = self._convert_address_from_address_type(to_)
@@ -605,7 +606,8 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        if pre_validation_enabled:
+            self.icon_service_engine.validate_transaction(tx)
         return tx
 
     def create_deposit_tx(self,
@@ -756,6 +758,7 @@ class TestIntegrateBase(TestCase):
                      step_limit: int = DEFAULT_DEPLOY_STEP_LIMIT,
                      expected_status: bool = True,
                      to_: Union['EOAAccount', 'Address'] = SYSTEM_SCORE_ADDRESS,
+                     pre_validation_enabled: bool = True,
                      data: bytes = None) -> List['TransactionResult']:
 
         tx = self.create_deploy_score_tx(score_root=score_root,
@@ -764,6 +767,7 @@ class TestIntegrateBase(TestCase):
                                          to_=to_,
                                          deploy_params=deploy_params,
                                          step_limit=step_limit,
+                                         pre_validation_enabled=pre_validation_enabled,
                                          data=data)
         return self.process_confirm_block_tx([tx], expected_status)
 
@@ -773,7 +777,9 @@ class TestIntegrateBase(TestCase):
                    func_name: str,
                    params: dict = None,
                    value: int = 0,
+                   pre_validation_enabled: bool = True,
                    step_limit: int = DEFAULT_BIG_STEP_LIMIT,
+
                    expected_status: bool = True) -> List['TransactionResult']:
 
         tx = self.create_score_call_tx(from_=from_,
@@ -781,6 +787,7 @@ class TestIntegrateBase(TestCase):
                                        func_name=func_name,
                                        params=params,
                                        value=value,
+                                       pre_validation_enabled=pre_validation_enabled,
                                        step_limit=step_limit)
         return self.process_confirm_block_tx([tx], expected_status)
 

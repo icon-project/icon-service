@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from unittest.mock import Mock
 
 import pytest
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS
-from iconservice.base.exception import InvalidRequestException
+from iconservice.base.exception import InvalidRequestException, InvalidParamsException
 from iconservice.icon_constant import Revision
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
@@ -149,3 +150,62 @@ class TestTransactionValidator:
 
         validator.execute(context, params, step_price, 100_000)
         validator.execute_to_check_out_of_balance(context, params, step_price)
+
+    @pytest.mark.parametrize(
+        "revision",
+        [rev for rev in range(Revision.IMPROVED_PRE_VALIDATOR.value - 1, Revision.LATEST.value + 1)]
+    )
+    @pytest.mark.parametrize(
+        "address_prefix,data_type,valid",
+        [
+            (AddressPrefix.EOA, "call", False),
+            (AddressPrefix.CONTRACT, "call", True),
+            (AddressPrefix.EOA, "deploy", False),
+            (AddressPrefix.CONTRACT, "deploy", True),
+            (AddressPrefix.EOA, "deposit", False),
+            (AddressPrefix.CONTRACT, "deposit", True),
+            (AddressPrefix.EOA, "message", True),
+            (AddressPrefix.CONTRACT, "message", True),
+            (AddressPrefix.EOA, None, True),
+            (AddressPrefix.CONTRACT, None, True),
+        ]
+    )
+    def test_validate_mismatch_between_to_and_data_type(self, context, revision, address_prefix, data_type, valid):
+        to = Address(address_prefix, os.urandom(20))
+        context.type = IconScoreContextType.INVOKE
+        context.revision = revision
+
+        if revision < Revision.IMPROVED_PRE_VALIDATOR.value or valid:
+            IconPreValidator.validate_data_type(context, to, data_type)
+        else:
+            with pytest.raises(InvalidParamsException) as exc_info:
+                IconPreValidator.validate_data_type(context, to, data_type)
+
+            assert exc_info.value.message.startswith("Mismatch between to and dataType")
+
+    @pytest.mark.parametrize(
+        "revision",
+        [rev for rev in range(Revision.IMPROVED_PRE_VALIDATOR.value - 1, Revision.LATEST.value + 1)]
+    )
+    @pytest.mark.parametrize("address_prefix", [AddressPrefix.EOA, AddressPrefix.CONTRACT])
+    @pytest.mark.parametrize(
+        "data_type,valid",
+        [
+            ("abc", False),
+            (1, False),
+            (1.1, False),
+            (b"call", False),
+        ]
+    )
+    def test_validate_data_type(self, context, revision, address_prefix, data_type, valid):
+        to = Address(address_prefix, os.urandom(20))
+        context.type = IconScoreContextType.INVOKE
+        context.revision = revision
+
+        if revision < Revision.IMPROVED_PRE_VALIDATOR.value or valid:
+            IconPreValidator.validate_data_type(context, to, data_type)
+        else:
+            with pytest.raises(InvalidParamsException) as exc_info:
+                IconPreValidator.validate_data_type(context, to, data_type)
+
+            assert exc_info.value.message.startswith(f"Invalid dataType: {data_type}")
