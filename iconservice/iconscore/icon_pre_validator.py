@@ -63,7 +63,7 @@ class IconPreValidator:
         pass
 
     def origin_request_execute(self, request: dict, revision: int):
-        if not request or revision < Revision.IMPROVED_PRE_VALIDATOR.value:
+        if revision < Revision.IMPROVED_PRE_VALIDATOR.value:
             return
         self.origin_pre_validate_version(request)
         self.origin_pre_validate_params(request)
