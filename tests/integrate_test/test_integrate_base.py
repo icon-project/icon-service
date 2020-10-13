@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
 
-from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
+from iconcommons import IconConfig
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
@@ -40,7 +40,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
 from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
-from tests import create_address, create_tx_hash, create_block_hash
+from tests import create_address, create_tx_hash, create_block_hash, remove_unstake_report
 from tests import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
@@ -137,6 +137,7 @@ class TestIntegrateBase(TestCase):
     def tearDown(self):
         self.icon_service_engine.close()
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
+        remove_unstake_report()
 
     def _make_init_config(self) -> dict:
         return {}
