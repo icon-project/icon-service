@@ -140,6 +140,7 @@ class Revision(Enum):
     FIX_BALANCE_BUG = 11
 
     BURN_V2_ENABLED = 12
+    IMPROVED_PRE_VALIDATOR = 12
 
     LATEST = 12
 
