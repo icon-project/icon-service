@@ -577,7 +577,7 @@ class TestIntegrateBase(TestCase):
                           to_: Union['EOAAccount', 'Address', 'MalformedAddress'],
                           data: bytes = None,
                           value: int = 0,
-                          disable_pre_validate: bool = False) -> dict:
+                          pre_validation_enabled: bool = False) -> dict:
 
         addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
         addr_to: Optional['Address', 'MalformedAddress'] = self._convert_address_from_address_type(to_)
@@ -606,7 +606,8 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        if pre_validation_enabled:
+            self.icon_service_engine.validate_transaction(tx)
         return tx
 
     def create_deposit_tx(self,

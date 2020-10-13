@@ -24,7 +24,7 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
-class TestDataTypeInRequest(TestIISSBase):
+class TestDataTypeValidationInTx(TestIISSBase):
     def setUp(self):
         super().setUp()
         self.init_decentralized()
@@ -102,7 +102,7 @@ class TestDataTypeInRequest(TestIISSBase):
 
             self.icon_service_engine.validate_transaction(tx)
 
-    def test_invalid_score_call_failure_on_strict_pre_validation_mode(self):
+    def test_invalid_score_call_failure_on_invoke(self):
         self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
 
         _from = self._accounts[0]
@@ -134,7 +134,7 @@ class TestDataTypeInRequest(TestIISSBase):
         self.assertEqual(old_from_balance - fee, self.get_balance(_from))
         self.assertEqual(old_to_balance, self.get_balance(_to))
 
-    def test_invalid_deploy_call_failure_on_strict_pre_validation_mode(self):
+    def test_invalid_deploy_call_failure_on_invoke(self):
         self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
 
         _from = self._accounts[0]
@@ -167,3 +167,79 @@ class TestDataTypeInRequest(TestIISSBase):
 
         self.assertEqual(old_from_balance - fee, self.get_balance(_from))
         self.assertEqual(old_to_balance, self.get_balance(_to))
+
+    def test_invalid_deposit_call_failure_on_invoke(self):
+        self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
+
+        _from = self._accounts[0]
+        _to = self._accounts[1]
+        value = 1000 * ICX_IN_LOOP
+
+        old_from_balance: int = self.get_balance(_from)
+        self.assertTrue(old_from_balance > value)
+
+        self.assertTrue(not _to.address.is_contract)
+        old_to_balance: int = self.get_balance(_to)
+        self.assertTrue(old_to_balance >= 0)
+
+        tx = self.create_deposit_tx(
+            from_=_from,
+            to_=_to,
+            action="add",
+            value=value,
+            params={},
+            pre_validation_enabled=False
+        )
+
+        tx_results = self.process_confirm_block_tx([tx], expected_status=False)
+
+        self.assertEqual(2, len(tx_results))
+        tx_result = tx_results[1]
+        self.assertEqual(0, tx_result.status)
+        fee: int = tx_result.step_used * tx_result.step_price
+        self.assertTrue(fee > 0)
+
+        self.assertEqual(old_from_balance - fee, self.get_balance(_from))
+        self.assertEqual(old_to_balance, self.get_balance(_to))
+
+    def test_valid_message_call_success_on_invoke(self):
+        """
+        Condition:
+        - to: EOA
+        - dataType: "message"
+
+        Result:
+        - Validation: success
+        - Invoke: success
+        """
+        self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
+
+        _from = self._accounts[0]
+        _to = self._accounts[1]
+        value = 2 * ICX_IN_LOOP
+
+        old_from_balance: int = self.get_balance(_from)
+        self.assertTrue(old_from_balance > value)
+
+        self.assertTrue(not _to.address.is_contract)
+        old_to_balance: int = self.get_balance(_to)
+        self.assertTrue(old_to_balance >= 0)
+
+        tx = self.create_message_tx(
+            from_=_from,
+            to_=_to,
+            data=b"hello",
+            value=value,
+            pre_validation_enabled=True
+        )
+
+        tx_results = self.process_confirm_block_tx([tx], expected_status=True)
+
+        self.assertEqual(2, len(tx_results))
+        tx_result = tx_results[1]
+        self.assertEqual(1, tx_result.status)
+        fee: int = tx_result.step_used * tx_result.step_price
+        self.assertTrue(fee > 0)
+
+        self.assertEqual(old_from_balance - value - fee, self.get_balance(_from))
+        self.assertEqual(old_to_balance + value, self.get_balance(_to))
