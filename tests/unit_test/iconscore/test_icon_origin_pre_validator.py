@@ -181,4 +181,18 @@ def test_validate_fields(validator, msg):
 )
 def test_validate_request_execute(validator, msg):
     with pytest.raises((InvalidParamsException, InvalidRequestException)):
-        validator.origin_request_execute(msg)
+        validator.origin_request_execute(msg, 12)
+
+
+@pytest.mark.parametrize(
+    'revision, expected',
+    [
+        (3, None),
+        (11, None),
+        (9, None)
+    ]
+)
+def test_execute_revision(validator, revision, expected):
+    assert validator.origin_request_execute(
+        make_origin_parameters(), revision
+    ) == expected
