@@ -472,6 +472,19 @@ class TestIntegrateBase(TestCase):
             "data": deploy_data
         }
 
+        origin_params = {
+            "version": hex(self._version),
+            "from": str(addr_from),
+            "to": str(addr_to),
+            "stepLimit": hex(step_limit),
+            "nid": '0x2',
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": self._signature,
+            "dataType": "deploy",
+            "data": deploy_data
+        }
+
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -481,7 +494,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -516,6 +529,21 @@ class TestIntegrateBase(TestCase):
                 "params": params
             }
         }
+        origin_params = {
+            "version": hex(self._version),
+            "from": str(from_),
+            "to": str(to_),
+            "stepLimit": hex(step_limit),
+            "nid": '0x2',
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": self._signature,
+            "dataType": "deploy",
+            "data": {
+                "method": func_name,
+                "params": params
+            }
+        }
 
         method = 'icx_sendTransaction'
         # Insert txHash into request params
@@ -526,7 +554,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -554,6 +582,17 @@ class TestIntegrateBase(TestCase):
             "signature": self._signature
         }
 
+        origin_params = {
+            "version": hex(self._version),
+            "from": str(addr_from),
+            "to": str(addr_to),
+            "stepLimit": hex(step_limit),
+            "nid": '0x2',
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": self._signature
+        }
+
         if support_v2:
             request_params["fee"] = 10 ** 16
         else:
@@ -568,7 +607,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if not disable_pre_validate:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
         return tx
 
     def create_message_tx(self,
@@ -597,6 +636,19 @@ class TestIntegrateBase(TestCase):
             "data": '0x' + data.hex(),
         }
 
+        origin_params = {
+            "version": hex(self._version),
+            "from": str(addr_from),
+            "to": str(addr_to),
+            "stepLimit": hex(DEFAULT_STEP_LIMIT),
+            "nid": '0x2',
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": self._signature,
+            "dataType": "message",
+            "data": '0x' + data.hex()
+        }
+
         method = 'icx_sendTransaction'
         # Inserts txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -605,7 +657,7 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        self.icon_service_engine.validate_transaction(tx, origin_params)
         return tx
 
     def create_deposit_tx(self,
@@ -638,6 +690,21 @@ class TestIntegrateBase(TestCase):
             }
         }
 
+        origin_params = {
+            "version": hex(self._version),
+            "from": str(addr_from),
+            "to": str(addr_to),
+            "stepLimit": hex(step_limit),
+            "nid": '0x2',
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": self._signature,
+            "dataType": "deposit",
+            "data": {
+                "action": action
+            }
+        }
+
         for k, v in params.items():
             request_params["data"][k] = v
 
@@ -650,7 +717,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
