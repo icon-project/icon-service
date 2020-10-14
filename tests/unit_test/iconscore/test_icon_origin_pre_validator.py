@@ -68,7 +68,9 @@ def test_malformed_number_string(validator, malformed_value, expected):
         ('0x3E', False),
         ('0xBE', False),
         ('0Xff', False),
-        ('0xff', True)
+        ('0xzz', False),
+        ('0x123k', False),
+        ('0xff', True),
     ]
 )
 def test_malformed_uppercase_string(validator, malformed_value, expected):
@@ -85,7 +87,8 @@ def test_malformed_uppercase_string(validator, malformed_value, expected):
         ('cx1234', False),
         ('cxEab1', False),
         ('1234', False),
-        ('hx3f945d146a87552487ad70a050eebfa2564e8e5c', True)
+        ('hx3f945d146a87552487ad70a050eebfa2564e8e5c', True),
+        ('cxba62bb61baf8dd8b6a04633fe33806547785a00c', True)
     ]
 )
 def test_malformed_address(validator, malformed_value, expected):

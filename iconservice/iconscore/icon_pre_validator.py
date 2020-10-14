@@ -113,9 +113,13 @@ class IconPreValidator:
 
     @classmethod
     def is_integer_type(cls, value: str) -> bool:
-        if value.startswith('0x'):
-            return value == hex(int(value, 16))
-        return False
+        try:
+            if value.startswith('0x'):
+                return value == hex(int(value, 16))
+        except ValueError:
+            return False
+        else:
+            return False
 
     @classmethod
     def is_address_type(cls, value: str) -> bool:
