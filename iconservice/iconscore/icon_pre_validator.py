@@ -46,9 +46,29 @@ REQUEST_PARAMS = (
     ConstantKeys.DATA,
 )
 
-REQUIRED_PARAMS = REQUEST_PARAMS[:4] + REQUEST_PARAMS[6:9]
-INT_PARAMS = REQUEST_PARAMS[:6]
-ADDR_PARAMS = REQUEST_PARAMS[6:8]
+REQUIRED_PARAMS = (
+    ConstantKeys.VERSION,
+    ConstantKeys.STEP_LIMIT,
+    ConstantKeys.NID,
+    ConstantKeys.TIMESTAMP,
+    ConstantKeys.FROM,
+    ConstantKeys.TO,
+    ConstantKeys.SIGNATURE
+)
+
+INT_PARAMS = (
+    ConstantKeys.VERSION,
+    ConstantKeys.STEP_LIMIT,
+    ConstantKeys.NID,
+    ConstantKeys.TIMESTAMP,
+    ConstantKeys.VALUE,
+    ConstantKeys.NONCE
+)
+
+ADDR_PARAMS = (
+    ConstantKeys.FROM,
+    ConstantKeys.TO
+)
 
 
 class IconPreValidator:
