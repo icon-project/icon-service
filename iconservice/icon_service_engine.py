@@ -33,7 +33,8 @@ from .base.address import SYSTEM_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import (
     ExceptionCode, IconServiceBaseException, IconScoreException, InvalidBaseTransactionException,
-    InternalServiceErrorException, DatabaseException)
+    InternalServiceErrorException, DatabaseException, InvalidParamsException,
+)
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
@@ -47,7 +48,8 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
     Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, STEP_LOG_TAG, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
-    BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag, RPCMethod
+    BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag, RPCMethod,
+    DataType
 )
 from .iconscore.context.context import ContextContainer
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -1103,9 +1105,10 @@ class IconServiceEngine(ContextContainer):
             self._icon_pre_validator.origin_request_execute(origin_request, context.revision)
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-            # SCORE updating is not blocked by SCORE blacklist
-            if 'dataType' in params and params['dataType'] == 'call':
+            if to.is_contract:
+                # SCORE updating is not blocked by SCORE blacklist
                 IconScoreContextUtil.validate_score_blacklist(context, to)
+
         finally:
             self._pop_context()
 
@@ -1180,12 +1183,17 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        icon_score_address: Address = params['to']
+        to: Address = params['to']
         data_type = params.get('dataType', None)
         data = params.get('data', None)
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        return IconScoreEngine.query(context, icon_score_address, data_type, data)
+        if to.is_contract:
+            return IconScoreEngine.query(context, to, data_type, data)
+
+        raise InvalidParamsException(
+            f"Mismatch between to and dataType: to={to} dataType={data_type}"
+        )
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -1277,13 +1285,29 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         to: Address = params['to']
-        data_type: str = params.get('dataType')
+        data_type: Optional[str] = params.get('dataType')
 
-        if data_type in (None, 'call', 'message'):
+        self._validate_data_type(context, to, data_type)
+
+        # Can't transfer ICX to system SCORE
+        if data_type in (None, DataType.CALL, DataType.MESSAGE):
             self._transfer_coin(context, params)
 
         if to.is_contract:
             tx_result.score_address = self._handle_score_invoke(context, to, params)
+
+    def _validate_data_type(
+            self, context: 'IconScoreContext', to: 'Address', data_type: Optional[str]
+    ):
+        try:
+            self._icon_pre_validator.validate_data_type(context, to, data_type)
+        except InvalidParamsException as e:
+            if data_type == DataType.CALL:
+                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            elif data_type == DataType.DEPLOY:
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
+
+            raise e
 
     @classmethod
     def _transfer_coin(cls,
@@ -1375,9 +1399,9 @@ class IconServiceEngine(ContextContainer):
         data_type: str = params.get('dataType')
         data: dict = params.get('data')
 
-        if data_type == 'deploy':
+        if data_type == DataType.DEPLOY:
             return context.engine.deploy.invoke(context, to, data)
-        elif data_type == 'deposit':
+        elif data_type == DataType.DEPOSIT:
             self._deposit_handler.handle_deposit_request(context, data)
             return None
         else:
@@ -1394,9 +1418,10 @@ class IconServiceEngine(ContextContainer):
         # exceptions for mainnet backward compatibility:
         #   - dataType is not 'call'
         if to == SYSTEM_SCORE_ADDRESS:
-            if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and data_type != 'call':
-                return True
-            return False
+            return (
+                context.revision < Revision.SYSTEM_SCORE_ENABLED.value
+                and data_type != DataType.CALL
+            )
 
         return True
 
