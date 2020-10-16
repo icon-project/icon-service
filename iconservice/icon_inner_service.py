@@ -15,7 +15,7 @@
 import asyncio
 import json
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
@@ -448,7 +448,7 @@ class MakeResponse:
 class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
-    def _callback_connection_close(self, exc: Exception):
+    def _callback_connection_close(self, sender, exc: Optional[BaseException], *args, **kwargs):
         Logger.error(tag=_TAG, msg=f"[Inner Service] connection closed. {exc}")
         self.clean_close()
 
@@ -460,5 +460,5 @@ class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
 class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
-    def _callback_connection_close(self, exc: Exception):
+    def _callback_connection_close(self, sender, exc: Optional[BaseException], *args, **kwargs):
         Logger.error(tag=_TAG, msg=f"[Inner Stub] connection closed. {exc}")
