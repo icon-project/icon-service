@@ -78,7 +78,7 @@ class TestDataTypeValidationInTx(TestIISSBase):
             value=value,
             disable_pre_validate=True
         )
-        origin_params = self.make_origin_params(tx['params'])
+        origin_params = {'params': self.make_origin_params(tx['params'])}
         self.icon_service_engine.validate_transaction(tx, origin_params)
 
         invalid_data_types = ("abc", 1, 1.1, b"call", b"deploy", b"deposit", b"message")

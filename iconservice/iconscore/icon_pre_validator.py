@@ -86,12 +86,12 @@ class IconPreValidator:
         """
         pass
 
-    def origin_request_execute(self, request: dict, revision: int):
+    def origin_request_execute(self, params: dict, revision: int):
         if revision < Revision.IMPROVED_PRE_VALIDATOR.value:
             return
-        self.origin_pre_validate_version(request)
-        self.origin_pre_validate_params(request)
-        self.origin_validate_fields(request)
+        self.origin_pre_validate_version(params)
+        self.origin_pre_validate_params(params)
+        self.origin_validate_fields(params)
 
     def origin_validate_fields(self, params: dict):
         for param, value in params.items():

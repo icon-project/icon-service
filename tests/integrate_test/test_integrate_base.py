@@ -500,7 +500,7 @@ class TestIntegrateBase(TestCase):
             "data": deploy_data
         }
 
-        origin_params = self.make_origin_params(request_params)
+        origin_params = {'params': self.make_origin_params(request_params)}
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -546,7 +546,9 @@ class TestIntegrateBase(TestCase):
             }
         }
 
-        origin_params = self.make_origin_params(request_params)
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -589,7 +591,9 @@ class TestIntegrateBase(TestCase):
         else:
             request_params["version"] = self._version
 
-        origin_params = self.make_origin_params(request_params)
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -628,7 +632,9 @@ class TestIntegrateBase(TestCase):
             "data": '0x' + data.hex(),
         }
 
-        origin_params = self.make_origin_params(request_params)
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
 
         method = 'icx_sendTransaction'
         # Inserts txHash into request params
@@ -671,8 +677,9 @@ class TestIntegrateBase(TestCase):
                 "action": action,
             }
         }
-        origin_params = self.make_origin_params(request_params)
-
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         for k, v in params.items():
             request_params["data"][k] = v
 

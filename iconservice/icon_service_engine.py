@@ -1090,6 +1090,8 @@ class IconServiceEngine(ContextContainer):
         context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
         context.set_step_counter()
 
+        origin_params = origin_request['params']
+
         try:
             self._push_context(context)
 
@@ -1102,7 +1104,7 @@ class IconServiceEngine(ContextContainer):
                 data = params['data']
                 input_size = get_input_data_size(context.revision, data)
                 minimum_step += input_size * context.inv_container.step_costs.get(StepType.INPUT, 0)
-            self._icon_pre_validator.origin_request_execute(origin_request, context.revision)
+            self._icon_pre_validator.origin_request_execute(origin_params, context.revision)
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
             if to.is_contract:
