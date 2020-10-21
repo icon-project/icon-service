@@ -23,12 +23,14 @@ from iconservice.database.db import IconScoreDatabase
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
+from iconservice.iconscore.db import ScoreDatabase
 from tests import create_address
 
 
 @pytest.fixture(scope="function")
 def score_db(context_db):
-    return IconScoreDatabase(create_address(), context_db)
+    # return IconScoreDatabase(create_address(), context_db)
+    return ScoreDatabase(create_address(), context_db)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -226,7 +228,6 @@ class TestIconContainerDB:
     def test_var_db(self, score_db, value_type, expected_value):
         test_var = VarDB('test_var', score_db, value_type=value_type)
         assert test_var._db != score_db
-        assert test_var._db._prefix == b'\x02'
 
         test_var.set(expected_value)
 
@@ -264,7 +265,6 @@ class TestIconContainerDB:
         name = "TEST"
         testarray = ArrayDB(name, score_db, value_type=int)
         assert testarray._db != score_db
-        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name)
 
         testarray.put(1)
         testarray.put(3)
@@ -279,7 +279,6 @@ class TestIconContainerDB:
         name = "TEST"
         testarray = ArrayDB(name, score_db, value_type=int)
         assert testarray._db != score_db
-        assert testarray._db._prefix == ContainerUtil.create_db_prefix(ArrayDB, name)
 
         testarray.put(1)
         testarray.put(2)

@@ -16,10 +16,11 @@
 
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
-from iconservice.icon_constant import IconScoreContextType, Revision
 from .context.context import ContextContainer
+from .db import ScoreDatabase, Key, KeyFlag, PrefixScoreDatabase
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
+from ..icon_constant import IconScoreContextType, Revision
 from ..utils import int_to_bytes, bytes_to_int
 
 if TYPE_CHECKING:
@@ -228,12 +229,12 @@ class ArrayDB(object):
     :K: [int, str, Address, bytes]
     :V: [int, str, Address, bytes, bool]
     """
-    __SIZE = 'size'
-    __SIZE_BYTE_KEY = get_encoded_key(__SIZE)
+    __SIZE_BYTE_KEY = b"size"
 
-    def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
-        prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
-        self._db = db.get_sub_db(prefix)
+    def __init__(self, var_key: K, db: 'ScoreDatabase', value_type: type) -> None:
+        self._db: 'PrefixScoreDatabase' = db.get_sub_db(Key(ARRAY_DB_ID, KeyFlag.TAG))
+        self._db.prefixes.append(get_encoded_key(var_key))
+
         self.__value_type = value_type
         self.__legacy_size = self.__get_size_from_db()
 
@@ -270,7 +271,7 @@ class ArrayDB(object):
         :param index: index
         :return: value at the index
         """
-        return self[index]
+        return self.__getitem__(index)
 
     def __get_size(self) -> int:
         if self.__is_defective_revision():
@@ -279,19 +280,27 @@ class ArrayDB(object):
             return self.__get_size_from_db()
 
     def __get_size_from_db(self) -> int:
-        return ContainerUtil.decode_object(self._db.get(self.__SIZE_BYTE_KEY), int)
+        value: bytes = self._db.get(Key(self.__SIZE_BYTE_KEY, KeyFlag.ARRAY_LENGTH))
+        return ContainerUtil.decode_object(value, int)
 
     def __set_size(self, size: int) -> None:
         self.__legacy_size = size
         byte_value = ContainerUtil.encode_value(size)
-        self._db.put(self.__SIZE_BYTE_KEY, byte_value)
+
+        key = Key(self.__SIZE_BYTE_KEY, KeyFlag.ARRAY_LENGTH)
+        self._db.put(key, byte_value)
 
     def __put(self, index: int, value: V) -> None:
         byte_value = ContainerUtil.encode_value(value)
         self._db.put(get_encoded_key(index), byte_value)
 
     def __iter__(self):
-        return self._get_generator(self._db, self.__get_size(), self.__value_type)
+        size: int = self.__get_size()
+
+        for i in range(size):
+            key: bytes = get_encoded_key(i)
+            value: bytes = self._db.get(key)
+            yield ContainerUtil.decode_object(value, self.__value_type)
 
     def __len__(self):
         return self.__get_size()
@@ -301,18 +310,19 @@ class ArrayDB(object):
             raise InvalidParamsException('Invalid index type: not an integer')
 
         size: int = self.__get_size()
-
-        # Negative index means that you count from the right instead of the left.
-        if index < 0:
-            index += size
-
-        if 0 <= index < size:
-            self.__put(index, value)
-        else:
-            raise InvalidParamsException('ArrayDB out of index')
+        index: int = self._to_positive_index(index, size)
+        self.__put(index, value)
 
     def __getitem__(self, index: int) -> V:
-        return self._get(self._db, self.__get_size(), index, self.__value_type)
+        if not isinstance(index, int):
+            raise InvalidParamsException('Invalid index type: not an integer')
+
+        size: int = self.__get_size()
+        index: int = self._to_positive_index(index, size)
+
+        key: bytes = get_encoded_key(index)
+        value: bytes = self._db.get(key)
+        return ContainerUtil.decode_object(value, self.__value_type)
 
     def __contains__(self, item: V):
         for e in self:
@@ -327,24 +337,14 @@ class ArrayDB(object):
         return context.type == IconScoreContextType.INVOKE and revision < Revision.THREE.value
 
     @classmethod
-    def _get(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, index: int, value_type: type) -> V:
-        if not isinstance(index, int):
-            raise InvalidParamsException('Invalid index type: not an integer')
-
-        # Negative index means that you count from the right instead of the left.
+    def _to_positive_index(cls, index: int, size: int) -> int:
         if index < 0:
             index += size
 
         if 0 <= index < size:
-            key: bytes = get_encoded_key(index)
-            return ContainerUtil.decode_object(db.get(key), value_type)
+            return index
 
         raise InvalidParamsException('ArrayDB out of index')
-
-    @classmethod
-    def _get_generator(cls, db: Union['IconScoreDatabase', 'IconScoreSubDatabase'], size: int, value_type: type):
-        for index in range(size):
-            yield cls._get(db, size, index, value_type)
 
 
 class VarDB(object):
@@ -356,9 +356,9 @@ class VarDB(object):
     :V: [int, str, Address, bytes, bool]
     """
 
-    def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
+    def __init__(self, var_key: K, db: 'ScoreDatabase', value_type: type) -> None:
         # Use var_key as a db prefix in the case of VarDB
-        self._db = db.get_sub_db(VAR_DB_ID)
+        self._db: 'PrefixScoreDatabase' = db.get_sub_db(Key(VAR_DB_ID, KeyFlag.TAG))
         self.__var_byte_key = get_encoded_key(var_key)
         self.__value_type = value_type
 
