@@ -90,6 +90,11 @@ class PrefixStorage(object):
 
     def append(self, key: Union[bytes, 'Key']):
         key = _to_key(key)
+
+        if key.flags == KeyFlag.TAG and len(self._keys) > 0:
+            # Block to append additional tags
+            return
+
         self._keys.append(key)
 
     def get_final_key(self, key: Union[bytes, 'Key'], version: int = 0) -> bytes:
@@ -114,7 +119,7 @@ class PrefixStorage(object):
             if key0.flags == KeyFlag.TAG and key0.value == Tag.DICT.value:
                 for i, key in enumerate(self._keys):
                     if i > 0:
-                        keys.append(Tag.DICT.value)
+                        keys.append(key0.value)  # Tag
                         keys.append(key.value)
             else:
                 for key in self._keys:

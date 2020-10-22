@@ -169,12 +169,14 @@ class DictDB(object):
 
     def __init__(self,
                  var_key: K,
-                 db: Union['IconScoreDatabase',
-                           'IconScoreSubDatabase'],
+                 db: Union['ScoreDatabase', 'PrefixScoreDatabase'],
                  value_type: type,
                  depth: int = 1) -> None:
-        prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
-        self._db = db.get_sub_db(prefix)
+        if not (1 <= depth <= 3):
+            raise InvalidParamsException(f"Depth out of range: {depth}")
+
+        self._db: 'PrefixScoreDatabase' = db.get_sub_db(Key(DICT_DB_ID, KeyFlag.TAG))
+        self._db.prefixes.append(get_encoded_key(var_key))
 
         self.__value_type = value_type
         self.__depth = depth
