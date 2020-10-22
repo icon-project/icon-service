@@ -17,7 +17,7 @@
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
 from .context.context import ContextContainer
-from .db import ScoreDatabase, Key, KeyFlag, PrefixScoreDatabase
+from .db import IconScoreDatabase, Key, KeyFlag, PrefixScoreDatabase
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidContainerAccessException
 from ..icon_constant import IconScoreContextType, Revision
@@ -169,7 +169,7 @@ class DictDB(object):
 
     def __init__(self,
                  var_key: K,
-                 db: Union['ScoreDatabase', 'PrefixScoreDatabase'],
+                 db: Union['IconScoreDatabase', 'PrefixScoreDatabase'],
                  value_type: type,
                  depth: int = 1) -> None:
         if not (1 <= depth <= 3):
@@ -233,7 +233,7 @@ class ArrayDB(object):
     """
     __SIZE_BYTE_KEY = b"size"
 
-    def __init__(self, var_key: K, db: 'ScoreDatabase', value_type: type) -> None:
+    def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
         self._db: 'PrefixScoreDatabase' = db.get_sub_db(Key(ARRAY_DB_ID, KeyFlag.TAG))
         self._db.prefixes.append(get_encoded_key(var_key))
 
@@ -358,7 +358,7 @@ class VarDB(object):
     :V: [int, str, Address, bytes, bool]
     """
 
-    def __init__(self, var_key: K, db: 'ScoreDatabase', value_type: type) -> None:
+    def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
         # Use var_key as a db prefix in the case of VarDB
         self._db: 'PrefixScoreDatabase' = db.get_sub_db(Key(VAR_DB_ID, KeyFlag.TAG))
         self.__var_byte_key = get_encoded_key(var_key)

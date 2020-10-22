@@ -1,7 +1,6 @@
 from typing import Iterator
-import pytest
 
-import os
+import pytest
 
 from iconservice.iconscore.db import (
     Key,
@@ -10,6 +9,7 @@ from iconservice.iconscore.db import (
     Tag,
 )
 from iconservice.utils.rlp import rlp_encode_bytes
+from iconservice.utils import int_to_bytes
 
 
 def concatenate_rlp_encoded_keys(keys: Iterator[bytes]) -> bytes:
@@ -62,3 +62,19 @@ class TestPrefixStorage:
         assert final_key == concatenate_rlp_encoded_keys(
             [key.value for key in keys] + [last_key.value]
         )
+
+    def test_append(self):
+        prefixes = PrefixStorage()
+        assert len(prefixes) == 0
+
+        tag = Key(Tag.ARRAY.value, KeyFlag.TAG)
+        for _ in range(10):
+            prefixes.append(tag)
+            assert len(prefixes) == 1
+
+        size = 10
+        for i in range(size):
+            value = int_to_bytes(i)
+            prefixes.append(value)
+
+        assert len(prefixes) == size + 1

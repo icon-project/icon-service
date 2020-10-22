@@ -19,12 +19,10 @@ import plyvel
 from iconcommons.logger import Logger
 
 from .batch import TransactionBatchValue
-from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
+from ..base.exception import DatabaseException
 from ..icon_constant import ICON_DB_LOG_TAG, IconScoreContextType
-from ..iconscore.context.context import ContextGetter
 
 if TYPE_CHECKING:
-    from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
 
 
@@ -192,7 +190,7 @@ class ContextDatabase(object):
         :param db: KeyValueDatabase instance
         """
         self.key_value_db = db
-        # True: this db is shared with all SCOREs
+        # True: this db is shared with all smart contracts
         self._is_shared = is_shared
 
     def get(self, context: Optional['IconScoreContext'], key: bytes) -> bytes:
@@ -358,200 +356,3 @@ class MetaContextDatabase(ContextDatabase):
                   create_if_missing: bool = True) -> 'MetaContextDatabase':
         db = KeyValueDatabase.from_path(path, create_if_missing)
         return MetaContextDatabase(db)
-
-
-class IconScoreDatabase(ContextGetter):
-    """It is used in IconScore
-
-    IconScore can access its states only through IconScoreDatabase
-    """
-
-    def __init__(self,
-                 address: 'Address',
-                 context_db: 'ContextDatabase',
-                 prefix: bytes = None) -> None:
-        """Constructor
-
-        :param address: the address of SCORE which this db is assigned to
-        :param context_db: ContextDatabase
-        :param prefix:
-        """
-        self.address = address
-        self._prefix = prefix
-        self._context_db = context_db
-        self._observer: Optional[DatabaseObserver] = None
-
-        self._prefix_hash_key: bytes = self._make_prefix_hash_key()
-
-    def _make_prefix_hash_key(self) -> bytes:
-        data = [self.address.to_bytes()]
-        if self._prefix is not None:
-            data.append(self._prefix)
-        return b'|'.join(data)
-
-    def get(self, key: bytes) -> bytes:
-        """
-        Gets the value for the specified key
-
-        :param key: key to retrieve
-        :return: value for the specified key, or None if not found
-        """
-        hashed_key = self._hash_key(key)
-        value = self._context_db.get(self._context, hashed_key)
-        if self._observer:
-            self._observer.on_get(self._context, key, value)
-        return value
-
-    def put(self, key: bytes, value: bytes):
-        """
-        Sets a value for the specified key.
-
-        :param key: key to set
-        :param value: value to set
-        """
-        self._validate_ownership()
-        hashed_key = self._hash_key(key)
-        if self._observer:
-            old_value = self._context_db.get(self._context, hashed_key)
-            if value:
-                self._observer.on_put(self._context, key, old_value, value)
-            elif old_value:
-                # If new value is None, then deletes the field
-                self._observer.on_delete(self._context, key, old_value)
-        self._context_db.put(self._context, hashed_key, value)
-
-    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
-        """
-        Returns sub db with a prefix
-
-        :param prefix: The prefix used by this sub db.
-        :return: sub db
-        """
-        if prefix is None:
-            raise InvalidParamsException(
-                'Invalid params: '
-                'prefix is None in IconScoreDatabase.get_sub_db()')
-
-        if self._prefix is not None:
-            prefix = b'|'.join((self._prefix, prefix))
-
-        return IconScoreSubDatabase(self.address, self, prefix)
-
-    def delete(self, key: bytes):
-        """
-        Deletes the key/value pair for the specified key.
-
-        :param key: key to delete
-        """
-        self._validate_ownership()
-        hashed_key = self._hash_key(key)
-        if self._observer:
-            old_value = self._context_db.get(self._context, hashed_key)
-            # If old value is None, won't fire the callback
-            if old_value:
-                self._observer.on_delete(self._context, key, old_value)
-        self._context_db.delete(self._context, hashed_key)
-
-    def close(self):
-        self._context_db.close(self._context)
-
-    def set_observer(self, observer: 'DatabaseObserver'):
-        self._observer = observer
-
-    def _hash_key(self, key: bytes) -> bytes:
-        """All key is hashed and stored
-        to StateDB to avoid key conflicts among SCOREs
-
-        :params key: key passed by SCORE
-        :return: key bytes
-        """
-
-        return b'|'.join((self._prefix_hash_key, key))
-
-    def _validate_ownership(self):
-        """Prevent a SCORE from accessing the database of another SCORE
-
-        """
-        if self._context.current_address != self.address:
-            raise AccessDeniedException("Invalid database ownership")
-
-
-class IconScoreSubDatabase(object):
-    def __init__(self, address: 'Address', score_db: 'IconScoreDatabase', prefix: bytes):
-        """Constructor
-
-        :param address: the address of SCORE which this db is assigned to
-        :param score_db: IconScoreDatabase
-        :param prefix:
-        """
-        if prefix is None or len(prefix) == 0:
-            raise InvalidParamsException("Invalid prefix")
-
-        self.address = address
-        self._prefix = prefix
-        self._score_db = score_db
-
-        self._prefix_hash_key: bytes = self._make_prefix_hash_key()
-
-    def _make_prefix_hash_key(self) -> bytes:
-        data = []
-        if self._prefix is not None:
-            data.append(self._prefix)
-        return b'|'.join(data)
-
-    def get(self, key: bytes) -> bytes:
-        """
-        Gets the value for the specified key
-
-        :param key: key to retrieve
-        :return: value for the specified key, or None if not found
-        """
-        hashed_key = self._hash_key(key)
-        return self._score_db.get(hashed_key)
-
-    def put(self, key: bytes, value: bytes):
-        """
-        Sets a value for the specified key.
-
-        :param key: key to set
-        :param value: value to set
-        """
-        hashed_key = self._hash_key(key)
-        self._score_db.put(hashed_key, value)
-
-    def get_sub_db(self, prefix: bytes) -> 'IconScoreSubDatabase':
-        """
-        Returns sub db with a prefix
-
-        :param prefix: The prefix used by this sub db.
-        :return: sub db
-        """
-        if prefix is None:
-            raise InvalidParamsException("Invalid prefix")
-
-        if self._prefix is not None:
-            prefix = b'|'.join((self._prefix, prefix))
-
-        return IconScoreSubDatabase(self.address, self._score_db, prefix)
-
-    def delete(self, key: bytes):
-        """
-        Deletes the key/value pair for the specified key.
-
-        :param key: key to delete
-        """
-        hashed_key = self._hash_key(key)
-        self._score_db.delete(hashed_key)
-
-    def close(self):
-        self._score_db.close()
-
-    def _hash_key(self, key: bytes) -> bytes:
-        """All key is hashed and stored
-        to StateDB to avoid key conflicts among SCOREs
-
-        :params key: key passed by SCORE
-        :return: key bytes
-        """
-
-        return b'|'.join((self._prefix_hash_key, key))

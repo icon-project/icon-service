@@ -20,7 +20,7 @@ from iconservice import Address
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.context.context import ContextContainer
-from iconservice.iconscore.db import ScoreDatabase
+from iconservice.iconscore.db import IconScoreDatabase
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from tests import create_address
@@ -28,8 +28,7 @@ from tests import create_address
 
 @pytest.fixture(scope="function")
 def score_db(context_db):
-    # return IconScoreDatabase(create_address(), context_db)
-    return ScoreDatabase(create_address(), context_db)
+    return IconScoreDatabase(create_address(), context_db)
 
 
 @pytest.fixture(scope="function", autouse=True)

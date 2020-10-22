@@ -148,7 +148,7 @@ class PrefixStorage(object):
         return PrefixStorage(self._keys)
 
 
-class ScoreDatabase(ContextGetter):
+class IconScoreDatabase(ContextGetter):
     """It is used in IconScore
 
     IconScore can access its states only through IconScoreDatabase
@@ -254,7 +254,7 @@ class ScoreDatabase(ContextGetter):
 class PrefixScoreDatabase(object):
     def __init__(
             self,
-            score_db: 'ScoreDatabase',
+            score_db: 'IconScoreDatabase',
             parent_prefixes: Optional[PrefixStorage],
             prefix: Union[bytes, 'Key']
     ):
