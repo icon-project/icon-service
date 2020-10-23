@@ -28,11 +28,11 @@ class TestPrefixStorage:
 
         # Length of ArrayDB whose name is b"balances" in version 0
         last_key = Key(b"size", KeyFlag.ARRAY_LENGTH)
-        final_key: bytes = prefixes.get_final_key(last_key, version=0)
+        final_key: bytes = prefixes.get_final_key(last_key, use_rlp=False)
         assert final_key == b"|".join((key.value for key in keys)) + b"|" + last_key.value
 
         # Length of ArrayDB whose name is b"balances" in version 1
-        final_key: bytes = prefixes.get_final_key(last_key, version=1)
+        final_key: bytes = prefixes.get_final_key(last_key, use_rlp=True)
         assert final_key == concatenate_rlp_encoded_keys((key.value for key in keys))
 
     def test_get_final_key_2(self):
@@ -47,7 +47,7 @@ class TestPrefixStorage:
 
         last_key = Key(b"last_key")
 
-        final_key: bytes = prefixes.get_final_key(last_key, version=0)
+        final_key: bytes = prefixes.get_final_key(last_key, use_rlp=False)
 
         def func_v0():
             for i, _key in enumerate(keys):
@@ -58,7 +58,7 @@ class TestPrefixStorage:
             yield last_key.value
         assert final_key == b"|".join(func_v0())
 
-        final_key: bytes = prefixes.get_final_key(last_key, version=1)
+        final_key: bytes = prefixes.get_final_key(last_key, use_rlp=True)
         assert final_key == concatenate_rlp_encoded_keys(
             [key.value for key in keys] + [last_key.value]
         )

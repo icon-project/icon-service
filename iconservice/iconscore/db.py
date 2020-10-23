@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from enum import Enum, Flag, auto
-from typing import Optional, Union, Iterator
+from typing import Union, Iterator, Optional
 
 from .context.context import ContextGetter
 from ..base.address import Address
@@ -25,6 +25,7 @@ from ..database.db import (
     ContextDatabase,
     DatabaseObserver,
 )
+from ..icon_constant import Revision
 from ..utils import bytes_to_hex
 from ..utils.rlp import rlp_encode_bytes
 
@@ -97,13 +98,13 @@ class PrefixStorage(object):
 
         self._keys.append(key)
 
-    def get_final_key(self, key: Union[bytes, 'Key'], version: int = 0) -> bytes:
+    def get_final_key(self, key: Union[bytes, 'Key'], use_rlp: bool) -> bytes:
         key = _to_key(key)
 
-        if version == 0:
-            return self._get_final_key_v0(key)
-        else:
+        if use_rlp:
             return self._get_final_key_v1(key)
+        else:
+            return self._get_final_key_v0(key)
 
     def _get_final_key_v0(self, last_key: 'Key') -> bytes:
         """Generate a final key with '|' separator
@@ -251,7 +252,7 @@ class IconScoreDatabase(ContextGetter):
             raise AccessDeniedException("Invalid database ownership")
 
 
-class PrefixScoreDatabase(object):
+class PrefixScoreDatabase(ContextGetter):
     def __init__(
             self,
             score_db: 'IconScoreDatabase',
@@ -280,6 +281,9 @@ class PrefixScoreDatabase(object):
     def prefixes(self) -> 'PrefixStorage':
         return self._prefixes
 
+    def _use_rlp(self) -> bool:
+        return self._context.revision >= Revision.USE_RLP.value
+
     def get(self, key: Union[bytes, 'Key']) -> bytes:
         """
         Gets the value for the specified key
@@ -287,11 +291,14 @@ class PrefixScoreDatabase(object):
         :param key: key to retrieve
         :return: value for the specified key, or None if not found
         """
-        if isinstance(key, bytes):
-            key = Key(key)
+        if self._use_rlp():
+            final_key: bytes = self._generate_final_key(key, use_rlp=True)
+            value: Optional[bytes] = self._score_db.get(final_key)
+            if isinstance(value, bytes):
+                return value
 
-        hashed_key = self._hash_key(key)
-        return self._score_db.get(hashed_key)
+        final_key = self._generate_final_key(key, use_rlp=False)
+        return self._score_db.get(final_key)
 
     def put(self, key: Union[bytes, 'Key'], value: bytes):
         """
@@ -300,11 +307,8 @@ class PrefixScoreDatabase(object):
         :param key: key to set
         :param value: value to set
         """
-        if isinstance(key, bytes):
-            key = Key(key)
-
-        hashed_key = self._hash_key(key)
-        self._score_db.put(hashed_key, value)
+        final_key: bytes = self._generate_final_key(key, use_rlp=self._use_rlp())
+        self._score_db.put(final_key, value)
 
     def get_sub_db(self, prefix: Union[bytes, 'Key']) -> 'PrefixScoreDatabase':
         """
@@ -321,17 +325,21 @@ class PrefixScoreDatabase(object):
 
         :param key: key to delete
         """
-        hashed_key: bytes = self._hash_key(_to_key(key))
-        self._score_db.delete(hashed_key)
+        if self._use_rlp():
+            final_key: bytes = self._generate_final_key(key, use_rlp=True)
+            self._score_db.delete(final_key)
+
+        final_key: bytes = self._generate_final_key(key, use_rlp=False)
+        self._score_db.delete(final_key)
 
     def close(self):
         self._score_db.close()
 
-    def _hash_key(self, key: 'Key') -> bytes:
+    def _generate_final_key(self, key: Union[bytes, 'Key'], use_rlp: bool) -> bytes:
         """All key is hashed and stored
         to StateDB to avoid key conflicts among SCOREs
 
         :params key: key passed by SCORE
         :return: key bytes
         """
-        return self._prefixes.get_final_key(key)
+        return self._prefixes.get_final_key(_to_key(key), use_rlp)
