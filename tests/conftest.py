@@ -2,8 +2,12 @@ from functools import wraps
 
 import pytest
 
+from iconservice.database.batch import TransactionBatch, BlockBatch
 from iconservice.database.db import KeyValueDatabase, ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, IconNetworkValueType
+from iconservice.iconscore.context.context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_step import StepType
 from iconservice.inv.container import Container as INVContainer
 from iconservice.inv.data.value import (
     RevisionCode,
@@ -14,7 +18,6 @@ from iconservice.inv.data.value import (
     ServiceConfig,
     ImportWhiteList
 )
-from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils import ContextStorage, ContextEngine
 from tests.legacy_unittest.mock_db import MockKeyValueDatabase
 
@@ -79,6 +82,17 @@ def generate_inv_container(is_migrated: bool, revision: int = 0):
         IconNetworkValueType.IMPORT_WHITE_LIST: ImportWhiteList(import_white_list)
     }
     return inv_container
+
+
+@pytest.fixture(scope="function")
+def context():
+    context = IconScoreContext(IconScoreContextType.DIRECT)
+    context.tx_batch = TransactionBatch()
+    context.block_batch = BlockBatch()
+
+    ContextContainer._push_context(context)
+    yield context
+    ContextContainer._pop_context()
 
 
 @pytest.fixture(scope="function")

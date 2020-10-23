@@ -56,6 +56,9 @@ class KeyFlag(Flag):
     ARRAY_LENGTH = auto()
     TAG = auto()
 
+    # Use | separator
+    PIPE = auto()
+
 
 class Key(object):
     def __init__(self, value: bytes, flags: 'KeyFlag' = KeyFlag.NONE):
@@ -115,12 +118,12 @@ class PrefixStorage(object):
         keys = []
 
         if len(self._keys) > 0:
-            key0 = self._keys[0]
+            key0 = self._keys[0]  # Tag key
 
             if key0.flags == KeyFlag.TAG and key0.value == Tag.DICT.value:
                 for i, key in enumerate(self._keys):
                     if i > 0:
-                        keys.append(key0.value)  # Tag
+                        keys.append(key0.value)  # Tag key
                         keys.append(key.value)
             else:
                 for key in self._keys:
@@ -133,7 +136,7 @@ class PrefixStorage(object):
     def _get_final_key_v1(self, last_key: 'Key') -> bytes:
         """Generate final key with rlp
 
-        :param key:
+        :param last_key:
         :return:
         """
         def func():
@@ -170,23 +173,23 @@ class IconScoreDatabase(ContextGetter):
         return self._address
 
     def __contains__(self, key: bytes) -> bool:
-        hashed_key = self._get_final_key(key)
-        return self._context_db.get(self._context, hashed_key) is not None
+        final_key: bytes = self._get_final_key(key)
+        return self._context_db.get(self._context, final_key) is not None
 
-    def get(self, key: bytes) -> bytes:
+    def get(self, key: Union[bytes, 'Key']) -> bytes:
         """
         Gets the value for the specified key
 
         :param key: key to retrieve
         :return: value for the specified key, or None if not found
         """
-        hashed_key = self._get_final_key(key)
-        value = self._context_db.get(self._context, hashed_key)
+        final_key: bytes = self._get_final_key(key)
+        value = self._context_db.get(self._context, final_key)
         if self._observer:
             self._observer.on_get(self._context, key, value)
         return value
 
-    def put(self, key: bytes, value: bytes):
+    def put(self, key: Union[bytes, 'Key'], value: bytes):
         """
         Sets a value for the specified key.
 
@@ -194,15 +197,15 @@ class IconScoreDatabase(ContextGetter):
         :param value: value to set
         """
         self._validate_ownership()
-        hashed_key = self._get_final_key(key)
+        final_key: bytes = self._get_final_key(key)
         if self._observer:
-            old_value = self._context_db.get(self._context, hashed_key)
+            old_value = self._context_db.get(self._context, final_key)
             if value:
                 self._observer.on_put(self._context, key, old_value, value)
             elif old_value:
                 # If new value is None, then deletes the field
                 self._observer.on_delete(self._context, key, old_value)
-        self._context_db.put(self._context, hashed_key, value)
+        self._context_db.put(self._context, final_key, value)
 
     def get_sub_db(self, prefix: Union[bytes, 'Key']) -> 'PrefixScoreDatabase':
         """
@@ -213,20 +216,20 @@ class IconScoreDatabase(ContextGetter):
         """
         return PrefixScoreDatabase(self, parent_prefixes=None, prefix=prefix)
 
-    def delete(self, key: bytes):
+    def delete(self, key: Union[bytes, 'Key']):
         """
         Deletes the key/value pair for the specified key.
 
         :param key: key to delete
         """
         self._validate_ownership()
-        hashed_key = self._get_final_key(key)
+        final_key: bytes = self._get_final_key(key)
         if self._observer:
-            old_value = self._context_db.get(self._context, hashed_key)
+            old_value = self._context_db.get(self._context, final_key)
             # If old value is None, won't fire the callback
             if old_value:
                 self._observer.on_delete(self._context, key, old_value)
-        self._context_db.delete(self._context, hashed_key)
+        self._context_db.delete(self._context, final_key)
 
     def close(self):
         self._context_db.close(self._context)
@@ -234,15 +237,19 @@ class IconScoreDatabase(ContextGetter):
     def set_observer(self, observer: 'DatabaseObserver'):
         self._observer = observer
 
-    def _get_final_key(self, key: bytes) -> bytes:
-        """All key is hashed and stored
-        to StateDB to avoid key conflicts among SCOREs
-
+    def _get_final_key(self, key: Union[bytes, 'Key']) -> bytes:
+        """
         :params key: key passed by SCORE
         :return: key bytes
         """
+        key = _to_key(key)
 
-        return self._address.to_bytes() + key
+        if self._use_rlp():
+            separator = b"|" if KeyFlag.PIPE in key.flags else b""
+        else:
+            separator = b"|"
+
+        return b"".join((self._address.to_bytes(), separator, key.value))
 
     def _validate_ownership(self):
         """Prevent a SCORE from accessing the database of another SCORE
@@ -250,6 +257,9 @@ class IconScoreDatabase(ContextGetter):
         """
         if self._context.current_address != self.address:
             raise AccessDeniedException("Invalid database ownership")
+
+    def _use_rlp(self) -> bool:
+        return self._context.revision >= Revision.USE_RLP.value
 
 
 class PrefixScoreDatabase(ContextGetter):
@@ -292,7 +302,7 @@ class PrefixScoreDatabase(ContextGetter):
         :return: value for the specified key, or None if not found
         """
         if self._use_rlp():
-            final_key: bytes = self._generate_final_key(key, use_rlp=True)
+            final_key: 'Key' = self._generate_final_key(key, use_rlp=True)
             value: Optional[bytes] = self._score_db.get(final_key)
             if isinstance(value, bytes):
                 return value
@@ -307,7 +317,7 @@ class PrefixScoreDatabase(ContextGetter):
         :param key: key to set
         :param value: value to set
         """
-        final_key: bytes = self._generate_final_key(key, use_rlp=self._use_rlp())
+        final_key: 'Key' = self._generate_final_key(key, use_rlp=self._use_rlp())
         self._score_db.put(final_key, value)
 
     def get_sub_db(self, prefix: Union[bytes, 'Key']) -> 'PrefixScoreDatabase':
@@ -326,20 +336,20 @@ class PrefixScoreDatabase(ContextGetter):
         :param key: key to delete
         """
         if self._use_rlp():
-            final_key: bytes = self._generate_final_key(key, use_rlp=True)
+            final_key: 'Key' = self._generate_final_key(key, use_rlp=True)
             self._score_db.delete(final_key)
 
-        final_key: bytes = self._generate_final_key(key, use_rlp=False)
+        final_key: 'Key' = self._generate_final_key(key, use_rlp=False)
         self._score_db.delete(final_key)
 
     def close(self):
         self._score_db.close()
 
-    def _generate_final_key(self, key: Union[bytes, 'Key'], use_rlp: bool) -> bytes:
-        """All key is hashed and stored
-        to StateDB to avoid key conflicts among SCOREs
-
+    def _generate_final_key(self, key: Union[bytes, 'Key'], use_rlp: bool) -> Key:
+        """
         :params key: key passed by SCORE
+        :params use_rlp: whether to use rtp when generating final key
         :return: key bytes
         """
-        return self._prefixes.get_final_key(_to_key(key), use_rlp)
+        value: bytes = self._prefixes.get_final_key(_to_key(key), use_rlp)
+        return Key(value, KeyFlag.NONE if use_rlp else KeyFlag.PIPE)
