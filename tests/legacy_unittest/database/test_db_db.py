@@ -25,7 +25,7 @@ from iconservice.database.batch import BlockBatch, TransactionBatch, Transaction
 from iconservice.database.db import ContextDatabase, MetaContextDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.database.wal import StateWAL
-from iconservice.icon_constant import DATA_BYTE_ORDER, Revision
+from iconservice.icon_constant import Revision
 from iconservice.iconscore.db import IconScoreDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreFuncType
@@ -302,17 +302,31 @@ class TestIconScoreDatabase(unittest.TestCase):
     @patch('iconservice.iconscore.context.context.ContextGetter._context')
     def test_put_and_get(self, context):
         context.current_address = self.address
+        context.revision = Revision.USE_RLP.value - 1
+        context.type = IconScoreContextType.DIRECT
+        context.readonly = False
 
-        for revision in (Revision.USE_RLP.value - 1, Revision.USE_RLP.value):
-            context.revision = revision
-
-            db = self.db
-            key = self.address.body
-            value = 100
-
+        db = self.db
+        for i in range(3):
+            key = f"key{i}".encode()
             self.assertIsNone(db.get(key))
 
-            context.readonly = False
-            context.type = IconScoreContextType.DIRECT
-            db.put(key, value.to_bytes(32, DATA_BYTE_ORDER))
-            self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(key))
+        for i in range(3):
+            key = f"key{i}".encode()
+            value = i.to_bytes(20, "big")
+
+            self.assertIsNone(db.get(key))
+            db.put(key, value)
+            self.assertEqual(value, db.get(key))
+
+        context.revision = Revision.USE_RLP.value
+
+        for i in range(3):
+            key = f"key{i}".encode()
+            old_value = i.to_bytes(20, "big")
+            new_value = i.to_bytes(30, "big")
+            self.assertNotEqual(old_value, new_value)
+
+            self.assertEqual(old_value, db.get(key))
+            db.put(key, new_value)
+            self.assertEqual(new_value, db.get(key))

@@ -21,7 +21,7 @@ from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.db import IconScoreDatabase
-from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
+from iconservice.iconscore.icon_container_db import DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from tests import create_address
 
@@ -44,70 +44,9 @@ def context(score_db):
 class TestIconContainerDB:
     ADDRESS = create_address(AddressPrefix.CONTRACT)
 
-    @pytest.mark.parametrize("args, value_type, expected_value", [
-        (0, int, 1),
-        (1, int, 2),
-        (2, int, 3),
-        ((3, 0), int, 4),
-        ((3, 1), int, 5),
-        ((3, 2), int, 6),
-        ((4, 0), int, 7),
-        ((4, 1), int, 8),
-        ((4, 2), int, 9),
-        ((4, 3, 0), int, 10),
-        ((4, 3, 1), int, 11),
-        ((4, 3, 2), int, 12),
-        (5, Address, ADDRESS),
-        (6, int, 0)
-    ])
-    def test_nested_list(self, score_db, args, value_type, expected_value):
-        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], self.ADDRESS]
-        ContainerUtil.put_to_db(score_db, 'test_list', test_list)
-
-        if isinstance(args, tuple):
-            assert ContainerUtil.get_from_db(score_db, 'test_list', *args, value_type=value_type) == expected_value
-        else:
-            assert ContainerUtil.get_from_db(score_db, 'test_list', args, value_type=value_type) == expected_value
-
-    @pytest.mark.parametrize("args, value_type, expected_value", [
-        (1, str, 'a'),
-        ((2, 0), str, 'a'),
-        ((2, 1), str, 'b'),
-        ((2, 2, 0), str, 'c'),
-        ((2, 2, 1), str, 'd'),
-        ((3, 'a'), int, 1),
-        (4, Address, ADDRESS),
-    ])
-    def test_nested_dict(self, score_db, args, value_type, expected_value):
-        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}, 4: self.ADDRESS}
-        ContainerUtil.put_to_db(score_db, 'test_dict', test_dict)
-
-        if isinstance(args, tuple):
-            assert ContainerUtil.get_from_db(score_db, 'test_dict', *args, value_type=value_type) == expected_value
-        else:
-            assert ContainerUtil.get_from_db(score_db, 'test_dict', args, value_type=value_type) == expected_value
-
-    @pytest.mark.parametrize("args, value_type, expected_value", [
-        (0, int, 1),
-        (1, int, 2),
-        (2, int, 3),
-        (3, Address, ADDRESS),
-    ])
-    def test_tuple(self, score_db, args, value_type, expected_value):
-        test_tuple = tuple([1, 2, 3, self.ADDRESS])
-        ContainerUtil.put_to_db(score_db, 'test_tuple', test_tuple)
-
-        assert ContainerUtil.get_from_db(score_db, 'test_tuple', args, value_type=value_type) == expected_value
-
-    @staticmethod
-    def _check_the_db_prefix_format(name):
-        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
-        assert prefix == b'\x01|' + name.encode()
-
     def test_dict_depth1(self, score_db):
         name = 'test_dict'
         test_dict = DictDB(name, score_db, value_type=int)
-        self._check_the_db_prefix_format(name)
 
         test_dict['a'] = 1
         test_dict['b'] = 2
@@ -120,7 +59,6 @@ class TestIconContainerDB:
     def test_dict_other_Key(self, score_db):
         name = 'test_dict'
         test_dict = DictDB(name, score_db, depth=2, value_type=int)
-        self._check_the_db_prefix_format(name)
 
         addr1 = create_address(1)
         addr2 = create_address(0)
@@ -133,7 +71,6 @@ class TestIconContainerDB:
     def test_dict_depth2(self, score_db):
         name = 'test_dict'
         test_dict = DictDB(name, score_db, depth=3, value_type=int)
-        self._check_the_db_prefix_format(name)
 
         test_dict['a']['b']['c'] = 1
         test_dict['a']['b']['d'] = 2
@@ -231,23 +168,6 @@ class TestIconContainerDB:
 
         assert test_var.get() == expected_value
 
-    @pytest.mark.parametrize("collection, key_or_index", [
-        ({"dummy_key": "dummy_value"}, "not_exists_key"),
-        (["dummy_list"], 3)
-    ])
-    @pytest.mark.parametrize("value_type, expected_value", [
-        (int, 0),
-        (str, ""),
-        (bytes, None),
-        (Address, None)
-    ])
-    def test_default_value_of_container_db(self, score_db, value_type, expected_value, collection, key_or_index):
-        # TEST: Check the default value of collection object (dict, list)
-        ContainerUtil.put_to_db(score_db, 'test_collection', collection)
-        actual_value = ContainerUtil.get_from_db(score_db, 'test_collection', key_or_index, value_type=value_type)
-
-        assert actual_value == expected_value
-
     @pytest.mark.parametrize("value_type, expected_value", [
         (int, 0),
         (str, ""),
@@ -261,70 +181,58 @@ class TestIconContainerDB:
 
     def test_array_db(self, score_db):
         name = "TEST"
-        testarray = ArrayDB(name, score_db, value_type=int)
-        assert testarray._db != score_db
+        test_array = ArrayDB(name, score_db, value_type=int)
+        assert test_array._db != score_db
 
-        testarray.put(1)
-        testarray.put(3)
-        testarray.put(5)
-        testarray.put(7)
-        assert len(testarray) == 4
-        assert testarray.pop() == 7
-        assert testarray.pop() == 5
-        assert len(testarray) == 2
+        test_array.put(1)
+        test_array.put(3)
+        test_array.put(5)
+        test_array.put(7)
+        assert len(test_array) == 4
+        assert test_array.pop() == 7
+        assert test_array.pop() == 5
+        assert len(test_array) == 2
 
     def test_array_db2(self, score_db):
         name = "TEST"
-        testarray = ArrayDB(name, score_db, value_type=int)
-        assert testarray._db != score_db
+        test_array = ArrayDB(name, score_db, value_type=int)
+        assert test_array._db != score_db
 
-        testarray.put(1)
-        testarray.put(2)
-        testarray.put(3)
-        testarray.put(4)
+        test_array.put(1)
+        test_array.put(2)
+        test_array.put(3)
+        test_array.put(4)
 
-        assert testarray[0] == 1
-        assert testarray[1] == 2
-        assert testarray[2] == 3
-        assert testarray[3] == 4
+        assert test_array[0] == 1
+        assert test_array[1] == 2
+        assert test_array[2] == 3
+        assert test_array[3] == 4
 
-        assert testarray[-1] == 4
-        assert testarray[-2] == 3
-        assert testarray[-3] == 2
-        assert testarray[-4] == 1
+        assert test_array[-1] == 4
+        assert test_array[-2] == 3
+        assert test_array[-3] == 2
+        assert test_array[-4] == 1
 
-        testarray[0] = 5
-        testarray[1] = 6
-        testarray[2] = 7
-        testarray[3] = 8
+        test_array[0] = 5
+        test_array[1] = 6
+        test_array[2] = 7
+        test_array[3] = 8
 
-        assert testarray[0] == 5
-        assert testarray[1] == 6
-        assert testarray[2] == 7
-        assert testarray[3] == 8
+        assert test_array[0] == 5
+        assert test_array[1] == 6
+        assert test_array[2] == 7
+        assert test_array[3] == 8
 
-        testarray[-1] = 4
-        testarray[-2] = 3
-        testarray[-3] = 2
-        testarray[-4] = 1
+        test_array[-1] = 4
+        test_array[-2] = 3
+        test_array[-3] = 2
+        test_array[-4] = 1
 
-        assert testarray[-1] == 4
-        assert testarray[-2] == 3
-        assert testarray[-3] == 2
-        assert testarray[-4] == 1
+        assert test_array[-1] == 4
+        assert test_array[-2] == 3
+        assert test_array[-3] == 2
+        assert test_array[-4] == 1
 
         with pytest.raises(InvalidParamsException):
-            testarray[5] = 1
-            a = testarray[5]
-
-    @pytest.mark.parametrize("prefix, score_db_cls, expected_prefix", [
-        ('a', ArrayDB, b'\x00|a'),
-        ('dictdb', DictDB, b'\x01|dictdb'),
-    ])
-    def test_container_util(self, prefix, score_db_cls, expected_prefix):
-        actual_prefix: bytes = ContainerUtil.create_db_prefix(score_db_cls, prefix)
-        assert actual_prefix == expected_prefix
-
-    def test_when_create_var_db_prefix_using_container_util_should_raise_error(self):
-        with pytest.raises(InvalidParamsException):
-            ContainerUtil.create_db_prefix(VarDB, 'vardb')
+            test_array[5] = 1
+            a = test_array[5]

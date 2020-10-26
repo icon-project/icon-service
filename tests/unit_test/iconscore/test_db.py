@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import os
-from typing import Iterable, Tuple, Optional, Iterator
+from typing import Iterable, Tuple, Optional, TypeVar
 from unittest.mock import Mock
 
 import pytest
@@ -28,7 +28,8 @@ from iconservice.database.db import ContextDatabase
 from iconservice.icon_constant import Revision
 from iconservice.iconscore.db import (
     IconScoreDatabase,
-    Tag,
+    Key,
+    ContainerTag,
 )
 from iconservice.iconscore.icon_container_db import (
     ArrayDB,
@@ -71,38 +72,35 @@ def key_value_db() -> DummyKeyValueDatabase:
     return DummyKeyValueDatabase()
 
 
-def _generate_final_key(*args, use_rlp: bool) -> bytes:
+K = TypeVar("K", bytes, Key, ContainerTag, Address)
+
+
+def _to_bytes(key: K) -> bytes:
+    if isinstance(key, (ContainerTag, Key)):
+        return key.value
+    elif isinstance(key, Address):
+        return key.to_bytes()
+    elif isinstance(key, bytes):
+        return key
+
+    raise ValueError
+
+
+def _get_final_key(*args, use_rlp: bool) -> bytes:
+    keys = (_to_bytes(key) for key in args)
+
     if use_rlp:
-        return _generate_new_final_key(*args)
+        return _get_final_key_with_rlp(*keys)
     else:
-        if args[1] == Tag.DICT.value:
-            return _generate_old_final_key_for_dict_db(*args)
-        else:
-            return _generate_old_final_key(*args)
+        return _get_final_key_with_pipe(*keys)
 
 
-def _generate_old_final_key(*args) -> bytes:
-    return b"|".join(args)
+def _get_final_key_with_pipe(*args) -> bytes:
+    return b"|".join((key for key in args))
 
 
-def _generate_old_final_key_for_dict_db(*args) -> bytes:
-    address: bytes = args[0]
-    tag: bytes = args[1]
-
-    def func():
-        yield address
-        for key in args[2:-1]:
-            yield tag
-            yield key
-
-        yield args[-1]
-
-    return b"|".join(func())
-
-
-def _generate_new_final_key(*args) -> bytes:
-    address = args[0]
-    return address + b"".join((rlp_encode_bytes(key) for key in args[1:]))
+def _get_final_key_with_rlp(*args) -> bytes:
+    return args[0] + b"".join((rlp_encode_bytes(key) for key in args[1:]))
 
 
 class TestIconScoreDatabase:
@@ -137,22 +135,18 @@ class TestIconScoreDatabase:
         balances.put(300)  # balances[3] = 300
         assert len(balances) == 4
 
-        # value: 0, 100, 200, 300
+        # balances: [0, 100, 200, 300]
         for i, value in enumerate(balances):
             assert value == i * 100
 
-        key = _generate_final_key(
-            address.to_bytes(),
-            Tag.ARRAY.value,
-            name.encode("utf-8"),
-            use_rlp=True
-        )
-        assert key_value_db.get(key) == b"\x04"
+        # len(balances)
+        final_key: bytes = _get_final_key(address, ContainerTag.ARRAY, name.encode(), use_rlp=True)
+        assert key_value_db.get(final_key) == int_to_bytes(len(balances))
 
         for i, use_rlp in enumerate((False, False, True, True)):
-            key = _generate_final_key(
+            key = _get_final_key(
                 address.to_bytes(),
-                Tag.ARRAY.value,
+                ContainerTag.ARRAY.value,
                 name.encode(),
                 int_to_bytes(i),
                 use_rlp=use_rlp,
@@ -174,10 +168,7 @@ class TestIconScoreDatabase:
         owner.set(owner_address)
         assert owner.get() == owner_address
 
-        key = _generate_final_key(
-            address.to_bytes(), Tag.VAR.value, name.encode(),
-            use_rlp=False
-        )
+        key = _get_final_key(address, ContainerTag.VAR, name.encode(), use_rlp=False)
         assert key_value_db.get(key) == owner_address.to_bytes()
 
         self._set_revision(context, Revision.USE_RLP.value)
@@ -187,10 +178,7 @@ class TestIconScoreDatabase:
         assert owner.get() == address
         assert owner.get() != owner_address
 
-        key = _generate_final_key(
-            address.to_bytes(), Tag.VAR.value, name.encode(),
-            use_rlp=True
-        )
+        key = _get_final_key(address, ContainerTag.VAR, name.encode(), use_rlp=True)
         assert key_value_db.get(key) == address.to_bytes()
 
     def test_1_depth_dict_db(self, context, key_value_db):
@@ -216,8 +204,8 @@ class TestIconScoreDatabase:
             balances[address] = balance
             assert balances[address] == balance
 
-            key = _generate_final_key(
-                score_address.to_bytes(), Tag.DICT.value, name.encode(), address.to_bytes(),
+            key = _get_final_key(
+                score_address, ContainerTag.DICT, name.encode(), address,
                 use_rlp=False
             )
             assert key_value_db.get(key) == int_to_bytes(balance)
@@ -231,8 +219,8 @@ class TestIconScoreDatabase:
             balances[address] = balance
             assert balances[address] == balance
 
-            key = _generate_final_key(
-                score_address.to_bytes(), Tag.DICT.value, name.encode(), address.to_bytes(),
+            key = _get_final_key(
+                score_address, ContainerTag.DICT, name.encode(), address,
                 use_rlp=True
             )
             assert key_value_db.get(key) == int_to_bytes(balance)
@@ -241,6 +229,7 @@ class TestIconScoreDatabase:
         for i, address in enumerate(addresses):
             assert balances[address] == i * 1000
 
+        # {0, 2000}
         del balances[addresses[1]]
         assert balances[addresses[1]] == 0
 
@@ -286,9 +275,11 @@ class TestIconScoreDatabase:
                 expected_allowance = expected_allowances[parent][child]
                 assert allowances[parent][child] == expected_allowance
 
-                key = _generate_final_key(
-                    score_address.to_bytes(), Tag.DICT.value,
-                    name.encode(), parent.to_bytes(), child.to_bytes(),
+                key = _get_final_key(
+                    score_address,
+                    ContainerTag.DICT, name.encode(),
+                    ContainerTag.DICT, parent.to_bytes(),
+                    child.to_bytes(),
                     use_rlp=False
                 )
                 assert key_value_db.get(key) == int_to_bytes(expected_allowance)
@@ -305,8 +296,9 @@ class TestIconScoreDatabase:
         allowances[parents[0]][children[0]] = value
         assert allowances[parents[0]][children[0]] == value
 
-        key = _generate_final_key(
-            score_address.to_bytes(), Tag.DICT.value, name.encode(),
+        key = _get_final_key(
+            score_address,
+            ContainerTag.DICT, name.encode(),
             parents[0].to_bytes(), children[0].to_bytes(),
             use_rlp=True
         )
