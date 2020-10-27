@@ -78,15 +78,15 @@ class TestDataTypeValidationInTx(TestIISSBase):
             value=value,
             disable_pre_validate=True
         )
-
-        self.icon_service_engine.validate_transaction(tx)
+        origin_params = {'params': self.make_origin_params(tx['params'])}
+        self.icon_service_engine.validate_transaction(tx, origin_params)
 
         invalid_data_types = ("abc", 1, 1.1, b"call", b"deploy", b"deposit", b"message")
         for data_type in invalid_data_types:
             tx["params"]["dataType"] = data_type
 
             with self.assertRaises(InvalidParamsException):
-                self.icon_service_engine.validate_transaction(tx)
+                self.icon_service_engine.validate_transaction(tx, origin_params)
 
         for data_type in DataType._TYPES:
             params = tx["params"]
@@ -100,7 +100,7 @@ class TestDataTypeValidationInTx(TestIISSBase):
             else:
                 continue
 
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
     def test_invalid_score_call_failure_on_invoke(self):
         self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)

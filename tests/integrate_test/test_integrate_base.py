@@ -342,6 +342,33 @@ class TestIntegrateBase(TestCase):
         assert block_height == self._block_height
         self._prev_block_hash = new_block_hash
 
+    def make_origin_params(self, params: dict):
+        origin_items = [
+            ('version', int, hex),
+            ('from', Address, str),
+            ('to', Address, str),
+            ('value', int, hex),
+            ('nonce', int, hex),
+            ('stepLimit', int, hex),
+            ('timestamp', int, hex),
+            ('nid', int, hex),
+            ('signature', str, str)
+        ]
+        origin_params = params.copy()
+
+        if "txHash" in origin_params:
+            del origin_params["txHash"]
+
+        for key, value_type, origin_type in origin_items:
+            value = origin_params.get(key, None)
+            if value is None and key == "nid":
+                origin_params[key] = hex(2)
+
+            if isinstance(value, value_type):
+                origin_params[key] = origin_type(value)
+
+        return origin_params
+
     def rollback(self, block_height: int = -1, block_hash: Optional[bytes] = None):
         """Rollback the current state to the old one indicated by a given block
 
@@ -473,6 +500,7 @@ class TestIntegrateBase(TestCase):
             "data": deploy_data
         }
 
+        origin_params = {'params': self.make_origin_params(request_params)}
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -482,7 +510,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -518,6 +546,9 @@ class TestIntegrateBase(TestCase):
             }
         }
 
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -527,7 +558,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -560,6 +591,9 @@ class TestIntegrateBase(TestCase):
         else:
             request_params["version"] = self._version
 
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -569,7 +603,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if not disable_pre_validate:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
         return tx
 
     def create_message_tx(self,
@@ -598,6 +632,10 @@ class TestIntegrateBase(TestCase):
             "data": '0x' + data.hex(),
         }
 
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
+
         method = 'icx_sendTransaction'
         # Inserts txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -607,7 +645,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
         return tx
 
     def create_deposit_tx(self,
@@ -639,7 +677,9 @@ class TestIntegrateBase(TestCase):
                 "action": action,
             }
         }
-
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         for k, v in params.items():
             request_params["data"][k] = v
 
@@ -652,7 +692,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
