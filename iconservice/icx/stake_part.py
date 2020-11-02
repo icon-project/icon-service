@@ -73,7 +73,16 @@ class StakePart(BasePart):
     @property
     def total_stake(self) -> int:
         assert self.is_set(BasePartState.COMPLETE)
-        return self._stake + self.total_unstake
+        return self._stake + self._total_unstake()
+
+    def get_total_stake(self) -> int:
+        """
+        It MUST BE called only in Account.__init__()
+        to verify account asset(stake + balance)
+
+        :return:
+        """
+        return self._stake + self._total_unstake()
 
     @property
     def unstakes_info(self) -> List[List[int]]:

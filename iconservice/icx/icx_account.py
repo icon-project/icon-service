@@ -212,7 +212,7 @@ class Account(object):
 
     def _get_asset(self) -> int:
         balance: int = self.coin_part.balance if self.coin_part else 0
-        total_stake: int = self.stake_part.total_stake if self.stake_part else 0
+        total_stake: int = self.stake_part.get_total_stake() if self.stake_part else 0
 
         return balance + total_stake
 
@@ -223,8 +223,8 @@ class Account(object):
 
         """
         if revision == Revision.MULTIPLE_UNSTAKE.value:
-            # Skip to verify only if revision is MULTIPLE_UNSTAKE
-            # Asset integrity failure exists during Revision.MULTIPLE_UNSTAKE
+            # Skip to verify if revision is MULTIPLE_UNSTAKE
+            # because asset integrity failure exists during Revision.MULTIPLE_UNSTAKE
             return
 
         if before_asset != after_asset:
