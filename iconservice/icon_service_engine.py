@@ -478,9 +478,6 @@ class IconServiceEngine(ContextContainer):
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
-                # TODO: by goldworm
-                # context.balance_verifier.verify()
-
                 self._log_step_trace(context)
                 block_result.append(tx_result)
                 context.update_batch()
