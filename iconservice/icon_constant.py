@@ -141,6 +141,7 @@ class Revision(Enum):
 
     BURN_V2_ENABLED = 12
     IMPROVED_PRE_VALIDATOR = 12
+    VERIFY_ASSET_INTEGRITY = 12
 
     LATEST = 12
 
