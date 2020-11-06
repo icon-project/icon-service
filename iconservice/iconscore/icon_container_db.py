@@ -105,7 +105,7 @@ class DictDB(object):
                  db: IconScoreDatabase,
                  value_type: type,
                  depth: int = 1) -> None:
-        if not (1 <= depth <= 3):
+        if not (1 <= depth <= 5):
             raise InvalidParamsException(f"Depth out of range: {depth}")
 
         self._db = db.get_sub_db(Key(get_encoded_key(var_key), KeyType.DICT))
