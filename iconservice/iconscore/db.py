@@ -349,11 +349,9 @@ class IconScoreDatabase(ContextGetter):
         final_key: bytes = new_kv_pair.key if new_kv_pair.key else old_kv_pair.key
         value: bytes = new_kv_pair.value if new_kv_pair.value else old_kv_pair.value
 
-        if value is None:
-            return
-
         if self._observer:
-            self._observer.on_delete(self._context, self._to_key_body(final_key), value)
+            if value:
+                self._observer.on_delete(self._context, self._to_key_body(final_key), value)
 
         self._context_db_delete(old_kv_pair.key)
         self._context_db_delete(new_kv_pair.key)
