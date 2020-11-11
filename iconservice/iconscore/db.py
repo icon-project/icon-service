@@ -170,8 +170,7 @@ class PrefixStorage(object):
                 keys.append(self._tag.value)
             keys.append(key.value)
 
-        if len(last_key.value) > 0:
-            keys.append(last_key.value)
+        keys.append(last_key.value)
 
         return keys
 
