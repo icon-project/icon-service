@@ -284,6 +284,7 @@ class VarDB(object):
     :K: [int, str, Address, bytes]
     :V: [int, str, Address, bytes, bool]
     """
+    _DUMMY_LAST_KEY = Key(b"", KeyType.DUMMY)
 
     def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
         # Use var_key as a db prefix in the case of VarDB
@@ -297,7 +298,7 @@ class VarDB(object):
         :param value: a value to be set
         """
         byte_value = ContainerUtil.encode_value(value)
-        self._db.put(b"", byte_value)
+        self._db.put(self._DUMMY_LAST_KEY, byte_value)
 
     def get(self) -> Optional[V]:
         """
@@ -305,13 +306,16 @@ class VarDB(object):
 
         :return: value of the var db
         """
-        return ContainerUtil.decode_object(self._db.get(b""), self.__value_type)
+        return ContainerUtil.decode_object(
+            self._db.get(self._DUMMY_LAST_KEY),
+            self.__value_type
+        )
 
     def remove(self) -> None:
         """
         Deletes the value
         """
-        self._db.delete(b"")
+        self._db.delete(self._DUMMY_LAST_KEY)
 
 
 def get_default_value(value_type: type) -> Any:

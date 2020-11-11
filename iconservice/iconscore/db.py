@@ -46,6 +46,7 @@ class KeyType(Enum):
     SUB = auto()
 
     ARRAY_SIZE = auto()
+    DUMMY = auto()
     LAST = auto()
 
 
@@ -170,7 +171,8 @@ class PrefixStorage(object):
                 keys.append(self._tag.value)
             keys.append(key.value)
 
-        keys.append(last_key.value)
+        if last_key.type != KeyType.DUMMY:
+            keys.append(last_key.value)
 
         return keys
 
