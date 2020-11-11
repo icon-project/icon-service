@@ -460,7 +460,8 @@ class IconServiceEngine(ContextContainer):
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
-                Logger.debug(_TAG, f"INVOKE tx: {tx_request}")
+                tx_hash: Optional[bytes] = tx_request["params"].get("txHash")
+                Logger.debug(_TAG, f"INVOKE tx: tx_hash={bytes_to_hex(tx_hash)} {tx_request}")
 
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
