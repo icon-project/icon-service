@@ -28,12 +28,12 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
-from iconservice.database.db import IconScoreDatabase
+from iconservice.iconscore.context.context import ContextContainer
+from iconservice.iconscore.db import IconScoreDatabase
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
-from iconservice.iconscore.context.context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLog
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
