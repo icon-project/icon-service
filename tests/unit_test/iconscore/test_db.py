@@ -265,6 +265,17 @@ class TestIconScoreDatabase:
 
         self._set_revision(context, Revision.USE_RLP.value)
 
+        # Read old-formatted data on Revision.USE_RLP
+        for i in range(2):
+            k, v = keys[i], old_values[i]
+            assert dict_db[k] == v
+
+            key = _get_final_key(
+                score_address, ContainerTag.DICT, name.encode(), ContainerUtil.encode_key(k),
+                use_rlp=False
+            )
+            assert key_value_db.get(key) == ContainerUtil.encode_value(v)
+
         # Put 4 items to dict_db
         for i, k in enumerate(keys):
             old_v = old_values[i]
@@ -350,6 +361,11 @@ class TestIconScoreDatabase:
 
         self._set_revision(context, Revision.USE_RLP.value)
 
+        # Check if reading old-formatted key:value data works on Revision.USE_RLP
+        for k1 in keys1:
+            for k2, v in zip(keys2, old_values):
+                assert dict_db[k1][k2] == v
+
         # Replace all old_values with new_values on Revision.USE_RLP
         for k1 in keys1:
             for k2, v in zip(keys2, new_values):
@@ -377,3 +393,65 @@ class TestIconScoreDatabase:
                 assert dict_db[k1][k2] == get_default_value(value_type)
 
         assert len(key_value_db) == 0
+
+    @pytest.mark.parametrize(
+        "prefixes", [
+            (),
+            (b"prefix0",),
+            (b"prefix0", b"prefix1"),
+            (b"prefix0", b"prefix1", b"prefix2"),
+        ]
+    )
+    @pytest.mark.parametrize(
+        "old_values,new_values", [
+            (
+                (True, b"hello", 100, "world", Address(AddressPrefix.EOA, os.urandom(20))),
+                (False, b"world", 1234, "helloworld", Address(AddressPrefix.CONTRACT, os.urandom(20))),
+            )
+        ],
+    )
+    def test_score_db(self, context, key_value_db, prefixes, old_values, new_values):
+        context_db = ContextDatabase(key_value_db, is_shared=False)
+        score_address = Address(AddressPrefix.CONTRACT, os.urandom(20))
+        score_db = IconScoreDatabase(score_address, context_db)
+        args = [score_address]
+
+        self._init_context(context, score_address)
+        self._set_revision(context, Revision.USE_RLP.value - 1)
+
+        for prefix in prefixes:
+            score_db = score_db.get_sub_db(prefix)
+            args.append(prefix)
+
+        for i, value in enumerate(old_values):
+            key: bytes = f"key{i}".encode()
+            encoded_value: bytes = ContainerUtil.encode_value(value)
+            score_db.put(key, encoded_value)
+            assert score_db.get(key) == encoded_value
+
+            final_key: bytes = _get_final_key(*args, key, use_rlp=False)
+            assert key_value_db.get(final_key) == encoded_value
+
+        self._set_revision(context, Revision.USE_RLP.value)
+
+        for i, value in enumerate(old_values):
+            key: bytes = f"key{i}".encode()
+            encoded_value: bytes = ContainerUtil.encode_value(value)
+            assert score_db.get(key) == encoded_value
+
+            final_key: bytes = _get_final_key(*args, key, use_rlp=False)
+            assert key_value_db.get(final_key) == encoded_value
+
+        for i, value in enumerate(new_values):
+            key: bytes = f"key{i}".encode()
+            encoded_value: bytes = ContainerUtil.encode_value(value)
+            score_db.put(key, encoded_value)
+
+            assert score_db.get(key) == encoded_value
+
+            final_key: bytes = _get_final_key(*args, key, use_rlp=True)
+            assert key_value_db.get(final_key) == encoded_value
+
+            score_db.delete(key)
+            assert score_db.get(key) is None
+            assert key_value_db.get(final_key) is None
