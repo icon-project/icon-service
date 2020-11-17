@@ -103,6 +103,7 @@ class IconService(object):
             """
             Logger.info(f"loop has been stopped and will be closed.")
 
+            loop.run_until_complete(self._inner_service.close())
             loop.run_until_complete(loop.shutdown_asyncgens())
 
             self.cancel_tasks(loop)

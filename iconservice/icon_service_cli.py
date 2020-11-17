@@ -166,6 +166,7 @@ async def stop_process(conf: 'IconConfig'):
     icon_score_queue_name = _make_icon_score_queue_name(conf[ConfigKey.CHANNEL], conf[ConfigKey.AMQP_KEY])
     stub = await _create_icon_score_stub(conf[ConfigKey.AMQP_TARGET], icon_score_queue_name)
     await stub.async_task().close()
+    await stub.close()
     Logger.info(f'stop_process_icon_service!', _TAG)
 
 
