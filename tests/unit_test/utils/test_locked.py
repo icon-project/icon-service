@@ -13,7 +13,7 @@ from iconservice.utils.locked import is_address_locked
         ("hxc39a4c8438abbcb6b49de4691f07ee9b24968a1b", True),
         ("hx96505aac67c4f9033e4bac47397d760f121bcc44", True),
         ("hxf5bbebeb7a7d37d2aee5d93a8459e182cbeb725d", True),
-        ("hx3f472b9f22a165b02da1544004e177d168d19eaf", True),
+        ("hx3f472b9f22a165b02da1544004e177d168d19eaf", False),
         ("hxe9152fad3960b17bedf60d4bc249b42d7f2a0ebc", False),
         ("hx459af36f56b9140407df21a856fcfd4ff44db648", False),
         ("hx19e551eae80f9b9dcfed1554192c91c96a9c71d1", True),
