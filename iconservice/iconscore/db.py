@@ -229,6 +229,7 @@ class IconScoreDatabase(ContextGetter):
             context_db: 'ContextDatabase',
             prev_prefixes: Iterable[Key] = None,
             prefix: Union[bytes, Key] = None,
+            origin_score_db: Optional[IconScoreDatabase] = None,
     ):
         """Constructor
 
@@ -238,6 +239,7 @@ class IconScoreDatabase(ContextGetter):
         self._address = address
         self._context_db = context_db
         self._observer: Optional[DatabaseObserver] = None
+        self._origin_score_db = origin_score_db
 
         self._prefixes = PrefixStorage(prev_prefixes)
         if prefix:
@@ -273,8 +275,9 @@ class IconScoreDatabase(ContextGetter):
         final_key: bytes = new_kv_pair.key if new_kv_pair.key else old_kv_pair.key
         value: bytes = new_kv_pair.value if new_kv_pair.value else old_kv_pair.value
 
-        if self._observer:
-            self._observer.on_get(self._context, self._to_key_body(final_key), value)
+        observer = self.__get_observer()
+        if observer:
+            observer.on_get(self._context, self._to_key_body(final_key), value)
 
         return value
 
@@ -311,13 +314,14 @@ class IconScoreDatabase(ContextGetter):
         final_key: bytes = new_kv_pair.key if new_kv_pair.key else old_kv_pair.key
         prev_value: bytes = new_kv_pair.value if new_kv_pair.value else old_kv_pair.value
 
-        if self._observer:
+        observer = self.__get_observer()
+        if observer:
             key_body: bytes = self._to_key_body(final_key)
             if value:
-                self._observer.on_put(self._context, key_body, prev_value, value)
+                observer.on_put(self._context, key_body, prev_value, value)
             elif prev_value:
                 # If new value is None, then deletes the field
-                self._observer.on_delete(self._context, key_body, prev_value)
+                observer.on_delete(self._context, key_body, prev_value)
 
         self._context_db.put(self._context, final_key, value)
 
@@ -328,11 +332,14 @@ class IconScoreDatabase(ContextGetter):
         :param prefix: The prefix used by this sub db.
         :return: sub db
         """
+        origin_score_db = self._origin_score_db if self._origin_score_db else self
+
         score_db = IconScoreDatabase(
             address=self._address,
             context_db=self._context_db,
             prev_prefixes=self._prefixes,
-            prefix=prefix
+            prefix=prefix,
+            origin_score_db=origin_score_db
         )
         score_db.set_observer(self._observer)
 
@@ -350,9 +357,10 @@ class IconScoreDatabase(ContextGetter):
         final_key: bytes = new_kv_pair.key if new_kv_pair.key else old_kv_pair.key
         value: bytes = new_kv_pair.value if new_kv_pair.value else old_kv_pair.value
 
-        if self._observer:
+        observer = self.__get_observer()
+        if observer:
             if value:
-                self._observer.on_delete(self._context, self._to_key_body(final_key), value)
+                observer.on_delete(self._context, self._to_key_body(final_key), value)
 
         self._context_db_delete(old_kv_pair.key)
         self._context_db_delete(new_kv_pair.key)
@@ -362,6 +370,15 @@ class IconScoreDatabase(ContextGetter):
 
     def set_observer(self, observer: DatabaseObserver):
         self._observer = observer
+
+    def __get_observer(self) -> Optional[DatabaseObserver]:
+        if self._observer:
+            return self._observer
+
+        if self._origin_score_db:
+            return self._origin_score_db.__get_observer()
+
+        return None
 
     def _get_final_key(self, key: Union[bytes, Key], use_rlp: bool) -> bytes:
         """
