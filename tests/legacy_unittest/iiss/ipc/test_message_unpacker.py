@@ -144,8 +144,16 @@ class TestMessageUnpacker(unittest.TestCase):
                     success,
                     block_height
                 )
+            ),
+            (
+                MessageType.START_BLOCK,
+                msg_id,
+                (
+                    block_height,
+                    block_hash
+                )
             )
-    ]
+        ]
 
         for message in messages:
             data: bytes = msgpack.packb(message)
@@ -213,6 +221,11 @@ class TestMessageUnpacker(unittest.TestCase):
         self.assertEqual(success, init_response.success)
         self.assertEqual(block_height, init_response.block_height)
 
+        start_block_response = next(it)
+        self.assertIsInstance(start_block_response, StartBlockResponse)
+        self.assertEqual(block_height, start_block_response.block_height)
+        self.assertEqual(block_hash, start_block_response.block_hash)
+
         with self.assertRaises(StopIteration):
             next(it)
 
@@ -224,7 +237,8 @@ class TestMessageUnpacker(unittest.TestCase):
             version_response, calculate_response, query_response,
             claim_response, commit_block_response, commit_claim_response,
             query_calculate_status, query_calculate_result,
-            ready_notification, calculate_done_notification, rollback_response
+            ready_notification, calculate_done_notification, rollback_response,
+            init_response, start_block_response,
         ]
         for expected_response, response in zip(expected, self.unpacker):
             self.assertEqual(expected_response.MSG_TYPE, response.MSG_TYPE)
