@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
-import time
 from iconcommons.logger import Logger
 
 from iconservice.iiss.listener import EngineListener as IISSEngineListener
@@ -31,6 +31,7 @@ from ..base.exception import (
     InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException,
     InternalServiceErrorException
 )
+from ..base.transaction import Transaction
 from ..icon_constant import ISCORE_EXCHANGE_RATE, IISS_MAX_REWARD_RATE, \
     IconScoreContextType, IISS_LOG_TAG, ROLLBACK_LOG_TAG, RCCalculateResult, INVALID_CLAIM_TX, Revision, \
     RevisionChangedFlag
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
     from ..icx import IcxStorage
     from ..prep.data import Term
     from ..base.block import Block
-    from ..base.transaction import Transaction
 
 _TAG = IISS_LOG_TAG
 
@@ -714,8 +714,8 @@ class Engine(EngineBase):
         if not isinstance(address, Address):
             raise InvalidParamsException(f"Invalid address: {address}")
 
-        # TODO: error handling
-        iscore, block_height = self._reward_calc_proxy.query_iscore(address)
+        tx_hash = context.tx.hash if isinstance(context.tx, Transaction) else None
+        iscore, block_height = self._reward_calc_proxy.query_iscore(address, tx_hash)
 
         data = {
             "iscore": iscore,

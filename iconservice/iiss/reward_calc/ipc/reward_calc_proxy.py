@@ -19,9 +19,10 @@ import asyncio
 import concurrent.futures
 import os
 from subprocess import Popen
-from typing import TYPE_CHECKING, Optional, Callable, Any, Tuple
+from typing import TYPE_CHECKING, Callable, Any, Tuple
 
 from iconcommons.logger import Logger
+
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
@@ -308,12 +309,13 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def query_iscore(self, address: 'Address') -> Tuple[int, int]:
+    def query_iscore(self, address: 'Address', tx_hash: Optional[bytes]) -> Tuple[int, int]:
         """Returns the I-Score of a given address
 
         It should be called on query thread
 
         :param address: the address to query
+        :param tx_hash: the hash of transaction where this query is called, it should be None under query mode
         :return: [i-score(int), block_height(int)]
         :exception TimeoutException: The operation has timed-out
         """
@@ -322,7 +324,7 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="query_iscore() start")
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._query_iscore(address), self._loop)
+            self._query_iscore(address, tx_hash), self._loop)
 
         try:
             response: 'QueryResponse' = future.result(self._ipc_timeout)
@@ -334,7 +336,7 @@ class RewardCalcProxy(object):
 
         return response.iscore, response.block_height
 
-    async def _query_iscore(self, address: 'Address') -> 'QueryResponse':
+    async def _query_iscore(self, address: 'Address', tx_hash: Optional[bytes]) -> 'QueryResponse':
         """
 
         :param address:
@@ -342,7 +344,7 @@ class RewardCalcProxy(object):
         """
         Logger.debug(tag=_TAG, msg="_query_iscore() start")
 
-        request = QueryRequest(address)
+        request = QueryRequest(address, tx_hash)
 
         future: asyncio.Future = self._message_queue.put(request)
         await future
@@ -525,7 +527,7 @@ class RewardCalcProxy(object):
             self._ready_callback(response)
 
         self._ready_future.set_result(RCStatus.READY)
-        self._rc_block = RewardCalcBlock(response.block_height, response.block_height)
+        self._rc_block = RewardCalcBlock(response.block_height, response.block_hash)
 
     def get_ready_future(self):
         return self._ready_future
