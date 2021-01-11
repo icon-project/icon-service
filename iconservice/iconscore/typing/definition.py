@@ -225,9 +225,9 @@ def _get_outputs(type_hint: type) -> List:
     if is_base_type(origin):
         type_name = origin.__name__
     elif is_struct(origin) or origin is dict:
-        type_name = "{}"
+        type_name = "dict"
     elif origin is list:
-        type_name = "[]"
+        type_name = "list"
     else:
         return []
 
