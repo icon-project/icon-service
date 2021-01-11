@@ -31,7 +31,12 @@ from ....icon_constant import RCStatus
 from ....utils import bytes_to_hex
 
 if TYPE_CHECKING:
-    from .message import ReadyNotification, CalculateDoneNotification, NoneResponse
+    from .message import (
+        ReadyNotification,
+        CalculateDoneNotification,
+        NoneResponse,
+        StartBlockResponse,
+    )
 
 _TAG = "RCP"
 
@@ -598,3 +603,42 @@ class RewardCalcProxy(object):
             return None
 
         return self._rc_block.block_height, self._rc_block.block_hash
+
+    def start_block(self, block_height: int, block_hash: bytes):
+        Logger.debug(
+            tag=_TAG,
+            msg=f"start_block() start: "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)}"
+        )
+
+        future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
+            self._start_block(block_height, block_hash),
+            self._loop
+        )
+
+        try:
+            response: 'StartBlockResponse' = future.result(self._ipc_timeout)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("START_BLOCK message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg="start_block() end")
+        return response.block_height, response.block_hash
+
+    async def _start_block(self, block_height: int, block_hash: bytes) -> 'StartBlockResponse':
+        Logger.debug(
+            tag=_TAG,
+            msg=f"_start_block() start: "
+                f"block_height={block_height} "
+                f"block_hash={bytes_to_hex(block_hash)}"
+        )
+
+        request = StartBlockRequest(block_height, block_hash)
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="_start_block() end")
+
+        return future.result()

@@ -30,6 +30,7 @@ class MessageUnpacker(object):
             MessageType.QUERY_CALCULATE_STATUS: QueryCalculateStatusResponse,
             MessageType.QUERY_CALCULATE_RESULT: QueryCalculateResultResponse,
             MessageType.INIT: InitResponse,
+            MessageType.START_BLOCK: StartBlockResponse,
             MessageType.READY: ReadyNotification,
             MessageType.CALCULATE_DONE: CalculateDoneNotification,
             MessageType.ROLLBACK: RollbackResponse,

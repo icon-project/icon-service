@@ -958,3 +958,11 @@ class Engine(EngineBase):
 
     def get_reward_calculator_commit_block(self) -> Optional[Tuple[int, bytes]]:
         return self._reward_calc_proxy.get_commit_block()
+
+    def send_start_block(self, block_height: int, block_hash: bytes):
+        ret_block_height, ret_block_hash = \
+            self._reward_calc_proxy.start_block(block_height, block_hash)
+        if block_height == ret_block_height and block_hash == ret_block_hash:
+            return
+
+        raise InternalServiceErrorException("Failed to send start_block to reward_calculator")

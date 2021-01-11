@@ -19,6 +19,7 @@ from iconservice.inv.data.value import (
     ImportWhiteList
 )
 from iconservice.utils import ContextStorage, ContextEngine
+from iconservice.utils.test_env import start_testing
 from tests.legacy_unittest.mock_db import MockKeyValueDatabase
 
 
@@ -109,3 +110,7 @@ def set_default_context_storage_and_engine():
     ContextEngine.__new__.__defaults__ = (None,) * len(ContextEngine._fields)
     yield
     ContextStorage.__new__.__defaults__, ContextEngine.__new__.__defaults__ = temp_storage, temp_engine
+
+
+def pytest_configure(config):
+    start_testing()

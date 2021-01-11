@@ -93,6 +93,7 @@ from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 from .utils.timer import Timer
+from .utils.test_env import is_under_testing
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -441,6 +442,9 @@ class IconServiceEngine(ContextContainer):
 
         block_result = []
         added_transactions = {}
+
+        if not is_under_testing():
+            IconScoreContext.engine.iiss.send_start_block(block.height, block.hash)
 
         self._before_transaction_process(context,
                                          is_block_editable,
