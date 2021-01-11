@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
+from typing import Optional
 
 import msgpack
 
@@ -332,18 +333,22 @@ class QueryRequest(Request):
     """queryIScore
     """
 
-    def __init__(self, address: 'Address'):
+    def __init__(self, address: 'Address', tx_hash: Optional[bytes]):
         super().__init__(MessageType.QUERY)
 
         self.address = address
+        self.tx_hash = tx_hash
 
     def __str__(self) -> str:
-        return f"{self.msg_type.name}({self.msg_id}, {self.address})"
+        return (
+            f"{self.msg_type.name}"
+            f"({self.msg_id}, {self.address}, {bytes_to_hex(self.tx_hash)})"
+        )
 
     def _to_list(self) -> tuple:
         return self.msg_type, \
                self.msg_id, \
-               self.address.to_bytes_including_prefix()
+               (self.address.to_bytes_including_prefix(), self.tx_hash)
 
 
 class QueryResponse(Response):
