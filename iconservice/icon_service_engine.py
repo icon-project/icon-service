@@ -460,10 +460,13 @@ class IconServiceEngine(ContextContainer):
             context.block_batch.update(context.tx_batch)
             context.tx_batch.clear()
         else:
+            one_tx_timer = Timer()
             tx_timer = Timer()
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
+                one_tx_timer.start()
+
                 tx_hash: Optional[bytes] = tx_request["params"].get("txHash")
                 Logger.debug(_TAG, f"INVOKE tx: tx_hash={bytes_to_hex(tx_hash)} {tx_request}")
 
@@ -499,7 +502,15 @@ class IconServiceEngine(ContextContainer):
                 if context.is_revision_changed(Revision.FIX_BALANCE_BUG.value):
                     self._run_unstake_patcher(context)
 
-                Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
+                Logger.info(
+                    tag=_TAG,
+                    msg=f"TX_END: "
+                        f"BH={tx_result.block_height} "
+                        f"txIndex={tx_result.tx_index} "
+                        f"to={tx_result.to} "
+                        f"duration={one_tx_timer.duration}"
+                )
+                Logger.debug(tag=_TAG, msg=f"INVOKE txResult: {tx_result}")
 
         if self._check_end_block_height_of_calc(context):
             context.revision_changed_flag |= RevisionChangedFlag.IISS_CALC
