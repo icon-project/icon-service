@@ -759,7 +759,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if prev_block_generator is None or prev_block_votes is None:
-            Logger.warning(tag=_TAG, msg=f"No block validators: block={context.block}")
+            # Logger.warning(tag=_TAG, msg=f"No block validators: block={context.block}")
             return
 
         validators: List[Tuple['Address', int]] = [[prev_block_generator, BlockVoteStatus.TRUE.value]]

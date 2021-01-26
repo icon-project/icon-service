@@ -1,0 +1,3 @@
+[submodule "tests/integrate_test/samples/sample_scores/cps"]
+	path = tests/integrate_test/samples/sample_scores/cps
+	url = git@github.com:ibriz/CPS.git
