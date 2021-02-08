@@ -88,7 +88,7 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
-    def open(self, log_dir: str, sock_path: str, iiss_db_path: str, icon_rc_monitor: bool):
+    def open(self, sock_path: str):
         Logger.debug(tag=_TAG, msg="open() start")
 
         self._loop = asyncio.get_event_loop()
@@ -97,16 +97,17 @@ class RewardCalcProxy(object):
                                            notify_handler=self.notify_handler)
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
-        self.start_reward_calc(log_dir=log_dir, sock_path=sock_path, iiss_db_path=iiss_db_path,
-                               icon_rc_monitor=icon_rc_monitor)
         self._ready_future = self._loop.create_future()
 
         Logger.debug(tag=_TAG, msg="open() end")
 
-    def start(self):
+    def start(self, log_dir: str, sock_path: str, iiss_db_path: str, icon_rc_monitor: bool):
         Logger.debug(tag=_TAG, msg="start() end")
 
         self._ipc_server.start()
+
+        self.start_reward_calc(log_dir=log_dir, sock_path=sock_path, iiss_db_path=iiss_db_path,
+                               icon_rc_monitor=icon_rc_monitor)
 
         Logger.debug(tag=_TAG, msg="start() end")
 
