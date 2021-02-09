@@ -55,7 +55,7 @@ class IPCServer(object):
 
         self._running = True
         co = asyncio.start_unix_server(self._on_accepted, self._path)
-        asyncio.ensure_future(co)
+        self._loop.run_until_complete(co)
 
         Logger.info(tag=_TAG, msg="start() end")
 
