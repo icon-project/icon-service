@@ -420,7 +420,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "type": "function",
                 "name": "estimateUnstakeLockPeriod",
                 "inputs": [],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
@@ -433,7 +433,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "type": "function",
                 "name": "getStake",
                 "inputs": [{"name": "address", "type": "Address"}],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
@@ -463,7 +463,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "type": "function",
                 "name": "queryIScore",
                 "inputs": [{"name": "address", "type": "Address"}],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
@@ -528,7 +528,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "type": "function",
                 "name": "getPRep",
                 "inputs": [{"name": "address", "type": "Address"}],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
@@ -538,14 +538,14 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                     {"name": "startRanking", "type": "int", "default": None},
                     {"name": "endRanking", "type": "int", "default": None},
                 ],
-                "outputs": [{"type": "[]"}],
+                "outputs": [{"type": "list"}],
                 "readonly": True,
             },
             {
                 "type": "function",
                 "name": "getDelegation",
                 "inputs": [{"name": "address", "type": "Address"}],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
@@ -568,43 +568,59 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 "type": "function",
                 "name": "getIISSInfo",
                 "inputs": [],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
                 "type": "function",
                 "name": "getPRepTerm",
                 "inputs": [],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
                 "type": "function",
                 "name": "getMainPReps",
                 "inputs": [],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
                 "type": "function",
                 "name": "getSubPReps",
                 "inputs": [],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
                 "type": "function",
                 "name": "getInactivePReps",
                 "inputs": [],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
             },
             {
                 "type": "function",
                 "name": "getScoreDepositInfo",
                 "inputs": [{"name": "address", "type": "Address"}],
-                "outputs": [{"type": "{}"}],
+                "outputs": [{"type": "dict"}],
                 "readonly": True,
+            },
+            {
+                "type": "function",
+                "name": "burn",
+                "inputs": [],
+                "outputs": [],
+                "payable": True,
+            },
+            {
+                "type": "eventlog",
+                "name": "ICXBurnedV2",
+                "inputs": [
+                    {"name": "address", "type": "Address", "indexed": True},
+                    {"name": "amount", "type": "int"},
+                    {"name": "totalSupply", "type": "int"},
+                ]
             },
         ]
 

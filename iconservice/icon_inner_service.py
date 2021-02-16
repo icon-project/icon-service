@@ -15,7 +15,7 @@
 import asyncio
 import json
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
@@ -409,8 +409,9 @@ class IconScoreInnerTask(object):
 
     def _validate_transaction(self, request: dict):
         try:
+            Logger.info(tag=_TAG, msg=f'validate_transaction Request: {request}')
             converted_request = TypeConverter.convert(request, ParamType.VALIDATE_TRANSACTION)
-            self._icon_service_engine.validate_transaction(converted_request)
+            self._icon_service_engine.validate_transaction(converted_request, request)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except FatalException as e:
             self._log_exception(e, _TAG)
@@ -448,12 +449,9 @@ class MakeResponse:
 class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
-    def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
-        Logger.error("MQ Connection lost. [Service]")
-        # self.clean_close()
-
-    def _callback_connection_reconnect_callback(self, connection: 'RobustConnection'):
-        Logger.error("MQ Connection reconnect. [Service]")
+    def _callback_connection_close(self, sender, exc: Optional[BaseException], *args, **kwargs):
+        Logger.error(tag=_TAG, msg=f"[Inner Service] connection closed. {exc}")
+        self.clean_close()
 
     def clean_close(self):
         Logger.debug(tag=_TAG, msg="icon service will be closed")
@@ -463,8 +461,5 @@ class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
 class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
-    def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
-        Logger.error("MQ Connection lost. [Stub]")
-
-    def _callback_connection_reconnect_callback(self, connection: 'RobustConnection'):
-        Logger.error("MQ Connection reconnect. [Service]")
+    def _callback_connection_close(self, sender, exc: Optional[BaseException], *args, **kwargs):
+        Logger.error(tag=_TAG, msg=f"[Inner Stub] connection closed. {exc}")

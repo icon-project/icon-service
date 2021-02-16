@@ -302,8 +302,10 @@ class Engine(EngineBase, IISSEngineListener):
             main_preps: List['Address'] = [prep.address for prep in self.term.main_preps]
         else:
             # first term
-            new_preps: List['PRep'] = context.preps.get_preps(start_index=0,
-                                                              size=context.main_prep_count)
+            new_preps: List['PRep'] = context.preps.get_preps(
+                start_index=0,
+                size=context.main_prep_count
+            )
             main_preps: List['Address'] = [prep.address for prep in new_preps]
 
         context.storage.meta.put_last_main_preps(context, main_preps)
@@ -908,27 +910,40 @@ class Engine(EngineBase, IISSEngineListener):
         prep_count: int = preps.size(active_prep_only=True)
         prep_list: list = []
 
-        if startRanking is None:
-            startRanking = 1
+        start_ranking = 1 if startRanking is None else startRanking
+
         if endRanking is None:
-            endRanking = prep_count
+            end_ranking = max(start_ranking, prep_count)
+        else:
+            end_ranking = endRanking
 
-        if prep_count > 0:
-            if not 1 <= startRanking <= endRanking:
-                raise InvalidParamsException(
-                    f"Invalid ranking: startRanking({startRanking}), endRanking({endRanking})")
+        if not self._verify_rankings(start_ranking, end_ranking):
+            raise InvalidParamsException(
+                f"Invalid ranking: startRanking({start_ranking}), "
+                f"endRanking({end_ranking})"
+            )
 
-            for i in range(startRanking - 1, endRanking):
-                prep: 'PRep' = preps.get_by_index(i)
-                prep_list.append(prep.to_dict(PRepDictType.FULL))
+        for i in range(start_ranking - 1, end_ranking):
+            if i >= prep_count:
+                break
+
+            prep: 'PRep' = preps.get_by_index(i)
+            prep_list.append(prep.to_dict(PRepDictType.FULL))
 
         return {
             "blockHeight": context.block.height,
-            "startRanking": startRanking,
+            "startRanking": start_ranking,
             "totalDelegated": preps.total_delegated,
             "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
         }
+
+    @classmethod
+    def _verify_rankings(cls, start_ranking: int, end_ranking: int) -> bool:
+        if not (isinstance(start_ranking, int) and isinstance(end_ranking, int)):
+            return False
+
+        return 0 < start_ranking <= end_ranking
 
     def handle_get_prep_term(self, context: 'IconScoreContext') -> dict:
         """Provides the information on the current term

@@ -14,13 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
 from iconservice import IconScoreDatabase
-from iconservice.base.address import AddressPrefix, Address
-from iconservice.database.db import ContextDatabase
 from iconservice.database.db import DatabaseObserver
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.context.context import ContextContainer

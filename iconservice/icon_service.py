@@ -21,12 +21,13 @@ import os
 import signal
 import sys
 
+import aio_pika
 import pkg_resources
 import setproctitle
-from earlgrey import MessageQueueService, aio_pika
+from earlgrey import MessageQueueService
+
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
-
 from iconservice.base.exception import FatalException
 from iconservice.icon_config import default_icon_config, check_config, args_to_dict
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
@@ -200,7 +201,6 @@ async def _check_rabbitmq(amqp_target: str):
         amqp_user_name = os.getenv("AMQP_USERNAME", "guest")
         amqp_password = os.getenv("AMQP_PASSWORD", "guest")
         connection = await aio_pika.connect(host=amqp_target, login=amqp_user_name, password=amqp_password)
-        connection.connect()
     except ConnectionRefusedError:
         Logger.error("rabbitmq-service disable", _TAG)
         exit(0)

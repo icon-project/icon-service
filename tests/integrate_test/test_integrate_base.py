@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Union, Optional, Any, List, Tuple
 from unittest import TestCase
 from unittest.mock import Mock
 
-from iconcommons import IconConfig
 from iconsdk.wallet.wallet import KeyWallet
 
+from iconcommons import IconConfig
 from iconservice.base.address import SYSTEM_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, Address, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.fee.engine import FIXED_TERM
@@ -40,7 +40,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateDoneNotification
 from iconservice.utils import bytes_to_hex
 from iconservice.utils import icx_to_loop
-from tests import create_address, create_tx_hash, create_block_hash
+from tests import create_address, create_tx_hash, create_block_hash, remove_unstake_report
 from tests import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
@@ -107,6 +107,9 @@ class TestIntegrateBase(TestCase):
     def get_block_height(self) -> int:
         return self._block_height
 
+    def get_treasury_address(self) -> 'Address':
+        return self._fee_treasury
+
     def mock_calculate(self, _path, _block_height):
         context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
         end_block_height_of_calc: int = context.storage.iiss.get_end_block_height_of_calc(context)
@@ -134,6 +137,7 @@ class TestIntegrateBase(TestCase):
     def tearDown(self):
         self.icon_service_engine.close()
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path, self._precommit_log_path)
+        remove_unstake_report()
 
     def _make_init_config(self) -> dict:
         return {}
@@ -338,6 +342,33 @@ class TestIntegrateBase(TestCase):
         assert block_height == self._block_height
         self._prev_block_hash = new_block_hash
 
+    def make_origin_params(self, params: dict):
+        origin_items = [
+            ('version', int, hex),
+            ('from', Address, str),
+            ('to', Address, str),
+            ('value', int, hex),
+            ('nonce', int, hex),
+            ('stepLimit', int, hex),
+            ('timestamp', int, hex),
+            ('nid', int, hex),
+            ('signature', str, str)
+        ]
+        origin_params = params.copy()
+
+        if "txHash" in origin_params:
+            del origin_params["txHash"]
+
+        for key, value_type, origin_type in origin_items:
+            value = origin_params.get(key, None)
+            if value is None and key == "nid":
+                origin_params[key] = hex(2)
+
+            if isinstance(value, value_type):
+                origin_params[key] = origin_type(value)
+
+        return origin_params
+
     def rollback(self, block_height: int = -1, block_hash: Optional[bytes] = None):
         """Rollback the current state to the old one indicated by a given block
 
@@ -469,6 +500,7 @@ class TestIntegrateBase(TestCase):
             "data": deploy_data
         }
 
+        origin_params = {'params': self.make_origin_params(request_params)}
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -478,7 +510,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -514,6 +546,9 @@ class TestIntegrateBase(TestCase):
             }
         }
 
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -523,7 +558,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -556,6 +591,9 @@ class TestIntegrateBase(TestCase):
         else:
             request_params["version"] = self._version
 
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -565,7 +603,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if not disable_pre_validate:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
         return tx
 
     def create_message_tx(self,
@@ -573,7 +611,7 @@ class TestIntegrateBase(TestCase):
                           to_: Union['EOAAccount', 'Address', 'MalformedAddress'],
                           data: bytes = None,
                           value: int = 0,
-                          disable_pre_validate: bool = False) -> dict:
+                          pre_validation_enabled: bool = False) -> dict:
 
         addr_from: Optional['Address'] = self._convert_address_from_address_type(from_)
         addr_to: Optional['Address', 'MalformedAddress'] = self._convert_address_from_address_type(to_)
@@ -594,6 +632,10 @@ class TestIntegrateBase(TestCase):
             "data": '0x' + data.hex(),
         }
 
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
+
         method = 'icx_sendTransaction'
         # Inserts txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -602,7 +644,8 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        if pre_validation_enabled:
+            self.icon_service_engine.validate_transaction(tx, origin_params)
         return tx
 
     def create_deposit_tx(self,
@@ -634,7 +677,9 @@ class TestIntegrateBase(TestCase):
                 "action": action,
             }
         }
-
+        origin_params = {
+            'params': self.make_origin_params(request_params)
+        }
         for k, v in params.items():
             request_params["data"][k] = v
 
@@ -647,7 +692,7 @@ class TestIntegrateBase(TestCase):
         }
 
         if pre_validation_enabled:
-            self.icon_service_engine.validate_transaction(tx)
+            self.icon_service_engine.validate_transaction(tx, origin_params)
 
         return tx
 
@@ -753,6 +798,7 @@ class TestIntegrateBase(TestCase):
                      step_limit: int = DEFAULT_DEPLOY_STEP_LIMIT,
                      expected_status: bool = True,
                      to_: Union['EOAAccount', 'Address'] = SYSTEM_SCORE_ADDRESS,
+                     pre_validation_enabled: bool = True,
                      data: bytes = None) -> List['TransactionResult']:
 
         tx = self.create_deploy_score_tx(score_root=score_root,
@@ -761,6 +807,7 @@ class TestIntegrateBase(TestCase):
                                          to_=to_,
                                          deploy_params=deploy_params,
                                          step_limit=step_limit,
+                                         pre_validation_enabled=pre_validation_enabled,
                                          data=data)
         return self.process_confirm_block_tx([tx], expected_status)
 
@@ -770,7 +817,9 @@ class TestIntegrateBase(TestCase):
                    func_name: str,
                    params: dict = None,
                    value: int = 0,
+                   pre_validation_enabled: bool = True,
                    step_limit: int = DEFAULT_BIG_STEP_LIMIT,
+
                    expected_status: bool = True) -> List['TransactionResult']:
 
         tx = self.create_score_call_tx(from_=from_,
@@ -778,6 +827,7 @@ class TestIntegrateBase(TestCase):
                                        func_name=func_name,
                                        params=params,
                                        value=value,
+                                       pre_validation_enabled=pre_validation_enabled,
                                        step_limit=step_limit)
         return self.process_confirm_block_tx([tx], expected_status)
 
@@ -785,7 +835,6 @@ class TestIntegrateBase(TestCase):
                      revision: int,
                      expected_status: bool = True,
                      with_np: bool = False) -> List['TransactionResult']:
-        response = self.get_revision()
         if not with_np:
             # update revision value only
             self.score_call(from_=self._admin,
@@ -889,7 +938,7 @@ class TestIntegrateBase(TestCase):
         return self.process_confirm_block_tx([tx], expected_status)
 
     def register_proposal(self,
-                          from_: 'Address',
+                          from_: Union['EOAAccount', 'Address'],
                           title: str,
                           description: str,
                           type_: int,

@@ -32,8 +32,15 @@ from .base.address import GOVERNANCE_SCORE_ADDRESS
 from .base.address import SYSTEM_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import (
-    ExceptionCode, IconServiceBaseException, IconScoreException, InvalidBaseTransactionException,
-    InternalServiceErrorException, DatabaseException)
+    ExceptionCode,
+    IconServiceBaseException,
+    IconScoreException,
+    InvalidBaseTransactionException,
+    InternalServiceErrorException,
+    DatabaseException,
+    InvalidBalanceException,
+    InvalidParamsException,
+)
 from .base.message import Message
 from .base.transaction import Transaction
 from .base.type_converter_templates import ConstantKeys
@@ -47,7 +54,8 @@ from .icon_constant import (
     ICON_DEX_DB_NAME, IconServiceFlag, ConfigKey,
     Revision, BASE_TRANSACTION_INDEX,
     IISS_DB, STEP_LOG_TAG, BlockVoteStatus, WAL_LOG_TAG, ROLLBACK_LOG_TAG,
-    BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag, RPCMethod
+    BLOCK_INVOKE_TIMEOUT_S, RevisionChangedFlag, RPCMethod,
+    DataType
 )
 from .iconscore.context.context import ContextContainer
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -85,6 +93,7 @@ from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 from .utils.timer import Timer
+from .utils.test_env import is_under_testing
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -434,6 +443,9 @@ class IconServiceEngine(ContextContainer):
         block_result = []
         added_transactions = {}
 
+        if not is_under_testing():
+            IconScoreContext.engine.iiss.send_start_block(block.height, block.hash)
+
         self._before_transaction_process(context,
                                          is_block_editable,
                                          tx_requests,
@@ -448,11 +460,15 @@ class IconServiceEngine(ContextContainer):
             context.block_batch.update(context.tx_batch)
             context.tx_batch.clear()
         else:
+            one_tx_timer = Timer()
             tx_timer = Timer()
             tx_timer.start()
 
             for index, tx_request in enumerate(tx_requests):
-                Logger.debug(_TAG, f"INVOKE tx: {tx_request}")
+                one_tx_timer.start()
+
+                tx_hash: Optional[bytes] = tx_request["params"].get("txHash")
+                Logger.debug(_TAG, f"INVOKE tx: tx_hash={bytes_to_hex(tx_hash)} {tx_request}")
 
                 # Adjust the number of transactions in a block to make sure that
                 # a leader can broadcast a block candidate to validators in a specific period.
@@ -486,7 +502,15 @@ class IconServiceEngine(ContextContainer):
                 if context.is_revision_changed(Revision.FIX_BALANCE_BUG.value):
                     self._run_unstake_patcher(context)
 
-                Logger.debug(_TAG, f"INVOKE txResult: {tx_result}")
+                Logger.info(
+                    tag=_TAG,
+                    msg=f"TX_END: "
+                        f"BH={tx_result.block_height} "
+                        f"txIndex={tx_result.tx_index} "
+                        f"to={tx_result.to} "
+                        f"duration={one_tx_timer.duration}"
+                )
+                Logger.debug(tag=_TAG, msg=f"INVOKE txResult: {tx_result}")
 
         if self._check_end_block_height_of_calc(context):
             context.revision_changed_flag |= RevisionChangedFlag.IISS_CALC
@@ -1062,7 +1086,7 @@ class IconServiceEngine(ContextContainer):
         ret = self._call(context, method, params)
         return ret
 
-    def validate_transaction(self, request: dict) -> None:
+    def validate_transaction(self, request: dict, origin_request: dict) -> None:
         """Validate JSON-RPC transaction request
         before putting it into transaction pool
 
@@ -1070,6 +1094,7 @@ class IconServiceEngine(ContextContainer):
         on JSON-RPC Server
         IconPreValidator focuses on business logic and semantic problems
 
+        :param origin_request: JSON_RPC Original request for more strict validate
         :param request: JSON-RPC request
             values in request have already been converted to original format
             in IconInnerService
@@ -1087,6 +1112,8 @@ class IconServiceEngine(ContextContainer):
         context = self._context_factory.create(IconScoreContextType.QUERY, self._get_last_block())
         context.set_step_counter()
 
+        origin_params = origin_request['params']
+
         try:
             self._push_context(context)
 
@@ -1099,12 +1126,13 @@ class IconServiceEngine(ContextContainer):
                 data = params['data']
                 input_size = get_input_data_size(context.revision, data)
                 minimum_step += input_size * context.inv_container.step_costs.get(StepType.INPUT, 0)
-
+            self._icon_pre_validator.origin_request_execute(origin_params, context.revision)
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-            # SCORE updating is not blocked by SCORE blacklist
-            if 'dataType' in params and params['dataType'] == 'call':
+            if to.is_contract:
+                # SCORE updating is not blocked by SCORE blacklist
                 IconScoreContextUtil.validate_score_blacklist(context, to)
+
         finally:
             self._pop_context()
 
@@ -1179,12 +1207,17 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        icon_score_address: Address = params['to']
+        to: Address = params['to']
         data_type = params.get('dataType', None)
         data = params.get('data', None)
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        return IconScoreEngine.query(context, icon_score_address, data_type, data)
+        if to.is_contract:
+            return IconScoreEngine.query(context, to, data_type, data)
+
+        raise InvalidParamsException(
+            f"Mismatch between to and dataType: to={to} dataType={data_type}"
+        )
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -1206,6 +1239,11 @@ class IconServiceEngine(ContextContainer):
             # process the transaction
             self._process_transaction(context, params, tx_result)
             tx_result.status = TransactionResult.SUCCESS
+        except InvalidBalanceException as e:
+            # If InvalidBalanceException is raised, stop to invoke this block
+            # Because balance integrity is broken
+            Logger.exception(tag=_TAG, msg=str(e))
+            raise e
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
             trace = self._get_trace_from_exception(context.current_address, e)
@@ -1276,14 +1314,29 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         to: Address = params['to']
-        data_type: str = params.get('dataType')
+        data_type: Optional[str] = params.get('dataType')
+
+        self._validate_data_type(context, to, data_type)
 
         # Can't transfer ICX to system SCORE
-        if data_type in (None, 'call', 'message') and to != SYSTEM_SCORE_ADDRESS:
+        if data_type in (None, DataType.CALL, DataType.MESSAGE):
             self._transfer_coin(context, params)
 
         if to.is_contract:
             tx_result.score_address = self._handle_score_invoke(context, to, params)
+
+    def _validate_data_type(
+            self, context: 'IconScoreContext', to: 'Address', data_type: Optional[str]
+    ):
+        try:
+            self._icon_pre_validator.validate_data_type(context, to, data_type)
+        except InvalidParamsException as e:
+            if data_type == DataType.CALL:
+                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            elif data_type == DataType.DEPLOY:
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
+
+            raise e
 
     @classmethod
     def _transfer_coin(cls,
@@ -1299,6 +1352,14 @@ class IconServiceEngine(ContextContainer):
         from_: 'Address' = params['from']
         to: 'Address' = params['to']
         value: int = params.get('value', 0)
+
+        if (
+                to == SYSTEM_SCORE_ADDRESS
+                and context.revision < Revision.BURN_V2_ENABLED.value
+        ):
+            # Prevent system score from receiving ICX
+            # if context.revision is less than Revision.BURN_V2_ENABLED(12)
+            return
 
         context.engine.icx.transfer(context, from_, to, value)
 
@@ -1367,9 +1428,9 @@ class IconServiceEngine(ContextContainer):
         data_type: str = params.get('dataType')
         data: dict = params.get('data')
 
-        if data_type == 'deploy':
+        if data_type == DataType.DEPLOY:
             return context.engine.deploy.invoke(context, to, data)
-        elif data_type == 'deposit':
+        elif data_type == DataType.DEPOSIT:
             self._deposit_handler.handle_deposit_request(context, data)
             return None
         else:
@@ -1386,9 +1447,10 @@ class IconServiceEngine(ContextContainer):
         # exceptions for mainnet backward compatibility:
         #   - dataType is not 'call'
         if to == SYSTEM_SCORE_ADDRESS:
-            if context.revision < Revision.SYSTEM_SCORE_ENABLED.value and data_type != 'call':
-                return True
-            return False
+            return (
+                context.revision < Revision.SYSTEM_SCORE_ENABLED.value
+                and data_type != DataType.CALL
+            )
 
         return True
 

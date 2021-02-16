@@ -139,7 +139,12 @@ class Revision(Enum):
 
     FIX_BALANCE_BUG = 11
 
-    LATEST = 11
+    BURN_V2_ENABLED = 12
+    IMPROVED_PRE_VALIDATOR = 12
+    VERIFY_ASSET_INTEGRITY = 12
+    USE_RLP = 12
+
+    LATEST = 12
 
 
 RC_DB_VERSION_0 = 0
@@ -473,3 +478,17 @@ class RPCMethod:
     ICX_SEND_TRANSACTION = 'icx_sendTransaction'
     DEBUG_ESTIMATE_STEP = "debug_estimateStep"
     DEBUG_GET_ACCOUNT = "debug_getAccount"
+
+
+class DataType:
+    CALL = "call"
+    DEPLOY = "deploy"
+    DEPOSIT = "deposit"
+    MESSAGE = "message"
+    NONE = None
+
+    _TYPES = {CALL, DEPLOY, DEPOSIT, MESSAGE, NONE}
+
+    @classmethod
+    def contains(cls, value: str) -> bool:
+        return value in cls._TYPES

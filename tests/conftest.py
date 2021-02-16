@@ -2,8 +2,12 @@ from functools import wraps
 
 import pytest
 
+from iconservice.database.batch import TransactionBatch, BlockBatch
 from iconservice.database.db import KeyValueDatabase, ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, IconNetworkValueType
+from iconservice.iconscore.context.context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_step import StepType
 from iconservice.inv.container import Container as INVContainer
 from iconservice.inv.data.value import (
     RevisionCode,
@@ -14,8 +18,8 @@ from iconservice.inv.data.value import (
     ServiceConfig,
     ImportWhiteList
 )
-from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils import ContextStorage, ContextEngine
+from iconservice.utils.test_env import start_testing
 from tests.legacy_unittest.mock_db import MockKeyValueDatabase
 
 
@@ -82,6 +86,17 @@ def generate_inv_container(is_migrated: bool, revision: int = 0):
 
 
 @pytest.fixture(scope="function")
+def context():
+    context = IconScoreContext(IconScoreContextType.DIRECT)
+    context.tx_batch = TransactionBatch()
+    context.block_batch = BlockBatch()
+
+    ContextContainer._push_context(context)
+    yield context
+    ContextContainer._pop_context()
+
+
+@pytest.fixture(scope="function")
 def context_db():
     mocked_kv_db: 'KeyValueDatabase' = MockKeyValueDatabase.create_db()
     return ContextDatabase(mocked_kv_db)
@@ -95,3 +110,7 @@ def set_default_context_storage_and_engine():
     ContextEngine.__new__.__defaults__ = (None,) * len(ContextEngine._fields)
     yield
     ContextStorage.__new__.__defaults__, ContextEngine.__new__.__defaults__ = temp_storage, temp_engine
+
+
+def pytest_configure(config):
+    start_testing()

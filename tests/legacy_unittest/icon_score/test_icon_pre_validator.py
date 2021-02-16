@@ -641,22 +641,22 @@ class TestTransactionValidator(unittest.TestCase):
         address = create_address()
         self.validator._is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
-        self.validator._is_score_active.assert_called_once_with(self.context, address)
+        assert not self.validator._is_score_active.called
 
         address = create_address()
         self.validator._is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
-        self.validator._is_score_active.assert_called_once_with(self.context, address)
+        assert not self.validator._is_score_active.called
 
         address = SYSTEM_SCORE_ADDRESS
         self.validator._is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
-        self.validator._is_score_active.assert_called_once_with(self.context, address)
+        assert not self.validator._is_score_active.called
 
         address = SYSTEM_SCORE_ADDRESS
         self.validator._is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(self.context, address))
-        self.validator._is_score_active.assert_called_once_with(self.context, address)
+        assert not self.validator._is_score_active.called
 
         address = create_address(1)
         self.validator._is_score_active = Mock(return_value=True)

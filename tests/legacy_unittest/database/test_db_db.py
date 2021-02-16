@@ -23,12 +23,12 @@ from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.database.batch import BlockBatch, TransactionBatch, TransactionBatchValue, BlockBatchValue
 from iconservice.database.db import ContextDatabase, MetaContextDatabase
-from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
-from iconservice.icon_constant import DATA_BYTE_ORDER
+from iconservice.database.wal import StateWAL
+from iconservice.icon_constant import Revision
+from iconservice.iconscore.db import IconScoreDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreFuncType
-from iconservice.database.wal import StateWAL
 from tests import rmtree
 
 
@@ -289,7 +289,7 @@ class TestIconScoreDatabase(unittest.TestCase):
         db_path = os.path.join(state_db_root_path, 'db')
         context_db = ContextDatabase.from_path(db_path, True)
 
-        self.db = IconScoreDatabase(address, context_db=context_db, prefix=b'')
+        self.db = IconScoreDatabase(address, context_db=context_db)
         self.address = address
 
     def tearDown(self):
@@ -302,13 +302,31 @@ class TestIconScoreDatabase(unittest.TestCase):
     @patch('iconservice.iconscore.context.context.ContextGetter._context')
     def test_put_and_get(self, context):
         context.current_address = self.address
-        db = self.db
-        key = self.address.body
-        value = 100
-
-        self.assertIsNone(db.get(key))
-
-        context.readonly = False
+        context.revision = Revision.USE_RLP.value - 1
         context.type = IconScoreContextType.DIRECT
-        db.put(key, value.to_bytes(32, DATA_BYTE_ORDER))
-        self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(key))
+        context.readonly = False
+
+        db = self.db
+        for i in range(3):
+            key = f"key{i}".encode()
+            self.assertIsNone(db.get(key))
+
+        for i in range(3):
+            key = f"key{i}".encode()
+            value = i.to_bytes(20, "big")
+
+            self.assertIsNone(db.get(key))
+            db.put(key, value)
+            self.assertEqual(value, db.get(key))
+
+        context.revision = Revision.USE_RLP.value
+
+        for i in range(3):
+            key = f"key{i}".encode()
+            old_value = i.to_bytes(20, "big")
+            new_value = i.to_bytes(30, "big")
+            self.assertNotEqual(old_value, new_value)
+
+            self.assertEqual(old_value, db.get(key))
+            db.put(key, new_value)
+            self.assertEqual(new_value, db.get(key))

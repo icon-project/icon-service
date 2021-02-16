@@ -28,7 +28,7 @@ from iconservice.iiss import IISSMethod
 from iconservice.prep import PRepMethod
 from iconservice.prep.data import Term
 from iconservice.utils import icx_to_loop
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, DEFAULT_STEP_LIMIT
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY, MINIMUM_STEP_LIMIT
 
 if TYPE_CHECKING:
     from iconservice.base.block import Block
@@ -57,7 +57,7 @@ class TestIISSBase(TestIntegrateBase):
                     to: int,
                     prev_block_generator: Optional['Address'] = None,
                     prev_block_validators: Optional[List['Address']] = None,
-                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None)\
+                    prev_block_votes: Optional[List[Tuple['Address', int]]] = None) \
             -> List[List['TransactionResult']]:
         block_height = self._block_height
         tx_results: List[List['TransactionResult']] = []
@@ -586,17 +586,24 @@ class TestIISSBase(TestIntegrateBase):
 
         tx_list: list = []
         step_price: int = self.get_step_price()
-        fee: int = DEFAULT_STEP_LIMIT * step_price
+        fee: int = 100_000 * step_price
 
         for account in self._accounts:
             balance: int = self.get_balance(account)
 
             if balance - fee > 0:
-                tx: dict = self.create_transfer_icx_tx(from_=account,
-                                                       to_=self._admin,
-                                                       value=balance - fee)
+                tx: dict = self.create_transfer_icx_tx(
+                    from_=account,
+                    to_=self._admin,
+                    value=balance - fee,
+                    step_limit=100_000
+                )
                 tx_list.append(tx)
         self.process_confirm_block_tx(tx_list)
+
+    def init_inv(self):
+        self.set_revision(revision=Revision.OPTIMIZE_DIRTY_PREP_UPDATE.value)
+        self.update_governance(version="1_1_0", expected_status=True, root_path="sample_builtin_for_tests")
 
     @staticmethod
     def get_debug_term() -> 'Term':

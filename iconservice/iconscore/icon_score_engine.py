@@ -29,7 +29,7 @@ from .typing.element import (
 )
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, InvalidParamsException
-from ..icon_constant import Revision
+from ..icon_constant import Revision, DataType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_base import IconScoreBase
@@ -53,7 +53,7 @@ class IconScoreEngine(object):
         """
         IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
-        if data_type == 'call':
+        if data_type == DataType.CALL:
             IconScoreEngine._call(context, icon_score_address, data)
         else:
             IconScoreEngine._fallback(context, icon_score_address)
@@ -69,10 +69,10 @@ class IconScoreEngine(object):
         """
         IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
-        if data_type == 'call':
+        if data_type == DataType.CALL:
             return IconScoreEngine._call(context, icon_score_address, data)
         else:
-            raise InvalidParamsException(f'Invalid dataType: ({data_type})')
+            raise InvalidParamsException(f'Invalid dataType: {data_type}')
 
     @staticmethod
     def get_score_api(context: 'IconScoreContext', icon_score_address: 'Address') -> object:

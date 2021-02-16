@@ -21,6 +21,7 @@ from inspect import isfunction, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Mapping
 
 from .context.context import ContextGetter, ContextContainer
+from .db import IconScoreDatabase
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import (
     CONST_INDEXED_ARGS_COUNT,
@@ -51,7 +52,7 @@ from .typing.element import create_score_element_metadatas
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
-from ..database.db import IconScoreDatabase, DatabaseObserver
+from ..database.db import DatabaseObserver
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG, Revision, IconScoreContextType
 from ..utils import get_main_type_from_annotations_type
 

@@ -45,6 +45,12 @@ class RegulatorVariable:
                  current_calc_period_issued_icx: int,
                  prev_calc_period_issued_icx: int,
                  over_issued_iscore: int):
+        """
+
+        :param current_calc_period_issued_icx: The sum of issued ICX amount on the current period (mutable)
+        :param prev_calc_period_issued_icx: The sum of issued ICX amount on the previous period (immutable)
+        :param over_issued_iscore: I-SCORE amount which over issued than Reward calculator (mutable)
+        """
         self.current_calc_period_issued_icx = current_calc_period_issued_icx
         self.prev_calc_period_issued_icx = prev_calc_period_issued_icx
         self.over_issued_iscore = over_issued_iscore

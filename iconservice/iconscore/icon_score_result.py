@@ -21,6 +21,7 @@ from ..base.address import Address
 from ..base.block import Block
 from ..base.exception import ExceptionCode
 from ..icon_constant import DATA_BYTE_ORDER
+from ..utils import bytes_to_hex
 from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -98,7 +99,13 @@ class TransactionResult(object):
         self.traces = None
 
     def __str__(self) -> str:
-        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+        def func():
+            for k, v in self.__dict__.items():
+                if isinstance(v, bytes):
+                    v = bytes_to_hex(v)
+                yield f'{k}: {v}'
+
+        return '\n'.join(func())
 
     def to_dict(self, casing: Optional[callable] = None) -> dict:
         """

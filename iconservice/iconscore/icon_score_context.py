@@ -169,7 +169,7 @@ class IconScoreContext(ABC):
         yield self.tx_batch
         yield self.block_batch
 
-        # If contex.type is not INVOKE, self._prev_block_batches is None
+        # If context_type is not INVOKE, self._prev_block_batches is None
         if self._prev_block_batches:
             for prev_block_batch in self._prev_block_batches:
                 yield prev_block_batch

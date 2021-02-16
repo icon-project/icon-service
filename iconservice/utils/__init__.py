@@ -25,7 +25,6 @@ import re
 from collections import namedtuple
 from enum import Flag
 from typing import Any, Union, Optional
-import inspect
 
 from iconcommons import Logger
 

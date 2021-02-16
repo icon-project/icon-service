@@ -189,3 +189,17 @@ class SampleSystemScoreInterCall(IconScoreBase):
                              func_name="getScoreDepositInfo",
                              kw_dict=self._get_kw_dict(locals()))
 
+    @payable
+    @external
+    def call_burn(self):
+        use_interface = self.use_interface.get()
+        if use_interface:
+            test_interface = self.create_interface_score(SYSTEM_SCORE_ADDRESS, InterfaceSystemScore)
+            test_interface.icx(self.msg.value).burn()
+        else:
+            self.call(
+                addr_to=SYSTEM_SCORE_ADDRESS,
+                func_name="burn",
+                kw_dict={},
+                amount=self.msg.value
+            )

@@ -24,7 +24,7 @@ from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_pat
 from ..base.address import Address
 from ..base.address import SYSTEM_SCORE_ADDRESS
 from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
-from ..database.db import IconScoreDatabase
+from ..iconscore.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState, BUILTIN_SCORE_IMPORT_WHITE_LIST
 from ..utils import is_builtin_score

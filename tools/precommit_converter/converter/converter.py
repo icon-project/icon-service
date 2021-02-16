@@ -7,7 +7,7 @@ from iconservice.base.block import Block
 from iconservice.deploy import DeployStorage
 from iconservice.deploy.storage import IconScoreDeployInfo, IconScoreDeployTXParams
 from iconservice.icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
-from iconservice.iconscore.icon_container_db import ARRAY_DB_ID, DICT_DB_ID, VAR_DB_ID
+from iconservice.iconscore.db import ContainerTag
 from iconservice.icx import IcxStorage
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.delegation_part import DelegationPart
@@ -99,9 +99,9 @@ class ScoreConverter(Converter):
     It means that it is impossible to decode the bytes data perfectly, as the data type is not recorded
     """
     DECODER_STRING_MAPPER = {
-        ARRAY_DB_ID: "List ",
-        DICT_DB_ID: "Dict ",
-        VAR_DB_ID: "Var  "
+        ContainerTag.ARRAY.value: "List ",
+        ContainerTag.DICT.value: "Dict ",
+        ContainerTag.VAR: "Var  ",
     }
     ADDR_B_SIZE = ICON_CONTRACT_ADDRESS_BYTES_SIZE
 
@@ -109,9 +109,9 @@ class ScoreConverter(Converter):
         super().__init__()
         self._flexible_key_convert_methods.append((self._is_score_data, self._convert_score_data))
         self.mapper = {
-            ARRAY_DB_ID: self._array_db_decoder,
-            DICT_DB_ID: self._dict_db_decoder,
-            VAR_DB_ID: self._var_db_decoder
+            ContainerTag.ARRAY.value: self._array_db_decoder,
+            ContainerTag.DICT.value: self._dict_db_decoder,
+            ContainerTag.VAR.value: self._var_db_decoder,
         }
 
     @classmethod
@@ -154,7 +154,7 @@ class ScoreConverter(Converter):
         name = cls._decode_name(ret.pop(0))
         string_dict: str = f"{name}"
         for key in ret:
-            if key == DICT_DB_ID:
+            if key == ContainerTag.DICT.value:
                 continue
             try:
                 decoded_key = Address.from_bytes(key)
@@ -171,7 +171,7 @@ class ScoreConverter(Converter):
         name = cls._decode_name(ret.pop(0))
         string_array: str = f"{name}"
         for d in ret:
-            if d == ArrayDB._ArrayDB__SIZE_BYTE_KEY:
+            if d == ArrayDB.SIZE_BYTE_KEY:
                 string_array += f" byte {d.decode()}"
             else:
                 string_array += f"[{bytes_to_int(d)}]"
