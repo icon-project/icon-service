@@ -25,8 +25,8 @@ from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
-from ..base.address import Address
-from ..base.address import SYSTEM_SCORE_ADDRESS
+from ..base.address import Address, SYSTEM_SCORE_ADDRESS
+from ..base.block import Block
 from ..base.exception import (
     InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException,
     InternalServiceErrorException
@@ -51,7 +51,6 @@ if TYPE_CHECKING:
     from ..iiss.storage import RewardRate
     from ..icx import IcxStorage
     from ..prep.data import Term
-    from ..base.block import Block
 
 _TAG = IISS_LOG_TAG
 
@@ -717,7 +716,8 @@ class Engine(EngineBase):
             raise InvalidParamsException(f"Invalid address: {address}")
 
         tx_hash = context.tx.hash if isinstance(context.tx, Transaction) else None
-        iscore, block_height = self._reward_calc_proxy.query_iscore(address, tx_hash)
+        block = context.block if isinstance(context.block, Block) else None
+        iscore, block_height = self._reward_calc_proxy.query_iscore(address, block, tx_hash)
 
         data = {
             "iscore": iscore,
