@@ -503,7 +503,11 @@ class IconServiceEngine(ContextContainer):
                     self._run_unstake_patcher(context)
 
                 if tx_request["params"].get("dataType") == "call":
-                    method: str = tx_request["params"]["data"].get("method", "")
+                    data = tx_request["params"].get("data")
+                    if data:
+                        method: str = data.get("method", "")
+                    else:
+                        method: str = ""
                 else:
                     method: str = ""
 
@@ -1096,8 +1100,12 @@ class IconServiceEngine(ContextContainer):
         ret = self._call(context, method, params)
 
         if method == 'icx_call':
-            score_addr = params.get("to")
-            score_method = params["data"].get("method", "")
+            score_addr = params.get("to", "")
+            data = params.get("data")
+            if data:
+                score_method: str = data.get("method", "")
+            else:
+                score_method: str = ""
 
             Logger.info(
                 tag=_TAG,
