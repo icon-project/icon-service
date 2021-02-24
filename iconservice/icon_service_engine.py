@@ -505,11 +505,11 @@ class IconServiceEngine(ContextContainer):
                 if tx_request["params"].get("dataType") == "call":
                     data = tx_request["params"].get("data")
                     if data:
-                        method: str = data.get("method", "")
+                        method: str = data.get("method", "EMPTY_METHOD")
                     else:
-                        method: str = ""
+                        method: str = "NOT_SCORE_CALL"
                 else:
-                    method: str = ""
+                    method: str = "NOT_CALL_DATA_TYPE"
 
                 Logger.info(
                     tag=_TAG,
@@ -1100,17 +1100,17 @@ class IconServiceEngine(ContextContainer):
         ret = self._call(context, method, params)
 
         if method == 'icx_call':
-            score_addr = params.get("to", "")
+            score_addr = params.get("to", "INVALID_TO_ADDR")
             data = params.get("data")
             if data:
-                score_method: str = data.get("method", "")
+                score_method: str = data.get("method", "EMPTY_METHOD")
             else:
-                score_method: str = ""
+                score_method: str = "NOT_SCORE_CALL"
 
             Logger.info(
                 tag=_TAG,
                 msg=f"QUERY_END: "
-                    f"to={score_addr}"
+                    f"to={score_addr} "
                     f"method={score_method} "
                     f"duration={one_tx_timer.duration}"
             )
