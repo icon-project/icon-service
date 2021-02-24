@@ -477,7 +477,7 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         self._make_delegated_to_zero()
         self.make_blocks_to_end_calculation()
         # This is beta1 value when Irep is 10,000
-        expected_issued_amount: int = 84876543209876528
+        expected_issued_amount: int = 42438271604938264
 
         tx_results = self.make_blocks(self._block_height + 1)
         # This event logs represent calculated total ICX amount.
