@@ -132,7 +132,10 @@ class IconScoreInnerTask(object):
     async def invoke(self, request: dict) -> dict:
         Logger.debug(tag=_TAG, msg=f'invoke() start')
 
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = asyncio.get_event_loop()
@@ -214,7 +217,11 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def query(self, request: dict) -> dict:
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
+
         return await self._get_query_response(request)
 
     async def _get_query_response(self, request: dict) -> dict:
@@ -264,7 +271,10 @@ class IconScoreInnerTask(object):
     async def call(self, request: dict):
         Logger.info(tag=_TAG, msg=f'call() start: {request}')
 
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
 
         if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = asyncio.get_event_loop()
@@ -296,7 +306,10 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def write_precommit_state(self, request: dict):
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = asyncio.get_event_loop()
@@ -341,8 +354,10 @@ class IconScoreInnerTask(object):
     async def remove_precommit_state(self, request: dict):
         Logger.info(tag=_TAG, msg=f'remove_precommit_state() start')
 
-        self._check_icon_service_ready()
-
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
 
         """
         Unused API
@@ -359,7 +374,10 @@ class IconScoreInnerTask(object):
 
         Logger.info(tag=_TAG, msg=f"rollback() start")
 
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
 
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = asyncio.get_event_loop()
@@ -398,7 +416,10 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def validate_transaction(self, request: dict):
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
 
         if self._is_thread_flag_on(EnableThreadFlag.VALIDATE):
             loop = asyncio.get_event_loop()
@@ -428,7 +449,11 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def change_block_hash(self, _params):
-        self._check_icon_service_ready()
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
+
         return ExceptionCode.OK
 
 
