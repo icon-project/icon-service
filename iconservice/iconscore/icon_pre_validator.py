@@ -139,7 +139,7 @@ class IconPreValidator:
     def is_integer_type(cls, value: str) -> bool:
         try:
             if value.startswith('0x'):
-                return value == hex(int(value, 16))
+                return "0x" + value[2:].lstrip("0") == hex(int(value, 16))
         except ValueError:
             return False
         else:
