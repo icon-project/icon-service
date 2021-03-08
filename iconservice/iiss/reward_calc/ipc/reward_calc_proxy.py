@@ -27,6 +27,7 @@ from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
 from ....base.address import Address
+from ....base.block import Block
 from ....base.exception import TimeoutException
 from ....icon_constant import RCStatus
 from ....utils import bytes_to_hex
@@ -310,7 +311,7 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def query_iscore(self, address: 'Address', tx_hash: Optional[bytes]) -> Tuple[int, int]:
+    def query_iscore(self, address: 'Address', block: Optional[Block], tx_hash: Optional[bytes]) -> Tuple[int, int]:
         """Returns the I-Score of a given address
 
         It should be called on query thread
@@ -325,7 +326,7 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="query_iscore() start")
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._query_iscore(address, tx_hash), self._loop)
+            self._query_iscore(address, block, tx_hash), self._loop)
 
         try:
             response: 'QueryResponse' = future.result(self._ipc_timeout)
@@ -337,7 +338,8 @@ class RewardCalcProxy(object):
 
         return response.iscore, response.block_height
 
-    async def _query_iscore(self, address: 'Address', tx_hash: Optional[bytes]) -> 'QueryResponse':
+    async def _query_iscore(self, address: 'Address', block: Optional[Block],
+                            tx_hash: Optional[bytes]) -> 'QueryResponse':
         """
 
         :param address:
@@ -345,7 +347,12 @@ class RewardCalcProxy(object):
         """
         Logger.debug(tag=_TAG, msg="_query_iscore() start")
 
-        request = QueryRequest(address, tx_hash)
+        request = QueryRequest(
+            address,
+            block.height if block is not None else 0,
+            block.hash if block is not None else None,
+            tx_hash,
+        )
 
         future: asyncio.Future = self._message_queue.put(request)
         await future

@@ -502,14 +502,25 @@ class IconServiceEngine(ContextContainer):
                 if context.is_revision_changed(Revision.FIX_BALANCE_BUG.value):
                     self._run_unstake_patcher(context)
 
+                if tx_request["params"].get("dataType") == "call":
+                    data = tx_request["params"].get("data")
+                    if data:
+                        method: str = data.get("method", "EMPTY_METHOD")
+                    else:
+                        method: str = "NOT_SCORE_CALL"
+                else:
+                    method: str = "NOT_CALL_DATA_TYPE"
+
                 Logger.info(
                     tag=_TAG,
                     msg=f"TX_END: "
                         f"BH={tx_result.block_height} "
                         f"txIndex={tx_result.tx_index} "
                         f"to={tx_result.to} "
+                        f"method={method} "
                         f"duration={one_tx_timer.duration}"
                 )
+
                 Logger.debug(tag=_TAG, msg=f"INVOKE txResult: {tx_result}")
 
         if self._check_end_block_height_of_calc(context):
@@ -1083,7 +1094,27 @@ class IconServiceEngine(ContextContainer):
         context.traces = []
         context.set_step_counter(step_limit=step_limit)
 
+        one_tx_timer = Timer()
+        one_tx_timer.start()
+
         ret = self._call(context, method, params)
+
+        if method == 'icx_call':
+            score_addr = params.get("to", "INVALID_TO_ADDR")
+            data = params.get("data")
+            if data:
+                score_method: str = data.get("method", "EMPTY_METHOD")
+            else:
+                score_method: str = "NOT_SCORE_CALL"
+
+            Logger.info(
+                tag=_TAG,
+                msg=f"QUERY_END: "
+                    f"to={score_addr} "
+                    f"method={score_method} "
+                    f"duration={one_tx_timer.duration}"
+            )
+
         return ret
 
     def validate_transaction(self, request: dict, origin_request: dict) -> None:
