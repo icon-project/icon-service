@@ -14,6 +14,7 @@
 
 import asyncio
 import json
+import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Any, TYPE_CHECKING, Optional
 
@@ -51,6 +52,55 @@ QUERY_THREAD_MAPPER = {
 
 _TAG = "MQ"
 
+DIFF_RESET_TIME: int = 50_000 #(5s)
+DOS_COUNT: int = 100
+
+
+class StaticsInfos:
+    def __init__(self):
+        self._statics: dict = {
+            "ip": {},
+            "from": {}
+        }
+        self._last_reset_time: int = 0
+
+    def update(self, ip: str, params: dict):
+        t: int = int(time.time())
+        if t - self._last_reset_time > DIFF_RESET_TIME:
+            self._reset()
+        else:
+            self._update(ip, params)
+
+    def _reset(self):
+        self._statics["ip"].clear()
+        self._statics["from"].clear()
+        self._last_reset_time: int = int(time.time())
+
+    def _update(self, ip: str, params: dict):
+        self._add_ip(ip)
+
+        method: str = params.get("method", "")
+        if method == "icx_sendTransaction":
+            self._add_from_on_tx(params["params"]["from"])
+        else:
+            pass
+
+    def _add_ip(self, ip: str):
+        if ip not in self._statics["ip"]:
+            self._statics["ip"][ip] = 1
+        else:
+            if self._statics["ip"][ip] > DOS_COUNT:
+                raise Exception(f"Too much call: IP({ip})")
+            self._statics["ip"][ip] += 1
+
+    def _add_from_on_tx(self, _from: str):
+        if _from not in self._statics["from"]:
+            self._statics["from"][_from] = 1
+        else:
+            if self._statics["from"][_from] > DOS_COUNT:
+                raise Exception(f"Too much call: from({_from})")
+            self._statics["from"][_from] += 1
+
 
 class IconScoreInnerTask(object):
     def __init__(self, conf: dict):
@@ -67,6 +117,8 @@ class IconScoreInnerTask(object):
             THREAD_ESTIMATE: ThreadPoolExecutor(1),
             THREAD_VALIDATE: ThreadPoolExecutor(1)
         }
+
+        self._static_info = StaticsInfos()
 
     def _open(self):
         Logger.info(tag=_TAG, msg="_open() start")
@@ -455,6 +507,24 @@ class IconScoreInnerTask(object):
             return MakeResponse.make_error_response(e.code, str(e))
 
         return ExceptionCode.OK
+
+    @message_queue_task
+    async def statics_call(self, ip: str, params: dict) -> dict:
+        try:
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
+
+        try:
+            self._static_info.update(ip, params)
+            response = MakeResponse.make_response(ExceptionCode.OK)
+        except FatalException as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        except Exception as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        return response
 
 
 class MakeResponse:
