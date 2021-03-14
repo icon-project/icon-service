@@ -183,6 +183,10 @@ class ConfigKey:
     PREP_MAIN_PREPS = 'mainPRepCount'
     PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
     IPC_TIMEOUT = 'ipcTimeout'
+    DOS_GUARD = "dosGuard"
+    RESET_TIME = "resetTIme"
+    THRESHOLD = "threshold"
+    BAN_TIME = "BanTime"
 
     # log
     LOG = 'log'

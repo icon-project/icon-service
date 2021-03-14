@@ -94,6 +94,7 @@ from .utils import to_camel_case, bytes_to_hex
 from .utils.bloom import BloomFilter
 from .utils.timer import Timer
 from .utils.test_env import is_under_testing
+from .dosguard import DoSGuard
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -143,6 +144,7 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
         self._precommit_data_writer: Optional['PrecommitDataWriter'] = None
+        self.dos_guard: Optional[DoSGuard] = None
 
     def open(self, conf: dict):
         """Get necessary parameters and initialize diverse objects
@@ -230,6 +232,12 @@ class IconServiceEngine(ContextContainer):
         context.engine.inv.load_inv_container(context)
 
         self._set_block_invoke_timeout(conf)
+
+        self.dos_guard = DoSGuard(
+            reset_time=conf[ConfigKey.RESET_TIME],
+            threshold=conf[ConfigKey.THRESHOLD],
+            ban_time=conf[ConfigKey.BAN_TIME]
+        )
 
         # DO NOT change the values in conf
         self._conf = conf
