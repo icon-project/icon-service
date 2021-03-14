@@ -37,7 +37,7 @@ class TestDoSGuard:
         dos_guard = DoSGuard(conf)
 
         _from: str = str(create_address())
-        for i in range(threshold + 2):
+        for i in range(threshold + 1):
             print(i)
             try:
                 dos_guard.update(_from=_from)

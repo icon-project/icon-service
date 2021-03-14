@@ -35,13 +35,11 @@ class DoSGuard:
     def _add(self, category: Category, value: str):
         self._validate(category=category, value=value)
 
-        if value not in self._statistics[category.value]:
-            self._statistics[category.value][value] = 1
-        else:
-            if self._statistics[category.value][value] >= self._threshold:
-                self._ban_expired[category.value][value] = now() + self._ban_time
-                raise Exception(f"Too many requests: {category.name}({value})")
-            self._statistics[category.value][value] += 1
+        category_statistics: dict = self._statistics[category.value]
+        category_statistics[value] = category_statistics.get(value, 0) + 1
+        if category_statistics[value] >= self._threshold:
+            self._ban_expired[category.value][value] = now() + self._ban_time
+            raise Exception(f"Too many requests: {category.name}({value})")
 
     def _validate(self, category: Category, value: str):
         if value in self._ban_expired[category.value]:
