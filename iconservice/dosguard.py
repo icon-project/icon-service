@@ -1,8 +1,6 @@
 import enum
 import time
 
-from iconservice.icon_constant import ConfigKey
-
 
 def now():
     return int(time.monotonic())  # unit: second

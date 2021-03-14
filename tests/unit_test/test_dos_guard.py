@@ -16,7 +16,6 @@ import time
 
 import pytest
 
-from iconservice.icon_constant import ConfigKey
 from iconservice.dosguard import DoSGuard
 from tests import create_address
 
