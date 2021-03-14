@@ -233,7 +233,11 @@ class IconServiceEngine(ContextContainer):
 
         self._set_block_invoke_timeout(conf)
 
-        self.dos_guard = DoSGuard(conf)
+        self.dos_guard = DoSGuard(
+            reset_time=conf[ConfigKey.RESET_TIME],
+            threshold=conf[ConfigKey.THRESHOLD],
+            ban_time=conf[ConfigKey.BAN_TIME]
+        )
 
         # DO NOT change the values in conf
         self._conf = conf

@@ -27,35 +27,20 @@ class TestDoSGuard:
         threshold = 10
         ban_time = 2
 
-        conf = {
-            ConfigKey.DOS_GUARD: {
-                ConfigKey.RESET_TIME: reset_time,
-                ConfigKey.THRESHOLD: threshold,
-                ConfigKey.BAN_TIME: ban_time,
-            }
-        }
-        dos_guard = DoSGuard(conf)
+        dos_guard = DoSGuard(reset_time, threshold, ban_time)
 
         _from: str = str(create_address())
-        for i in range(threshold + 1):
+        for i in range(threshold):
             print(i)
-            try:
-                dos_guard.update(_from=_from)
-            except Exception as e:
-                print(e)
+            dos_guard.run(_from=_from)
 
-        time.sleep(ban_time - 1)
+        with pytest.raises(Exception):
+            print(10)
+            dos_guard.run(_from=_from)
 
-        try:
-            print(12)
-            dos_guard.update(_from=_from)
-        except Exception as e:
-            print(e)
-
-        time.sleep(ban_time)
+        time.sleep(ban_time + 1)
 
         # already release
         # have to no raise
-        print(13)
-        dos_guard.update(_from=_from)
-        print("release!")
+        print(11)
+        dos_guard.run(_from=_from)

@@ -5,7 +5,7 @@ from iconservice.icon_constant import ConfigKey
 
 
 def now():
-    return int(time.time())
+    return int(time.monotonic())  # unit: second
 
 
 class Category(enum.Enum):
@@ -13,38 +13,38 @@ class Category(enum.Enum):
 
 
 class DoSGuard:
-    def __init__(self, conf: dict):
+    def __init__(self, reset_time: int, threshold: int, ban_time: int):
         self._statistics: dict = {c.value: {} for c in Category}
         self._ban_expired: dict = {c.value: {} for c in Category}
 
+        self._reset_time: int = reset_time
+        self._threshold: int = threshold
+        self._ban_time: int = ban_time
         self._last_reset_time: int = now()
-        dos_guard: dict = conf[ConfigKey.DOS_GUARD]
-        self._reset_time: int = dos_guard[ConfigKey.RESET_TIME]
-        self._threshold: int = dos_guard[ConfigKey.THRESHOLD]
-        self._ban_time: int = dos_guard[ConfigKey.BAN_TIME]
 
-    def update(self, _from: str):
-        if now() - self._last_reset_time >= self._reset_time:
-            self._reset()
-        self._add(category=Category.FROM_ON_TX, value=_from)
+    def run(self, _from: str):
+        cur_time: int = now()
+        if cur_time - self._last_reset_time > self._reset_time:
+            self._reset(cur_time)
+        self._add(cur_time=cur_time, category=Category.FROM_ON_TX, value=_from)
 
-    def _reset(self):
+    def _reset(self, cur_time: int):
         self._statistics = {c.value: {} for c in Category}
-        self._last_reset_time: int = now()
+        self._last_reset_time: int = cur_time
 
-    def _add(self, category: Category, value: str):
-        self._validate(category=category, value=value)
+    def _add(self, cur_time: int, category: Category, value: str):
+        self._validate(cur_time=cur_time, category=category, value=value)
 
         category_statistics: dict = self._statistics[category.value]
         category_statistics[value] = category_statistics.get(value, 0) + 1
-        if category_statistics[value] >= self._threshold:
-            self._ban_expired[category.value][value] = now() + self._ban_time
+        if category_statistics[value] > self._threshold:
+            self._ban_expired[category.value][value] = cur_time + self._ban_time
             raise Exception(f"Too many requests: {category.name}({value})")
 
-    def _validate(self, category: Category, value: str):
+    def _validate(self, cur_time: int, category: Category, value: str):
         if value in self._ban_expired[category.value]:
-            if now() >= self._ban_expired[category.value][value]:
+            if cur_time > self._ban_expired[category.value][value]:
                 del self._ban_expired[category.value][value]
             else:
-                self._ban_expired[category.value][value] = now() + self._ban_time
+                self._ban_expired[category.value][value] = cur_time + self._ban_time
                 raise Exception(f"(Validate) Too many requests: {category.name}({value})")

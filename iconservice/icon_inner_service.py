@@ -466,7 +466,7 @@ class IconScoreInnerTask(object):
             return MakeResponse.make_error_response(e.code, str(e))
 
         try:
-            self._icon_service_engine.dos_guard.update(_from=params["from"])
+            self._icon_service_engine.dos_guard.run(_from=params["from"])
             response = MakeResponse.make_response(ExceptionCode.OK)
         except Exception as e:
             self._log_exception(e, _TAG)
