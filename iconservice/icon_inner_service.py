@@ -14,6 +14,7 @@
 
 import asyncio
 import json
+import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Any, TYPE_CHECKING, Optional
 
@@ -455,6 +456,25 @@ class IconScoreInnerTask(object):
             return MakeResponse.make_error_response(e.code, str(e))
 
         return ExceptionCode.OK
+
+    @message_queue_task
+    async def statics_call(self, ip: str, params: dict) -> dict:
+        try:
+            Logger.info(tag=_TAG, msg=f'statics_call: ip: {ip}, params: {params}')
+            self._check_icon_service_ready()
+        except ServiceNotReadyException as e:
+            return MakeResponse.make_error_response(e.code, str(e))
+
+        try:
+            self._icon_service_engine.statics.update(ip, params)
+            response = MakeResponse.make_response(ExceptionCode.OK)
+        except FatalException as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        except Exception as e:
+            self._log_exception(e, _TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        return response
 
 
 class MakeResponse:

@@ -184,6 +184,10 @@ class ConfigKey:
     PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
     IPC_TIMEOUT = 'ipcTimeout'
 
+    DIFF_RESET_TIME = 'diffResetTime'
+    DOS_CHECK_COUNT = 'dosCheckCount'
+    DOS_RELEASE_TIME = "dosReleaseTIme"
+
     # log
     LOG = 'log'
     LOGGER = "logger"

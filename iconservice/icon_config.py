@@ -77,6 +77,9 @@ default_icon_config = {
     ConfigKey.BLOCK_INVOKE_TIMEOUT: BLOCK_INVOKE_TIMEOUT_S,
     ConfigKey.TBEARS_MODE: False,
     ConfigKey.UNSTAKE_SLOT_MAX: UNSTAKE_SLOT_MAX,
+    ConfigKey.DIFF_RESET_TIME: 5,
+    ConfigKey.DOS_CHECK_COUNT: 200,
+    ConfigKey.DOS_RELEASE_TIME: 300,
 }
 
 
