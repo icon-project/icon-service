@@ -186,7 +186,7 @@ class ConfigKey:
     DOS_GUARD = "dosGuard"
     RESET_TIME = "resetTIme"
     THRESHOLD = "threshold"
-    BAN_TIME = "BanTime"
+    BAN_TIME = "banTime"
 
     # log
     LOG = 'log'
