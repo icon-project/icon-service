@@ -14,7 +14,7 @@ class Category(enum.Enum):
 
 class DoSGuard:
     def __init__(self, reset_time: int, threshold: int, ban_time: int):
-        Logger.info(f"DoSGuard config: {reset_time}, {threshold}, {ban_time}")
+        Logger.info(f"DoSGuard config: reset_time={reset_time}, threshold={threshold}, ban_time={ban_time}")
         self._statistics: dict = {c.value: {} for c in Category}
         self._ban_expired: dict = {c.value: {} for c in Category}
 
