@@ -457,22 +457,6 @@ class IconScoreInnerTask(object):
 
         return ExceptionCode.OK
 
-    @message_queue_task
-    async def dos_guard(self, params: dict) -> dict:
-        try:
-            Logger.info(tag=_TAG, msg=f'dos_guard: params: {params}')
-            self._check_icon_service_ready()
-        except ServiceNotReadyException as e:
-            return MakeResponse.make_error_response(e.code, str(e))
-
-        try:
-            self._icon_service_engine.dos_guard.run(_from=params["from"])
-            response = MakeResponse.make_response(ExceptionCode.OK)
-        except Exception as e:
-            self._log_exception(e, _TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-        return response
-
 
 class MakeResponse:
     @staticmethod
