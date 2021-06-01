@@ -16,7 +16,8 @@
 
 """IconScoreEngine testcase
 """
-import time
+from timeit import default_timer as timer
+from datetime import timedelta
 from typing import TYPE_CHECKING, List, Any
 
 from iconservice.base.address import Address
@@ -51,15 +52,17 @@ class TestIntegrateScores(TestIntegrateBase):
         score_address: 'Address' = tx_results[0].score_address
 
         def _put_address():
-            tx_list = []
+            transactions = []
             for _ in range(500):
                 tx = self.create_score_call_tx(self._accounts[0].address, score_address, "add_value")
-                tx_list.append(tx)
+                transactions.append(tx)
+            return transactions
 
-        for _ in range(160):
-            _put_address()
+        for _ in range(13):
+            tx_list = _put_address()
+            self.process_confirm_block_tx(tx_list)
 
-        start = time.time()
-        ret = self.query_score(self._accounts[0], score_address, "check", {"address": f"hx{'1'*40}"})
-        end = time.time()
-        print("GET time : ", ret, end - start)
+        start = timer()
+        self.query_score(self._accounts[0], score_address, "check", {"address": f"hx{'1'*40}"})
+        end = timer()
+        print("GET time : ", timedelta(seconds=end-start).microseconds, "microseconds")
