@@ -392,6 +392,8 @@ class Engine(EngineBase):
     def handle_set_delegation(self, context: 'IconScoreContext', delegations: List[Delegation]):
         """Handles setDelegation JSON-RPC API request
         """
+        Logger.info(f"goldworm: {delegations}")
+
         # SCORE can stake via SCORE inter-call
         sender: 'Address' = context.msg.sender
         cached_accounts: Dict['Address', Tuple['Account', int]] = OrderedDict()
@@ -602,6 +604,7 @@ class Engine(EngineBase):
         :param delegations: The list of delegations that the given address did
         :return:
         """
+        Logger.info(f"goldworm: address={address} delegations={delegations}")
         delegation_list: list = []
 
         for delegation in delegations:
@@ -611,6 +614,9 @@ class Engine(EngineBase):
         delegation_tx: 'DelegationTx' = RewardCalcDataCreator.create_tx_delegation(delegation_list)
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, context.block.height, delegation_tx)
         context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
+        Logger.info(f"goldworm: dl={delegation_list}")
+        Logger.info(f"goldworm: dtx{delegation_tx}")
+        Logger.info(f"goldworm: itd={iiss_tx_data}")
 
     def handle_get_delegation(self, context: 'IconScoreContext', address: 'Address') -> dict:
         """Handles getDelegation JSON-RPC API request

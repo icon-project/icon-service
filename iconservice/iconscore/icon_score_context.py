@@ -308,6 +308,7 @@ class IconScoreContext(ABC):
         if self.tx_batch:
             self.tx_batch.clear()
         if self.rc_tx_batch:
+            Logger.debug(tag=self.TAG, msg=f"clear RX tx_batch {self.block.height}. len={len(self.rc_tx_batch)}")
             self.rc_tx_batch.clear()
         if self._tx_dirty_preps:
             self._tx_dirty_preps.clear()
