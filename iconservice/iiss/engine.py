@@ -22,7 +22,7 @@ from iconcommons.logger import Logger
 
 from iconservice.iiss.listener import EngineListener as IISSEngineListener
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
-from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification
+from .reward_calc.ipc.message import CalculateDoneNotification, ReadyNotification, CommitClaimRequest
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, SYSTEM_SCORE_ADDRESS
@@ -647,7 +647,7 @@ class Engine(EngineBase):
         iscore, block_height = self._claim_iscore(context, address)
 
         if iscore > 0:
-            self._commit_claim(context, iscore, address)
+            self._process_claim(context, iscore, address)
 
         if context.revision < Revision.SYSTEM_SCORE_ENABLED.value:
             EventLogEmitter.emit_event_log(
@@ -687,7 +687,7 @@ class Engine(EngineBase):
 
         return iscore, block_height
 
-    def _commit_claim(self, context: 'IconScoreContext', iscore: int, address: Address):
+    def _process_claim(self, context: 'IconScoreContext', iscore: int, address: Address):
         block: 'Block' = context.block
         tx: 'Transaction' = context.tx
         success = True
@@ -709,7 +709,16 @@ class Engine(EngineBase):
             success = False
             raise e
         finally:
-            self._reward_calc_proxy.commit_claim(success, address, block.height, block.hash, tx.index, tx.hash)
+            req = CommitClaimRequest(success, address, block.height, block.hash, tx.index, tx.hash)
+            if context.revision < Revision.FIX_COMMIT_CLAIM.value:
+                self._reward_calc_proxy.commit_claim(req)
+            else:
+                context.commit_claims.append(req)
+
+    def commit_claim(self, commit_claims: List['CommitClaimRequest'], success: bool):
+        for commit in commit_claims:
+            commit.success = success
+            self._reward_calc_proxy.commit_claim(commit)
 
     def handle_query_iscore(self, context: 'IconScoreContext', address: 'Address') -> dict:
         if not isinstance(address, Address):

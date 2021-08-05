@@ -260,22 +260,11 @@ class RewardCalcProxy(object):
 
         return future.result()
 
-    def commit_claim(self, success: bool, address: 'Address',
-                     block_height: int, block_hash: bytes,
-                     tx_index: int, tx_hash: bytes):
-        Logger.debug(
-            tag=_TAG,
-            msg=f"commit_claim() start: "
-                f"success={success} "
-                f"address={address} "
-                f"block_height={block_height} "
-                f"block_hash={bytes_to_hex(block_hash)} "
-                f"tx_index={tx_index} "
-                f"tx_hash={bytes_to_hex(tx_hash)}"
-        )
+    def commit_claim(self, request: CommitClaimRequest):
+        Logger.debug(tag=_TAG, msg=f"commit_claim() start: {request}")
 
         future: concurrent.futures.Future = asyncio.run_coroutine_threadsafe(
-            self._commit_claim(success, address, block_height, block_hash, tx_index, tx_hash),
+            self._commit_claim(request),
             self._loop
         )
 
@@ -288,21 +277,8 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="commit_claim() end")
 
-    async def _commit_claim(self, success: bool, address: 'Address',
-                            block_height: int, block_hash: bytes,
-                            tx_index: int, tx_hash: bytes) -> 'CommitClaimResponse':
-        Logger.debug(
-            tag=_TAG,
-            msg=f"_commit_claim() start: "
-                f"success={success} "
-                f"address={address} "
-                f"block_height={block_height} "
-                f"block_hash={bytes_to_hex(block_hash)} "
-                f"tx_index={tx_index} "
-                f"tx_hash={bytes_to_hex(tx_hash)}"
-        )
-
-        request = CommitClaimRequest(success, address, block_height, block_hash, tx_index, tx_hash)
+    async def _commit_claim(self, request: CommitClaimRequest) -> 'CommitClaimResponse':
+        Logger.debug(tag=_TAG, msg=f"_commit_claim() start: {request}")
 
         future: asyncio.Future = self._message_queue.put(request)
         await future

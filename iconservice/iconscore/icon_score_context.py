@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from ..prep.prep_address_converter import PRepAddressConverter
     from ..inv.container import Container as INVContainer
     from ..database.batch import Batch
+    from ..iiss.reward_calc.ipc.message import CommitClaimRequest
 
 
 class IconScoreContext(ABC):
@@ -92,6 +93,7 @@ class IconScoreContext(ABC):
             [] if context_type == IconScoreContextType.INVOKE else None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
+        self.commit_claims: List['CommitClaimRequest'] = []
         self.new_icon_score_mapper: Optional['IconScoreMapper'] = None
         self.cumulative_step_used: int = 0
         self.event_logs: Optional[List['EventLog']] = None

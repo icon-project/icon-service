@@ -1311,6 +1311,11 @@ class IconServiceEngine(ContextContainer):
 
             context.cumulative_step_used += final_step_used
 
+            # send COMMIT_CLAIM to RC
+            if context.revision >= Revision.FIX_COMMIT_CLAIM.value:
+                context.engine.iiss.commit_claim(context.commit_claims, tx_result.status == TransactionResult.SUCCESS)
+                context.commit_claims.clear()
+
         return tx_result
 
     def _handle_estimate_step(self,

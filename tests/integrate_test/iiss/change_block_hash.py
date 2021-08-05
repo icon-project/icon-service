@@ -26,6 +26,7 @@ from iconservice.icon_constant import ConfigKey, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
+from iconservice.iiss.reward_calc.ipc.message import CommitClaimRequest
 from iconservice.utils import icx_to_loop
 from tests import create_block_hash, create_timestamp, create_address, create_tx_hash
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -140,8 +141,9 @@ class TestChangeBlockHash(TestIISSBase):
         assert block.hash == actual_hash
 
         m = RewardCalcProxy.commit_claim
-        actual_height = m.call_args[0][2]
-        actual_hash = m.call_args[0][3]
+        req: CommitClaimRequest = m.call_args[0][0]
+        actual_height = req.block_height
+        actual_hash = req.block_hash
 
         assert block.height == actual_height
         assert block.hash == actual_hash
