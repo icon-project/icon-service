@@ -274,7 +274,7 @@ class TxData(Data):
         self.data: 'Tx' = None
 
     def __str__(self) -> str:
-        return f"{self.block_height}, {self.address}, {self.type}, {self.data}, {self.data}"
+        return f"{self.block_height}, {self.address}, {self.type}, {self.data}"
 
     def make_key(self, index: int) -> bytes:
         tx_index: bytes = index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
