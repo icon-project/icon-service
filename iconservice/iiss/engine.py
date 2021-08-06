@@ -610,7 +610,7 @@ class Engine(EngineBase):
 
         delegation_tx: 'DelegationTx' = RewardCalcDataCreator.create_tx_delegation(delegation_list)
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, context.block.height, delegation_tx)
-        context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
+        context.storage.rc.put(context.rc_tx_batch, iiss_tx_data)
 
     def handle_get_delegation(self, context: 'IconScoreContext', address: 'Address') -> dict:
         """Handles getDelegation JSON-RPC API request
