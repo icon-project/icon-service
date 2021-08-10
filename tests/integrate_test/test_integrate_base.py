@@ -229,7 +229,7 @@ class TestIntegrateBase(TestCase):
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, next_preps = \
+        tx_results, state_root_hash, added_transactions, next_preps, is_shutdown = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -259,7 +259,7 @@ class TestIntegrateBase(TestCase):
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, next_preps = \
+        tx_results, state_root_hash, added_transactions, next_preps, is_shutdown = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -293,7 +293,7 @@ class TestIntegrateBase(TestCase):
         if context.is_decentralized():
             is_block_editable = True
 
-        tx_results, state_root_hash, added_transactions, next_preps = \
+        tx_results, state_root_hash, added_transactions, next_preps, is_shutdown = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -301,7 +301,7 @@ class TestIntegrateBase(TestCase):
                                             prev_block_votes=prev_block_votes,
                                             is_block_editable=is_block_editable)
 
-        return block, tx_results, state_root_hash, added_transactions, next_preps
+        return block, tx_results, state_root_hash, added_transactions, next_preps, is_shutdown
 
     def _make_and_req_block_for_issue_test(self,
                                            tx_list: list,
@@ -318,7 +318,7 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, cumulative_fee)
 
-        tx_results, _, added_transactions, next_preps = \
+        tx_results, _, added_transactions, next_preps, is_shutdown = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,

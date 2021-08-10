@@ -122,9 +122,10 @@ class TestIconServiceEngine(TestIntegrateBase):
                       self.genesis_block.hash,
                       0)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
+        self.assertFalse(is_shutdown)
 
         self.assertEqual(len(tx_results), 1)
 
@@ -168,10 +169,11 @@ class TestIconServiceEngine(TestIntegrateBase):
 
         block = Block(block_height, block_hash, block_timestamp, self.genesis_block.hash, 0)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v2])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
+        self.assertFalse(is_shutdown)
 
         tx_result: 'TransactionResult' = tx_results[0]
         self.assertIsNone(tx_result.failure)
@@ -217,10 +219,11 @@ class TestIconServiceEngine(TestIntegrateBase):
         }
 
         block = Block(block_height, block_hash, block_timestamp, self.genesis_block.hash, 0)
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v2])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
+        self.assertFalse(is_shutdown)
 
         tx_result: 'TransactionResult' = tx_results[0]
         self.assertIsNone(tx_result.failure)
@@ -274,11 +277,11 @@ class TestIconServiceEngine(TestIntegrateBase):
                       self.genesis_block.hash,
                       0)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
-
         self.assertEqual(len(tx_results), 1)
+        self.assertFalse(is_shutdown)
 
         tx_result: 'TransactionResult' = tx_results[0]
         self.assertIsNone(tx_result.failure)
@@ -337,10 +340,10 @@ class TestIconServiceEngine(TestIntegrateBase):
 
         before_from_balance: int = self.get_balance(self._admin.address)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
-
+        self.assertFalse(is_shutdown)
         self.assertEqual(len(tx_results), 1)
 
         tx_result: 'TransactionResult' = tx_results[0]
@@ -411,10 +414,10 @@ class TestIconServiceEngine(TestIntegrateBase):
         block = Block(block_height, block_hash, block_timestamp, prev_hash, 0)
 
         before_from_balance: int = self.get_balance(self._admin.address)
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
-
+        self.assertFalse(is_shutdown)
         self.assertEqual(len(tx_results), 1)
 
         tx_result: 'TransactionResult' = tx_results[0]
@@ -474,10 +477,11 @@ class TestIconServiceEngine(TestIntegrateBase):
         block = Block(block_height, block_hash, block_timestamp,
                       self.icon_service_engine._get_last_block().hash, 0)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
+        self.assertFalse(is_shutdown)
 
         tx_result: 'TransactionResult' = tx_results[0]
         self.assertIsNotNone(tx_result.failure)
@@ -526,10 +530,10 @@ class TestIconServiceEngine(TestIntegrateBase):
 
         block = Block(block_height, block_hash, block_timestamp, self.genesis_block.hash, 0)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
-
+        self.assertFalse(is_shutdown)
         self.assertEqual(len(tx_results), 1)
 
         tx_result: 'TransactionResult' = tx_results[0]
@@ -636,10 +640,11 @@ class TestIconServiceEngine(TestIntegrateBase):
         transactions: list = params['transactions']
         self.assertIsInstance(transactions[0]['params']['to'], MalformedAddress)
 
-        tx_results, state_root_hash, _, _ = self.icon_service_engine.invoke(block, transactions)
+        tx_results, state_root_hash, _, _, is_shutdown = self.icon_service_engine.invoke(block, transactions)
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
+        self.assertFalse(is_shutdown)
 
         tx_result: 'TransactionResult' = tx_results[0]
         self.assertIsNone(tx_result.failure)
