@@ -81,6 +81,17 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             },
             {
                 'type': 'function',
+                'name': 'get_person',
+                'inputs': [],
+                'outputs': [
+                    {
+                        'type': 'dict'
+                    }
+                ],
+                'readonly': True
+            },
+            {
+                'type': 'function',
                 'name': 'get_value',
                 'inputs': [
                     {
@@ -96,7 +107,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 'readonly': True
             },
         ]
-        self.assertEqual(response1, expect_value1)
+        self.assertEqual(expect_value1, response1)
 
         expect_value2 = [
             {
@@ -159,7 +170,7 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
                 'readonly': True
             },
         ]
-        self.assertEqual(response2, expect_value2)
+        self.assertEqual(expect_value2, response2)
 
     def test_get_score_api_update(self):
         tx1: dict = self.create_deploy_score_tx(score_root="get_api",
