@@ -396,7 +396,7 @@ class IconServiceEngine(ContextContainer):
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
                prev_block_votes: Optional[List[Tuple['Address', int]]] = None,
-               is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
+               is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict], bool]:
 
         """Process transactions in a block sent by loopchain
 
@@ -406,7 +406,7 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_validators: previous block validators (legacy)
         :param prev_block_votes: previous block vote info
         :param is_block_editable: boolean which imply whether creating base transaction or not
-        :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
+        :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{}, is_shutdown)
         """
         # If the block has already been processed,
         # return the result from PrecommitDataManager
@@ -422,11 +422,7 @@ class IconServiceEngine(ContextContainer):
                             msg=f"Block result already exists: \n"
                                 f"state_root_hash={bytes_to_hex(precommit_data.state_root_hash)}")
 
-            return \
-                precommit_data.block_result, \
-                precommit_data.state_root_hash, \
-                precommit_data.added_transactions, \
-                precommit_data.next_preps
+            return _get_invoke_result_from_precommit_data(precommit_data)
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -563,16 +559,12 @@ class IconServiceEngine(ContextContainer):
                                        rc_state_hash,
                                        added_transactions,
                                        next_preps,
-                                       context.prep_address_converter)
+                                       context.prep_address_converter,
+                                       context.is_revision_changed(Revision.SHUTDOWN.value))
         if context.precommitdata_log_flag:
-            Logger.info(tag=_TAG,
-                        msg=f"Created precommit_data: \n{precommit_data}")
+            Logger.info(tag=_TAG, msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
-        return \
-            block_result, \
-            precommit_data.state_root_hash, \
-            precommit_data.added_transactions, \
-            precommit_data.next_preps
+        return _get_invoke_result_from_precommit_data(precommit_data)
 
     @classmethod
     def _get_rc_db_revision_before_process_transactions(cls, context: 'IconScoreContext') -> int:
@@ -1487,8 +1479,8 @@ class IconServiceEngine(ContextContainer):
         #   - dataType is not 'call'
         if to == SYSTEM_SCORE_ADDRESS:
             return (
-                context.revision < Revision.SYSTEM_SCORE_ENABLED.value
-                and data_type != DataType.CALL
+                    context.revision < Revision.SYSTEM_SCORE_ENABLED.value
+                    and data_type != DataType.CALL
             )
 
         return True
@@ -2255,3 +2247,14 @@ class IconServiceEngine(ContextContainer):
             account_filter=account_filter
         )
         return raw_data
+
+
+def _get_invoke_result_from_precommit_data(
+        precommit_data: PrecommitData) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict], bool]:
+    return (
+        precommit_data.block_result,
+        precommit_data.state_root_hash,
+        precommit_data.added_transactions,
+        precommit_data.next_preps,
+        precommit_data.is_shutdown,
+    )

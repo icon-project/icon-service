@@ -135,7 +135,8 @@ class PrecommitData(object):
                  rc_state_root_hash: Optional[bytes],
                  added_transactions: dict,
                  next_preps: Optional[dict],
-                 prep_address_converter: 'PRepAddressConverter'):
+                 prep_address_converter: 'PRepAddressConverter',
+                 is_shutdown: bool):
         """
 
         :param block_batch: changed states for a block
@@ -166,6 +167,7 @@ class PrecommitData(object):
         self.next_preps: Optional[dict] = next_preps
 
         self.prep_address_converter: 'PRepAddressConverter' = prep_address_converter
+        self.is_shutdown = is_shutdown
 
         # To prevent redundant precommit data logging
         self.already_exists = False
@@ -185,7 +187,8 @@ class PrecommitData(object):
             f"state_root_hash: {bytes_to_hex(self.state_root_hash)}",
             f"prev_block_generator: {self.prev_block_generator}",
             f"added_transactions: {self.added_transactions}",
-            f"next_preps: {self.next_preps}"
+            f"next_preps: {self.next_preps}",
+            f"is_shutdown: {self.is_shutdown}",
         ]
         return "\n".join(lines)
 

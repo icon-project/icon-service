@@ -172,13 +172,15 @@ class IconScoreInnerTask(object):
             converted_prev_block_validators = params.get('prevBlockValidators')
             converted_prev_votes = params.get('prevBlockVotes')
 
-            tx_results, state_root_hash, added_transactions, next_preps = self._icon_service_engine.invoke(
-                block=block,
-                tx_requests=converted_tx_requests,
-                prev_block_generator=converted_prev_block_generator,
-                prev_block_validators=converted_prev_block_validators,
-                prev_block_votes=converted_prev_votes,
-                is_block_editable=converted_is_block_editable)
+            tx_results, state_root_hash, added_transactions, next_preps, is_shutdown = \
+                self._icon_service_engine.invoke(
+                    block=block,
+                    tx_requests=converted_tx_requests,
+                    prev_block_generator=converted_prev_block_generator,
+                    prev_block_validators=converted_prev_block_validators,
+                    prev_block_votes=converted_prev_votes,
+                    is_block_editable=converted_is_block_editable
+                )
 
             if convert_tx_result_to_dict:
                 convert_tx_results = [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
@@ -194,6 +196,8 @@ class IconScoreInnerTask(object):
 
             if next_preps:
                 results["prep"] = next_preps
+            if is_shutdown:
+                results["is_shutdown"] = True
 
             response = MakeResponse.make_response(results)
         except FatalException as e:
