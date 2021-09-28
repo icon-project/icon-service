@@ -36,18 +36,22 @@ class TestShutdown(TestIISSBase):
         )
 
     def test_shutdown_revision(self):
-        self.set_revision(Revision.IMPROVED_PRE_VALIDATOR.value)
+        self.set_revision(11)
 
-        revision = Revision.SHUTDOWN.value
-        from_ = self._admin
-        to = GOVERNANCE_SCORE_ADDRESS
-        params = {"code": hex(revision), "name": f"1.1.{revision}"}
+        results = (False, False, True, False, True, True)
+        revisions = (11, 12, 13, 13, 14, 15)
 
-        tx = self.create_score_call_tx(
-            from_=self._admin,
-            to_=to,
-            func_name="setRevision",
-            params=params,
-        )
-        block, tx_results, _, _, _, is_shutdown = self.debug_make_and_req_block([tx])
-        assert is_shutdown
+        for revision, expected in zip(revisions, results):
+            to = GOVERNANCE_SCORE_ADDRESS
+            params = {"code": hex(revision), "name": f"1.1.{revision}"}
+
+            tx = self.create_score_call_tx(
+                from_=self._admin,
+                to_=to,
+                func_name="setRevision",
+                params=params,
+            )
+            block, tx_results, _, _, _, is_shutdown = self.debug_make_and_req_block([tx])
+            assert is_shutdown is expected
+            self.process_confirm_block_tx(tx_list=[tx])
+            assert self.get_revision()["code"] == revision
