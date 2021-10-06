@@ -160,6 +160,11 @@ class IconScoreContext(ABC):
 
         return old.revision_code != new.revision_code and new.revision_code == target_rev
 
+    def is_shutdown(self):
+        old: 'INVContainer' = self.engine.inv.inv_container
+        new: 'INVContainer' = self.inv_container
+        return old.revision_code < new.revision_code >= Revision.SHUTDOWN.value
+
     def get_batches(self) -> Iterable['Batch']:
         """Used to support 2-depth block invocation
         It is called in ContextDatabase.get_from_batch() on estimation or invoke

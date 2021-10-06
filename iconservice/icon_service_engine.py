@@ -560,7 +560,7 @@ class IconServiceEngine(ContextContainer):
                                        added_transactions,
                                        next_preps,
                                        context.prep_address_converter,
-                                       context.is_revision_changed(Revision.SHUTDOWN.value))
+                                       context.is_shutdown())
         if context.precommitdata_log_flag:
             Logger.info(tag=_TAG, msg=f"Created precommit_data: \n{precommit_data}")
         self._precommit_data_manager.push(precommit_data)
