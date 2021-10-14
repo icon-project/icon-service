@@ -40,7 +40,7 @@ deploy:
     on:
       tags: true
       all_branches: true
-      condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}((a|b|rc)+[0-9]*)+(\.?(post|dev)[0-9]*)?
+      condition: $TRAVIS_TAG =~ ^([0-9]+)(\.[0-9]+){1,2}((a|b|rc)+[0-9]*)?(\.?(post|dev)[0-9]*)?
 
 notifications:
   slack:

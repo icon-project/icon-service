@@ -144,7 +144,10 @@ class Revision(Enum):
     VERIFY_ASSET_INTEGRITY = 12
     USE_RLP = 12
 
-    LATEST = 12
+    # All revisions after Revision12 pass is_shutdown flag to loopchain
+    SHUTDOWN = 13
+
+    LATEST = 13
 
 
 RC_DB_VERSION_0 = 0
@@ -186,7 +189,7 @@ class ConfigKey:
     DOS_GUARD = "dosGuard"
     RESET_TIME = "resetTIme"
     THRESHOLD = "threshold"
-    BAN_TIME = "BanTime"
+    BAN_TIME = "banTime"
 
     # log
     LOG = 'log'

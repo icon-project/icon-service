@@ -2,6 +2,12 @@ from iconservice import *
 from .base import BaseScore
 
 
+class Person(TypedDict):
+    name: str
+    age: int
+    wallet: Address
+
+
 class GetApi(BaseScore):
 
     @eventlog(indexed=1)
@@ -24,3 +30,11 @@ class GetApi(BaseScore):
     @payable
     def fallback(self) -> None:
         print("fallback!!")
+
+    @external(readonly=True)
+    def get_person(self) -> Person:
+        return {
+            "name": "hello",
+            "age": 15,
+            "wallet": SYSTEM_SCORE_ADDRESS
+        }

@@ -273,6 +273,9 @@ class TxData(Data):
         self.type: 'TxType' = TxType.INVALID
         self.data: 'Tx' = None
 
+    def __str__(self) -> str:
+        return f"{self.block_height}, {self.address}, {self.type}, {self.data}"
+
     def make_key(self, index: int) -> bytes:
         tx_index: bytes = index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return self.PREFIX + tx_index
@@ -341,6 +344,9 @@ class DelegationTx(Tx):
     def __init__(self):
         self.delegation_info: List['DelegationInfo'] = []
 
+    def __str__(self) -> str:
+        return f"{[str(x) for x in self.delegation_info]}"
+
     def get_type(self) -> 'TxType':
         return TxType.DELEGATION
 
@@ -360,6 +366,9 @@ class DelegationInfo(object):
     def __init__(self):
         self.address: 'Address' = None
         self.value: int = None
+
+    def __str__(self) -> str:
+        return f"{self.address}, {self.value}"
 
     def encode(self) -> list:
         return [self.address, self.value]
